@@ -1,0 +1,9 @@
+Amaura Company OS v3.4.0 Verification Snapshot
+
+- 207 automated tests passed with warnings treated as errors through scripts/run_verified_tests.py.
+- 28 targeted trust/production/Ventures tests passed.
+- 32-worker acquisition stress passed.
+- 32-process / 640-entry signed audit stress passed.
+- 32-way Ventures admission allowed exactly one sprint.
+- Evidence provenance separation and tamper rejection passed.
+- Source certification passed; live production readiness intentionally remains false.

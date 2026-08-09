@@ -1,0 +1,3126 @@
+diff -ruN a/.env.amaura.example b/.env.amaura.example
+--- a/.env.amaura.example	2026-01-01 00:00:00.000000000 +0000
++++ b/.env.amaura.example	2026-08-07 15:09:10.063450643 +0000
+@@ -1,4 +1,4 @@
+-# Amaura Company OS 3.6.0 — production template
++# Amaura Company OS 3.6.1 — production template
+ # Generate every secret independently:
+ # python -c 'import secrets; print(secrets.token_urlsafe(48))'
+ AMAURA_FOUNDER_NAME=Akshat
+@@ -166,11 +166,21 @@
+ AMAURA_VENTURE_FOUNDER_REVIEW_MINUTES=20
+ 
+ # OSS capability runtime (lazy/on-demand; tuned for M3 8 GB by default).
+-AMAURA_LOCAL_RAM_BUDGET_MB=5600
++# v3.6.1 8 GB Mac memory policy. No RAM is pre-reserved; these are admission/kill targets.
++AMAURA_RAM_NORMAL_TARGET_MB=1500
++AMAURA_RAM_BURST_LIMIT_MB=2500
++AMAURA_RAM_ABSOLUTE_LIMIT_MB=3000
++AMAURA_RAM_PRESSURE_LIMIT_MB=1000
++AMAURA_SWAP_GROWTH_ABORT_MB=192
++AMAURA_RESOURCE_LEDGER_PATH=
++# Legacy v3.6.0 knob is ignored by the new scheduler.
++AMAURA_LOCAL_RAM_BUDGET_MB=
+ SEARXNG_URL=
+ AMAURA_QDRANT_PATH=.amaura-qdrant
+ QDRANT_API_KEY=
+ COMFYUI_URL=
++COMFYUI_API_TOKEN=
++AMAURA_MCP_REGISTRY_PATH=
+ AMAURA_MCP_TOOL_CALLS_ENABLED=0
+ LANGFUSE_PUBLIC_KEY=
+ LANGFUSE_SECRET_KEY=
+@@ -179,6 +189,7 @@
+ AMAURA_BROWSER_USE_MODEL=
+ AMAURA_WHISPER_MODEL=small
+ AMAURA_REMOTION_VERSION=4.0.477
++AMAURA_STRICT_MEDIA_SANDBOX=1
+ # OSS capability runtime
+ AMAURA_CAPABILITY_HEAVY_LOCK=
+ AMAURA_MEDIA_DOWNLOADS_ENABLED=0
+diff -ruN a/AMAURA_OSS_CAPABILITIES.md b/AMAURA_OSS_CAPABILITIES.md
+--- a/AMAURA_OSS_CAPABILITIES.md	2026-01-01 00:00:00.000000000 +0000
++++ b/AMAURA_OSS_CAPABILITIES.md	2026-08-07 15:01:34.185201220 +0000
+@@ -6,7 +6,7 @@
+ 
+ - Playwright: rendered-page extraction and screenshots.
+ - Crawl4AI: bounded website crawling to structured Markdown.
+-- Browser Use: opt-in, restricted read-only browser research fallback with explicit domains. Disabled by default.
++- Browser Use: opt-in read-only browser research fallback with domain restrictions, public-only egress proxy and dangerous tools removed in code. Disabled by default.
+ - SearXNG: configured self-hosted metasearch JSON API.
+ - Docling: rich document conversion.
+ - PyMuPDF: lightweight PDF text/render fast path.
+@@ -20,13 +20,13 @@
+ - ImageMagick/libvips: deterministic image resizing/thumbnail transforms.
+ - yt-dlp: metadata inspection plus explicit, rights-confirmed media ingestion; downloads are disabled by default.
+ - ComfyUI: optional HTTP API for pre-approved API-format workflows; recommended remote/on-demand on 8 GB machines.
+-- MCP: stdio client for explicitly configured servers. Tool calls are disabled unless `AMAURA_MCP_TOOL_CALLS_ENABLED=1` and the call is founder-approved.
++- MCP: stdio client for founder-owned registry entries only. AI requests use `server_id`; executable path/hash, args, env exposure, tools and sandbox/network policy are operator-pinned.
+ - Langfuse: optional observability mirror. Amaura's audit/evidence store remains authoritative.
+ - Antigravity: first-class governed engineering handoff packet while no official automatable interface is assumed.
+ 
+ ## 8 GB Mac policy
+ 
+-`AMAURA_LOCAL_RAM_BUDGET_MB` defaults to 5600 MB. Heavy local capabilities are serialized: Docling, PaddleOCR, faster-whisper, Kokoro, Browser Use and Remotion never intentionally run concurrently inside Amaura. Heavy Python capabilities execute in disposable subprocess workers so model/package memory is returned to macOS after each job. Repositories being installed does not consume RAM.
++`v3.6.1` uses a pressure-aware policy instead of a 5.6 GB reservation: normal capability target 1500 MB, temporary burst 2500 MB, absolute child-tree ceiling 3000 MB, and pressure mode 1000 MB. Playwright, Crawl4AI, Browser Use, Docling, PaddleOCR, Qdrant/FastEmbed, faster-whisper and Kokoro run in disposable subprocesses; Remotion is an external child process. Heavy jobs are host-wide serialized through a durable reservation ledger, and actual child-tree RSS plus swap growth can terminate a runaway job.
+ 
+ ComfyUI is treated as an external API service, and localhost ComfyUI is disabled by default on the 8 GB profile. Large image/video models should normally run remotely or only when Amaura is otherwise idle. The capability registry never starts ComfyUI, Qdrant, SearXNG or Langfuse servers automatically.
+ 
+@@ -55,7 +55,10 @@
+ Configure only services you actually run:
+ 
+ ```bash
+-AMAURA_LOCAL_RAM_BUDGET_MB=5600
++AMAURA_RAM_NORMAL_TARGET_MB=1500
++AMAURA_RAM_BURST_LIMIT_MB=2500
++AMAURA_RAM_ABSOLUTE_LIMIT_MB=3000
++AMAURA_RAM_PRESSURE_LIMIT_MB=1000
+ AMAURA_BROWSER_USE_AGENT_ENABLED=0
+ SEARXNG_URL=http://127.0.0.1:8080
+ AMAURA_QDRANT_PATH=.amaura-qdrant
+diff -ruN a/AMAURA_V3_6_1_RESOURCE_HARDENING_REPORT.md b/AMAURA_V3_6_1_RESOURCE_HARDENING_REPORT.md
+--- a/AMAURA_V3_6_1_RESOURCE_HARDENING_REPORT.md	1970-01-01 00:00:00.000000000 +0000
++++ b/AMAURA_V3_6_1_RESOURCE_HARDENING_REPORT.md	2026-08-07 15:23:07.252723247 +0000
+@@ -0,0 +1,196 @@
++# Amaura Company OS v3.6.1 — Resource & Security Hardening Report
++
++## Executive verdict
++
++Amaura v3.6.1 replaces the v3.6.0 5.6 GB estimate-only scheduling profile with a pressure-aware 8 GB Mac control-plane profile and hardens the highest-risk OSS execution boundaries discovered in the v3.6.0 audit.
++
++This source state is **source-qualified, not production-configured**. The code/test/security gates pass, but the deployment gate correctly remains false until founder/operator keys, strict evidence/audit settings, reviewer/model routing, sandbox image pinning, backup separation and other target-machine settings are configured.
++
++## 8 GB Mac resource policy
++
++Default policy:
++
++- normal Amaura target: **1500 MB**
++- ordinary burst limit: **2500 MB**
++- absolute local Amaura burst ceiling: **3000 MB**
++- pressure-mode admission target: **1000 MB**
++- maximum simultaneous heavy capability workers: **1**
++- always-resident heavyweight services: **0**
++- heavyweight capabilities: **on demand, disposable, terminate after completion**
++
++The scheduler no longer treats a single estimated number as a hard memory limit. It now combines:
++
++1. a cross-process reservation ledger;
++2. live host memory/swap pressure;
++3. actual child-process-tree RSS monitoring;
++4. a hard worker RSS kill ceiling;
++5. swap-growth abort handling;
++6. red-pressure abort handling;
++7. pressure-aware admission control.
++
++On macOS, native `memory_pressure`, `sysctl` and `ps` telemetry are used when available. `psutil` is opportunistic only and is **not** a new required core dependency. Linux has `/proc`/`ps` fallbacks.
++
++## Heavy capability lifecycle
++
++Heavy Python/browser workers are isolated into disposable subprocesses. Worker environments are allowlisted rather than copied from the parent process, preventing unrelated Gmail/GitHub/model/signing credentials from being inherited by Whisper, OCR, document, browser and other OSS workers.
++
++Playwright, Crawl4AI, Browser Use, Docling, PaddleOCR, Qdrant/FastEmbed, faster-whisper and Kokoro are treated as isolated/on-demand Python capability paths. FFmpeg/Remotion and other subprocess-based capabilities are monitored by the same process-tree resource enforcement.
++
++## Browser hardening
++
++### Playwright
++
++- HTTPS-only navigation for governed public research.
++- Public-network URL resolution before navigation.
++- Amaura egress proxy pins a validated public IP.
++- Private, loopback, link-local and metadata destinations are rejected.
++- WebSocket requests are blocked.
++- downloads disabled.
++- service workers blocked.
++- final navigation URL revalidated.
++- response-size ceiling enforced.
++- Chromium runs in a disposable capability worker.
++
++### Crawl4AI
++
++- HTTPS-only.
++- public-only egress proxy.
++- fails closed if the installed Crawl4AI API cannot accept the expected proxy/security configuration.
++- final URL revalidated.
++- disposable worker lifecycle.
++
++### Browser Use
++
++- remains disabled by default.
++- fails closed unless the installed Browser Use version exposes the expected restricted-session APIs.
++- interactive/form/file/JavaScript actions are excluded programmatically rather than relying only on a system prompt.
++- explicit domain allowlist and IP blocking.
++- downloads disabled.
++- no persistent user-data directory.
++- one action per model step.
++- remote/free providers are preferred; paid routing requires an explicit operator gate.
++
++## MCP hardening
++
++AI-controlled MCP requests no longer accept arbitrary `command`, `args` or `env_keys`.
++
++MCP now accepts a `server_id` resolved through a founder-owned registry containing:
++
++- absolute executable path;
++- executable SHA-256;
++- fixed arguments;
++- fixed environment allowlist;
++- allowed tools;
++- whether tool calls are enabled;
++- whether AI roles may list tools;
++- timeout;
++- network policy.
++
++The registry must be owned by the current user and mode `0600` on POSIX. Executable hashes are checked at execution time. Network-disabled servers run through a fail-closed OS sandbox path where supported.
++
++## Remotion hardening
++
++Production rendering no longer accepts an arbitrary employee-selected project/entry boundary.
++
++- immutable Amaura template ID;
++- template source SHA-256 manifest;
++- approved composition IDs only;
++- validated JSON props;
++- package-lock hash verification;
++- local project CLI only;
++- renderer sandbox with network disabled by default;
++- fail closed when the required renderer sandbox is unavailable in strict mode.
++
++## Remote ComfyUI lifecycle
++
++The adapter now supports a full remote flow:
++
++`queue -> poll history -> identify outputs -> authenticated download -> validate image bytes -> save -> SHA-256 artifact registration`
++
++Bearer-token authentication is supported through `COMFYUI_API_TOKEN`. Localhost remains disabled by default for the 8 GB profile.
++
++## Capability health semantics
++
++The previous package-presence Boolean has been expanded to distinguish:
++
++- `installed`
++- `configured`
++- `healthy`
++- `execution_ready`
++- `verified_at`
++- `version`
++
++`--deep-check` performs explicit non-destructive execution probes where a safe cheap smoke test exists. Heavy/model-specific capabilities do not claim execution readiness merely because an import succeeds.
++
++## Validation of this exact source state
++
++- Python compilation: **PASS**
++- isolated verifier suite: **301 / 301 PASS**
++- warnings-as-errors verifier behavior: **PASS**
++- security gate: **PASS — 0 findings**
++- static source release gate: **source_certified = true**
++- backup/restore gate inside static qualification: **PASS**
++- frozen core installer dry-run: **PASS**
++- wheel build: **PASS**
++- wheel smoke import/version/resource-policy/MCP-contract: **PASS**
++
++The verifier runs tests in isolated OS-process shards to avoid the shared-process lifecycle issue that affected older qualification runs.
++
++## Production deployment gate
++
++`production_ready` remains **false** with **24 deployment/configuration blockers**:
++
++- approval_key
++- audit_checkpoint_path
++- audit_checkpoint_separated
++- audit_hmac_key
++- backup_destination_separated
++- distinct_reviewer_model
++- evaluation_pack_hmac_key
++- evidence_hmac_key
++- keys_are_separate
++- local_tool_api_auth
++- model_routing_valid
++- operator_key
++- post_merge_validation
++- private_model_evaluation_pack
++- provider_receipt_key
++- review_attestation_key
++- reviewer_identity_keys
++- sandbox_image_pinned
++- strict_audit_checkpoint
++- strict_audit_signatures
++- strict_evidence_mode
++- strict_evidence_signatures
++- strict_git_mode
++- strict_review_mode
++
++These are not being silently bypassed. Amaura must remain fail-closed until the target deployment is configured.
++
++## Deliberately unresolved / not falsely certified
++
++### 1. Full optional-OSS dependency lock
++
++The v3.6.0 audit correctly identified that the new optional OSS packages were not represented by a complete reproducible lock/SBOM. A fresh trustworthy optional dependency lock could not be generated in the current build environment because its configured package registry could not resolve the dependency graph. The existing v3.6.0 qualification files therefore remain **historical v3.6.0 evidence**, not a new v3.6.1 supply-chain attestation.
++
++The v3.6.1 core project does not add a new unlocked mandatory dependency, and `uv sync --frozen --extra dev --dry-run` succeeds. Before public/production distribution, generate exact per-profile locks plus hashes/SBOM from a functioning trusted registry and requalify them.
++
++### 2. Physical M3 8 GB qualification
++
++The resource implementation is designed for and contains native macOS telemetry paths, but this build environment is not the user's physical M3 8 GB Mac. Actual M3 memory-pressure/swap behavior must therefore be measured on that target before claiming hardware qualification.
++
++### 3. Durable capability workload queue
++
++v3.6.1 adds a **durable cross-process resource ledger** and longer bounded contention handling, but capability invocation remains synchronous at this layer. It is not being represented as a fully durable `queued -> leased -> running -> retry_wait -> completed` capability job queue. That can be added as a separate workload-orchestration release without weakening the current memory guardrails.
++
++### 4. Kokoro / Python 3.13 compatibility
++
++Current Kokoro packaging has a Python-version constraint that can conflict with Python 3.13. For local Kokoro use, operate the optional media profile under a compatible Python runtime (for example Python 3.12) or isolate Kokoro into a dedicated compatible environment. Amaura does not keep Kokoro resident; the capability remains on-demand.
++
++## Operational recommendation for the user's Mac
++
++Run Amaura as the command/control plane. Keep SQLite, governance, queues, approvals and lightweight adapters local. Start exactly one heavy local worker only when required and terminate it after the task. Keep local ComfyUI/SearXNG/Langfuse/Qdrant servers off unless explicitly needed; prefer remote/free endpoints for heavyweight generation/search/telemetry. Do not run Ollama plus a browser worker plus Whisper/Remotion simultaneously on the 8 GB machine.
++
++## Release classification
++
++**Amaura Company OS v3.6.1 Resource-Hardened — source-qualified hardening build; not yet production-configured or M3 hardware-qualified.**
+diff -ruN a/V3_6_1_VALIDATION.json b/V3_6_1_VALIDATION.json
+--- a/V3_6_1_VALIDATION.json	1970-01-01 00:00:00.000000000 +0000
++++ b/V3_6_1_VALIDATION.json	2026-08-07 15:23:07.749958209 +0000
+@@ -0,0 +1,57 @@
++{
++  "qualification_limits": {
++    "complete_optional_oss_lock_regenerated": false,
++    "durable_capability_job_queue": false,
++    "historical_v360_qualification_evidence_reused_as_v361": false,
++    "physical_m3_8gb_tested": false
++  },
++  "release": "Amaura Company OS v3.6.1 Resource-Hardened",
++  "resource_policy_mb": {
++    "absolute_limit": 3000,
++    "burst_limit": 2500,
++    "idle_heavy_services": 0,
++    "max_heavy_workers": 1,
++    "normal_target": 1500,
++    "pressure_limit": 1000
++  },
++  "validation": {
++    "compileall": true,
++    "frozen_core_sync_dry_run": true,
++    "isolated_shards": 7,
++    "production_blockers": [
++      "approval_key",
++      "audit_checkpoint_path",
++      "audit_checkpoint_separated",
++      "audit_hmac_key",
++      "backup_destination_separated",
++      "distinct_reviewer_model",
++      "evaluation_pack_hmac_key",
++      "evidence_hmac_key",
++      "keys_are_separate",
++      "local_tool_api_auth",
++      "model_routing_valid",
++      "operator_key",
++      "post_merge_validation",
++      "private_model_evaluation_pack",
++      "provider_receipt_key",
++      "review_attestation_key",
++      "reviewer_identity_keys",
++      "sandbox_image_pinned",
++      "strict_audit_checkpoint",
++      "strict_audit_signatures",
++      "strict_evidence_mode",
++      "strict_evidence_signatures",
++      "strict_git_mode",
++      "strict_review_mode"
++    ],
++    "production_ready": false,
++    "security_findings": [],
++    "security_gate_ok": true,
++    "source_certified": true,
++    "tests_collected": 301,
++    "tests_passed": 301,
++    "wheel_build": true,
++    "wheel_smoke": true
++  },
++  "version": "3.6.1"
++}
+diff -ruN a/desktop-app/main.js b/desktop-app/main.js
+--- a/desktop-app/main.js	2026-01-01 00:00:00.000000000 +0000
++++ b/desktop-app/main.js	2026-08-07 15:09:10.062858675 +0000
+@@ -226,7 +226,7 @@
+ }
+ 
+ function verifyHealthPayload(payload, challenge) {
+-    if (!payload || payload.status !== 'online' || payload.version !== '3.6.0') return false;
++    if (!payload || payload.status !== 'online' || payload.version !== '3.6.1') return false;
+     if (!serverProcess || Number(payload.pid) !== Number(serverProcess.pid)) return false;
+     const expected = crypto.createHmac('sha256', backendBootstrapToken).update(challenge).digest('hex');
+     const supplied = String(payload.bootstrap_proof || '');
+diff -ruN a/desktop-app/package-lock.json b/desktop-app/package-lock.json
+--- a/desktop-app/package-lock.json	2026-01-01 00:00:00.000000000 +0000
++++ b/desktop-app/package-lock.json	2026-08-07 15:09:10.062991281 +0000
+@@ -1,12 +1,12 @@
+ {
+   "name": "amaura-company-os-desktop",
+-  "version": "3.6.0",
++  "version": "3.6.1",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "amaura-company-os-desktop",
+-      "version": "3.6.0"
++      "version": "3.6.1"
+     }
+   }
+ }
+diff -ruN a/desktop-app/package.json b/desktop-app/package.json
+--- a/desktop-app/package.json	2026-01-01 00:00:00.000000000 +0000
++++ b/desktop-app/package.json	2026-08-07 15:09:10.062952704 +0000
+@@ -1,6 +1,6 @@
+ {
+   "name": "amaura-company-os-desktop",
+-  "version": "3.6.0",
++  "version": "3.6.1",
+   "description": "Secure desktop control plane for Amaura Company OS",
+   "main": "main.js",
+   "private": true,
+diff -ruN a/jarvis/__init__.py b/jarvis/__init__.py
+--- a/jarvis/__init__.py	2026-01-01 00:00:00.000000000 +0000
++++ b/jarvis/__init__.py	2026-08-07 15:09:10.062104967 +0000
+@@ -3,5 +3,5 @@
+ Personal AI assistant powered by NVIDIA's free API.
+ """
+ 
+-__version__ = "3.6.0"
++__version__ = "3.6.1"
+ __codename__ = "JARVIS"
+diff -ruN a/jarvis/amaura/browser_egress.py b/jarvis/amaura/browser_egress.py
+--- a/jarvis/amaura/browser_egress.py	1970-01-01 00:00:00.000000000 +0000
++++ b/jarvis/amaura/browser_egress.py	2026-08-07 14:53:03.962725483 +0000
+@@ -0,0 +1,159 @@
++"""Ephemeral browser egress proxy with public-network-only CONNECT handling.
++
++The proxy is intentionally small and conservative. Browsers may tunnel HTTPS to
++validated public destinations only. The proxy resolves once, pins the selected
++public IP for the TCP connection, blocks local/private/link-local/metadata hosts,
++and never exposes a LAN listener.
++"""
++
++from __future__ import annotations
++
++import contextlib
++import select
++import socket
++import socketserver
++import threading
++from dataclasses import dataclass
++
++from jarvis.amaura.models import GovernanceError
++from jarvis.amaura.network import validate_public_url
++
++
++class _ProxyHandler(socketserver.StreamRequestHandler):
++    timeout = 20
++
++    def handle(self) -> None:
++        try:
++            first = self.rfile.readline(8192).decode("iso-8859-1", "replace").strip()
++        except OSError:
++            return
++        if not first:
++            return
++        parts = first.split()
++        if len(parts) != 3:
++            self._reject(400, "Bad Request")
++            return
++        method, target, _version = parts
++        # Drain headers with strict bounds. We intentionally ignore proxy auth/cookies.
++        total = 0
++        while True:
++            line = self.rfile.readline(8192)
++            if not line or line in {b"\r\n", b"\n"}:
++                break
++            total += len(line)
++            if total > 64 * 1024:
++                self._reject(431, "Headers Too Large")
++                return
++        if method.upper() != "CONNECT":
++            # Keep the research browser HTTPS-only. This removes plaintext proxying
++            # and makes destination enforcement occur on every TLS connection.
++            self._reject(403, "HTTPS Required")
++            return
++        try:
++            host, port = self._parse_connect_target(target)
++            destination = validate_public_url(f"https://{host}:{port}", resolve=True)
++            if port not in {443, 8443}:
++                raise GovernanceError("Browser egress permits HTTPS ports 443/8443 only")
++            if not destination.addresses:
++                raise GovernanceError("No validated browser egress address")
++            upstream = socket.create_connection((destination.addresses[0], port), timeout=15)
++        except (GovernanceError, OSError, ValueError):
++            self._reject(403, "Destination Blocked")
++            return
++        try:
++            self.wfile.write(b"HTTP/1.1 200 Connection Established\r\nConnection: close\r\n\r\n")
++            self.wfile.flush()
++            self._relay(self.connection, upstream)
++        finally:
++            with contextlib.suppress(OSError):
++                upstream.close()
++
++    @staticmethod
++    def _parse_connect_target(target: str) -> tuple[str, int]:
++        if target.startswith("["):
++            end = target.find("]")
++            if end < 0 or end + 2 > len(target):
++                raise ValueError("Malformed IPv6 CONNECT target")
++            return target[1:end], int(target[end + 2 :])
++        if ":" not in target:
++            return target, 443
++        host, raw_port = target.rsplit(":", 1)
++        return host, int(raw_port)
++
++    @staticmethod
++    def _relay(client: socket.socket, upstream: socket.socket) -> None:
++        client.setblocking(False)
++        upstream.setblocking(False)
++        sockets = [client, upstream]
++        idle_rounds = 0
++        while True:
++            try:
++                readable, _, exceptional = select.select(sockets, [], sockets, 1.0)
++            except OSError:
++                return
++            if exceptional:
++                return
++            if not readable:
++                idle_rounds += 1
++                if idle_rounds >= 60:
++                    return
++                continue
++            idle_rounds = 0
++            for source in readable:
++                target = upstream if source is client else client
++                try:
++                    data = source.recv(64 * 1024)
++                except (BlockingIOError, OSError):
++                    continue
++                if not data:
++                    return
++                try:
++                    target.sendall(data)
++                except OSError:
++                    return
++
++    def _reject(self, status: int, reason: str) -> None:
++        body = f"Amaura browser egress: {reason}\n".encode()
++        with contextlib.suppress(OSError):
++            self.wfile.write(
++                f"HTTP/1.1 {status} {reason}\r\nContent-Type: text/plain\r\nContent-Length: {len(body)}\r\nConnection: close\r\n\r\n".encode()
++                + body
++            )
++            self.wfile.flush()
++
++
++class _ThreadingProxy(socketserver.ThreadingTCPServer):
++    allow_reuse_address = True
++    daemon_threads = True
++
++
++@dataclass(slots=True)
++class BrowserEgressProxy:
++    server: _ThreadingProxy
++    thread: threading.Thread
++
++    @classmethod
++    def start(cls) -> "BrowserEgressProxy":
++        server = _ThreadingProxy(("127.0.0.1", 0), _ProxyHandler)
++        thread = threading.Thread(target=server.serve_forever, name="amaura-browser-egress", daemon=True)
++        thread.start()
++        return cls(server=server, thread=thread)
++
++    @property
++    def url(self) -> str:
++        host, port = self.server.server_address[:2]
++        return f"http://{host}:{port}"
++
++    def close(self) -> None:
++        self.server.shutdown()
++        self.server.server_close()
++        self.thread.join(timeout=2)
++
++    def __enter__(self) -> "BrowserEgressProxy":
++        return self
++
++    def __exit__(self, exc_type, exc, tb) -> None:  # noqa: ANN001
++        self.close()
++
++
++__all__ = ["BrowserEgressProxy"]
+diff -ruN a/jarvis/amaura/capability_runtime.py b/jarvis/amaura/capability_runtime.py
+--- a/jarvis/amaura/capability_runtime.py	2026-01-01 00:00:00.000000000 +0000
++++ b/jarvis/amaura/capability_runtime.py	2026-08-07 15:11:36.046497188 +0000
+@@ -14,6 +14,8 @@
+ import hashlib
+ import importlib
+ import importlib.util
++import importlib.metadata
++import inspect
+ import json
+ import os
+ import shutil
+@@ -26,12 +28,22 @@
+ from dataclasses import asdict, dataclass, field
+ from pathlib import Path
+ from typing import Any, Callable, Protocol
+-from urllib.parse import urljoin, urlsplit
++from urllib.parse import urlencode, urljoin, urlsplit
+ 
+ import httpx
+ 
++from jarvis.amaura.browser_egress import BrowserEgressProxy
++from jarvis.amaura.mcp_registry import load_server
+ from jarvis.amaura.models import GovernanceError
+-from jarvis.amaura.network import validate_public_url
++from jarvis.amaura.network import request_bytes, request_json, validate_public_url
++from jarvis.amaura.resource_control import (
++    CrossProcessResourceLedger,
++    MemoryPolicy,
++    child_hard_limit_mb,
++    process_tree_rss_mb,
++    sample_host_memory,
++    terminate_process_tree,
++)
+ from jarvis.tools.security import resolve_workspace_path, workspace_root
+ 
+ 
+@@ -110,31 +122,101 @@
+     return text
+ 
+ 
++_RESOURCE_CONTEXT = threading.local()
++
++
+ def _run(
+     argv: list[str],
+     *,
+     cwd: Path | None = None,
+     timeout: int = 300,
+     env: dict[str, str] | None = None,
++    max_rss_mb: int | None = None,
+ ) -> subprocess.CompletedProcess[str]:
++    """Run a child process while enforcing the current capability RSS policy.
++
++    The process is launched as its own session on POSIX so a runaway renderer/model
++    can be terminated together with descendants. RSS includes the full child tree.
++    """
+     if not argv or not all(isinstance(item, str) and item for item in argv):
+         raise CapabilityExecutionError("Capability subprocess requires a non-empty argv vector")
+     timeout = max(1, min(int(timeout), 3600))
++    policy = MemoryPolicy.from_env()
++    inherited_limit = getattr(_RESOURCE_CONTEXT, "child_hard_limit_mb", None)
++    hard_limit = int(max_rss_mb or inherited_limit or policy.absolute_limit_mb)
++    hard_limit = max(256, min(hard_limit, policy.absolute_limit_mb))
++    heavy = bool(getattr(_RESOURCE_CONTEXT, "heavy", False))
++    started = time.monotonic()
++    start_host = sample_host_memory(policy)
++    popen_kwargs: dict[str, Any] = {
++        "cwd": str(cwd) if cwd else None,
++        "env": env,
++        "text": True,
++        "stdout": subprocess.PIPE,
++        "stderr": subprocess.PIPE,
++    }
++    if os.name == "posix":
++        popen_kwargs["start_new_session"] = True
+     try:
+-        return subprocess.run(
+-            argv,
+-            cwd=str(cwd) if cwd else None,
+-            env=env,
+-            text=True,
+-            capture_output=True,
+-            timeout=timeout,
+-            check=False,
+-        )
+-    except subprocess.TimeoutExpired as exc:
+-        raise CapabilityExecutionError(f"Capability timed out after {timeout}s") from exc
++        proc = subprocess.Popen(argv, **popen_kwargs)
+     except OSError as exc:
+         raise CapabilityExecutionError(f"Capability could not start: {exc}") from exc
+ 
++    last_host = start_host
++    try:
++        while True:
++            elapsed = time.monotonic() - started
++            if elapsed >= timeout:
++                terminate_process_tree(proc.pid)
++                with contextlib.suppress(Exception):
++                    proc.wait(timeout=2)
++                raise CapabilityExecutionError(f"Capability timed out after {timeout}s")
++
++            rss_mb = process_tree_rss_mb(proc.pid)
++            if rss_mb > hard_limit:
++                terminate_process_tree(proc.pid)
++                with contextlib.suppress(Exception):
++                    proc.wait(timeout=2)
++                raise CapabilityExecutionError(
++                    f"Capability process tree exceeded its {hard_limit} MB RSS ceiling (observed {rss_mb} MB)"
++                )
++
++            if heavy:
++                last_host = sample_host_memory(policy)
++                swap_growth = max(0, last_host.swap_used_mb - start_host.swap_used_mb)
++                if swap_growth >= policy.swap_growth_abort_mb:
++                    terminate_process_tree(proc.pid)
++                    with contextlib.suppress(Exception):
++                        proc.wait(timeout=2)
++                    raise CapabilityExecutionError(
++                        f"Capability stopped because swap grew by {swap_growth} MB under {last_host.pressure} memory pressure"
++                    )
++                if last_host.pressure == "red":
++                    terminate_process_tree(proc.pid)
++                    with contextlib.suppress(Exception):
++                        proc.wait(timeout=2)
++                    raise CapabilityExecutionError(
++                        "Capability stopped because macOS/host memory pressure became red"
++                    )
++
++            try:
++                stdout, stderr = proc.communicate(timeout=0.25)
++                return subprocess.CompletedProcess(argv, proc.returncode, stdout, stderr)
++            except subprocess.TimeoutExpired:
++                continue
++    finally:
++        if proc.poll() is None:
++            terminate_process_tree(proc.pid)
++            with contextlib.suppress(Exception):
++                proc.wait(timeout=2)
++        # Explicitly close pipe handles on every exceptional path. The release
++        # verifier treats ResourceWarning as an error, and relying on Popen's
++        # destructor would leave these descriptors pending until GC.
++        for stream in (proc.stdout, proc.stderr):
++            if stream is not None:
++                with contextlib.suppress(Exception):
++                    stream.close()
++
+ 
+ def _safe_local_input(raw: str) -> Path:
+     return resolve_workspace_path(raw, must_exist=True)
+@@ -147,7 +229,7 @@
+ 
+ 
+ def _safe_public_url(raw: str) -> str:
+-    return validate_public_url(raw, resolve=False).url
++    return validate_public_url(raw, resolve=True).url
+ 
+ 
+ def _run_async(factory: Callable[[], Any]) -> Any:
+@@ -232,6 +314,7 @@
+         category="browser",
+         operations=("extract", "screenshot"),
+         ram_mb=650,
++        heavy=True,
+         networked=True,
+         install_hint="pip install playwright && playwright install chromium",
+         licence="Apache-2.0",
+@@ -240,7 +323,35 @@
+     def available(self) -> tuple[bool, str]:
+         if not _module_available("playwright"):
+             return False, "Python package 'playwright' is not installed"
+-        return True, "installed"
++        try:
++            from playwright.sync_api import sync_playwright  # type: ignore
++            with sync_playwright() as p:
++                executable = Path(p.chromium.executable_path)
++                if not executable.is_file():
++                    return False, "Playwright is installed but Chromium is missing; run: playwright install chromium"
++        except Exception as exc:
++            return False, f"Playwright Chromium readiness check failed: {_bounded_text(exc, 500)}"
++        return True, "installed; Chromium executable present"
++
++    @staticmethod
++    def _route_guard(route) -> None:  # noqa: ANN001
++        request = route.request
++        parsed = urlsplit(request.url)
++        if parsed.scheme in {"data", "blob"}:
++            route.continue_()
++            return
++        if parsed.scheme not in {"http", "https"}:
++            route.abort("blockedbyclient")
++            return
++        try:
++            validate_public_url(request.url, resolve=True)
++        except GovernanceError:
++            route.abort("blockedbyclient")
++            return
++        if getattr(request, "resource_type", "") == "websocket":
++            route.abort("blockedbyclient")
++            return
++        route.continue_()
+ 
+     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
+         self._check_operation(operation)
+@@ -248,30 +359,47 @@
+         if not available:
+             raise CapabilityUnavailable(reason)
+         url = _safe_public_url(str(params.get("url", "")))
++        if urlsplit(url).scheme != "https":
++            raise GovernanceError("Browser execution is HTTPS-only in the hardened profile")
+         timeout_ms = max(1_000, min(int(params.get("timeout_ms", 30_000)), 60_000))
++        max_response_mb = max(1, min(int(os.environ.get("AMAURA_BROWSER_MAX_RESPONSE_MB", "20")), 100))
+         started = time.monotonic()
+         from playwright.sync_api import sync_playwright  # type: ignore
+ 
+-        with sync_playwright() as p:
+-            browser = p.chromium.launch(headless=True)
++        with BrowserEgressProxy.start() as egress, sync_playwright() as p:
++            browser = p.chromium.launch(headless=True, proxy={"server": egress.url})
+             try:
+-                page = browser.new_page()
+-                page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
++                context = browser.new_context(
++                    accept_downloads=False,
++                    service_workers="block",
++                    ignore_https_errors=False,
++                )
++                context.route("**/*", self._route_guard)
++                page = context.new_page()
++                response = page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
++                final_url = str(page.url)
++                validate_public_url(final_url, resolve=True)
++                if urlsplit(final_url).scheme != "https":
++                    raise GovernanceError("Browser final navigation left HTTPS")
++                if response is not None:
++                    header = response.headers.get("content-length", "").strip()
++                    if header.isdigit() and int(header) > max_response_mb * 1024 * 1024:
++                        raise CapabilityExecutionError(
++                            f"Browser document exceeds {max_response_mb} MB response-size limit"
++                        )
+                 if operation == "extract":
+                     selector = str(params.get("selector", "body") or "body")
+                     text = page.locator(selector).inner_text(timeout=timeout_ms)
+                     title = page.title()
+                     return self._result(
+-                        operation,
+-                        started=started,
+-                        output={"url": page.url, "title": title, "text": _bounded_text(text)},
++                        operation, started=started,
++                        output={"url": final_url, "title": title, "text": _bounded_text(text)},
+                     )
+                 output_path = _safe_local_output(str(params.get("output_path", "playwright-screenshot.png")))
+                 page.screenshot(path=str(output_path), full_page=bool(params.get("full_page", True)))
+                 return self._result(
+-                    operation,
+-                    started=started,
+-                    output={"url": page.url, "title": page.title(), "path": str(output_path)},
++                    operation, started=started,
++                    output={"url": final_url, "title": page.title(), "path": str(output_path)},
+                     artifacts=[_artifact(output_path)],
+                 )
+             finally:
+@@ -285,13 +413,18 @@
+         category="research",
+         operations=("crawl",),
+         ram_mb=850,
++        heavy=True,
+         networked=True,
+         install_hint="pip install crawl4ai && crawl4ai-setup",
+         licence="Apache-2.0",
+     )
+ 
+     def available(self) -> tuple[bool, str]:
+-        return (_module_available("crawl4ai"), "installed" if _module_available("crawl4ai") else "Python package 'crawl4ai' is not installed")
++        if not _module_available("crawl4ai"):
++            return False, "Python package 'crawl4ai' is not installed"
++        if not _module_available("playwright"):
++            return False, "Crawl4AI browser backend needs Playwright"
++        return True, "installed; secure proxy compatibility is checked at execution"
+ 
+     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
+         self._check_operation(operation)
+@@ -299,28 +432,40 @@
+         if not available:
+             raise CapabilityUnavailable(reason)
+         url = _safe_public_url(str(params.get("url", "")))
++        if urlsplit(url).scheme != "https":
++            raise GovernanceError("Crawl4AI execution is HTTPS-only in the hardened profile")
+         started = time.monotonic()
+ 
+         async def _crawl() -> dict[str, Any]:
+             from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig  # type: ignore
+ 
+-            browser_config = BrowserConfig(headless=True)
+-            run_config = CrawlerRunConfig()
+-            async with AsyncWebCrawler(config=browser_config) as crawler:
+-                result = await crawler.arun(url=url, config=run_config)
+-                success = bool(getattr(result, "success", True))
+-                if not success:
+-                    raise CapabilityExecutionError(_bounded_text(getattr(result, "error_message", "Crawl failed"), 5_000))
+-                markdown = getattr(result, "markdown", "")
+-                if hasattr(markdown, "raw_markdown"):
+-                    markdown = markdown.raw_markdown
+-                return {
+-                    "url": str(getattr(result, "url", url)),
+-                    "markdown": _bounded_text(markdown),
+-                    "html": _bounded_text(getattr(result, "cleaned_html", ""), 100_000),
+-                    "links": _jsonable(getattr(result, "links", {})),
+-                    "metadata": _jsonable(getattr(result, "metadata", {})),
+-                }
++            with BrowserEgressProxy.start() as egress:
++                parameters = inspect.signature(BrowserConfig).parameters
++                if "proxy" not in parameters:
++                    raise CapabilityUnavailable(
++                        "Installed Crawl4AI does not expose BrowserConfig(proxy=...); refusing insecure browser execution"
++                    )
++                browser_config = BrowserConfig(headless=True, proxy=egress.url)
++                run_config = CrawlerRunConfig()
++                async with AsyncWebCrawler(config=browser_config) as crawler:
++                    result = await crawler.arun(url=url, config=run_config)
++                    success = bool(getattr(result, "success", True))
++                    if not success:
++                        raise CapabilityExecutionError(_bounded_text(getattr(result, "error_message", "Crawl failed"), 5_000))
++                    final_url = str(getattr(result, "url", url))
++                    validate_public_url(final_url, resolve=True)
++                    if urlsplit(final_url).scheme != "https":
++                        raise GovernanceError("Crawl4AI final navigation left HTTPS")
++                    markdown = getattr(result, "markdown", "")
++                    if hasattr(markdown, "raw_markdown"):
++                        markdown = markdown.raw_markdown
++                    return {
++                        "url": final_url,
++                        "markdown": _bounded_text(markdown),
++                        "html": _bounded_text(getattr(result, "cleaned_html", ""), 100_000),
++                        "links": _jsonable(getattr(result, "links", {})),
++                        "metadata": _jsonable(getattr(result, "metadata", {})),
++                    }
+ 
+         output = _run_async(_crawl)
+         return self._result(operation, started=started, output=output)
+@@ -339,29 +484,49 @@
+         licence="MIT",
+     )
+ 
++    _READ_ONLY_EXCLUDES = [
++        "click", "input", "upload_file", "send_keys", "evaluate",
++        "switch", "close", "dropdown_options", "select_dropdown",
++        "write_file", "read_file", "replace_file",
++    ]
++
+     def available(self) -> tuple[bool, str]:
+         enabled = os.environ.get("AMAURA_BROWSER_USE_AGENT_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
+         if not enabled:
+             return False, "Agentic browser research is disabled by default; set AMAURA_BROWSER_USE_AGENT_ENABLED=1 to opt in"
+         if not _module_available("browser_use"):
+             return False, "Python package 'browser-use' is not installed"
+-        if not any(os.environ.get(key) for key in ("GOOGLE_API_KEY", "GROQ_API_KEY", "CEREBRAS_API_KEY", "OPENROUTER_API_KEY")) and not shutil.which("ollama"):
+-            return False, "Browser Use needs GOOGLE_API_KEY/GROQ_API_KEY/CEREBRAS_API_KEY/OPENROUTER_API_KEY or local Ollama"
+-        return True, "installed and model route available"
++        try:
++            browser_use = importlib.import_module("browser_use")
++        except Exception as exc:
++            return False, f"Browser Use import failed: {_bounded_text(exc, 500)}"
++        required = ("Agent", "Tools", "BrowserProfile", "BrowserSession", "ProxySettings")
++        missing = [name for name in required if not hasattr(browser_use, name)]
++        if missing:
++            return False, f"Installed Browser Use lacks hardened APIs: {', '.join(missing)}"
++        free_cloud = any(os.environ.get(key) for key in ("GOOGLE_API_KEY", "GROQ_API_KEY", "CEREBRAS_API_KEY"))
++        paid_allowed = os.environ.get("AMAURA_BROWSER_USE_ALLOW_PAID", "0").strip().lower() in {"1", "true", "yes", "on"}
++        paid_route = paid_allowed and bool(os.environ.get("OPENROUTER_API_KEY"))
++        if not free_cloud and not shutil.which("ollama") and not paid_route:
++            return False, "Browser Use needs a configured free cloud route, local Ollama fallback, or explicitly approved paid route"
++        return True, "installed; hardened read-only APIs and model route available"
+ 
+     @staticmethod
+     def _llm():
+         browser_use = importlib.import_module("browser_use")
+-        if os.environ.get("GOOGLE_API_KEY") and hasattr(browser_use, "ChatGoogle"):
+-            return browser_use.ChatGoogle(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "gemini-2.5-flash"))
++        # Prefer remote/free inference on an 8 GB Mac. Local Ollama is an offline/fallback
++        # route so browser + local LLM are not selected together unnecessarily.
+         if os.environ.get("GROQ_API_KEY") and hasattr(browser_use, "ChatGroq"):
+             return browser_use.ChatGroq(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "meta-llama/llama-4-maverick-17b-128e-instruct"))
+         if os.environ.get("CEREBRAS_API_KEY") and hasattr(browser_use, "ChatCerebras"):
+             return browser_use.ChatCerebras(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "llama3.3-70b"))
+-        if os.environ.get("OPENROUTER_API_KEY") and hasattr(browser_use, "ChatOpenRouter"):
+-            return browser_use.ChatOpenRouter(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "google/gemini-2.5-flash"))
++        if os.environ.get("GOOGLE_API_KEY") and hasattr(browser_use, "ChatGoogle"):
++            return browser_use.ChatGoogle(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "gemini-2.5-flash"))
+         if shutil.which("ollama") and hasattr(browser_use, "ChatOllama"):
+             return browser_use.ChatOllama(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "qwen2.5:3b"), num_ctx=8192)
++        paid_allowed = os.environ.get("AMAURA_BROWSER_USE_ALLOW_PAID", "0").strip().lower() in {"1", "true", "yes", "on"}
++        if paid_allowed and os.environ.get("OPENROUTER_API_KEY") and hasattr(browser_use, "ChatOpenRouter"):
++            return browser_use.ChatOpenRouter(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "google/gemini-2.5-flash"))
+         raise CapabilityUnavailable("No supported Browser Use model route is configured")
+ 
+     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
+@@ -377,36 +542,59 @@
+             raise GovernanceError("Browser Use research requires an explicit allowed_domains list")
+         for domain in domains:
+             candidate = domain[2:] if domain.startswith("*.") else domain
++            candidate = candidate.removeprefix("https://").split("/", 1)[0]
+             _safe_public_url(f"https://{candidate}")
+         max_steps = max(1, min(int(params.get("max_steps", 12)), 30))
+         started = time.monotonic()
+ 
+         async def _run_agent() -> dict[str, Any]:
+             browser_use = importlib.import_module("browser_use")
+-            Agent = getattr(browser_use, "Agent")
+-            kwargs: dict[str, Any] = {
+-                "task": task,
+-                "llm": self._llm(),
+-                "use_vision": bool(params.get("use_vision", False)),
+-                "max_failures": 2,
+-                "validate_output": True,
+-                "extend_system_message": (
+-                    "READ-ONLY RESEARCH MODE. Do not submit forms, send messages, make purchases, "
+-                    "change account state, upload files, delete data, or accept terms. Only navigate, "
+-                    "read, search, and extract information from the allowed domains."
+-                ),
+-            }
+-            # Prefer an explicit restricted browser profile when the installed API exposes it.
++            Agent = getattr(browser_use, "Agent", None)
++            Tools = getattr(browser_use, "Tools", None)
+             BrowserProfile = getattr(browser_use, "BrowserProfile", None)
+             BrowserSession = getattr(browser_use, "BrowserSession", None)
+-            if BrowserProfile is not None and BrowserSession is not None:
+-                profile = BrowserProfile(headless=True, allowed_domains=domains)
+-                kwargs["browser_session"] = BrowserSession(browser_profile=profile)
+-            agent = Agent(**kwargs)
+-            history = await agent.run(max_steps=max_steps)
+-            final_result = history.final_result() if hasattr(history, "final_result") else str(history)
+-            successful = history.is_successful() if hasattr(history, "is_successful") else True
+-            return {"result": _bounded_text(final_result), "successful": bool(successful), "allowed_domains": domains}
++            ProxySettings = getattr(browser_use, "ProxySettings", None)
++            if None in {Agent, Tools, BrowserProfile, BrowserSession, ProxySettings}:
++                raise CapabilityUnavailable("Installed Browser Use is missing hardened security APIs")
++            with BrowserEgressProxy.start() as egress:
++                tools = Tools(exclude_actions=list(self._READ_ONLY_EXCLUDES))
++                profile = BrowserProfile(
++                    headless=True,
++                    allowed_domains=domains,
++                    block_ip_addresses=True,
++                    accept_downloads=False,
++                    auto_download_pdfs=False,
++                    permissions=[],
++                    cross_origin_iframes=False,
++                    user_data_dir=None,
++                    proxy=ProxySettings(server=egress.url),
++                )
++                session = BrowserSession(browser_profile=profile)
++                kwargs: dict[str, Any] = {
++                    "task": task,
++                    "llm": self._llm(),
++                    "tools": tools,
++                    "browser_session": session,
++                    "use_vision": bool(params.get("use_vision", False)),
++                    "max_failures": 2,
++                    "validate_output": True,
++                    "max_actions_per_step": 1,
++                    "extend_system_message": (
++                        "READ-ONLY RESEARCH MODE. Only search, navigate, go back, wait, scroll, find text, "
++                        "extract content, request screenshots, and finish. Interaction, typing, JavaScript, file "
++                        "operations, form controls, uploads, downloads, and state-changing actions are unavailable."
++                    ),
++                }
++                agent = Agent(**kwargs)
++                history = await agent.run(max_steps=max_steps)
++                final_result = history.final_result() if hasattr(history, "final_result") else str(history)
++                successful = history.is_successful() if hasattr(history, "is_successful") else True
++                return {
++                    "result": _bounded_text(final_result),
++                    "successful": bool(successful),
++                    "allowed_domains": domains,
++                    "read_only_actions": ["search", "navigate", "go_back", "wait", "scroll", "find_text", "extract", "screenshot", "done"],
++                }
+ 
+         output = _run_async(_run_agent)
+         if not output["successful"]:
+@@ -895,16 +1083,16 @@
+         key="remotion",
+         name="Remotion",
+         category="video_render",
+-        operations=("bootstrap_project", "render"),
++        operations=("bootstrap_project", "lock_project", "render"),
+         ram_mb=1800,
+         heavy=True,
+-        install_hint="Bootstrap a project, run npm install once, then render with pinned Remotion packages",
++        install_hint="Bootstrap the Amaura template, lock dependencies, run npm ci --ignore-scripts, then render",
+         licence="Free for individuals and eligible small teams; review Remotion licence as the company grows",
+     )
+ 
+     def available(self) -> tuple[bool, str]:
+-        ok = bool(shutil.which("node") and (shutil.which("npx") or shutil.which("pnpm")))
+-        return ok, "node runner available" if ok else "Node.js plus npx/pnpm is required"
++        ok = bool(shutil.which("node") and shutil.which("npm"))
++        return ok, "Node.js and npm are available" if ok else "Node.js plus npm is required"
+ 
+     @staticmethod
+     def _template_files(version: str) -> dict[str, str]:
+@@ -1005,6 +1193,119 @@
+ """,
+         }
+ 
++    _TEMPLATE_ID = "amaura-remotion-v1"
++    _COMPOSITIONS = {"AmauraReel30", "AmauraShort60", "AmauraLandscape60"}
++
++    @classmethod
++    def _manifest_payload(cls, project: Path, version: str, package_lock_sha256: str = "") -> dict[str, Any]:
++        files = cls._template_files(version)
++        hashes = {relative: _sha256(project / relative) for relative in sorted(files)}
++        return {
++            "template_id": cls._TEMPLATE_ID,
++            "remotion_version": version,
++            "source_hashes": hashes,
++            "package_lock_sha256": package_lock_sha256,
++        }
++
++    @classmethod
++    def _write_manifest(cls, project: Path, version: str, package_lock_sha256: str = "") -> Path:
++        path = project / ".amaura-template.json"
++        payload = cls._manifest_payload(project, version, package_lock_sha256)
++        path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
++        return path
++
++    @classmethod
++    def _verify_project(cls, project: Path, *, require_lock: bool) -> dict[str, Any]:
++        manifest_path = project / ".amaura-template.json"
++        if not manifest_path.is_file():
++            raise GovernanceError("Remotion render requires an Amaura-owned verified template manifest")
++        try:
++            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
++        except (OSError, json.JSONDecodeError) as exc:
++            raise GovernanceError("Remotion template manifest is invalid") from exc
++        if manifest.get("template_id") != cls._TEMPLATE_ID:
++            raise GovernanceError("Remotion template_id is not approved")
++        version = str(manifest.get("remotion_version", "")).strip()
++        expected = cls._template_files(version)
++        stored = manifest.get("source_hashes")
++        if not isinstance(stored, dict):
++            raise GovernanceError("Remotion source hashes are missing")
++        for relative in sorted(expected):
++            path = project / relative
++            if not path.is_file() or stored.get(relative) != _sha256(path):
++                raise GovernanceError(f"Remotion template source changed after approval: {relative}")
++        if require_lock:
++            lock_path = project / "package-lock.json"
++            expected_lock = str(manifest.get("package_lock_sha256", "")).strip()
++            if not lock_path.is_file() or len(expected_lock) != 64 or _sha256(lock_path) != expected_lock:
++                raise GovernanceError("Remotion package-lock.json is missing or changed; run lock_project again")
++            for package_name in ("remotion", "@remotion/cli"):
++                package_json = project / "node_modules" / package_name / "package.json"
++                if not package_json.is_file():
++                    raise CapabilityUnavailable("Remotion node_modules is not installed; run npm ci --ignore-scripts in the verified project")
++                try:
++                    installed = json.loads(package_json.read_text(encoding="utf-8"))
++                except (OSError, json.JSONDecodeError) as exc:
++                    raise GovernanceError(f"Invalid installed package metadata for {package_name}") from exc
++                if str(installed.get("version", "")) != version:
++                    raise GovernanceError(f"Installed {package_name} version does not match locked Remotion version {version}")
++        return manifest
++
++    @staticmethod
++    def _validate_props(raw: Any) -> dict[str, Any]:
++        if raw is None:
++            return {}
++        if not isinstance(raw, dict):
++            raise GovernanceError("Remotion props must be an object")
++        allowed = {"title", "subtitle", "scenes"}
++        if set(raw) - allowed:
++            raise GovernanceError("Remotion props contain unsupported fields")
++        output: dict[str, Any] = {}
++        for key in ("title", "subtitle"):
++            if key in raw:
++                value = str(raw[key])
++                if len(value) > 500:
++                    raise GovernanceError(f"Remotion {key} is too long")
++                output[key] = value
++        if "scenes" in raw:
++            scenes = raw["scenes"]
++            if not isinstance(scenes, list) or len(scenes) > 30:
++                raise GovernanceError("Remotion scenes must be a list of at most 30 objects")
++            clean_scenes = []
++            for scene in scenes:
++                if not isinstance(scene, dict) or set(scene) - {"headline", "body", "imageUrl", "background"}:
++                    raise GovernanceError("Remotion scene has unsupported fields")
++                clean: dict[str, str] = {}
++                for key, value in scene.items():
++                    text = str(value)
++                    if len(text) > (5000 if key == "body" else 1000):
++                        raise GovernanceError(f"Remotion scene field is too long: {key}")
++                    if key == "imageUrl" and text:
++                        parsed = urlsplit(text)
++                        if parsed.scheme in {"http", "https"}:
++                            raise GovernanceError("Remote imageUrl is disabled; render from local/embedded approved assets")
++                        if parsed.scheme not in {"", "data"}:
++                            raise GovernanceError("Unsupported Remotion imageUrl scheme")
++                    clean[key] = text
++                clean_scenes.append(clean)
++            output["scenes"] = clean_scenes
++        return output
++
++    @staticmethod
++    def _media_sandbox(argv: list[str]) -> list[str]:
++        if sys.platform == "darwin":
++            sandbox = shutil.which("sandbox-exec")
++            if not sandbox:
++                raise CapabilityUnavailable("Strict Remotion rendering requires sandbox-exec on macOS")
++            return [sandbox, "-p", "(version 1) (allow default) (deny network*)", *argv]
++        bwrap = shutil.which("bwrap")
++        if bwrap:
++            return [bwrap, "--unshare-net", "--die-with-parent", "--new-session", "--bind", "/", "/", *argv]
++        strict = os.environ.get("AMAURA_STRICT_MEDIA_SANDBOX", "1").strip().lower() in {"1", "true", "yes", "on"}
++        if strict:
++            raise CapabilityUnavailable("Strict Remotion rendering requires bwrap on non-macOS hosts")
++        return argv
++
+     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
+         self._check_operation(operation)
+         started = time.monotonic()
+@@ -1022,42 +1323,75 @@
+                 destination.parent.mkdir(parents=True, exist_ok=True)
+                 destination.write_text(content, encoding="utf-8")
+                 artifacts.append(_artifact(destination))
++            manifest_path = self._write_manifest(project, version)
++            artifacts.append(_artifact(manifest_path))
+             return self._result(
+                 operation, started=started,
+                 output={
+                     "project_path": str(project),
++                    "template_id": self._TEMPLATE_ID,
+                     "remotion_version": version,
+-                    "install_command": "npm install",
++                    "next_command": "amaura_execute_capability remotion/lock_project, then npm ci --ignore-scripts",
+                     "compositions": ["AmauraReel30", "AmauraShort60", "AmauraLandscape60"],
+                 },
+                 artifacts=artifacts,
+             )
+ 
++        if operation == "lock_project":
++            project = resolve_workspace_path(str(params.get("project_path", ".")), must_exist=True)
++            manifest = self._verify_project(project, require_lock=False)
++            npm = shutil.which("npm")
++            if not npm:
++                raise CapabilityUnavailable("npm is required to create package-lock.json")
++            env = {
++                key: value for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "SSL_CERT_FILE", "SSL_CERT_DIR")
++                if (value := os.environ.get(key))
++            }
++            env["npm_config_ignore_scripts"] = "true"
++            proc = _run(
++                [npm, "install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"],
++                cwd=project, timeout=int(params.get("timeout", 600)), env=env, max_rss_mb=800,
++            )
++            lock_path = project / "package-lock.json"
++            if proc.returncode != 0 or not lock_path.is_file():
++                raise CapabilityExecutionError(_bounded_text(proc.stderr or proc.stdout, 16_000))
++            manifest_path = self._write_manifest(project, str(manifest["remotion_version"]), _sha256(lock_path))
++            return self._result(
++                operation, started=started,
++                output={
++                    "project_path": str(project),
++                    "package_lock_sha256": _sha256(lock_path),
++                    "install_command": "npm ci --ignore-scripts --no-audit --no-fund",
++                },
++                artifacts=[_artifact(lock_path), _artifact(manifest_path)],
++            )
++
+         available, reason = self.available()
+         if not available:
+             raise CapabilityUnavailable(reason)
+         project = resolve_workspace_path(str(params.get("project_path", ".")), must_exist=True)
+         if not project.is_dir():
+             raise GovernanceError("Remotion project_path must be a directory")
+-        entry = str(params.get("entry", "src/index.tsx")).strip()
++        self._verify_project(project, require_lock=True)
+         composition = str(params.get("composition", "")).strip()
+-        if not composition:
+-            raise GovernanceError("Remotion render requires composition")
++        if composition not in self._COMPOSITIONS:
++            raise GovernanceError("Remotion composition is not one of the immutable Amaura compositions")
+         output = _safe_local_output(str(params.get("output_path", "remotion-output.mp4")))
+-        props = params.get("props", {})
+-        if not isinstance(props, dict):
+-            raise GovernanceError("Remotion props must be an object")
++        props = self._validate_props(params.get("props", {}))
+         local_cli = project / "node_modules" / ".bin" / "remotion"
+-        if local_cli.is_file():
+-            argv = [str(local_cli), "render", entry, composition, str(output), "--props", json.dumps(props, separators=(",", ":"))]
+-        else:
+-            runner = shutil.which("npx")
+-            if runner:
+-                argv = [runner, "--no-install", "remotion", "render", entry, composition, str(output), "--props", json.dumps(props, separators=(",", ":"))]
+-            else:
+-                runner = shutil.which("pnpm")
+-                argv = [runner or "pnpm", "exec", "remotion", "render", entry, composition, str(output), "--props", json.dumps(props, separators=(",", ":"))]
+-        proc = _run(argv, cwd=project, timeout=int(params.get("timeout", 1200)))
++        if not local_cli.is_file():
++            raise CapabilityUnavailable("Verified local Remotion CLI is missing; run npm ci --ignore-scripts")
++        argv = [
++            str(local_cli), "render", "src/index.tsx", composition, str(output),
++            "--props", json.dumps(props, separators=(",", ":")),
++        ]
++        argv = self._media_sandbox(argv)
++        env = {
++            key: value for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL")
++            if (value := os.environ.get(key))
++        }
++        env["NODE_ENV"] = "production"
++        proc = _run(argv, cwd=project, timeout=int(params.get("timeout", 1200)), env=env)
+         if proc.returncode != 0 or not output.is_file():
+             raise CapabilityExecutionError(_bounded_text(proc.stderr or proc.stdout, 16_000))
+         return self._result(operation, started=started, output={"output_path": str(output)}, artifacts=[_artifact(output)])
+@@ -1139,6 +1473,14 @@
+         available, reason = self.available()
+         if not available:
+             raise CapabilityUnavailable(reason)
++        if operation == "download":
++            enabled = os.environ.get("AMAURA_MEDIA_DOWNLOADS_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
++            if not enabled:
++                raise GovernanceError(
++                    "Media downloads are disabled. Set AMAURA_MEDIA_DOWNLOADS_ENABLED=1 only for media you are authorised to download."
++                )
++            if not bool(params.get("rights_confirmed", False)):
++                raise GovernanceError("yt-dlp download requires rights_confirmed=true")
+         url = _safe_public_url(str(params.get("url", "")))
+         started = time.monotonic()
+         base = self._base_argv()
+@@ -1166,13 +1508,6 @@
+             }
+             return self._result(operation, started=started, output={"metadata": _jsonable(compact)})
+ 
+-        enabled = os.environ.get("AMAURA_MEDIA_DOWNLOADS_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
+-        if not enabled:
+-            raise GovernanceError(
+-                "Media downloads are disabled. Set AMAURA_MEDIA_DOWNLOADS_ENABLED=1 only for media you are authorised to download."
+-            )
+-        if not bool(params.get("rights_confirmed", False)):
+-            raise GovernanceError("yt-dlp download requires rights_confirmed=true")
+         output = _safe_local_output(str(params.get("output_path", "media-download.%(ext)s")))
+         max_filesize_mb = max(1, min(int(params.get("max_filesize_mb", 500)), 2_000))
+         argv = [
+@@ -1210,11 +1545,11 @@
+         key="comfyui",
+         name="ComfyUI",
+         category="image_generation",
+-        operations=("queue_workflow", "history"),
++        operations=("queue_workflow", "history", "run_workflow"),
+         ram_mb=200,
+         heavy=False,
+         networked=True,
+-        install_hint="Run ComfyUI separately and set COMFYUI_URL; not recommended as always-on on an 8 GB Mac",
++        install_hint="Run ComfyUI separately and set COMFYUI_URL; remote/on-demand is preferred on an 8 GB Mac",
+         licence="GPL-3.0 code; model licences vary",
+     )
+ 
+@@ -1227,45 +1562,163 @@
+         allow_local = os.environ.get("AMAURA_ALLOW_LOCAL_COMFYUI", "0").strip().lower() in {"1", "true", "yes", "on"}
+         if local and not allow_local:
+             return False, "Local ComfyUI is disabled by default on the 8 GB Mac profile; use a remote endpoint or set AMAURA_ALLOW_LOCAL_COMFYUI=1"
++        if not local:
++            try:
++                validate_public_url(url, resolve=True)
++            except GovernanceError as exc:
++                return False, f"COMFYUI_URL is not a safe public endpoint: {exc}"
+         return True, "configured"
+ 
+-    def _base(self) -> str:
++    def _base(self) -> tuple[str, bool]:
+         available, reason = self.available()
+         if not available:
+             raise CapabilityUnavailable(reason)
+         base = os.environ.get("COMFYUI_URL", "").rstrip("/")
+-        if not base:
+-            raise CapabilityUnavailable("COMFYUI_URL is not configured")
+         host = (urlsplit(base).hostname or "").lower()
+-        if host not in {"localhost", "127.0.0.1", "::1"}:
+-            _safe_public_url(base)
+-        return base
++        local = host in {"localhost", "127.0.0.1", "::1"}
++        return base, local
++
++    @staticmethod
++    def _headers() -> dict[str, str]:
++        token = os.environ.get("COMFYUI_API_TOKEN", "").strip()
++        return {"Authorization": f"Bearer {token}"} if token else {}
++
++    def _json(self, base: str, local: bool, path: str, *, method: str = "GET", payload: dict[str, Any] | None = None, timeout: float = 30.0) -> dict[str, Any]:
++        url = f"{base}{path}"
++        headers = self._headers()
++        if not local:
++            status, data, _ = request_json(url, method=method, payload=payload, headers=headers, timeout=timeout)
++            if not 200 <= status < 300:
++                raise CapabilityExecutionError(f"ComfyUI returned HTTP {status}")
++            return data
++        try:
++            response = httpx.request(method, url, json=payload, headers=headers, timeout=timeout, follow_redirects=False)
++            response.raise_for_status()
++            data = response.json()
++        except (httpx.HTTPError, ValueError) as exc:
++            raise CapabilityExecutionError(f"ComfyUI request failed: {exc}") from exc
++        if not isinstance(data, dict):
++            raise CapabilityExecutionError("ComfyUI returned a non-object JSON response")
++        return data
++
++    def _bytes(self, base: str, local: bool, path: str, *, max_bytes: int = 25_000_000) -> bytes:
++        url = f"{base}{path}"
++        headers = self._headers()
++        if not local:
++            status, data, _ = request_bytes(url, method="GET", headers=headers, timeout=30, max_response_bytes=max_bytes)
++            if not 200 <= status < 300:
++                raise CapabilityExecutionError(f"ComfyUI artifact returned HTTP {status}")
++            return data
++        try:
++            response = httpx.get(url, headers=headers, timeout=30, follow_redirects=False)
++            response.raise_for_status()
++        except httpx.HTTPError as exc:
++            raise CapabilityExecutionError(f"ComfyUI artifact download failed: {exc}") from exc
++        if len(response.content) > max_bytes:
++            raise GovernanceError("ComfyUI artifact exceeds configured byte limit")
++        return bytes(response.content)
++
++    @staticmethod
++    def _validate_image_bytes(data: bytes) -> str:
++        signatures = {
++            b"\x89PNG\r\n\x1a\n": ".png",
++            b"\xff\xd8\xff": ".jpg",
++            b"RIFF": ".webp",
++        }
++        for prefix, suffix in signatures.items():
++            if data.startswith(prefix):
++                if suffix == ".webp" and (len(data) < 12 or data[8:12] != b"WEBP"):
++                    continue
++                return suffix
++        raise GovernanceError("ComfyUI returned bytes that are not a supported image")
++
++    @staticmethod
++    def _image_descriptors(history: dict[str, Any], prompt_id: str) -> list[dict[str, str]]:
++        record = history.get(prompt_id, history)
++        outputs = record.get("outputs", {}) if isinstance(record, dict) else {}
++        found: list[dict[str, str]] = []
++        if not isinstance(outputs, dict):
++            return found
++        for node in outputs.values():
++            if not isinstance(node, dict):
++                continue
++            images = node.get("images", [])
++            if not isinstance(images, list):
++                continue
++            for image in images:
++                if not isinstance(image, dict):
++                    continue
++                filename = Path(str(image.get("filename", ""))).name
++                if not filename:
++                    continue
++                found.append({
++                    "filename": filename,
++                    "subfolder": str(image.get("subfolder", "")),
++                    "type": str(image.get("type", "output")),
++                })
++        return found
+ 
+     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
+         self._check_operation(operation)
+         started = time.monotonic()
+-        base = self._base()
+-        try:
++        base, local = self._base()
++        if operation in {"queue_workflow", "run_workflow"}:
++            workflow = params.get("workflow")
++            if not isinstance(workflow, dict) or not workflow:
++                raise GovernanceError("ComfyUI workflow operation requires an API-format workflow object")
++            client_id = str(params.get("client_id", uuid.uuid4()))
++            payload = self._json(base, local, "/prompt", method="POST", payload={"prompt": workflow, "client_id": client_id}, timeout=30)
++            prompt_id = str(payload.get("prompt_id", "")).strip()
++            if not prompt_id:
++                raise CapabilityExecutionError("ComfyUI returned no prompt_id")
+             if operation == "queue_workflow":
+-                workflow = params.get("workflow")
+-                if not isinstance(workflow, dict) or not workflow:
+-                    raise GovernanceError("ComfyUI queue_workflow requires an API-format workflow object")
+-                client_id = str(params.get("client_id", uuid.uuid4()))
+-                response = httpx.post(f"{base}/prompt", json={"prompt": workflow, "client_id": client_id}, timeout=30, follow_redirects=False)
+-                response.raise_for_status()
+-                payload = response.json()
+-                prompt_id = str(payload.get("prompt_id", "")).strip()
+-                if not prompt_id:
+-                    raise CapabilityExecutionError("ComfyUI returned no prompt_id")
+                 return self._result(operation, started=started, output={"prompt_id": prompt_id, "client_id": client_id})
+-            prompt_id = str(params.get("prompt_id", "")).strip()
+-            if not prompt_id:
+-                raise GovernanceError("ComfyUI history requires prompt_id")
+-            response = httpx.get(f"{base}/history/{prompt_id}", timeout=20, follow_redirects=False)
+-            response.raise_for_status()
+-            return self._result(operation, started=started, output={"history": response.json()})
+-        except httpx.HTTPError as exc:
+-            raise CapabilityExecutionError(f"ComfyUI request failed: {exc}") from exc
++
++            timeout = max(5.0, min(float(params.get("timeout", 300.0)), 1800.0))
++            poll = max(0.25, min(float(params.get("poll_interval", 1.0)), 10.0))
++            deadline = time.monotonic() + timeout
++            history: dict[str, Any] = {}
++            images: list[dict[str, str]] = []
++            while time.monotonic() < deadline:
++                history = self._json(base, local, f"/history/{prompt_id}", timeout=20)
++                images = self._image_descriptors(history, prompt_id)
++                if images:
++                    break
++                time.sleep(poll)
++            if not images:
++                raise CapabilityExecutionError("ComfyUI workflow timed out before producing image artifacts")
++
++            output_dir = resolve_workspace_path(str(params.get("output_dir", "comfyui-output")), must_exist=False)
++            output_dir.mkdir(parents=True, exist_ok=True)
++            max_artifacts = max(1, min(int(params.get("max_artifacts", 8)), 32))
++            artifacts: list[dict[str, Any]] = []
++            downloaded: list[str] = []
++            for index, item in enumerate(images[:max_artifacts], start=1):
++                query = urlencode({"filename": item["filename"], "subfolder": item["subfolder"], "type": item["type"]})
++                data = self._bytes(base, local, f"/view?{query}")
++                suffix = self._validate_image_bytes(data)
++                stem = Path(item["filename"]).stem[:120] or f"comfy-{index}"
++                destination = output_dir / f"{stem}-{index}{suffix}"
++                destination.write_bytes(data)
++                artifacts.append(_artifact(destination))
++                downloaded.append(str(destination))
++            return self._result(
++                operation, started=started,
++                output={
++                    "prompt_id": prompt_id,
++                    "client_id": client_id,
++                    "downloaded": downloaded,
++                    "artifact_count": len(downloaded),
++                    "history": _jsonable(history),
++                },
++                artifacts=artifacts,
++            )
++
++        prompt_id = str(params.get("prompt_id", "")).strip()
++        if not prompt_id:
++            raise GovernanceError("ComfyUI history requires prompt_id")
++        history = self._json(base, local, f"/history/{prompt_id}", timeout=20)
++        return self._result(operation, started=started, output={"history": history})
+ 
+ 
+ class MCPAdapter(_BaseAdapter):
+@@ -1276,66 +1729,62 @@
+         operations=("list_tools", "call_tool"),
+         ram_mb=250,
+         side_effects=True,
+-        install_hint="pip install mcp",
++        install_hint="pip install mcp; configure ~/.config/amaura/mcp_servers.json",
+         licence="MIT",
+     )
+ 
+     def available(self) -> tuple[bool, str]:
+-        return (_module_available("mcp"), "installed" if _module_available("mcp") else "Python package 'mcp' is not installed")
++        if not _module_available("mcp"):
++            return False, "Python package 'mcp' is not installed"
++        return True, "installed; approved server registry is checked per request"
+ 
+     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
+         self._check_operation(operation)
+         available, reason = self.available()
+         if not available:
+             raise CapabilityUnavailable(reason)
+-        command = str(params.get("command", "")).strip()
+-        args = [str(v) for v in params.get("args", [])]
+-        if not command:
+-            raise GovernanceError("MCP stdio server command is required")
+-        executable = shutil.which(command)
+-        if not executable:
+-            raise CapabilityUnavailable(f"MCP server executable is unavailable: {command}")
+         if operation == "call_tool":
+             enabled = os.environ.get("AMAURA_MCP_TOOL_CALLS_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
+             if not enabled:
+                 raise GovernanceError("MCP tool calls are disabled; set AMAURA_MCP_TOOL_CALLS_ENABLED=1 only for a founder-approved integration")
+             if not bool(params.get("founder_approved", False)):
+-                raise GovernanceError("MCP tool calls require founder_approved=true; list_tools is read-only")
++                raise GovernanceError("MCP tool calls require founder_approved=true")
++        server_id = str(params.get("server_id", "")).strip()
++        if not server_id:
++            raise GovernanceError("MCP requests require founder-approved server_id")
++        spec = load_server(server_id, for_ai_list=(operation == "list_tools"))
++        if operation == "call_tool" and not spec.allow_tool_calls:
++            raise GovernanceError(f"MCP server '{server_id}' is registered read-only")
+         started = time.monotonic()
+ 
+         async def _session_call() -> dict[str, Any]:
+             from mcp import ClientSession, StdioServerParameters  # type: ignore
+             from mcp.client.stdio import stdio_client  # type: ignore
+ 
+-            safe_env = {
+-                key: value for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL")
+-                if (value := os.environ.get(key))
+-            }
+-            requested_env = params.get("env_keys") or []
+-            if not isinstance(requested_env, list) or len(requested_env) > 16:
+-                raise GovernanceError("MCP env_keys must be a list of at most 16 environment variable names")
+-            for raw_key in requested_env:
+-                env_key = str(raw_key).strip()
+-                if not env_key or not env_key.replace("_", "A").isalnum() or env_key.upper() != env_key:
+-                    raise GovernanceError(f"Invalid MCP environment key: {env_key}")
+-                value = os.environ.get(env_key)
+-                if value is not None:
+-                    safe_env[env_key] = value
+-            server = StdioServerParameters(command=executable, args=args, env=safe_env)
+-            async with stdio_client(server) as (read_stream, write_stream):
+-                async with ClientSession(read_stream, write_stream) as session:
+-                    await session.initialize()
+-                    if operation == "list_tools":
+-                        tools = await session.list_tools()
+-                        return {"tools": _jsonable(tools)}
+-                    tool_name = str(params.get("tool_name", "")).strip()
+-                    if not tool_name:
+-                        raise GovernanceError("MCP call_tool requires tool_name")
+-                    arguments = params.get("arguments") or {}
+-                    if not isinstance(arguments, dict):
+-                        raise GovernanceError("MCP arguments must be an object")
+-                    result = await session.call_tool(tool_name, arguments=arguments)
+-                    return {"tool_name": tool_name, "result": _jsonable(result)}
++            command, args, cleanup = spec.command_argv()
++            try:
++                server = StdioServerParameters(command=command, args=args, env=spec.child_env())
++                async with stdio_client(server) as (read_stream, write_stream):
++                    async with ClientSession(read_stream, write_stream) as session:
++                        await asyncio.wait_for(session.initialize(), timeout=spec.timeout_seconds)
++                        if operation == "list_tools":
++                            tools = await asyncio.wait_for(session.list_tools(), timeout=spec.timeout_seconds)
++                            return {"server_id": server_id, "tools": _jsonable(tools)}
++                        tool_name = str(params.get("tool_name", "")).strip()
++                        if not tool_name:
++                            raise GovernanceError("MCP call_tool requires tool_name")
++                        if spec.allowed_tools and tool_name not in spec.allowed_tools:
++                            raise GovernanceError(f"MCP tool is not in founder registry allowlist: {tool_name}")
++                        arguments = params.get("arguments") or {}
++                        if not isinstance(arguments, dict):
++                            raise GovernanceError("MCP arguments must be an object")
++                        result = await asyncio.wait_for(
++                            session.call_tool(tool_name, arguments=arguments), timeout=spec.timeout_seconds
++                        )
++                        return {"server_id": server_id, "tool_name": tool_name, "result": _jsonable(result)}
++            finally:
++                for path in cleanup:
++                    path.unlink(missing_ok=True)
+ 
+         return self._result(operation, started=started, output=_run_async(_session_call))
+ 
+@@ -1486,7 +1935,8 @@
+     },
+     "remotion": {
+         "bootstrap_project": {"required": (), "optional": ("project_path", "version", "overwrite")},
+-        "render": {"required": ("project_path", "composition", "output_path"), "optional": ("entry", "props", "timeout")},
++        "lock_project": {"required": ("project_path",), "optional": ("timeout",)},
++        "render": {"required": ("project_path", "composition", "output_path"), "optional": ("props", "timeout")},
+     },
+     "image_tools": {
+         "resize": {"required": ("source_path", "output_path"), "optional": ("width", "height")},
+@@ -1499,10 +1949,11 @@
+     "comfyui": {
+         "queue_workflow": {"required": ("workflow",), "optional": ("client_id",)},
+         "history": {"required": ("prompt_id",), "optional": ()},
++        "run_workflow": {"required": ("workflow", "output_dir"), "optional": ("client_id", "timeout", "poll_interval", "max_artifacts")},
+     },
+     "mcp": {
+-        "list_tools": {"required": ("command",), "optional": ("args", "env_keys")},
+-        "call_tool": {"required": ("command", "tool_name"), "optional": ("args", "arguments", "env_keys", "founder_approved")},
++        "list_tools": {"required": ("server_id",), "optional": ()},
++        "call_tool": {"required": ("server_id", "tool_name"), "optional": ("arguments", "founder_approved")},
+     },
+     "langfuse": {
+         "health": {"required": (), "optional": ()},
+@@ -1515,9 +1966,45 @@
+ 
+ 
+ ISOLATED_PYTHON_CAPABILITIES = frozenset({
+-    "browser_use", "docling", "paddleocr", "faster_whisper", "kokoro"
++    "playwright", "crawl4ai", "browser_use", "docling", "paddleocr",
++    "qdrant_fastembed", "faster_whisper", "kokoro"
+ })
+ 
++_BASE_WORKER_ENV = frozenset({
++    "PATH", "HOME", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL", "LC_CTYPE",
++    "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE",
++    "HF_HOME", "HF_HUB_CACHE", "TRANSFORMERS_CACHE", "XDG_CACHE_HOME",
++})
++
++CAPABILITY_ENV_ALLOWLIST: dict[str, frozenset[str]] = {
++    "playwright": frozenset({"PLAYWRIGHT_BROWSERS_PATH", "AMAURA_BROWSER_MAX_RESPONSE_MB"}),
++    "crawl4ai": frozenset({"PLAYWRIGHT_BROWSERS_PATH", "AMAURA_BROWSER_MAX_RESPONSE_MB"}),
++    "browser_use": frozenset({
++        "AMAURA_BROWSER_USE_AGENT_ENABLED", "AMAURA_BROWSER_USE_MODEL",
++        "AMAURA_BROWSER_USE_ALLOW_PAID", "GOOGLE_API_KEY", "GROQ_API_KEY",
++        "CEREBRAS_API_KEY", "OPENROUTER_API_KEY", "OLLAMA_HOST",
++        "PLAYWRIGHT_BROWSERS_PATH",
++    }),
++    "docling": frozenset({"DOCLING_ARTIFACTS_PATH", "DOCLING_CACHE_DIR"}),
++    "paddleocr": frozenset({"PADDLE_HOME", "PADDLE_PDX_CACHE_HOME"}),
++    "qdrant_fastembed": frozenset({"QDRANT_URL", "QDRANT_API_KEY", "AMAURA_QDRANT_PATH", "FASTEMBED_CACHE_PATH"}),
++    "faster_whisper": frozenset({"AMAURA_WHISPER_MODEL", "HF_TOKEN"}),
++    "kokoro": frozenset({"KOKORO_MODEL_PATH", "KOKORO_VOICE_PATH"}),
++    "antigravity": frozenset({"AMAURA_ANTIGRAVITY_ENABLED"}),
++}
++
++
++def _capability_worker_env(key: str, root: Path) -> dict[str, str]:
++    allowed = _BASE_WORKER_ENV | CAPABILITY_ENV_ALLOWLIST.get(key, frozenset())
++    env = {name: value for name in allowed if (value := os.environ.get(name))}
++    env["AMAURA_CAPABILITY_WORKER"] = "1"
++    env["JARVIS_WORKSPACE_ROOT"] = str(root)
++    package_root = str(Path(__file__).resolve().parents[2])
++    # Never inherit a caller-controlled PYTHONPATH; the worker gets only Amaura's package root.
++    env["PYTHONPATH"] = package_root
++    env["PYTHONNOUSERSITE"] = "1"
++    return env
++
+ 
+ def _heavy_lock_path() -> Path:
+     raw = os.environ.get("AMAURA_CAPABILITY_HEAVY_LOCK", "").strip()
+@@ -1563,54 +2050,184 @@
+ 
+ 
+ class CapabilityScheduler:
+-    """Memory reservation guard tuned for small Apple Silicon Macs.
++    """Cross-process pressure-aware scheduler for the 8 GB Mac profile.
+ 
+-    Reservations are process-local for ordinary jobs. Heavy jobs additionally
+-    acquire a POSIX file lock, preventing multiple Amaura processes from
+-    intentionally launching heavy workers at the same time on an 8 GB machine.
++    v3.6.1 no longer treats one 5.6 GB estimate as a memory ceiling. The
++    scheduler uses a durable host-wide reservation ledger, live memory/swap
++    pressure, and a 1.5 GB normal / 2.5 GB burst / 3 GB absolute policy.
+     """
+ 
+     def __init__(self, budget_mb: int | None = None):
+-        self.budget_mb = max(1024, int(budget_mb or os.environ.get("AMAURA_LOCAL_RAM_BUDGET_MB", "5600")))
+-        self._lock = threading.Condition()
+-        self._active_mb = 0
+-        self._active_heavy = 0
++        self.policy = MemoryPolicy.from_env()
++        # Backward-compatible constructor: an explicit test/operator budget maps
++        # to the burst ceiling while never raising the absolute safety ceiling.
++        if budget_mb is not None:
++            requested = max(512, int(budget_mb))
++            self.policy = MemoryPolicy(
++                normal_target_mb=min(self.policy.normal_target_mb, requested),
++                burst_limit_mb=min(requested, self.policy.burst_limit_mb),
++                absolute_limit_mb=self.policy.absolute_limit_mb,
++                pressure_limit_mb=min(self.policy.pressure_limit_mb, requested),
++                yellow_available_mb=self.policy.yellow_available_mb,
++                red_available_mb=self.policy.red_available_mb,
++                yellow_used_percent=self.policy.yellow_used_percent,
++                red_used_percent=self.policy.red_used_percent,
++                yellow_swap_percent=self.policy.yellow_swap_percent,
++                red_swap_percent=self.policy.red_swap_percent,
++                swap_growth_abort_mb=self.policy.swap_growth_abort_mb,
++                stale_reservation_seconds=self.policy.stale_reservation_seconds,
++            )
++        self.ledger = CrossProcessResourceLedger(self.policy)
++        self._local_lock = threading.RLock()
++        self._local_reservations: set[str] = set()
+ 
+     @contextlib.contextmanager
+     def reserve(self, descriptor: CapabilityDescriptor, timeout: float = 5.0):
+         deadline = time.monotonic() + max(0.1, timeout)
+-        with self._lock:
+-            while True:
+-                fits = self._active_mb + descriptor.ram_mb <= self.budget_mb
+-                heavy_ok = not descriptor.heavy or self._active_heavy == 0
+-                if fits and heavy_ok:
+-                    self._active_mb += descriptor.ram_mb
+-                    if descriptor.heavy:
+-                        self._active_heavy += 1
+-                    break
+-                remaining = deadline - time.monotonic()
+-                if remaining <= 0:
+-                    raise CapabilityExecutionError(
+-                        f"Resource scheduler refused {descriptor.key}: requested {descriptor.ram_mb} MB, "
+-                        f"active {self._active_mb} MB, budget {self.budget_mb} MB"
+-                    )
+-                self._lock.wait(timeout=min(remaining, 0.25))
++        reservation_id: str | None = None
++        last_reason = "resource admission unavailable"
++        last_state: dict[str, Any] = {}
++        while time.monotonic() < deadline:
++            reservation_id, last_reason, last_state = self.ledger.try_reserve(
++                capability=descriptor.key, ram_mb=descriptor.ram_mb, heavy=descriptor.heavy
++            )
++            if reservation_id:
++                break
++            time.sleep(min(0.15, max(0.01, deadline - time.monotonic())))
++        if not reservation_id:
++            raise CapabilityExecutionError(
++                f"Resource scheduler refused {descriptor.key}: {last_reason}; state={json.dumps(last_state, sort_keys=True, default=str)}"
++            )
++
++        with self._local_lock:
++            self._local_reservations.add(reservation_id)
++        previous_limit = getattr(_RESOURCE_CONTEXT, "child_hard_limit_mb", None)
++        previous_heavy = getattr(_RESOURCE_CONTEXT, "heavy", False)
++        _RESOURCE_CONTEXT.child_hard_limit_mb = child_hard_limit_mb(descriptor.ram_mb, self.policy)
++        _RESOURCE_CONTEXT.heavy = bool(descriptor.heavy)
+         try:
+-            if descriptor.heavy:
+-                with _cross_process_heavy_lock(timeout):
+-                    yield
+-            else:
+-                yield
++            yield
+         finally:
+-            with self._lock:
+-                self._active_mb = max(0, self._active_mb - descriptor.ram_mb)
+-                if descriptor.heavy:
+-                    self._active_heavy = max(0, self._active_heavy - 1)
+-                self._lock.notify_all()
+-
+-    def status(self) -> dict[str, int]:
+-        with self._lock:
+-            return {"budget_mb": self.budget_mb, "active_mb": self._active_mb, "active_heavy_jobs": self._active_heavy}
++            _RESOURCE_CONTEXT.child_hard_limit_mb = previous_limit
++            _RESOURCE_CONTEXT.heavy = previous_heavy
++            self.ledger.release(reservation_id)
++            with self._local_lock:
++                self._local_reservations.discard(reservation_id)
++
++    def status(self) -> dict[str, Any]:
++        ledger = self.ledger.snapshot()
++        host = sample_host_memory(self.policy)
++        return {
++            "mode": "pressure" if host.pressure == "red" else "guarded" if host.pressure == "yellow" else "normal",
++            "pressure": host.pressure,
++            "normal_target_mb": self.policy.normal_target_mb,
++            "burst_limit_mb": self.policy.burst_limit_mb,
++            "absolute_limit_mb": self.policy.absolute_limit_mb,
++            "pressure_limit_mb": self.policy.pressure_limit_mb,
++            "active_mb": int(ledger["reserved_mb"]),
++            "active_heavy_jobs": int(ledger["active_heavy_jobs"]),
++            "active_jobs": int(ledger["active_jobs"]),
++            "process_tree_rss_mb": process_tree_rss_mb(os.getpid()),
++            "host": host.to_dict(),
++        }
++
++
++_MODULE_BY_CAPABILITY = {
++    "playwright": "playwright", "crawl4ai": "crawl4ai", "browser_use": "browser_use",
++    "docling": "docling", "pymupdf": "fitz", "paddleocr": "paddleocr",
++    "llamaindex": "llama_index.core", "qdrant_fastembed": "qdrant_client",
++    "faster_whisper": "faster_whisper", "kokoro": "kokoro", "mcp": "mcp",
++    "langfuse": "langfuse",
++}
++
++_PACKAGE_BY_CAPABILITY = {
++    "playwright": "playwright", "crawl4ai": "crawl4ai", "browser_use": "browser-use",
++    "docling": "docling", "pymupdf": "PyMuPDF", "paddleocr": "paddleocr",
++    "llamaindex": "llama-index-core", "qdrant_fastembed": "qdrant-client",
++    "faster_whisper": "faster-whisper", "kokoro": "kokoro", "mcp": "mcp",
++    "langfuse": "langfuse",
++}
++
++_EXECUTABLE_BY_CAPABILITY = {
++    "ffmpeg": "ffmpeg", "remotion": "node", "yt_dlp": "yt-dlp",
++}
++
++
++def _package_version(key: str) -> str:
++    package = _PACKAGE_BY_CAPABILITY.get(key)
++    if not package:
++        return ""
++    try:
++        return importlib.metadata.version(package)
++    except importlib.metadata.PackageNotFoundError:
++        return ""
++
++
++def _installed_state(key: str) -> bool:
++    module = _MODULE_BY_CAPABILITY.get(key)
++    if module:
++        return _module_available(module)
++    executable = _EXECUTABLE_BY_CAPABILITY.get(key)
++    if executable:
++        return bool(shutil.which(executable))
++    if key == "image_tools":
++        return bool(shutil.which("magick") or shutil.which("vipsthumbnail"))
++    if key in {"searxng", "comfyui", "antigravity"}:
++        return True
++    return False
++
++
++def _cheap_execution_ready(key: str, available: bool) -> bool:
++    # These adapters' ordinary availability checks are sufficient to establish
++    # executable readiness without downloading models or touching the network.
++    return bool(available and key in {"pymupdf", "ffmpeg", "image_tools", "llamaindex", "antigravity"})
++
++
++def _deep_probe(key: str, adapter: CapabilityAdapter) -> tuple[bool, str]:
++    """Run a non-destructive smoke probe. Never download a model implicitly."""
++    available, reason = adapter.available()
++    if not available:
++        return False, reason
++    try:
++        if key == "playwright":
++            from playwright.sync_api import sync_playwright  # type: ignore
++            with sync_playwright() as p:
++                browser = p.chromium.launch(headless=True)
++                browser.close()
++            return True, "Chromium launched and exited successfully"
++        if key == "pymupdf":
++            import fitz  # type: ignore
++            document = fitz.open()
++            document.close()
++            return True, "PyMuPDF opened an in-memory document"
++        if key == "ffmpeg":
++            executable = shutil.which("ffmpeg")
++            if not executable:
++                return False, "ffmpeg executable is missing"
++            proc = _run([executable, "-version"], timeout=10, max_rss_mb=256)
++            return proc.returncode == 0, "ffmpeg -version succeeded" if proc.returncode == 0 else _bounded_text(proc.stderr, 500)
++        if key == "image_tools":
++            executable = shutil.which("magick") or shutil.which("vipsthumbnail")
++            if not executable:
++                return False, "image executable is missing"
++            proc = _run([executable, "-version"], timeout=10, max_rss_mb=256)
++            return proc.returncode == 0, "image tool version probe succeeded" if proc.returncode == 0 else _bounded_text(proc.stderr, 500)
++        if key == "llamaindex":
++            from llama_index.core import Document  # type: ignore
++            from llama_index.core.node_parser import SentenceSplitter  # type: ignore
++            nodes = SentenceSplitter(chunk_size=128, chunk_overlap=0).get_nodes_from_documents([Document(text="Amaura probe sentence.")])
++            return bool(nodes), "LlamaIndex chunk smoke succeeded"
++        if key == "comfyui":
++            base, local = adapter._base()  # type: ignore[attr-defined]
++            adapter._json(base, local, "/system_stats", timeout=10)  # type: ignore[attr-defined]
++            return True, "ComfyUI /system_stats succeeded"
++        if key in {"crawl4ai", "browser_use", "searxng", "qdrant_fastembed", "faster_whisper", "kokoro", "paddleocr", "docling", "remotion", "mcp", "langfuse"}:
++            return False, "Installed/configured, but execution readiness requires an explicit fixture/service/model-specific smoke job"
++        if key == "antigravity":
++            return True, "Structured handoff adapter is ready"
++        return False, "No deep probe is defined"
++    except Exception as exc:
++        return False, _bounded_text(exc, 1000)
+ 
+ 
+ class CapabilityRuntime:
+@@ -1620,31 +2237,47 @@
+         self.adapters: dict[str, CapabilityAdapter] = {adapter.descriptor.key: adapter() for adapter in ADAPTER_TYPES}
+         self.scheduler = scheduler or CapabilityScheduler()
+ 
+-    def inventory(self) -> list[dict[str, Any]]:
+-        rows: list[dict[str, Any]] = []
+-        for key in sorted(self.adapters):
+-            adapter = self.adapters[key]
+-            available, reason = adapter.available()
+-            row = asdict(adapter.descriptor)
+-            row.update({"available": bool(available), "reason": reason})
+-            rows.append(row)
+-        return rows
++    def _health_row(self, key: str, *, deep: bool = False) -> dict[str, Any]:
++        adapter = self.adapters[key]
++        available, reason = adapter.available()
++        installed = _installed_state(key)
++        healthy: bool | None = None
++        verification = "not execution-verified"
++        execution_ready = _cheap_execution_ready(key, bool(available))
++        if deep:
++            healthy, verification = _deep_probe(key, adapter)
++            execution_ready = bool(healthy)
++        row = asdict(adapter.descriptor)
++        row.update({
++            "installed": bool(installed),
++            "configured": bool(available),
++            "healthy": healthy,
++            "execution_ready": bool(execution_ready),
++            "verified_at": time.time() if deep else None,
++            "version": _package_version(key),
++            # Backward-compatible field, now explicitly means configured/admissible prerequisites.
++            "available": bool(available),
++            "reason": reason,
++            "verification": verification,
++        })
++        return row
+ 
+-    def health(self, key: str = "") -> dict[str, Any]:
++    def inventory(self, *, deep: bool = False) -> list[dict[str, Any]]:
++        return [self._health_row(key, deep=deep) for key in sorted(self.adapters)]
++
++    def health(self, key: str = "", *, deep: bool = False) -> dict[str, Any]:
+         if key:
+-            adapter = self.adapters.get(key)
+-            if adapter is None:
++            if key not in self.adapters:
+                 raise GovernanceError(f"Unknown capability: {key}")
+-            available, reason = adapter.available()
++            row = self._health_row(key, deep=deep)
+             return {
+                 "capability": key,
+-                "available": available,
+-                "reason": reason,
+-                "descriptor": asdict(adapter.descriptor),
++                **row,
++                "descriptor": asdict(self.adapters[key].descriptor),
+                 "contracts": CAPABILITY_OPERATION_CONTRACTS.get(key, {}),
+                 "scheduler": self.scheduler.status(),
+             }
+-        return {"capabilities": self.inventory(), "scheduler": self.scheduler.status()}
++        return {"capabilities": self.inventory(deep=deep), "scheduler": self.scheduler.status()}
+ 
+     def plan(self, intent: str) -> dict[str, Any]:
+         key = intent.strip().lower().replace("-", "_").replace(" ", "_")
+@@ -1746,12 +2379,7 @@
+                 json.dumps({"capability": key, "operation": operation, "params": params}, ensure_ascii=False),
+                 encoding="utf-8",
+             )
+-            env = os.environ.copy()
+-            env["AMAURA_CAPABILITY_WORKER"] = "1"
+-            env["JARVIS_WORKSPACE_ROOT"] = str(root)
+-            package_root = str(Path(__file__).resolve().parents[2])
+-            existing_pythonpath = env.get("PYTHONPATH", "").strip()
+-            env["PYTHONPATH"] = package_root if not existing_pythonpath else package_root + os.pathsep + existing_pythonpath
++            env = _capability_worker_env(key, root)
+             timeout = max(30, min(int(params.get("timeout", 1800)), 3600))
+             proc = _run(
+                 [
+@@ -1799,7 +2427,7 @@
+         missing = [name for name in contract.get("required", ()) if name not in params or params.get(name) in (None, "")]
+         if missing:
+             raise GovernanceError(f"{key}/{operation} is missing required params: {', '.join(missing)}")
+-        wait_seconds = max(0.1, min(float(params.get("scheduler_wait_seconds", 5.0)), 300.0))
++        wait_seconds = max(0.1, min(float(params.get("scheduler_wait_seconds", 120.0)), 300.0))
+         with self.scheduler.reserve(adapter.descriptor, timeout=wait_seconds):
+             try:
+                 isolate = (
+diff -ruN a/jarvis/amaura/mcp_registry.py b/jarvis/amaura/mcp_registry.py
+--- a/jarvis/amaura/mcp_registry.py	1970-01-01 00:00:00.000000000 +0000
++++ b/jarvis/amaura/mcp_registry.py	2026-08-07 15:05:15.779686790 +0000
+@@ -0,0 +1,169 @@
++"""Founder-owned registry for approved MCP stdio servers.
++
++AI capability requests refer only to a ``server_id``. Executable paths, hashes,
++arguments, environment exposure, tool allowlists and sandbox policy live in a
++0600 operator configuration outside the workspace by default.
++"""
++
++from __future__ import annotations
++
++import hashlib
++import json
++import os
++import shutil
++import stat
++import sys
++import tempfile
++from dataclasses import dataclass
++from pathlib import Path
++from typing import Any
++
++from jarvis.amaura.models import GovernanceError
++
++
++def _sha256(path: Path) -> str:
++    digest = hashlib.sha256()
++    with path.open("rb") as handle:
++        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
++            digest.update(chunk)
++    return digest.hexdigest()
++
++
++def registry_path() -> Path:
++    raw = os.environ.get("AMAURA_MCP_REGISTRY_PATH", "").strip()
++    if raw:
++        return Path(raw).expanduser().resolve()
++    return (Path.home() / ".config" / "amaura" / "mcp_servers.json").resolve()
++
++
++@dataclass(frozen=True, slots=True)
++class MCPServerSpec:
++    server_id: str
++    executable: Path
++    sha256: str
++    args: tuple[str, ...]
++    env_keys: tuple[str, ...]
++    allowed_tools: tuple[str, ...]
++    allow_tool_calls: bool
++    ai_list_tools: bool
++    timeout_seconds: int
++    network: str
++
++    def child_env(self) -> dict[str, str]:
++        safe = {
++            key: value
++            for key in ("PATH", "HOME", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL", "LC_CTYPE")
++            if (value := os.environ.get(key))
++        }
++        for key in self.env_keys:
++            value = os.environ.get(key)
++            if value is None:
++                raise GovernanceError(f"Approved MCP server '{self.server_id}' is missing required environment: {key}")
++            safe[key] = value
++        return safe
++
++    def command_argv(self) -> tuple[str, list[str], list[Path]]:
++        """Return sandbox wrapper command/args and temporary files to clean up."""
++        cleanup: list[Path] = []
++        executable = str(self.executable)
++        args = list(self.args)
++        if self.network == "none":
++            if sys.platform == "darwin":
++                sandbox = shutil.which("sandbox-exec")
++                if not sandbox:
++                    raise GovernanceError("MCP network=none requires sandbox-exec on macOS")
++                profile = """(version 1)\n(allow default)\n(deny network*)\n(deny file-write*)\n(allow file-write* (subpath \"/private/tmp\"))\n(allow file-write* (subpath \"/tmp\"))\n"""
++                fd, name = tempfile.mkstemp(prefix="amaura-mcp-", suffix=".sb")
++                os.close(fd)
++                path = Path(name)
++                path.write_text(profile, encoding="utf-8")
++                path.chmod(0o600)
++                cleanup.append(path)
++                return sandbox, ["-f", str(path), executable, *args], cleanup
++            bwrap = shutil.which("bwrap")
++            if bwrap:
++                return bwrap, [
++                    "--unshare-net", "--die-with-parent", "--new-session",
++                    "--ro-bind", "/", "/", "--tmpfs", "/tmp",
++                    executable, *args,
++                ], cleanup
++            raise GovernanceError("MCP network=none requires sandbox-exec (macOS) or bwrap (Linux)")
++        if self.network != "public":
++            raise GovernanceError(f"Unsupported MCP network policy: {self.network}")
++        # Public-network MCP servers are operator-only; the registry still pins executable/hash/env.
++        return executable, args, cleanup
++
++
++def _validate_registry_permissions(path: Path) -> None:
++    if os.name != "posix":
++        return
++    info = path.stat()
++    if info.st_uid != os.getuid():
++        raise GovernanceError("MCP registry must be owned by the current operator")
++    if stat.S_IMODE(info.st_mode) & 0o077:
++        raise GovernanceError("MCP registry permissions must be 0600 (not group/world accessible)")
++
++
++def load_server(server_id: str, *, for_ai_list: bool = False) -> MCPServerSpec:
++    server_id = str(server_id).strip()
++    if not server_id or len(server_id) > 128:
++        raise GovernanceError("MCP server_id is required")
++    path = registry_path()
++    if not path.is_file():
++        raise GovernanceError(f"Founder MCP registry is not configured: {path}")
++    _validate_registry_permissions(path)
++    try:
++        payload = json.loads(path.read_text(encoding="utf-8"))
++    except (OSError, json.JSONDecodeError) as exc:
++        raise GovernanceError("Founder MCP registry is invalid JSON") from exc
++    servers = payload.get("servers") if isinstance(payload, dict) else None
++    raw = servers.get(server_id) if isinstance(servers, dict) else None
++    if not isinstance(raw, dict):
++        raise GovernanceError(f"MCP server_id is not approved: {server_id}")
++
++    command = Path(str(raw.get("command", ""))).expanduser()
++    if not command.is_absolute() or not command.is_file():
++        raise GovernanceError("Approved MCP command must be an existing absolute executable path")
++    if not os.access(command, os.X_OK):
++        raise GovernanceError("Approved MCP command is not executable")
++    expected_hash = str(raw.get("sha256", "")).strip().lower()
++    if len(expected_hash) != 64 or any(ch not in "0123456789abcdef" for ch in expected_hash):
++        raise GovernanceError("Approved MCP server must declare an exact executable sha256")
++    actual_hash = _sha256(command)
++    if actual_hash != expected_hash:
++        raise GovernanceError("Approved MCP executable hash does not match registry")
++
++    args_raw = raw.get("args", [])
++    env_raw = raw.get("env_keys", [])
++    tools_raw = raw.get("allowed_tools", [])
++    if not isinstance(args_raw, list) or len(args_raw) > 32:
++        raise GovernanceError("MCP registry args must be a list of at most 32 strings")
++    if not isinstance(env_raw, list) or len(env_raw) > 16:
++        raise GovernanceError("MCP registry env_keys must be a list of at most 16 names")
++    if not isinstance(tools_raw, list) or len(tools_raw) > 128:
++        raise GovernanceError("MCP registry allowed_tools must be a list")
++    env_keys: list[str] = []
++    for value in env_raw:
++        key = str(value).strip()
++        if not key or key.upper() != key or not key.replace("_", "A").isalnum():
++            raise GovernanceError(f"Invalid MCP registry environment key: {key}")
++        env_keys.append(key)
++    allowed_tools = tuple(str(value).strip() for value in tools_raw if str(value).strip())
++    spec = MCPServerSpec(
++        server_id=server_id,
++        executable=command.resolve(),
++        sha256=expected_hash,
++        args=tuple(str(value) for value in args_raw),
++        env_keys=tuple(env_keys),
++        allowed_tools=allowed_tools,
++        allow_tool_calls=bool(raw.get("allow_tool_calls", False)),
++        ai_list_tools=bool(raw.get("ai_list_tools", False)),
++        timeout_seconds=max(3, min(int(raw.get("timeout_seconds", 30)), 120)),
++        network=str(raw.get("network", "none")).strip().lower(),
++    )
++    if for_ai_list and (not spec.ai_list_tools or spec.network != "none"):
++        raise GovernanceError("AI list_tools is allowed only for registry entries with ai_list_tools=true and network=none")
++    return spec
++
++
++__all__ = ["MCPServerSpec", "load_server", "registry_path"]
+diff -ruN a/jarvis/amaura/policy.py b/jarvis/amaura/policy.py
+--- a/jarvis/amaura/policy.py	2026-01-01 00:00:00.000000000 +0000
++++ b/jarvis/amaura/policy.py	2026-08-07 14:58:35.964595387 +0000
+@@ -164,12 +164,14 @@
+     ("ffmpeg", "concat"): {"render_media"},
+     ("ffmpeg", "mux_audio"): {"render_media", "render_audio"},
+     ("remotion", "bootstrap_project"): {"render_media"},
++    ("remotion", "lock_project"): {"render_media"},
+     ("remotion", "render"): {"render_media"},
+     ("image_tools", "resize"): {"render_media", "download_approved_assets", "record_demo"},
+     ("image_tools", "thumbnail"): {"render_media", "download_approved_assets"},
+     ("yt_dlp", "metadata"): {"research", "download_approved_assets", "render_media"},
+     ("yt_dlp", "download"): {"download_approved_assets"},
+     ("comfyui", "queue_workflow"): {"render_media"},
++    ("comfyui", "run_workflow"): {"render_media"},
+     ("comfyui", "history"): {"render_media", "approve_or_reject"},
+     ("mcp", "list_tools"): {"plan", "research", "evaluate"},
+     # MCP call_tool is deliberately absent: arbitrary MCP side effects are not
+diff -ruN a/jarvis/amaura/resource_control.py b/jarvis/amaura/resource_control.py
+--- a/jarvis/amaura/resource_control.py	1970-01-01 00:00:00.000000000 +0000
++++ b/jarvis/amaura/resource_control.py	2026-08-07 15:15:34.345657324 +0000
+@@ -0,0 +1,592 @@
++"""Cross-process resource control for Amaura's small-Mac execution profile.
++
++This module deliberately separates three ideas that v3.6.0 conflated:
++
++* a *normal target* for ordinary capability work;
++* a temporary *burst allowance* for one expensive worker; and
++* a hard *absolute ceiling* used to terminate runaway child process trees.
++
++Reservations are persisted in a tiny JSON ledger protected by an OS file lock.
++Actual process-tree RSS and host memory/swap pressure are sampled with psutil,
++with extra macOS telemetry when the native commands are available.
++"""
++
++from __future__ import annotations
++
++import contextlib
++import json
++import os
++import re
++import signal
++import subprocess
++import sys
++import threading
++import time
++import uuid
++from dataclasses import asdict, dataclass
++from pathlib import Path
++from typing import Any, Iterator
++
++try:  # psutil is a lightweight core dependency in v3.6.1, but fail safely if missing.
++    import psutil  # type: ignore
++except Exception:  # pragma: no cover - fallback is for damaged/minimal installs.
++    psutil = None  # type: ignore
++
++from jarvis.tools.security import workspace_root
++
++_MIB = 1024 * 1024
++_LOCAL_LOCK = threading.RLock()
++_MAC_PRESSURE_CACHE_LOCK = threading.Lock()
++_MAC_PRESSURE_CACHE: tuple[float, float | None] = (0.0, None)
++_NATIVE_MEMORY_CACHE_LOCK = threading.Lock()
++_NATIVE_MEMORY_CACHE: tuple[float, tuple[int, int, float, int, int, float] | None] = (0.0, None)
++_PS_TABLE_CACHE_LOCK = threading.Lock()
++_PS_TABLE_CACHE: tuple[float, dict[int, tuple[int, int]]] = (0.0, {})
++
++
++@dataclass(frozen=True, slots=True)
++class MemoryPolicy:
++    normal_target_mb: int = 1500
++    burst_limit_mb: int = 2500
++    absolute_limit_mb: int = 3000
++    pressure_limit_mb: int = 1000
++    yellow_available_mb: int = 1600
++    red_available_mb: int = 800
++    yellow_used_percent: float = 82.0
++    red_used_percent: float = 92.0
++    yellow_swap_percent: float = 30.0
++    red_swap_percent: float = 60.0
++    swap_growth_abort_mb: int = 192
++    stale_reservation_seconds: int = 7200
++
++    @classmethod
++    def from_env(cls) -> "MemoryPolicy":
++        def _int(name: str, default: int, minimum: int, maximum: int) -> int:
++            raw = os.environ.get(name, "").strip()
++            if not raw:
++                return default
++            try:
++                return max(minimum, min(int(raw), maximum))
++            except ValueError:
++                return default
++
++        normal = _int("AMAURA_RAM_NORMAL_TARGET_MB", 1500, 512, 4096)
++        burst = _int("AMAURA_RAM_BURST_LIMIT_MB", 2500, normal, 6144)
++        absolute = _int("AMAURA_RAM_ABSOLUTE_LIMIT_MB", 3000, burst, 7168)
++        pressure = _int("AMAURA_RAM_PRESSURE_LIMIT_MB", 1000, 384, normal)
++        return cls(
++            normal_target_mb=normal,
++            burst_limit_mb=burst,
++            absolute_limit_mb=absolute,
++            pressure_limit_mb=pressure,
++            swap_growth_abort_mb=_int("AMAURA_SWAP_GROWTH_ABORT_MB", 192, 64, 2048),
++            stale_reservation_seconds=_int("AMAURA_RESOURCE_LEASE_TTL_SECONDS", 7200, 60, 86400),
++        )
++
++
++@dataclass(frozen=True, slots=True)
++class HostMemorySnapshot:
++    total_mb: int
++    available_mb: int
++    used_percent: float
++    swap_used_mb: int
++    swap_total_mb: int
++    swap_percent: float
++    mac_free_percent: float | None
++    pressure: str
++    sampled_at: float
++
++    def to_dict(self) -> dict[str, Any]:
++        return asdict(self)
++
++
++def _mac_free_percent() -> float | None:
++    """Return macOS' native free-memory signal without spawning continuously.
++
++    Heavy workers are sampled several times per second for RSS enforcement. Calling
++    ``memory_pressure -Q`` at that cadence would itself create avoidable process
++    churn, so the native signal is cached for two seconds. psutil telemetry remains
++    live on every scheduler/worker sample.
++    """
++    global _MAC_PRESSURE_CACHE
++    if sys.platform != "darwin":
++        return None
++    now = time.monotonic()
++    with _MAC_PRESSURE_CACHE_LOCK:
++        sampled_at, cached = _MAC_PRESSURE_CACHE
++        if now - sampled_at < 2.0:
++            return cached
++        command = shutil_which("memory_pressure")
++        if not command:
++            _MAC_PRESSURE_CACHE = (now, None)
++            return None
++        try:
++            proc = subprocess.run(
++                [command, "-Q"], text=True, capture_output=True, check=False, timeout=2,
++            )
++        except (OSError, subprocess.TimeoutExpired):
++            _MAC_PRESSURE_CACHE = (now, None)
++            return None
++        text = f"{proc.stdout}\n{proc.stderr}"
++        match = re.search(r"System-wide memory free percentage:\s*([0-9.]+)%", text, re.I)
++        try:
++            value = float(match.group(1)) if match else None
++        except ValueError:
++            value = None
++        _MAC_PRESSURE_CACHE = (now, value)
++        return value
++
++
++def shutil_which(command: str) -> str | None:
++    # Local wrapper avoids importing shutil at module import in worker hot paths.
++    import shutil
++
++    return shutil.which(command)
++
++
++def _parse_size_mb(value: str) -> float:
++    value = value.strip().upper()
++    match = re.match(r"([0-9.]+)\s*([KMGT]?)", value)
++    if not match:
++        return 0.0
++    number = float(match.group(1))
++    unit = match.group(2)
++    factor = {"": 1 / _MIB, "K": 1 / 1024, "M": 1, "G": 1024, "T": 1024 * 1024}.get(unit, 0)
++    return number * factor
++
++
++def _native_memory_values(policy: MemoryPolicy) -> tuple[int, int, float, int, int, float]:
++    """Return total/available/used/swap metrics without third-party packages."""
++    global _NATIVE_MEMORY_CACHE
++    now = time.monotonic()
++    with _NATIVE_MEMORY_CACHE_LOCK:
++        sampled_at, cached = _NATIVE_MEMORY_CACHE
++        if cached is not None and now - sampled_at < 1.5:
++            return cached
++
++        if sys.platform == "darwin":
++            total_mb = 0
++            sysctl = shutil_which("sysctl")
++            if sysctl:
++                try:
++                    total_proc = subprocess.run(
++                        [sysctl, "-n", "hw.memsize"], text=True, capture_output=True, check=False, timeout=2
++                    )
++                    total_mb = int(int(total_proc.stdout.strip()) / _MIB) if total_proc.returncode == 0 else 0
++                except (OSError, ValueError, subprocess.TimeoutExpired):
++                    total_mb = 0
++            mac_free = _mac_free_percent()
++            available_mb = int(total_mb * mac_free / 100.0) if total_mb and mac_free is not None else policy.yellow_available_mb
++            used_percent = 100.0 - (available_mb / total_mb * 100.0) if total_mb else policy.yellow_used_percent
++            swap_total_mb = 0
++            swap_used_mb = 0
++            if sysctl:
++                try:
++                    swap_proc = subprocess.run(
++                        [sysctl, "-n", "vm.swapusage"], text=True, capture_output=True, check=False, timeout=2
++                    )
++                    if swap_proc.returncode == 0:
++                        total_match = re.search(r"total\s*=\s*([0-9.]+[KMGT]?)", swap_proc.stdout, re.I)
++                        used_match = re.search(r"used\s*=\s*([0-9.]+[KMGT]?)", swap_proc.stdout, re.I)
++                        if total_match:
++                            swap_total_mb = int(_parse_size_mb(total_match.group(1)))
++                        if used_match:
++                            swap_used_mb = int(_parse_size_mb(used_match.group(1)))
++                except (OSError, subprocess.TimeoutExpired):
++                    pass
++            swap_percent = (swap_used_mb / swap_total_mb * 100.0) if swap_total_mb else 0.0
++            result = (total_mb, available_mb, used_percent, swap_used_mb, swap_total_mb, swap_percent)
++        elif Path("/proc/meminfo").is_file():
++            values: dict[str, int] = {}
++            try:
++                for line in Path("/proc/meminfo").read_text(encoding="utf-8", errors="replace").splitlines():
++                    key, _, rest = line.partition(":")
++                    token = rest.strip().split()[0] if rest.strip() else "0"
++                    values[key] = int(token)  # Linux meminfo values are KiB.
++            except (OSError, ValueError):
++                values = {}
++            total_mb = int(values.get("MemTotal", 0) / 1024)
++            available_mb = int(values.get("MemAvailable", values.get("MemFree", 0)) / 1024)
++            used_percent = 100.0 - (available_mb / total_mb * 100.0) if total_mb else policy.yellow_used_percent
++            swap_total_mb = int(values.get("SwapTotal", 0) / 1024)
++            swap_free_mb = int(values.get("SwapFree", 0) / 1024)
++            swap_used_mb = max(0, swap_total_mb - swap_free_mb)
++            swap_percent = (swap_used_mb / swap_total_mb * 100.0) if swap_total_mb else 0.0
++            result = (total_mb, available_mb, used_percent, swap_used_mb, swap_total_mb, swap_percent)
++        else:
++            result = (0, policy.yellow_available_mb, policy.yellow_used_percent, 0, 0, 0.0)
++
++        _NATIVE_MEMORY_CACHE = (now, result)
++        return result
++
++
++def sample_host_memory(policy: MemoryPolicy | None = None) -> HostMemorySnapshot:
++    policy = policy or MemoryPolicy.from_env()
++    if psutil is not None:
++        virtual = psutil.virtual_memory()
++        swap = psutil.swap_memory()
++        total_mb = int(virtual.total / _MIB)
++        available_mb = int(virtual.available / _MIB)
++        used_percent = float(virtual.percent)
++        swap_used_mb = int(swap.used / _MIB)
++        swap_total_mb = int(swap.total / _MIB)
++        swap_percent = float(swap.percent)
++    else:
++        total_mb, available_mb, used_percent, swap_used_mb, swap_total_mb, swap_percent = _native_memory_values(policy)
++
++    mac_free = _mac_free_percent()
++    red = (
++        available_mb <= policy.red_available_mb
++        or used_percent >= policy.red_used_percent
++        or swap_percent >= policy.red_swap_percent
++        or (mac_free is not None and mac_free <= 8.0)
++    )
++    yellow = (
++        available_mb <= policy.yellow_available_mb
++        or used_percent >= policy.yellow_used_percent
++        or swap_percent >= policy.yellow_swap_percent
++        or (mac_free is not None and mac_free <= 15.0)
++    )
++    pressure = "red" if red else "yellow" if yellow else "green"
++    return HostMemorySnapshot(
++        total_mb=total_mb,
++        available_mb=available_mb,
++        used_percent=round(used_percent, 2),
++        swap_used_mb=swap_used_mb,
++        swap_total_mb=swap_total_mb,
++        swap_percent=round(swap_percent, 2),
++        mac_free_percent=mac_free,
++        pressure=pressure,
++        sampled_at=time.time(),
++    )
++
++
++def _posix_process_table() -> dict[int, tuple[int, int]]:
++    """Map PID -> (PPID, RSS KiB), cached briefly to keep monitoring cheap."""
++    global _PS_TABLE_CACHE
++    now = time.monotonic()
++    with _PS_TABLE_CACHE_LOCK:
++        sampled_at, cached = _PS_TABLE_CACHE
++        if cached and now - sampled_at < 0.4:
++            return cached
++        ps = shutil_which("ps")
++        if not ps:
++            return {}
++        try:
++            proc = subprocess.run(
++                [ps, "-axo", "pid=,ppid=,rss="], text=True, capture_output=True, check=False, timeout=2
++            )
++        except (OSError, subprocess.TimeoutExpired):
++            return {}
++        table: dict[int, tuple[int, int]] = {}
++        if proc.returncode == 0:
++            for line in proc.stdout.splitlines():
++                parts = line.split()
++                if len(parts) != 3:
++                    continue
++                try:
++                    pid, ppid, rss_kib = map(int, parts)
++                except ValueError:
++                    continue
++                table[pid] = (ppid, max(0, rss_kib))
++        _PS_TABLE_CACHE = (now, table)
++        return table
++
++
++def process_tree_rss_mb(pid: int) -> int:
++    if psutil is not None:
++        try:
++            root = psutil.Process(pid)
++        except (psutil.NoSuchProcess, psutil.AccessDenied):
++            return 0
++        seen: set[int] = set()
++        total = 0
++        candidates = [root]
++        try:
++            candidates.extend(root.children(recursive=True))
++        except (psutil.NoSuchProcess, psutil.AccessDenied):
++            pass
++        for process in candidates:
++            if process.pid in seen:
++                continue
++            seen.add(process.pid)
++            try:
++                total += int(process.memory_info().rss)
++            except (psutil.NoSuchProcess, psutil.AccessDenied):
++                continue
++        return int(total / _MIB)
++
++    if os.name == "posix":
++        table = _posix_process_table()
++        if pid not in table:
++            return 0
++        descendants = {pid}
++        changed = True
++        while changed:
++            changed = False
++            for child, (parent, _rss) in table.items():
++                if child not in descendants and parent in descendants:
++                    descendants.add(child)
++                    changed = True
++        total_kib = sum(table[item][1] for item in descendants if item in table)
++        return int(total_kib / 1024)
++    return 0
++
++
++def terminate_process_tree(pid: int, grace_seconds: float = 2.0) -> None:
++    if psutil is not None:
++        try:
++            root = psutil.Process(pid)
++        except (psutil.NoSuchProcess, psutil.AccessDenied):
++            return
++        try:
++            children = root.children(recursive=True)
++        except (psutil.NoSuchProcess, psutil.AccessDenied):
++            children = []
++        processes = [*children, root]
++        for process in reversed(processes):
++            with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
++                process.terminate()
++        _, alive = psutil.wait_procs(processes, timeout=max(0.1, grace_seconds))
++        for process in alive:
++            with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
++                process.kill()
++        return
++
++    if os.name == "posix":
++        # _run() starts capability children in their own session, making PID the
++        # process-group ID. Kill the whole group so Chromium/model descendants do
++        # not survive their disposable worker. Fall back to the root PID if needed.
++        try:
++            os.killpg(pid, signal.SIGTERM)
++        except (ProcessLookupError, PermissionError):
++            with contextlib.suppress(OSError):
++                os.kill(pid, signal.SIGTERM)
++        deadline = time.monotonic() + max(0.1, grace_seconds)
++        while time.monotonic() < deadline and _pid_alive(pid):
++            time.sleep(0.05)
++        if _pid_alive(pid):
++            with contextlib.suppress(OSError):
++                os.killpg(pid, signal.SIGKILL)
++        return
++
++    with contextlib.suppress(OSError):
++        os.kill(pid, signal.SIGTERM)
++
++
++def _pid_alive(pid: int) -> bool:
++    if pid <= 0:
++        return False
++    if psutil is not None:
++        try:
++            return bool(psutil.pid_exists(pid))
++        except Exception:
++            return False
++    try:
++        os.kill(pid, 0)
++        return True
++    except OSError:
++        return False
++
++
++def _ledger_path() -> Path:
++    raw = os.environ.get("AMAURA_RESOURCE_LEDGER_PATH", "").strip()
++    path = Path(raw).expanduser() if raw else workspace_root() / ".amaura-data" / "capability-resource-ledger.json"
++    path.parent.mkdir(parents=True, exist_ok=True)
++    return path.resolve()
++
++
++@contextlib.contextmanager
++def _locked_ledger_file() -> Iterator[Any]:
++    path = _ledger_path()
++    handle = path.open("a+", encoding="utf-8")
++    with _LOCAL_LOCK:
++        locked = False
++        if os.name == "posix":
++            try:
++                import fcntl
++
++                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
++                locked = True
++            except (ImportError, OSError):
++                locked = False
++        try:
++            yield handle
++        finally:
++            if locked:
++                with contextlib.suppress(OSError):
++                    import fcntl
++
++                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
++            handle.close()
++
++
++def _read_state(handle: Any) -> dict[str, Any]:
++    handle.seek(0)
++    raw = handle.read().strip()
++    if not raw:
++        return {"version": 1, "reservations": []}
++    try:
++        payload = json.loads(raw)
++    except json.JSONDecodeError:
++        return {"version": 1, "reservations": []}
++    if not isinstance(payload, dict) or not isinstance(payload.get("reservations"), list):
++        return {"version": 1, "reservations": []}
++    return payload
++
++
++def _write_state(handle: Any, payload: dict[str, Any]) -> None:
++    handle.seek(0)
++    handle.truncate(0)
++    json.dump(payload, handle, sort_keys=True, separators=(",", ":"))
++    handle.flush()
++    with contextlib.suppress(OSError):
++        os.fsync(handle.fileno())
++
++
++def _prune(payload: dict[str, Any], policy: MemoryPolicy, now: float) -> list[dict[str, Any]]:
++    kept: list[dict[str, Any]] = []
++    for raw in payload.get("reservations", []):
++        if not isinstance(raw, dict):
++            continue
++        try:
++            pid = int(raw.get("pid", 0))
++            created = float(raw.get("created_at", 0.0))
++        except (TypeError, ValueError):
++            continue
++        if now - created > policy.stale_reservation_seconds:
++            continue
++        if not _pid_alive(pid):
++            continue
++        kept.append(raw)
++    return kept
++
++
++class CrossProcessResourceLedger:
++    """Durable admission ledger shared by every Amaura process on one host."""
++
++    def __init__(self, policy: MemoryPolicy | None = None):
++        self.policy = policy or MemoryPolicy.from_env()
++
++    def snapshot(self) -> dict[str, Any]:
++        now = time.time()
++        with _locked_ledger_file() as handle:
++            payload = _read_state(handle)
++            reservations = _prune(payload, self.policy, now)
++            if reservations != payload.get("reservations", []):
++                payload["reservations"] = reservations
++                _write_state(handle, payload)
++        return self._summarize(reservations)
++
++    @staticmethod
++    def _summarize(reservations: list[dict[str, Any]]) -> dict[str, Any]:
++        total = sum(max(0, int(item.get("ram_mb", 0))) for item in reservations)
++        heavy = sum(1 for item in reservations if bool(item.get("heavy")))
++        return {
++            "reserved_mb": total,
++            "active_heavy_jobs": heavy,
++            "active_jobs": len(reservations),
++            "reservations": [
++                {
++                    "id": str(item.get("id", "")),
++                    "pid": int(item.get("pid", 0)),
++                    "capability": str(item.get("capability", "")),
++                    "ram_mb": int(item.get("ram_mb", 0)),
++                    "heavy": bool(item.get("heavy")),
++                }
++                for item in reservations
++            ],
++        }
++
++    def try_reserve(self, *, capability: str, ram_mb: int, heavy: bool) -> tuple[str | None, str, dict[str, Any]]:
++        policy = self.policy
++        host = sample_host_memory(policy)
++        current_tree_rss = process_tree_rss_mb(os.getpid())
++        now = time.time()
++        with _locked_ledger_file() as handle:
++            payload = _read_state(handle)
++            reservations = _prune(payload, policy, now)
++            summary = self._summarize(reservations)
++
++            if host.pressure == "red" and heavy:
++                return None, "system memory pressure is red; heavy workers are blocked", {
++                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
++                }
++            if host.pressure == "yellow" and heavy:
++                return None, "system memory pressure is yellow; no new heavy worker is admitted", {
++                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
++                }
++
++            effective_limit = (
++                policy.pressure_limit_mb if host.pressure == "red"
++                else policy.burst_limit_mb if heavy
++                else policy.normal_target_mb
++            )
++            projected = int(summary["reserved_mb"]) + max(0, int(ram_mb))
++            if bool(summary["active_heavy_jobs"]) and not heavy:
++                # During a burst, keep the host quiet rather than stacking ordinary work behind it.
++                return None, "a heavy capability is active; ordinary capability admission is paused", {
++                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
++                    "effective_limit_mb": effective_limit,
++                }
++            if heavy and int(summary["active_heavy_jobs"]) > 0:
++                return None, "another heavy capability is already active", {
++                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
++                    "effective_limit_mb": effective_limit,
++                }
++            if projected > effective_limit:
++                return None, f"projected reservation {projected} MB exceeds {effective_limit} MB limit", {
++                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
++                    "effective_limit_mb": effective_limit,
++                }
++            if current_tree_rss >= policy.absolute_limit_mb:
++                return None, f"Amaura process tree already uses {current_tree_rss} MB, above the absolute ceiling", {
++                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
++                    "effective_limit_mb": effective_limit,
++                }
++
++            reservation_id = uuid.uuid4().hex
++            reservations.append({
++                "id": reservation_id,
++                "pid": os.getpid(),
++                "capability": capability,
++                "ram_mb": max(0, int(ram_mb)),
++                "heavy": bool(heavy),
++                "created_at": now,
++            })
++            payload = {"version": 1, "updated_at": now, "reservations": reservations}
++            _write_state(handle, payload)
++            summary = self._summarize(reservations)
++            return reservation_id, "reserved", {
++                "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
++                "effective_limit_mb": effective_limit,
++            }
++
++    def release(self, reservation_id: str) -> None:
++        if not reservation_id:
++            return
++        now = time.time()
++        with _locked_ledger_file() as handle:
++            payload = _read_state(handle)
++            reservations = _prune(payload, self.policy, now)
++            reservations = [item for item in reservations if str(item.get("id", "")) != reservation_id]
++            payload = {"version": 1, "updated_at": now, "reservations": reservations}
++            _write_state(handle, payload)
++
++
++def child_hard_limit_mb(estimated_mb: int, policy: MemoryPolicy | None = None) -> int:
++    policy = policy or MemoryPolicy.from_env()
++    # Give estimates reasonable headroom while preserving the absolute cap.
++    estimated = max(256, int(estimated_mb))
++    return min(policy.absolute_limit_mb, max(768, int(estimated * 1.35)))
++
++
++__all__ = [
++    "CrossProcessResourceLedger",
++    "HostMemorySnapshot",
++    "MemoryPolicy",
++    "child_hard_limit_mb",
++    "process_tree_rss_mb",
++    "sample_host_memory",
++    "terminate_process_tree",
++]
+diff -ruN a/jarvis/amaura/resources/env.amaura.example b/jarvis/amaura/resources/env.amaura.example
+--- a/jarvis/amaura/resources/env.amaura.example	2026-01-01 00:00:00.000000000 +0000
++++ b/jarvis/amaura/resources/env.amaura.example	2026-08-07 15:09:10.063508559 +0000
+@@ -1,4 +1,4 @@
+-# Amaura Company OS 3.6.0 — production template
++# Amaura Company OS 3.6.1 — production template
+ # Generate every secret independently:
+ # python -c 'import secrets; print(secrets.token_urlsafe(48))'
+ AMAURA_FOUNDER_NAME=Akshat
+@@ -166,11 +166,21 @@
+ AMAURA_VENTURE_FOUNDER_REVIEW_MINUTES=20
+ 
+ # OSS capability runtime (lazy/on-demand; tuned for M3 8 GB by default).
+-AMAURA_LOCAL_RAM_BUDGET_MB=5600
++# v3.6.1 8 GB Mac memory policy. No RAM is pre-reserved; these are admission/kill targets.
++AMAURA_RAM_NORMAL_TARGET_MB=1500
++AMAURA_RAM_BURST_LIMIT_MB=2500
++AMAURA_RAM_ABSOLUTE_LIMIT_MB=3000
++AMAURA_RAM_PRESSURE_LIMIT_MB=1000
++AMAURA_SWAP_GROWTH_ABORT_MB=192
++AMAURA_RESOURCE_LEDGER_PATH=
++# Legacy v3.6.0 knob is ignored by the new scheduler.
++AMAURA_LOCAL_RAM_BUDGET_MB=
+ SEARXNG_URL=
+ AMAURA_QDRANT_PATH=.amaura-qdrant
+ QDRANT_API_KEY=
+ COMFYUI_URL=
++COMFYUI_API_TOKEN=
++AMAURA_MCP_REGISTRY_PATH=
+ AMAURA_MCP_TOOL_CALLS_ENABLED=0
+ LANGFUSE_PUBLIC_KEY=
+ LANGFUSE_SECRET_KEY=
+@@ -179,6 +189,7 @@
+ AMAURA_BROWSER_USE_MODEL=
+ AMAURA_WHISPER_MODEL=small
+ AMAURA_REMOTION_VERSION=4.0.477
++AMAURA_STRICT_MEDIA_SANDBOX=1
+ # OSS capability runtime
+ AMAURA_CAPABILITY_HEAVY_LOCK=
+ AMAURA_MEDIA_DOWNLOADS_ENABLED=0
+diff -ruN a/jarvis/amaura/resources.py b/jarvis/amaura/resources.py
+--- a/jarvis/amaura/resources.py	2026-01-01 00:00:00.000000000 +0000
++++ b/jarvis/amaura/resources.py	2026-08-07 15:09:34.624734517 +0000
+@@ -518,9 +518,15 @@
+             "strategy": "control-plane-local-heavy-work-on-demand",
+             "always_on": always_on,
+             "on_demand": on_demand,
+-            "avoid_simultaneous": ["ollama", "docker", "faster_whisper", "docling", "paddleocr", "remotion", "comfyui", "local_video_generation"],
++            "normal_target_mb": int(os.environ.get("AMAURA_RAM_NORMAL_TARGET_MB", "1500")),
++            "burst_limit_mb": int(os.environ.get("AMAURA_RAM_BURST_LIMIT_MB", "2500")),
++            "absolute_limit_mb": int(os.environ.get("AMAURA_RAM_ABSOLUTE_LIMIT_MB", "3000")),
++            "pressure_limit_mb": int(os.environ.get("AMAURA_RAM_PRESSURE_LIMIT_MB", "1000")),
++            "heavy_workers_max": 1,
++            "idle_heavy_services": 0,
++            "avoid_simultaneous": ["ollama", "docker", "playwright", "crawl4ai", "browser_use", "faster_whisper", "docling", "paddleocr", "remotion", "comfyui", "local_video_generation"],
+             "recommended_concurrent_agent_runs": 2,
+-            "reason": "Agent definitions are cheap; model inference, containers and media rendering consume memory.",
++            "reason": "The control plane stays resident; heavy capabilities are disposable, pressure-aware and serialized. Local LLM + browser/media/model jobs should not overlap on 8 GB.",
+         }
+ 
+ 
+diff -ruN a/jarvis/server.py b/jarvis/server.py
+--- a/jarvis/server.py	2026-01-01 00:00:00.000000000 +0000
++++ b/jarvis/server.py	2026-08-07 15:09:10.062602495 +0000
+@@ -70,7 +70,7 @@
+ app = FastAPI(
+     title="J.A.R.V.I.S. Server",
+     description="Just A Rather Very Intelligent System — Backend API",
+-    version="3.6.0",
++    version="3.6.1",
+     lifespan=app_lifespan,
+ )
+ 
+@@ -507,7 +507,7 @@
+         ).hexdigest()
+     return {
+         "status": "online",
+-        "version": "3.6.0",
++        "version": "3.6.1",
+         "timestamp": datetime.now().isoformat(),
+         "sessions": len(sessions),
+         "tools": get_tool_count(),
+diff -ruN a/jarvis/tools/amaura.py b/jarvis/tools/amaura.py
+--- a/jarvis/tools/amaura.py	2026-01-01 00:00:00.000000000 +0000
++++ b/jarvis/tools/amaura.py	2026-08-07 15:01:01.035290188 +0000
+@@ -490,10 +490,13 @@
+         "type": "function",
+         "function": {
+             "name": "amaura_capability_health",
+-            "description": "Inspect installed/configured open-source capability adapters and the local RAM scheduler without executing work.",
++            "description": "Inspect OSS capability installed/configured/healthy/execution-ready state and live RAM pressure. Set deep=true for explicit non-destructive smoke probes.",
+             "parameters": {
+                 "type": "object",
+-                "properties": {"capability": {"type": "string"}},
++                "properties": {
++                    "capability": {"type": "string"},
++                    "deep": {"type": "boolean"}
++                },
+             },
+         },
+     },
+@@ -556,10 +559,10 @@
+     return _json(get_capability_runtime().plan(intent))
+ 
+ 
+-def capability_health(capability: str = "") -> str:
++def capability_health(capability: str = "", deep: bool = False) -> str:
+     from jarvis.amaura.capability_runtime import get_capability_runtime
+ 
+-    return _json(get_capability_runtime().health(capability))
++    return _json(get_capability_runtime().health(capability, deep=bool(deep)))
+ 
+ 
+ def execute_capability(capability: str, operation: str, params: dict) -> str:
+diff -ruN a/pyproject.toml b/pyproject.toml
+--- a/pyproject.toml	2026-01-01 00:00:00.000000000 +0000
++++ b/pyproject.toml	2026-08-07 15:15:34.345797592 +0000
+@@ -5,7 +5,7 @@
+ 
+ [project]
+ name = "jarvis"
+-version = "3.6.0"
++version = "3.6.1"
+ description = "Amaura Company OS — governed autonomous AI workforce for an AI-native company."
+ readme = "README.md"
+ requires-python = ">=3.11,<3.14"
+diff -ruN a/scripts/build_amaura_handbook.py b/scripts/build_amaura_handbook.py
+--- a/scripts/build_amaura_handbook.py	2026-01-01 00:00:00.000000000 +0000
++++ b/scripts/build_amaura_handbook.py	2026-08-07 15:09:10.063320850 +0000
+@@ -154,7 +154,7 @@
+     add(table(["Gate", "Verified result"], [
+         ["Repository tests", "63 passed, 0 failed"],
+         ["Static analysis", "Focused Ruff passed; focused mypy passed on eight core modules"],
+-        ["Packaging", "Wheel built: `release/jarvis-3.6.0-py3-none-any.whl`"],
++        ["Packaging", "Wheel built: `release/jarvis-3.6.1-py3-none-any.whl`"],
+         ["API security smoke", "Authenticated routes passed; missing operator authority rejected with HTTP 403"],
+         ["Stress run", "1,000 leads, 32 workers, 100/100 injections detected, 60 provider-confirmed sends, 20/20 cap violations blocked"],
+         ["Concurrency and idempotency", "500 simultaneous duplicate attempts produced one record"],
+diff -ruN a/scripts/build_desktop_app.py b/scripts/build_desktop_app.py
+--- a/scripts/build_desktop_app.py	2026-01-01 00:00:00.000000000 +0000
++++ b/scripts/build_desktop_app.py	2026-08-07 15:09:10.063039363 +0000
+@@ -99,7 +99,7 @@
+     parser.add_argument("--electron-sha256", required=True)
+     parser.add_argument("--backend", type=Path, default=DESKTOP / "runtime" / "amaura-backend")
+     parser.add_argument("--output", type=Path, default=ROOT / "release-desktop")
+-    parser.add_argument("--version", default="3.6.0")
++    parser.add_argument("--version", default="3.6.1")
+     parser.add_argument("--sign-identity", default=os.environ.get("AMAURA_CODESIGN_IDENTITY", ""))
+     parser.add_argument("--dmg", action="store_true")
+     args = parser.parse_args()
+diff -ruN a/scripts/setup_oss_capabilities.py b/scripts/setup_oss_capabilities.py
+--- a/scripts/setup_oss_capabilities.py	2026-01-01 00:00:00.000000000 +0000
++++ b/scripts/setup_oss_capabilities.py	2026-08-07 15:01:02.363768283 +0000
+@@ -41,13 +41,15 @@
+     parser = argparse.ArgumentParser()
+     parser.add_argument("groups", nargs="*", choices=sorted([*GROUPS, *BREW_PACKAGES, "all"]))
+     parser.add_argument("--check", action="store_true", help="Only print current capability health")
++    parser.add_argument("--deep-check", action="store_true", help="Run explicit non-destructive execution smoke probes")
+     parser.add_argument("--skip-browser-binary", action="store_true")
+     args = parser.parse_args()
+ 
+-    if args.check:
++    if args.check or args.deep_check:
+         from jarvis.amaura.capability_runtime import CapabilityRuntime
+-        for row in CapabilityRuntime().inventory():
+-            print(f"{row['key']:<20} {'YES' if row['available'] else 'NO ':<3} {row['reason']}")
++        for row in CapabilityRuntime().inventory(deep=bool(args.deep_check)):
++            state = "READY" if row["execution_ready"] else "CONF" if row["configured"] else "MISS"
++            print(f"{row['key']:<20} {state:<5} installed={row['installed']} configured={row['configured']} ready={row['execution_ready']} {row['reason']}")
+         return 0
+ 
+     groups = args.groups or ["browser", "memory", "media", "observability"]
+@@ -85,7 +87,8 @@
+     from jarvis.amaura.capability_runtime import CapabilityRuntime
+     print("\nCapability health:")
+     for row in CapabilityRuntime().inventory():
+-        print(f"{row['key']:<20} {'YES' if row['available'] else 'NO ':<3} {row['reason']}")
++        state = "READY" if row["execution_ready"] else "CONF" if row["configured"] else "MISS"
++        print(f"{row['key']:<20} {state:<5} {row['reason']}")
+     return 0
+ 
+ 
+diff -ruN a/tests/test_amaura_v361_resource_security.py b/tests/test_amaura_v361_resource_security.py
+--- a/tests/test_amaura_v361_resource_security.py	1970-01-01 00:00:00.000000000 +0000
++++ b/tests/test_amaura_v361_resource_security.py	2026-08-07 15:15:57.094171184 +0000
+@@ -0,0 +1,156 @@
++from __future__ import annotations
++
++import os
++import sys
++from pathlib import Path
++
++import pytest
++
++import jarvis.amaura.capability_runtime as runtime_module
++import jarvis.amaura.resource_control as resource_module
++from jarvis.amaura.capability_runtime import (
++    CAPABILITY_OPERATION_CONTRACTS,
++    CapabilityExecutionError,
++    PlaywrightAdapter,
++    RemotionAdapter,
++)
++from jarvis.amaura.models import GovernanceError
++from jarvis.amaura.resource_control import (
++    CrossProcessResourceLedger,
++    HostMemorySnapshot,
++    MemoryPolicy,
++)
++from jarvis.tools.security import tool_workspace
++
++
++def _host(*, pressure: str = "green", available_mb: int = 5000, swap_used_mb: int = 0) -> HostMemorySnapshot:
++    return HostMemorySnapshot(
++        total_mb=8192,
++        available_mb=available_mb,
++        used_percent=35.0 if pressure == "green" else 85.0 if pressure == "yellow" else 95.0,
++        swap_used_mb=swap_used_mb,
++        swap_total_mb=4096,
++        swap_percent=0.0 if pressure == "green" else 35.0 if pressure == "yellow" else 70.0,
++        mac_free_percent=55.0 if pressure == "green" else 12.0 if pressure == "yellow" else 5.0,
++        pressure=pressure,
++        sampled_at=1.0,
++    )
++
++
++def test_v361_default_memory_policy_matches_small_mac_profile(monkeypatch: pytest.MonkeyPatch) -> None:
++    for key in (
++        "AMAURA_RAM_NORMAL_TARGET_MB",
++        "AMAURA_RAM_BURST_LIMIT_MB",
++        "AMAURA_RAM_ABSOLUTE_LIMIT_MB",
++        "AMAURA_RAM_PRESSURE_LIMIT_MB",
++    ):
++        monkeypatch.delenv(key, raising=False)
++    policy = MemoryPolicy.from_env()
++    assert policy.normal_target_mb == 1500
++    assert policy.burst_limit_mb == 2500
++    assert policy.absolute_limit_mb == 3000
++    assert policy.pressure_limit_mb == 1000
++
++
++
++def test_native_resource_fallback_works_without_psutil(monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setattr(resource_module, "psutil", None)
++    monkeypatch.setattr(resource_module, "_NATIVE_MEMORY_CACHE", (0.0, None))
++    monkeypatch.setattr(resource_module, "_PS_TABLE_CACHE", (0.0, {}))
++    snapshot = resource_module.sample_host_memory(MemoryPolicy())
++    assert snapshot.available_mb >= 0
++    assert snapshot.pressure in {"green", "yellow", "red"}
++    assert resource_module.process_tree_rss_mb(os.getpid()) >= 0
++
++def test_cross_process_ledger_allows_only_one_heavy_job(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setenv("AMAURA_RESOURCE_LEDGER_PATH", str(tmp_path / "ledger.json"))
++    monkeypatch.setattr(resource_module, "sample_host_memory", lambda policy=None: _host())
++    monkeypatch.setattr(resource_module, "process_tree_rss_mb", lambda pid: 120)
++    ledger = CrossProcessResourceLedger(MemoryPolicy())
++    first, reason, _ = ledger.try_reserve(capability="whisper", ram_mb=1600, heavy=True)
++    assert first and reason == "reserved"
++    second, reason, _ = ledger.try_reserve(capability="docling", ram_mb=1800, heavy=True)
++    assert second is None
++    assert "another heavy capability" in reason
++    ledger.release(first)
++    assert ledger.snapshot()["reserved_mb"] == 0
++
++
++def test_pressure_mode_blocks_new_heavy_workers(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setenv("AMAURA_RESOURCE_LEDGER_PATH", str(tmp_path / "ledger.json"))
++    monkeypatch.setattr(resource_module, "sample_host_memory", lambda policy=None: _host(pressure="yellow", available_mb=1200))
++    monkeypatch.setattr(resource_module, "process_tree_rss_mb", lambda pid: 100)
++    reservation, reason, state = CrossProcessResourceLedger(MemoryPolicy()).try_reserve(
++        capability="browser_use", ram_mb=1400, heavy=True
++    )
++    assert reservation is None
++    assert "yellow" in reason
++    assert state["host"]["pressure"] == "yellow"
++
++
++def test_isolated_worker_environment_scrubs_unrelated_secrets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setenv("AMAURA_GITHUB_TOKEN", "super-secret")
++    monkeypatch.setenv("AMAURA_GMAIL_CLIENT_SECRET", "gmail-secret")
++    monkeypatch.setenv("OPENAI_API_KEY", "paid-secret")
++    monkeypatch.setenv("AMAURA_WHISPER_MODEL", "tiny")
++    env = runtime_module._capability_worker_env("faster_whisper", tmp_path)
++    assert env["AMAURA_WHISPER_MODEL"] == "tiny"
++    assert "AMAURA_GITHUB_TOKEN" not in env
++    assert "AMAURA_GMAIL_CLIENT_SECRET" not in env
++    assert "OPENAI_API_KEY" not in env
++    assert env["AMAURA_CAPABILITY_WORKER"] == "1"
++
++
++def test_subprocess_tree_is_killed_when_rss_ceiling_is_exceeded(monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setattr(runtime_module, "process_tree_rss_mb", lambda pid: 9999)
++    monkeypatch.setattr(runtime_module, "sample_host_memory", lambda policy=None: _host())
++    with pytest.raises(CapabilityExecutionError, match="RSS ceiling"):
++        runtime_module._run([sys.executable, "-c", "import time; time.sleep(30)"], timeout=10, max_rss_mb=300)
++
++
++def test_mcp_contract_exposes_server_id_not_process_launch_parameters() -> None:
++    list_contract = CAPABILITY_OPERATION_CONTRACTS["mcp"]["list_tools"]
++    call_contract = CAPABILITY_OPERATION_CONTRACTS["mcp"]["call_tool"]
++    assert list_contract["required"] == ("server_id",)
++    assert call_contract["required"] == ("server_id", "tool_name")
++    flattened = set(list_contract["required"] + list_contract["optional"] + call_contract["required"] + call_contract["optional"])
++    assert {"command", "args", "env_keys"}.isdisjoint(flattened)
++
++
++class _Request:
++    def __init__(self, url: str, resource_type: str = "document"):
++        self.url = url
++        self.resource_type = resource_type
++
++
++class _Route:
++    def __init__(self, url: str, resource_type: str = "document"):
++        self.request = _Request(url, resource_type)
++        self.action = ""
++
++    def abort(self, _reason: str) -> None:
++        self.action = "abort"
++
++    def continue_(self) -> None:
++        self.action = "continue"
++
++
++def test_playwright_request_guard_blocks_private_and_websocket_destinations() -> None:
++    private = _Route("http://127.0.0.1:9999/admin")
++    PlaywrightAdapter._route_guard(private)
++    assert private.action == "abort"
++
++    websocket = _Route("https://93.184.216.34/socket", resource_type="websocket")
++    PlaywrightAdapter._route_guard(websocket)
++    assert websocket.action == "abort"
++
++
++def test_remotion_render_rejects_template_tampering(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
++    monkeypatch.setenv("AMAURA_REMOTION_VERSION", "4.0.477")
++    with tool_workspace(tmp_path):
++        adapter = RemotionAdapter()
++        adapter.execute("bootstrap_project", {"project_path": "template"})
++        source = tmp_path / "template" / "src" / "Root.tsx"
++        source.write_text(source.read_text() + "\n// tampered\n", encoding="utf-8")
++        with pytest.raises(GovernanceError, match="source changed after approval"):
++            adapter._verify_project(tmp_path / "template", require_lock=False)
+diff -ruN a/uv.lock b/uv.lock
+--- a/uv.lock	2026-01-01 00:00:00.000000000 +0000
++++ b/uv.lock	2026-08-07 15:15:56.295269056 +0000
+@@ -432,7 +432,7 @@
+ 
+ [[package]]
+ name = "jarvis"
+-version = "3.6.0"
++version = "3.6.1"
+ source = { editable = "." }
+ dependencies = [
+     { name = "beautifulsoup4" },

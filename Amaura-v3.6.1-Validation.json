@@ -1,0 +1,57 @@
+{
+  "qualification_limits": {
+    "complete_optional_oss_lock_regenerated": false,
+    "durable_capability_job_queue": false,
+    "historical_v360_qualification_evidence_reused_as_v361": false,
+    "physical_m3_8gb_tested": false
+  },
+  "release": "Amaura Company OS v3.6.1 Resource-Hardened",
+  "resource_policy_mb": {
+    "absolute_limit": 3000,
+    "burst_limit": 2500,
+    "idle_heavy_services": 0,
+    "max_heavy_workers": 1,
+    "normal_target": 1500,
+    "pressure_limit": 1000
+  },
+  "validation": {
+    "compileall": true,
+    "frozen_core_sync_dry_run": true,
+    "isolated_shards": 7,
+    "production_blockers": [
+      "approval_key",
+      "audit_checkpoint_path",
+      "audit_checkpoint_separated",
+      "audit_hmac_key",
+      "backup_destination_separated",
+      "distinct_reviewer_model",
+      "evaluation_pack_hmac_key",
+      "evidence_hmac_key",
+      "keys_are_separate",
+      "local_tool_api_auth",
+      "model_routing_valid",
+      "operator_key",
+      "post_merge_validation",
+      "private_model_evaluation_pack",
+      "provider_receipt_key",
+      "review_attestation_key",
+      "reviewer_identity_keys",
+      "sandbox_image_pinned",
+      "strict_audit_checkpoint",
+      "strict_audit_signatures",
+      "strict_evidence_mode",
+      "strict_evidence_signatures",
+      "strict_git_mode",
+      "strict_review_mode"
+    ],
+    "production_ready": false,
+    "security_findings": [],
+    "security_gate_ok": true,
+    "source_certified": true,
+    "tests_collected": 301,
+    "tests_passed": 301,
+    "wheel_build": true,
+    "wheel_smoke": true
+  },
+  "version": "3.6.1"
+}

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amaura Studio — J.A.R.V.I.S. Control Plane</title>
+    <!-- Google Fonts -->
+    <!-- FontAwesome Icons -->
+    <!-- Highlight.js CSS -->
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="hud-app">
+        <!-- ── TOP HUD HEADER ─────────────────────────────────────────────── -->
+        <header class="hud-header">
+            <div class="header-left">
+                <div class="stark-logo">
+                    <span class="logo-icon">◈</span>
+                    <span class="logo-text">J.A.R.V.I.S.</span>
+                    <span class="logo-tag">AMAURA OS</span>
+                </div>
+                <div class="status-pill online" id="status-pill">
+                    <span class="status-dot"></span>
+                    <span class="status-text" id="status-text">ONLINE</span>
+                </div>
+            </div>
+
+            <div class="header-center">
+                <div class="arc-reactor-header" id="arc-visualizer">
+                    <div class="arc-core"></div>
+                    <div class="arc-ring ring-1"></div>
+                    <div class="arc-ring ring-2"></div>
+                </div>
+                <div class="audio-waves" id="audio-waves">
+                    <span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <div class="system-time" id="system-clock">00:00:00</div>
+            </div>
+
+            <div class="header-right">
+                <div class="model-selector-wrap">
+                    <i class="fa-solid fa-microchip"></i>
+                    <select id="model-select" class="hud-select" title="Active AI Model">
+                        <option value="llama-3.3-70b">Llama 3.3 70B (Default)</option>
+                        <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                        <option value="claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                        <option value="deepseek-r1">DeepSeek R1</option>
+                        <option value="gpt-4o">GPT-4o</option>
+                    </select>
+                </div>
+
+                <button id="tts-toggle-btn" class="hud-icon-btn active" title="Toggle Voice Output (TTS)">
+                    <i class="fa-solid fa-volume-high" id="tts-icon"></i>
+                </button>
+
+                <button id="sidebar-toggle-btn" class="hud-icon-btn" title="Toggle Dashboard Panel">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- ── MAIN BODY CONTAINER ────────────────────────────────────────── -->
+        <div class="hud-body">
+            <!-- ── SIDEBAR PANELS ─────────────────────────────────────────── -->
+            <aside class="hud-sidebar" id="hud-sidebar">
+                <div class="sidebar-tabs">
+                    <button class="tab-btn active" data-tab="tab-sys"><i class="fa-solid fa-chart-pie"></i> System</button>
+                    <button class="tab-btn" data-tab="tab-amaura"><i class="fa-solid fa-building-shield"></i> Amaura</button>
+                    <button class="tab-btn" data-tab="tab-tools"><i class="fa-solid fa-wrench"></i> Tools</button>
+                    <button class="tab-btn" data-tab="tab-memory"><i class="fa-solid fa-brain"></i> Memory</button>
+                    <button class="tab-btn" data-tab="tab-voice"><i class="fa-solid fa-microphone-lines"></i> Voice</button>
+                </div>
+
+                <div class="sidebar-content">
+                    <!-- Tab: System Diagnostics -->
+                    <div class="tab-pane active" id="tab-sys">
+                        <h4 class="pane-title"><i class="fa-solid fa-desktop"></i> Core Diagnostics</h4>
+                        
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span>CPU Utilization</span>
+                                <span id="cpu-val">0%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" id="cpu-bar" style="width: 0%;"></div></div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span>Memory Usage</span>
+                                <span id="ram-val">0%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" id="ram-bar" style="width: 0%;"></div></div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span>Disk Space</span>
+                                <span id="disk-val">0%</span>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" id="disk-bar" style="width: 0%;"></div></div>
+                        </div>
+
+                        <div class="sys-info-box">
+                            <div class="sys-info-row"><span>OS:</span> <strong id="sys-os">macOS</strong></div>
+                            <div class="sys-info-row"><span>Uptime:</span> <strong id="sys-uptime">--</strong></div>
+                            <div class="sys-info-row"><span>Tools Count:</span> <strong id="sys-tools-count">61 Active</strong></div>
+                            <div class="sys-info-row"><span>WebSocket:</span> <strong id="sys-ws-status" class="text-success">Connected</strong></div>
+                        </div>
+
+                        <button id="refresh-sys-btn" class="hud-action-btn"><i class="fa-solid fa-arrows-rotate"></i> Refresh System Info</button>
+                    </div>
+
+                    <!-- Tab: Amaura Company Operating System -->
+                    <div class="tab-pane" id="tab-amaura">
+                        <div class="company-master-card">
+                            <div class="master-orb">J</div>
+                            <div>
+                                <span class="company-eyebrow">COMPANY CONTROL PLANE</span>
+                                <h4>JARVIS is Master</h4>
+                                <p>Founder direction → governed execution</p>
+                            </div>
+                        </div>
+                        <div class="company-metric-grid">
+                            <div class="company-stat"><strong id="amaura-programmes">0</strong><span>Programmes</span></div>
+                            <div class="company-stat"><strong id="amaura-agents">15</strong><span>Employees</span></div>
+                            <div class="company-stat warning"><strong id="amaura-approvals">0</strong><span>Approvals</span></div>
+                            <div class="company-stat"><strong id="amaura-cost">0</strong><span>Cost units</span></div>
+                        </div>
+                        <div class="company-section">
+                            <div class="company-section-title">Task Operations</div>
+                            <div id="amaura-task-states" class="company-state-list">
+                                <div class="loading-spinner"><i class="fa-solid fa-spinner fa-spin"></i> Loading company state...</div>
+                            </div>
+                        </div>
+                        <div class="company-section">
+                            <div class="company-section-title">Founder Decisions</div>
+                            <div id="amaura-approval-list" class="company-approval-list"></div>
+                        </div>
+                        <div class="company-policy-row">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <span><strong id="amaura-violations">0</strong> denied policy violations logged</span>
+                        </div>
+                        <button id="refresh-amaura-btn" class="hud-action-btn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Company</button>
+                    </div>
+
+                    <!-- Tab: Tools Directory -->
+                    <div class="tab-pane" id="tab-tools">
+                        <h4 class="pane-title"><i class="fa-solid fa-cubes"></i> Capable Tools (61+)</h4>
+                        <input type="text" id="tool-search" class="hud-input" placeholder="Search tool by name or keyword...">
+                        <div class="tools-list" id="tools-list">
+                            <div class="loading-spinner"><i class="fa-solid fa-spinner fa-spin"></i> Loading tools...</div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Memory Bank -->
+                    <div class="tab-pane" id="tab-memory">
+                        <h4 class="pane-title"><i class="fa-solid fa-brain"></i> Personal Memory</h4>
+                        <div class="memory-input-group">
+                            <input type="text" id="memory-input" class="hud-input" placeholder="Teach Jarvis a new fact...">
+                            <button id="add-memory-btn" class="hud-action-btn compact"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div class="memory-list" id="memory-list">
+                            <div class="loading-spinner"><i class="fa-solid fa-spinner fa-spin"></i> Loading memory...</div>
+                        </div>
+                        <button id="clear-memory-btn" class="hud-action-btn danger"><i class="fa-solid fa-trash"></i> Reset Memory</button>
+                    </div>
+
+                    <!-- Tab: Voice Controls -->
+                    <div class="tab-pane" id="tab-voice">
+                        <h4 class="pane-title"><i class="fa-solid fa-sliders"></i> Voice Engine Settings</h4>
+                        
+                        <div class="setting-group">
+                            <label>Speech Output Voice:</label>
+                            <select id="voice-select" class="hud-select full-width"></select>
+                        </div>
+
+                        <div class="setting-group">
+                            <label>Voice Speed: <span id="rate-val">1.0x</span></label>
+                            <input type="range" id="voice-rate" min="0.5" max="2.0" step="0.1" value="1.0" class="hud-slider">
+                        </div>
+
+                        <div class="setting-group">
+                            <label>Pitch: <span id="pitch-val">1.0</span></label>
+                            <input type="range" id="voice-pitch" min="0.5" max="1.5" step="0.1" value="1.0" class="hud-slider">
+                        </div>
+
+                        <div class="setting-group checkbox-group">
+                            <label><input type="checkbox" id="auto-speak-chk" checked> Auto-read Assistant Responses</label>
+                        </div>
+
+                        <div class="setting-group checkbox-group">
+                            <label><input type="checkbox" id="continuous-stt-chk"> Continuous Hands-Free Voice Mode</label>
+                        </div>
+
+                        <button id="test-voice-btn" class="hud-action-btn"><i class="fa-solid fa-volume-high"></i> Test Voice Output</button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- ── CHAT STAGE ────────────────────────────────────────────── -->
+            <main class="hud-chat-stage">
+                <!-- Live Voice Speech Transcript Overlay -->
+                <div class="transcript-overlay hidden" id="transcript-overlay">
+                    <i class="fa-solid fa-microphone-lines fa-bounce"></i>
+                    <span id="transcript-text">Listening...</span>
+                </div>
+
+                <!-- Live Stream Messages Area -->
+                <div class="chat-messages" id="chat-messages">
+                    <div class="msg system-msg">
+                        <div class="msg-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                        <div class="msg-content">
+                            <strong>Amaura Studio Control Plane Online.</strong><br>
+                            JARVIS is master of the governed agent workforce. Founder authority and approval gates are active.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Autocomplete Floating Popup -->
+                <div class="autocomplete-popup hidden" id="autocomplete-popup"></div>
+
+                <!-- ── BOTTOM CONTROL DOCK ──────────────────────────────────── -->
+                <div class="hud-control-dock">
+                    <!-- Quick Slash Chips -->
+                    <div class="slash-chips">
+                        <button class="chip-btn" data-cmd="/help"><i class="fa-solid fa-circle-question"></i> /help</button>
+                        <button class="chip-btn" data-cmd="/status"><i class="fa-solid fa-gauge-high"></i> /status</button>
+                        <button class="chip-btn" data-cmd="/company"><i class="fa-solid fa-building-shield"></i> /company</button>
+                        <button class="chip-btn" data-cmd="/briefing"><i class="fa-solid fa-clipboard-list"></i> /briefing</button>
+                        <button class="chip-btn" data-cmd="/tools"><i class="fa-solid fa-wrench"></i> /tools</button>
+                        <button class="chip-btn" data-cmd="/models"><i class="fa-solid fa-microchip"></i> /models</button>
+                        <button class="chip-btn" data-cmd="/memory"><i class="fa-solid fa-brain"></i> /memory</button>
+                        <button class="chip-btn" data-cmd="/voice"><i class="fa-solid fa-volume-high"></i> /voice</button>
+                        <button class="chip-btn" data-cmd="/clear"><i class="fa-solid fa-eraser"></i> /clear</button>
+                    </div>
+
+                    <!-- Main Input Bar -->
+                    <div class="input-bar-wrap">
+                        <button id="mic-btn" class="hud-btn mic-btn" title="Click to Speak (Voice Command)">
+                            <i class="fa-solid fa-microphone" id="mic-icon"></i>
+                        </button>
+
+                        <div class="input-inner">
+                            <textarea id="chat-input" placeholder="Type command or query (e.g., 'What is my system status?', '/models', or speak)..." rows="1"></textarea>
+                        </div>
+
+                        <button id="stop-speech-btn" class="hud-btn stop-btn hidden" title="Stop Assistant Speaking">
+                            <i class="fa-solid fa-circle-stop"></i>
+                        </button>
+
+                        <button id="clear-chat-btn" class="hud-btn icon-only" title="Clear Workspace">
+                            <i class="fa-solid fa-broom"></i>
+                        </button>
+
+                        <button id="send-btn" class="hud-btn send-btn" title="Send Command (Enter)">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- External Libraries -->
+    <!-- Custom Application Logic -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

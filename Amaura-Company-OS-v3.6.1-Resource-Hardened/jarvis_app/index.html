@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S. — Just A Rather Very Intelligent System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='none' stroke='%2300d4ff' stroke-width='3'/><circle cx='50' cy='50' r='20' fill='%2300d4ff' opacity='0.8'/></svg>">
+</head>
+<body>
+    <!-- Boot Sequence Overlay -->
+    <div id="boot-overlay" class="boot-overlay">
+        <div class="boot-content">
+            <div class="boot-logo">J.A.R.V.I.S.</div>
+            <div class="boot-subtitle">Just A Rather Very Intelligent System</div>
+            <div class="boot-loader">
+                <div class="boot-bar"></div>
+            </div>
+            <div id="boot-status" class="boot-status">Initializing core systems...</div>
+        </div>
+    </div>
+
+    <!-- Main HUD Container -->
+    <div id="hud" class="hud-container hidden">
+        <!-- Top Status Bar -->
+        <header class="hud-header">
+            <div class="header-left">
+                <span class="sys-label">SYS.V_3.0</span>
+                <span class="status-dot online"></span>
+                <span id="header-status">ALL SYSTEMS OPERATIONAL</span>
+            </div>
+            <div class="header-center">
+                <span class="jarvis-title">J.A.R.V.I.S.</span>
+            </div>
+            <div class="header-right">
+                <span id="clock" class="header-clock">--:--:--</span>
+                <span id="cpu-info" class="header-info">CPU --%</span>
+                <span id="mem-info" class="header-info">MEM --%</span>
+            </div>
+        </header>
+
+        <!-- Main Layout: Sidebar + Content -->
+        <div class="hud-main">
+            <!-- Left Sidebar — Quick Controls -->
+            <aside class="sidebar">
+                <nav class="sidebar-nav">
+                    <button class="nav-btn active" data-panel="chat" title="Chat">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        <span>CHAT</span>
+                    </button>
+                    <button class="nav-btn" data-panel="tools" title="Tools">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                        </svg>
+                        <span>TOOLS</span>
+                    </button>
+                    <button class="nav-btn" data-panel="system" title="System">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                        <span>SYSTEM</span>
+                    </button>
+                    <button class="nav-btn" data-panel="memory" title="Memory">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                            <path d="M2 17l10 5 10-5"/>
+                            <path d="M2 12l10 5 10-5"/>
+                        </svg>
+                        <span>MEMORY</span>
+                    </button>
+                    <button class="nav-btn" data-panel="settings" title="Settings">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                        <span>SETTINGS</span>
+                    </button>
+                </nav>
+
+                <!-- Voice Toggle -->
+                <div class="sidebar-voice">
+                    <button id="voice-toggle" class="voice-toggle" title="Toggle Voice Mode">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="23"/>
+                            <line x1="8" y1="23" x2="16" y2="23"/>
+                        </svg>
+                        <span>VOICE</span>
+                    </button>
+                </div>
+
+                <!-- Arc Reactor Mini -->
+                <div class="sidebar-reactor">
+                    <div class="mini-reactor" id="mini-reactor">
+                        <div class="mini-core"></div>
+                        <div class="mini-ring"></div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="content-area">
+                <!-- Chat Panel -->
+                <section id="panel-chat" class="panel active">
+                    <div class="panel-header">
+                        <h2>COMMUNICATION INTERFACE</h2>
+                        <span id="model-badge" class="model-badge">META/LLAMA-3.3-70B</span>
+                    </div>
+                    <div class="chat-log" id="chat-log">
+                        <div class="msg-system">
+                            <span class="msg-time">SYSTEM</span>
+                            <span>J.A.R.V.I.S. online. All systems operational. At your service, sir.</span>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <div class="input-wrapper">
+                            <button id="mic-btn" class="input-btn mic-btn" title="Voice Input">
+                                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none">
+                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                    <line x1="12" y1="19" x2="12" y2="23"/>
+                                    <line x1="8" y1="23" x2="16" y2="23"/>
+                                </svg>
+                            </button>
+                            <textarea id="chat-input" rows="1" placeholder="Enter command or speak..." autocomplete="off"></textarea>
+                            <button id="send-btn" class="input-btn send-btn" title="Send">
+                                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none">
+                                    <line x1="22" y1="2" x2="11" y2="13"/>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="quick-commands">
+                            <button class="quick-cmd" data-cmd="What's the system status?">System Status</button>
+                            <button class="quick-cmd" data-cmd="Take a screenshot">Screenshot</button>
+                            <button class="quick-cmd" data-cmd="List running apps">Running Apps</button>
+                            <button class="quick-cmd" data-cmd="Search the web for latest AI news">Web Search</button>
+                            <button class="quick-cmd" data-cmd="Open Safari">Open Safari</button>
+                            <button class="quick-cmd" data-cmd="Set volume to 50">Volume 50%</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tools Panel -->
+                <section id="panel-tools" class="panel">
+                    <div class="panel-header">
+                        <h2>TOOL ARSENAL</h2>
+                        <span id="tool-count" class="model-badge">61 TOOLS</span>
+                    </div>
+                    <div class="tools-grid" id="tools-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </section>
+
+                <!-- System Panel -->
+                <section id="panel-system" class="panel">
+                    <div class="panel-header">
+                        <h2>SYSTEM DIAGNOSTICS</h2>
+                        <button id="refresh-system" class="refresh-btn">⟳ REFRESH</button>
+                    </div>
+                    <div class="system-grid">
+                        <div class="sys-card">
+                            <div class="sys-card-icon">🖥</div>
+                            <div class="sys-card-label">CPU</div>
+                            <div class="sys-card-value" id="sys-cpu">--%</div>
+                            <div class="sys-card-bar"><div class="sys-bar-fill" id="sys-cpu-bar"></div></div>
+                        </div>
+                        <div class="sys-card">
+                            <div class="sys-card-icon">🧠</div>
+                            <div class="sys-card-label">MEMORY</div>
+                            <div class="sys-card-value" id="sys-mem">--%</div>
+                            <div class="sys-card-bar"><div class="sys-bar-fill" id="sys-mem-bar"></div></div>
+                        </div>
+                        <div class="sys-card">
+                            <div class="sys-card-icon">💾</div>
+                            <div class="sys-card-label">DISK</div>
+                            <div class="sys-card-value" id="sys-disk">--%</div>
+                            <div class="sys-card-bar"><div class="sys-bar-fill" id="sys-disk-bar"></div></div>
+                        </div>
+                        <div class="sys-card">
+                            <div class="sys-card-icon">🔋</div>
+                            <div class="sys-card-label">BATTERY</div>
+                            <div class="sys-card-value" id="sys-battery">--%</div>
+                            <div class="sys-card-bar"><div class="sys-bar-fill" id="sys-battery-bar"></div></div>
+                        </div>
+                    </div>
+                    <div class="desktop-controls">
+                        <h3>DESKTOP CONTROLS</h3>
+                        <div class="ctrl-grid">
+                            <button class="ctrl-btn" data-action="screenshot">📸 Screenshot</button>
+                            <button class="ctrl-btn" data-action="lock">🔒 Lock Screen</button>
+                            <button class="ctrl-btn" data-action="apps">📋 Running Apps</button>
+                            <button class="ctrl-btn" data-action="notify">🔔 Test Notification</button>
+                        </div>
+                        <div class="volume-control">
+                            <label>VOLUME</label>
+                            <input type="range" id="volume-slider" min="0" max="100" value="50">
+                            <span id="volume-value">50%</span>
+                        </div>
+                        <div class="brightness-control">
+                            <label>BRIGHTNESS</label>
+                            <input type="range" id="brightness-slider" min="0" max="100" value="70">
+                            <span id="brightness-value">70%</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Memory Panel -->
+                <section id="panel-memory" class="panel">
+                    <div class="panel-header">
+                        <h2>PERSONAL MEMORY BANK</h2>
+                        <button id="refresh-memory" class="refresh-btn">⟳ REFRESH</button>
+                    </div>
+                    <div class="memory-input-area">
+                        <input type="text" id="memory-input" placeholder="Teach Jarvis something about you...">
+                        <button id="memory-save-btn" class="hud-btn-primary">REMEMBER</button>
+                    </div>
+                    <div class="memory-list" id="memory-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </section>
+
+                <!-- Settings Panel -->
+                <section id="panel-settings" class="panel">
+                    <div class="panel-header">
+                        <h2>SYSTEM CONFIGURATION</h2>
+                    </div>
+                    <div class="settings-grid">
+                        <div class="setting-card">
+                            <label>AI MODEL</label>
+                            <select id="model-select">
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+                        <div class="setting-card">
+                            <label>TTS VOICE</label>
+                            <select id="voice-select">
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+                        <div class="setting-card">
+                            <label>SPEECH RATE (WPM)</label>
+                            <input type="range" id="rate-slider" min="100" max="300" value="180">
+                            <span id="rate-value">180</span>
+                        </div>
+                        <div class="setting-card">
+                            <button id="clear-convo-btn" class="hud-btn-danger">CLEAR CONVERSATION</button>
+                        </div>
+                        <div class="setting-card">
+                            <button id="clear-memory-btn" class="hud-btn-danger">CLEAR MEMORY</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <!-- Right Info Panel -->
+            <aside class="info-panel">
+                <div class="info-section">
+                    <h3>SESSION</h3>
+                    <div class="info-item">
+                        <span class="info-label">ID</span>
+                        <span id="session-id" class="info-value">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">MODEL</span>
+                        <span id="info-model" class="info-value">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">TOOLS</span>
+                        <span id="info-tools" class="info-value">61</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">VOICE</span>
+                        <span id="info-voice" class="info-value">OFF</span>
+                    </div>
+                </div>
+                <div class="info-section">
+                    <h3>RECENT ACTIVITY</h3>
+                    <div id="activity-log" class="activity-log">
+                        <span class="activity-empty">Awaiting commands...</span>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Arc Reactor Background -->
+        <div class="arc-reactor-bg" id="arc-reactor-bg">
+            <div class="arc-core"></div>
+            <div class="arc-ring arc-ring-1"></div>
+            <div class="arc-ring arc-ring-2"></div>
+            <div class="arc-ring arc-ring-3"></div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

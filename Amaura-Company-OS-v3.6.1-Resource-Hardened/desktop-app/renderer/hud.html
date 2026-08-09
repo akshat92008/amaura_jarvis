@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <title>Amaura Company OS</title>
+    <link rel="stylesheet" href="hud.css">
+</head>
+<body>
+    <!-- ── Boot Screen ──────────────────────────────────────────────────────── -->
+    <div id="boot-screen" class="boot-screen">
+        <div class="boot-content">
+            <div class="arc-reactor-boot">
+                <div class="boot-core"></div>
+                <div class="boot-ring outer"></div>
+                <div class="boot-ring inner"></div>
+            </div>
+            <div class="boot-title">J.A.R.V.I.S.</div>
+            <div class="boot-subtitle">Just A Rather Very Intelligent System</div>
+            <div class="boot-status" id="boot-status">Initializing neural pathways...</div>
+            <div class="boot-progress">
+                <div class="boot-progress-bar" id="boot-progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Main HUD ─────────────────────────────────────────────────────────── -->
+    <div id="hud-main" class="hud-main" style="display: none;">
+        <!-- Top Status Bar -->
+        <header class="hud-header">
+            <div class="hud-header-left">
+                <span class="hud-label">SYS.V_2.0</span>
+                <span class="hud-separator">|</span>
+                <span class="hud-label" id="hud-model">LLAMA-3.1-70B</span>
+                <span class="hud-separator">|</span>
+                <span class="hud-label" id="hud-time">--:--:--</span>
+            </div>
+            <div class="hud-header-center">
+                <span class="hud-title">◈ J.A.R.V.I.S. ◈</span>
+            </div>
+            <div class="hud-header-right">
+                <span class="hud-status-dot" id="status-dot"></span>
+                <span class="hud-label" id="hud-status-text">ONLINE</span>
+                <span class="hud-separator">|</span>
+                <span class="hud-label" id="hud-session-count">SESS:1</span>
+                <button class="hud-icon-btn" id="btn-minimize" title="Minimize to tray">─</button>
+                <button class="hud-icon-btn" id="btn-hide" title="Hide window">◈</button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="hud-body">
+            <!-- Left Panel: Arc Reactor + Quick Stats -->
+            <aside class="hud-sidebar">
+                <div class="arc-reactor-panel">
+                    <div class="arc-reactor" id="arc-reactor">
+                        <div class="arc-core" id="arc-core"></div>
+                        <div class="arc-ring arc-ring-1"></div>
+                        <div class="arc-ring arc-ring-2"></div>
+                        <div class="arc-ring arc-ring-3"></div>
+                        <div class="arc-particles" id="arc-particles"></div>
+                    </div>
+                </div>
+
+                <div class="quick-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">CPU</span>
+                        <span class="stat-value" id="stat-cpu">--%</span>
+                        <div class="stat-bar"><div class="stat-fill" id="stat-cpu-fill"></div></div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">MEM</span>
+                        <span class="stat-value" id="stat-mem">--%</span>
+                        <div class="stat-bar"><div class="stat-fill" id="stat-mem-fill"></div></div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">DISK</span>
+                        <span class="stat-value" id="stat-disk">--%</span>
+                        <div class="stat-bar"><div class="stat-fill" id="stat-disk-fill"></div></div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">BATT</span>
+                        <span class="stat-value" id="stat-batt">--%</span>
+                        <div class="stat-bar"><div class="stat-fill" id="stat-batt-fill"></div></div>
+                    </div>
+                </div>
+
+                <div class="sidebar-actions">
+                    <button class="sidebar-btn" id="btn-voice" title="Toggle Voice Mode">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="23"/>
+                            <line x1="8" y1="23" x2="16" y2="23"/>
+                        </svg>
+                        <span>VOICE</span>
+                    </button>
+                    <button class="sidebar-btn" id="btn-clear" title="Clear Conversation">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                        <span>CLEAR</span>
+                    </button>
+                    <button class="sidebar-btn" id="btn-status" title="System Status">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+                            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+                            <line x1="6" y1="6" x2="6.01" y2="6"/>
+                            <line x1="6" y1="18" x2="6.01" y2="18"/>
+                        </svg>
+                        <span>STATUS</span>
+                    </button>
+                    <button class="sidebar-btn" id="btn-models" title="Switch Model">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                            <path d="M2 17l10 5 10-5"/>
+                            <path d="M2 12l10 5 10-5"/>
+                        </svg>
+                        <span>MODEL</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Center: Chat Area -->
+            <main class="hud-chat-area">
+                <!-- Tool execution overlay -->
+                <div class="tool-overlay" id="tool-overlay" style="display: none;">
+                    <div class="tool-overlay-content">
+                        <div class="tool-icon">⚡</div>
+                        <div class="tool-name" id="tool-name-display">Executing tool...</div>
+                        <div class="tool-spinner"></div>
+                    </div>
+                </div>
+
+                <!-- Chat messages -->
+                <div class="chat-messages" id="chat-messages">
+                    <div class="msg-system">
+                        <span class="msg-icon">◈</span>
+                        <span>All systems operational. At your service, sir.</span>
+                    </div>
+                </div>
+
+                <!-- Voice listening indicator -->
+                <div class="voice-indicator" id="voice-indicator" style="display: none;">
+                    <div class="voice-pulse"></div>
+                    <span class="voice-text">Listening...</span>
+                </div>
+
+                <!-- Input Area -->
+                <div class="chat-input-area">
+                    <div class="input-wrapper">
+                        <button class="input-mic-btn" id="btn-mic" title="Voice Input">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="23"/>
+                                <line x1="8" y1="23" x2="16" y2="23"/>
+                            </svg>
+                        </button>
+                        <input
+                            type="text"
+                            id="chat-input"
+                            class="chat-input"
+                            placeholder="Enter command or speak..."
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <button class="input-send-btn" id="btn-send" title="Send Command">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                                <line x1="22" y1="2" x2="11" y2="13"/>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="input-hints">
+                        <span>Type a command or use /help</span>
+                        <span class="hint-shortcut">⌘⇧J to summon</span>
+                        <span class="hint-shortcut">⌘⇧V for voice</span>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Panel: Tools & Memory -->
+            <aside class="hud-right-panel">
+                <div class="panel-section">
+                    <div class="panel-title">⚡ ACTIVE TOOLS</div>
+                    <div class="tools-list" id="tools-list">
+                        <span class="tools-count" id="tools-count">61 tools loaded</span>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="panel-title">🧠 MEMORY</div>
+                    <div class="memory-display" id="memory-display">
+                        <span class="memory-empty">No personal facts stored yet.</span>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="panel-title">📋 QUICK COMMANDS</div>
+                    <div class="quick-commands">
+                        <button class="quick-cmd" data-cmd="Open Safari">Open Safari</button>
+                        <button class="quick-cmd" data-cmd="Take a screenshot">Screenshot</button>
+                        <button class="quick-cmd" data-cmd="What's my system status?">System Status</button>
+                        <button class="quick-cmd" data-cmd="Set volume to 50%">Volume 50%</button>
+                        <button class="quick-cmd" data-cmd="Lock my screen">Lock Screen</button>
+                        <button class="quick-cmd" data-cmd="Search the web for latest AI news">AI News</button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Model Selector Modal -->
+        <div class="modal-overlay" id="modal-models" style="display: none;">
+            <div class="modal-panel">
+                <div class="modal-header">
+                    <span class="modal-title">◈ SELECT MODEL ◈</span>
+                    <button class="modal-close" id="btn-close-models">✕</button>
+                </div>
+                <div class="modal-body" id="models-list">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Modal -->
+        <div class="modal-overlay" id="modal-status" style="display: none;">
+            <div class="modal-panel">
+                <div class="modal-header">
+                    <span class="modal-title">◈ SYSTEM STATUS ◈</span>
+                    <button class="modal-close" id="btn-close-status">✕</button>
+                </div>
+                <div class="modal-body" id="status-content">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="hud.js"></script>
+</body>
+</html>

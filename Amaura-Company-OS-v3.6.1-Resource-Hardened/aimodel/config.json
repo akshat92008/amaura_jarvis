@@ -1,0 +1,8 @@
+{
+  "nvidia_api_key": "",
+  "nvidia_api_keys": [],
+  "default_provider": "auto",
+  "max_thinking_budget": 8000,
+  "auto_self_heal": true,
+  "max_heal_attempts": 5
+}

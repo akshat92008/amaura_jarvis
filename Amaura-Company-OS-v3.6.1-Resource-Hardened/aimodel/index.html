@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fable-5 Autonomous AI Engineering Engine</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-badge">FABLE 5</span>
+        <h2>Autonomous AI Engineering Engine</h2>
+      </div>
+      <div class="status-indicator">
+        <span class="dot green"></span>
+        <span>MacBook M3 Engine (< 150MB RAM)</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Input Panel -->
+      <section class="card input-section">
+        <h3>What would you like the AI to build or refactor?</h3>
+        <textarea id="promptInput" placeholder="e.g. Build a full-stack weather app with real-time forecast and unit tests..."></textarea>
+        <div class="actions">
+          <button id="runBtn" class="btn btn-primary">🚀 Run Autonomous Engine</button>
+        </div>
+      </section>
+
+      <!-- Status Pipeline -->
+      <section class="card pipeline-section">
+        <h3>Execution Pipeline</h3>
+        <div class="pipeline-steps">
+          <div id="stepPlanning" class="step"><span class="step-icon">1</span> Adaptive CoT Planning</div>
+          <div id="stepCoding" class="step"><span class="step-icon">2</span> Surgical Code Generation</div>
+          <div id="stepTesting" class="step"><span class="step-icon">3</span> Self-Healing Verification</div>
+          <div id="stepComplete" class="step"><span class="step-icon">4</span> Production Ready</div>
+        </div>
+      </section>
+
+      <!-- Results Grid -->
+      <div class="grid-2col">
+        <!-- Thinking Trace -->
+        <section class="card">
+          <h3>Adaptive Thinking Trace (CoT)</h3>
+          <pre id="thinkingOutput" class="code-box">Awaiting prompt...</pre>
+        </section>
+
+        <!-- Verification Log -->
+        <section class="card">
+          <h3>Self-Healing Verification Log</h3>
+          <pre id="verificationOutput" class="code-box">No tests executed yet.</pre>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

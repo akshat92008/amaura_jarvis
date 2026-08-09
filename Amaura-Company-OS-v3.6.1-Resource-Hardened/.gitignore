@@ -1,0 +1,66 @@
+# Environment variables & Secrets
+.env
+*.env
+!.env.example
+!.env.amaura.example
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Python cache & build outputs
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Screenshots & snapshots
+ui_screenshot.png
+webcam_snapshot.jpg
+
+# Node / JS artifacts (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database / local dynamic storage
+*.sqlite
+*.db
+.jarvis-data/
+.amaura-data/
+.env.amaura
+amaura-launch-report.json
+
+# Test/runtime artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+evidence/
+coverage.xml
+.coverage
+htmlcov/
