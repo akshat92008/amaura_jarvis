@@ -1,0 +1,61 @@
+{
+  "architecture_status": {
+    "company_os_legacy_features": "regression_passed",
+    "noryx_contract_and_independent_verification": "qualified_with_fake_fixture; live backend pending",
+    "persistent_mission_runner": "qualified_by_contract_tests",
+    "plan_only_hold": "qualified_by_contract_tests",
+    "structural_replanning": "qualified_by_regression",
+    "unified_executive_kernel": "qualified_by_regression",
+    "unified_memory_and_reference_resolution": "qualified_by_regression"
+  },
+  "generated_at": "2026-08-09T18:44:08.865557+00:00",
+  "open_qualification_items": [
+    {
+      "id": "target_mac_soak",
+      "requirement": "Run long-duration workload/resource/lease/restart soak on the actual target Mac.",
+      "status": "open"
+    },
+    {
+      "id": "live_noryx_unseen_benchmark",
+      "requirement": "Qualify the actual installed Noryx executable on private unseen repositories with independent hidden verifiers.",
+      "status": "open"
+    },
+    {
+      "id": "live_cognition_provider",
+      "requirement": "Qualify configured planner/intent/reference/memory providers, rate limits and failure recovery using real credentials.",
+      "status": "open"
+    },
+    {
+      "id": "sandbox_runtime",
+      "requirement": "Qualify configured Docker/native sandbox/runtime images on the target machine.",
+      "status": "open"
+    },
+    {
+      "id": "desktop_permissions",
+      "requirement": "Validate Electron installation and macOS microphone/automation permissions if voice/computer capabilities are enabled.",
+      "status": "open"
+    },
+    {
+      "id": "external_integrations",
+      "requirement": "Production credentials/provider receipts/webhooks must be validated per integration before unattended external actions.",
+      "status": "open"
+    },
+    {
+      "id": "intelligence_outcomes",
+      "requirement": "Run a private scenario pack for ambiguous long-running company missions and measure objective completion, interventions and regressions.",
+      "status": "open"
+    }
+  ],
+  "production_ready": false,
+  "regression": {
+    "compileall": "pass",
+    "electron_syntax": "pass",
+    "tests_failed": 0,
+    "tests_passed": 327,
+    "wheel_source_parity": "pass"
+  },
+  "schema": "amaura.qualification-report.v5",
+  "source_certified": true,
+  "verdict": "Strong source/regression release candidate for practical JARVIS architecture; do not label production-proven until live target-machine and unseen-task qualification are complete.",
+  "version": "5.0.0"
+}

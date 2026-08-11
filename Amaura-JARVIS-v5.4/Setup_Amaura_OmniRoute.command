@@ -1,0 +1,220 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Setup_Amaura_OmniRoute.command
+══════════════════════════════════════════════════════════════════════════
+Secure local setup assistant for Amaura JARVIS v5.4.1 OmniRoute.
+
+What this does:
+  1. Detects the JARVIS installation directory.
+  2. Backs up any existing .env.amaura to .env.amaura.bak.<timestamp>.
+  3. Prompts (securely / hidden input) for OmniRoute credentials.
+  4. Writes config to .env.amaura.local with chmod 0600.
+  5. Runs preflight connectivity check — reports READY or BLOCKED.
+
+Security guarantees:
+  - API key is never echoed to terminal.
+  - API key is never written to stdout, logs, or error messages.
+  - Config file is written mode 0600 (owner-read-only).
+  - This script never stores or transmits your key anywhere else.
+══════════════════════════════════════════════════════════════════════════
+"""
+
+from __future__ import annotations
+import datetime
+import getpass
+import json
+import os
+import pathlib
+import shutil
+import sys
+import time
+import urllib.error
+import urllib.request
+
+BANNER = r"""
+  ┌──────────────────────────────────────────────────────────┐
+  │  Amaura JARVIS v5.4.1 — OmniRoute Setup Assistant        │
+  │  Your API key is never echoed or stored in logs.          │
+  └──────────────────────────────────────────────────────────┘
+"""
+
+def _colour(text: str, code: str) -> str:
+    return f"\033[{code}m{text}\033[0m" if sys.stdout.isatty() else text
+
+OK   = lambda t: _colour(t, "32")
+ERR  = lambda t: _colour(t, "31")
+WARN = lambda t: _colour(t, "33")
+HEAD = lambda t: _colour(t, "36;1")
+DIM  = lambda t: _colour(t, "2")
+
+def _prompt(label: str, default: str = "", secret: bool = False) -> str:
+    display = f"{label} [{default}]: " if default and not secret else f"{label}: "
+    if secret:
+        try:
+            val = getpass.getpass(display)
+        except (EOFError, KeyboardInterrupt):
+            print()
+            sys.exit(0)
+    else:
+        try:
+            val = input(display).strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            sys.exit(0)
+    return val or default
+
+def _redact(key: str, text: str) -> str:
+    if key and len(key) >= 6:
+        text = text.replace(key, "[REDACTED]")
+    return text
+
+def _probe_omniroute(base_url: str, api_key: str, model: str) -> dict:
+    endpoint = base_url.rstrip("/") + "/models"
+    req = urllib.request.Request(
+        endpoint,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Accept": "application/json",
+            "User-Agent": "Amaura-JARVIS/5.4.1-setup",
+        },
+        method="GET",
+    )
+    t0 = time.monotonic()
+    try:
+        with urllib.request.urlopen(req, timeout=8.0) as resp:
+            latency_ms = int((time.monotonic() - t0) * 1000)
+            raw = resp.read(65536).decode("utf-8", errors="replace")
+        try:
+            data = json.loads(raw)
+            models = [str(m.get("id") or m.get("name") or "") for m in (data.get("data") or []) if isinstance(m, dict)]
+        except Exception:
+            models = []
+        return {"ok": True, "latency_ms": latency_ms, "models": models[:10], "error": ""}
+    except urllib.error.HTTPError as exc:
+        return {"ok": False, "latency_ms": int((time.monotonic() - t0) * 1000),
+                "models": [], "error": _redact(api_key, f"HTTP {exc.code}: {exc.reason}")}
+    except Exception as exc:
+        return {"ok": False, "latency_ms": int((time.monotonic() - t0) * 1000),
+                "models": [], "error": _redact(api_key, type(exc).__name__)}
+
+def _detect_jarvis_dir() -> pathlib.Path:
+    candidates = [
+        pathlib.Path(__file__).resolve().parent,
+        pathlib.Path.cwd(),
+        pathlib.Path.home() / "Desktop" / "amaura_jarivs" / "Amaura-JARVIS-v5.4",
+    ]
+    for cand in candidates:
+        if (cand / "pyproject.toml").exists() and (cand / "jarvis").is_dir():
+            return cand
+    return pathlib.Path(__file__).resolve().parent
+
+def _backup_existing(jarvis_dir: pathlib.Path) -> None:
+    env_path = jarvis_dir / ".env.amaura"
+    if env_path.exists():
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        bak = jarvis_dir / f".env.amaura.bak.{ts}"
+        shutil.copy2(env_path, bak)
+        os.chmod(bak, 0o600)
+        print(DIM(f"  ↳ Backed up existing .env.amaura → {bak.name}"))
+
+def _write_env_local(jarvis_dir: pathlib.Path, values: dict[str, str]) -> pathlib.Path:
+    env_local = jarvis_dir / ".env.amaura.local"
+    existing: dict[str, str] = {}
+    if env_local.exists():
+        for line in env_local.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                existing[k.strip()] = v.strip()
+    existing.update(values)
+    lines = [
+        "# Amaura JARVIS OmniRoute Configuration",
+        f"# Generated by Setup_Amaura_OmniRoute.command on {datetime.datetime.now().isoformat()}",
+        "# This file is 0600 — never share it or commit it to version control.",
+        "",
+    ]
+    for k, v in existing.items():
+        lines.append(f"{k}={v}")
+    lines.append("")
+    env_local.write_text("\n".join(lines), encoding="utf-8")
+    os.chmod(env_local, 0o600)
+    return env_local
+
+def main() -> int:
+    print(BANNER)
+    jarvis_dir = _detect_jarvis_dir()
+    print(HEAD(f"JARVIS directory: {jarvis_dir}"))
+    print()
+
+    print(HEAD("Step 1/5 — Backing up existing config"))
+    _backup_existing(jarvis_dir)
+    print(OK("  ✓ Done"))
+    print()
+
+    print(HEAD("Step 2/5 — OmniRoute Base URL"))
+    print(DIM("  Example: https://api.omniroute.ai/v1"))
+    base_url = _prompt("  OmniRoute Base URL", default="https://api.omniroute.ai/v1")
+    if not base_url.startswith(("http://", "https://")):
+        print(ERR("  ✗ Base URL must start with http:// or https://"))
+        return 1
+    print(OK("  ✓ OK"))
+    print()
+
+    print(HEAD("Step 3/5 — OmniRoute API Key"))
+    print(DIM("  Input is hidden — your key will NOT be echoed to terminal."))
+    api_key = _prompt("  OmniRoute API Key (hidden)", secret=True)
+    if not api_key or len(api_key) < 8:
+        print(ERR("  ✗ API key too short — please provide a valid key."))
+        return 1
+    print(OK("  ✓ Key accepted (not echoed)"))
+    print()
+
+    print(HEAD("Step 4/5 — Model Selection"))
+    print(DIM("  This is the default model OmniRoute will use for JARVIS cognition."))
+    print(DIM("  Examples: claude-3-5-sonnet-20241022  |  gpt-4o  |  gemini-2.5-pro"))
+    primary_model = _prompt("  Primary Model", default="claude-3-5-sonnet-20241022")
+    fallback_model = _prompt("  Fallback Model (optional, press Enter to skip)", default="")
+    print()
+
+    print(HEAD("Step 5/5 — Preflight Connectivity Check"))
+    print(DIM(f"  Probing {base_url.rstrip('/')}/models …"))
+    probe = _probe_omniroute(base_url, api_key, primary_model)
+    if probe["ok"]:
+        print(OK(f"  ✓ OmniRoute is READY  (latency: {probe['latency_ms']}ms)"))
+        if probe["models"]:
+            print(DIM(f"  ↳ Available models: {', '.join(probe['models'][:5])}{'…' if len(probe['models']) > 5 else ''}"))
+    else:
+        print(WARN(f"  ⚠ OmniRoute probe returned: {probe['error']}"))
+        print(WARN("  ↳ Config will still be saved. Fix connectivity and re-run to verify."))
+    print()
+
+    # Write config
+    values = {
+        "AMAURA_MODEL_PROVIDER": "omniroute",
+        "AMAURA_OMNIROUTE_BASE_URL": base_url.rstrip("/"),
+        "AMAURA_OMNIROUTE_API_KEY": api_key,
+        "AMAURA_OMNIROUTE_MODEL": primary_model,
+    }
+    if fallback_model:
+        values["AMAURA_OMNIROUTE_FALLBACK_MODEL"] = fallback_model
+
+    env_local = _write_env_local(jarvis_dir, values)
+    print(OK(f"  ✓ Config saved to {env_local}  (chmod 0600)"))
+    print()
+
+    # Summary
+    print(HEAD("═══ Setup Summary ═══"))
+    print(f"  Gateway:         OmniRoute")
+    print(f"  Base URL:        {base_url}")
+    print(f"  Primary Model:   {primary_model}")
+    print(f"  Fallback Model:  {fallback_model or '(none)'}")
+    print(f"  Status:          {'READY ✓' if probe['ok'] else 'BLOCKED ⚠  (check connectivity)'}")
+    print()
+    print(DIM("  To apply: source .env.amaura.local  or add it to your .env.amaura"))
+    print(DIM("  Then restart JARVIS:  ./Launch_Amaura.command"))
+    print()
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())

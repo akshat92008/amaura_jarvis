@@ -1,0 +1,45 @@
+{
+  "collection": {
+    "aimodel": 5,
+    "tests_directory": 334,
+    "total": 339
+  },
+  "execution": [
+    {
+      "duration_seconds": 14.71,
+      "failed": 0,
+      "passed": 112,
+      "scope": "tests shard 1"
+    },
+    {
+      "duration_seconds": 21.12,
+      "failed": 0,
+      "passed": 111,
+      "scope": "tests shard 2"
+    },
+    {
+      "duration_seconds": 26.7,
+      "failed": 0,
+      "passed": 111,
+      "scope": "tests shard 3"
+    },
+    {
+      "duration_seconds": 1.18,
+      "failed": 0,
+      "passed": 5,
+      "scope": "aimodel/test_engine.py"
+    }
+  ],
+  "generated_at": "2026-08-10T04:23:32.916213+00:00",
+  "notes": [
+    "Application collection executed in bounded shards; every collected node is covered exactly once.",
+    "Antigravity CLI integration tests use a deterministic fake agy fixture; live authenticated Antigravity remains target-machine qualification."
+  ],
+  "schema": "amaura.test-report.v5.1",
+  "totals": {
+    "failed": 0,
+    "passed": 339,
+    "skipped": 0
+  },
+  "version": "5.1.0"
+}

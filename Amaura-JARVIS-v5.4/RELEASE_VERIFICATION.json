@@ -1,0 +1,14 @@
+{
+  "checks": {
+    "compileall": "pass",
+    "electron_syntax": "pass",
+    "tests": "376/376 pass",
+    "wheel_source_parity": "117/117 byte-identical"
+  },
+  "generated_at": "2026-08-10T16:31:30.639918+00:00",
+  "note": "Distributed source ZIP manifest/hash verification is performed after clean packaging and recorded in the external release validation.",
+  "production_ready": false,
+  "schema": "amaura.release-verification.v5.4",
+  "source_certified": true,
+  "version": "5.4.0"
+}

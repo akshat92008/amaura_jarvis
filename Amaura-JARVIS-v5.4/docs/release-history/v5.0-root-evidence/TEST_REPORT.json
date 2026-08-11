@@ -1,0 +1,44 @@
+{
+  "collection": {
+    "aimodel": 5,
+    "tests_directory": 322,
+    "total": 327
+  },
+  "execution": [
+    {
+      "duration_seconds": 17.73,
+      "failed": 0,
+      "passed": 91,
+      "scope": "tests shard 1"
+    },
+    {
+      "duration_seconds": 22.98,
+      "failed": 0,
+      "passed": 156,
+      "scope": "tests shard 2"
+    },
+    {
+      "duration_seconds": 9.52,
+      "failed": 0,
+      "passed": 75,
+      "scope": "tests shard 3"
+    },
+    {
+      "duration_seconds": 1.11,
+      "failed": 0,
+      "passed": 5,
+      "scope": "aimodel/test_engine.py"
+    }
+  ],
+  "generated_at": "2026-08-09T18:44:08.865557+00:00",
+  "notes": [
+    "The collection was executed in bounded shards to avoid a monolithic runtime window; every collected node is covered exactly once."
+  ],
+  "schema": "amaura.test-report.v5",
+  "totals": {
+    "failed": 0,
+    "passed": 327,
+    "skipped": 0
+  },
+  "version": "5.0.0"
+}

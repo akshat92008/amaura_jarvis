@@ -1,0 +1,70 @@
+{
+  "checks": {
+    "compileall": {
+      "scope": [
+        "jarvis",
+        "aimodel",
+        "scripts",
+        "tests"
+      ],
+      "status": "pass"
+    },
+    "electron_syntax": {
+      "files": [
+        "desktop-app/main.js",
+        "desktop-app/preload.js",
+        "desktop-app/renderer/hud.js"
+      ],
+      "status": "pass"
+    },
+    "pytest": {
+      "failed": 0,
+      "passed": 327,
+      "status": "pass"
+    },
+    "wheel_build": {
+      "method": "pip wheel --no-deps --no-build-isolation",
+      "status": "pass"
+    },
+    "wheel_import_smoke": {
+      "imports": [
+        "jarvis",
+        "jarvis.amaura.mission_runner.MissionRunner",
+        "jarvis.amaura.cognition.ExecutiveKernel"
+      ],
+      "status": "pass",
+      "version": "5.0.0"
+    },
+    "wheel_source_parity": {
+      "mismatched": 0,
+      "missing": 0,
+      "source_python_files": 114,
+      "status": "pass",
+      "unexpected": 0,
+      "wheel_python_files": 114
+    }
+  },
+  "generated_at": "2026-08-09T18:44:08.865557+00:00",
+  "production_ready": false,
+  "qualification_boundary": "Source/regression qualified in this environment; target-machine/provider/Noryx/soak qualification remains required.",
+  "release": "Amaura JARVIS v5.0 \u2014 Persistent Executive Runtime",
+  "schema": "amaura.release-validation.v5",
+  "source": {
+    "jarvis_python_files": 114,
+    "python_files": 189,
+    "python_lines": 57938
+  },
+  "v5_contracts": {
+    "antigravity_hard_hold": "verified",
+    "background_mission_queue": "verified",
+    "cognition_provider_exact_routing": "verified",
+    "external_executor_model_provenance": "verified",
+    "hierarchy_rollup": "verified",
+    "late_worker_result_rejection": "implemented_and_regression_covered_by_supervisor/v5 suites",
+    "memory_provenance_graph": "verified",
+    "noryx_independent_test_rerun": "verified",
+    "plan_only_unclaimable": "verified",
+    "reference_mission_control": "verified"
+  },
+  "version": "5.0.0"
+}

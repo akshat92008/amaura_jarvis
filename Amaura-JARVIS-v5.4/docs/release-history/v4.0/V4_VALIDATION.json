@@ -1,0 +1,62 @@
+{
+  "artifact": "Amaura JARVIS v4.0 source",
+  "version": "4.0.0",
+  "generated_at_utc": "2026-08-09T17:13:48.982277+00:00",
+  "source_basis": "Amaura Company OS v3.6.1 Resource Hardened",
+  "preserves_previous_company_os_features": true,
+  "new_capabilities": [
+    "Natural-language founder goals compiled into bounded dynamic task DAGs",
+    "Persistent personal/project knowledge plus recent company-work context",
+    "Bounded failure-aware replanning using recorded execution/review context",
+    "First-class Noryx engineering backend with strict structured result contract",
+    "Noryx subprocess secret-minimizing environment allowlist",
+    "Backward-compatible Nexus adapter/event receipt identity",
+    "Founder-controlled Antigravity immutable engineering handoff packets",
+    "Desktop Mission Control for missions, chat, memory, company, approvals and status",
+    "JARVIS goal/memory/handoff HTTP API endpoints"
+  ],
+  "verification": {
+    "pytest_collected": 306,
+    "pytest_passed": 306,
+    "pytest_failed": 0,
+    "execution_mode": "bounded isolated groups because monolithic pytest process can hang during late resource cleanup",
+    "compileall": "passed",
+    "desktop_main_node_check": "passed",
+    "desktop_renderer_node_check": "passed",
+    "ruff": "not run; ruff executable not installed in this runtime",
+    "uv_lock_registry_check": "not completed; package registry is unreachable from this runtime"
+  },
+  "production_ready": false,
+  "production_readiness_note": "Source-level regression verified. Live provider credentials, Noryx installation, Electron runtime installation, macOS permissions, target-machine resource soak and production deployment boundaries still require qualification on the actual machine.",
+  "antigravity_note": "Antigravity is intentionally represented as a founder-controlled handoff. This bundle does not falsely claim unattended Antigravity UI/API control.",
+  "changed_files": [
+    "AMAURA_JARVIS_V4.md",
+    "Install_Amaura_Desktop.command",
+    "Launch_Amaura_Desktop.command",
+    "jarvis/amaura/brain.py",
+    "jarvis/amaura/noryx_bridge.py",
+    "tests/test_amaura_jarvis_v4.py",
+    ".env.amaura.example",
+    "README.md",
+    "desktop-app/main.js",
+    "desktop-app/package.json",
+    "desktop-app/renderer/hud.css",
+    "desktop-app/renderer/hud.html",
+    "desktop-app/renderer/hud.js",
+    "jarvis/__init__.py",
+    "jarvis/amaura/control_plane.py",
+    "jarvis/amaura/executor.py",
+    "jarvis/amaura/integration_control.py",
+    "jarvis/amaura/integrations.py",
+    "jarvis/amaura/nexus_bridge.py",
+    "jarvis/amaura/operation_policy.py",
+    "jarvis/amaura/resources/env.amaura.example",
+    "jarvis/amaura/store.py",
+    "jarvis/server.py",
+    "pyproject.toml",
+    "uv.lock"
+  ],
+  "removed_files": [
+    "desktop-app/package-lock.json"
+  ]
+}

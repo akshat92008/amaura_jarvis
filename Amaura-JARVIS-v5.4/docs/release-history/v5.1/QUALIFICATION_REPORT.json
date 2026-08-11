@@ -1,0 +1,69 @@
+{
+  "architecture_status": {
+    "antigravity_cli_bridge": "qualified_with_fake_fixture; live backend pending",
+    "cognition_gateway": "source_contract_qualified; live provider pending",
+    "company_os_legacy_features": "regression_passed",
+    "executive_kernel": "regression_passed",
+    "independent_engineering_verifier": "source_contract_qualified; target isolation pending",
+    "memory_world_model": "regression_passed",
+    "mission_authority_defense_in_depth": "qualified_by_contract_tests",
+    "noryx": "experimental_disabled_by_default",
+    "persistent_mission_runner": "qualified_by_contract_tests",
+    "structural_replanning": "qualified_by_regression"
+  },
+  "generated_at": "2026-08-10T04:23:32.916213+00:00",
+  "open_qualification_items": [
+    {
+      "id": "live_antigravity_cli",
+      "requirement": "Qualify the actual authenticated agy CLI, safe permission settings, model availability and structured output on the target Mac.",
+      "status": "open"
+    },
+    {
+      "id": "antigravity_unseen_repos",
+      "requirement": "Run private unseen repository tasks with hidden independent acceptance tests and measure objective completion/intervention/regression rates.",
+      "status": "open"
+    },
+    {
+      "id": "target_mac_soak",
+      "requirement": "Run long-duration mission/resource/lease/pause/cancel/restart soak on the actual target Mac.",
+      "status": "open"
+    },
+    {
+      "id": "verifier_native_runtime",
+      "requirement": "Qualify the configured macOS native or Docker verifier isolation against malicious repository fixtures on the target machine.",
+      "status": "open"
+    },
+    {
+      "id": "live_cognition_provider",
+      "requirement": "Qualify configured executive cognition provider(s), model availability, rate limits, fallback visibility and recovery using real credentials.",
+      "status": "open"
+    },
+    {
+      "id": "desktop_permissions",
+      "requirement": "Validate Electron installation and macOS microphone/automation permissions for enabled assistant capabilities.",
+      "status": "open"
+    },
+    {
+      "id": "external_integrations",
+      "requirement": "Validate production credentials, provider receipts and recovery semantics per external integration before unattended consequential actions.",
+      "status": "open"
+    },
+    {
+      "id": "intelligence_outcomes",
+      "requirement": "Run private ambiguous/long-running company missions and measure objective completion, human intervention, incorrect-action and recovery rates.",
+      "status": "open"
+    }
+  ],
+  "production_ready": false,
+  "regression": {
+    "compileall": "pass",
+    "electron_syntax": "pass",
+    "tests_failed": 0,
+    "tests_passed": 339,
+    "wheel_source_parity": "pass"
+  },
+  "schema": "amaura.qualification-report.v5.1",
+  "source_certified": true,
+  "verdict": "Strong source/regression release candidate for an Antigravity-first practical JARVIS. Do not label 10/10 or production-proven until live target-machine and unseen-task qualification succeeds.",
+  "version": "5.1.0"
+}

@@ -1,0 +1,24 @@
+# Binaries and packages
+*.dmg
+*.zip
+*.whl
+.DS_Store
+
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Local Data and Secrets
+.amaura-data/
+.env.amaura
+.env
+.env.local
+*.log
+*.sqlite
+*.db

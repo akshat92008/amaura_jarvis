@@ -1,0 +1,69 @@
+{
+  "all_tests_passed": true,
+  "automated_tests": 292,
+  "collected_tests": 292,
+  "compilation_ok": true,
+  "git": {
+    "available": true,
+    "commit": "ba1a162e3dacd42ba5655e2990e2b5d0a470b20a",
+    "dirty": false,
+    "status": []
+  },
+  "production_ready": false,
+  "release_name": "Amaura Company OS v3.6.0 \u2014 Free-First Human-Reviewed Integrations",
+  "security_ok": true,
+  "shards": [
+    {
+      "duration_seconds": 11.954,
+      "index": 1,
+      "log_sha256": "6b32bec6f9421bf36a9f0302fbe5bdc4cb5b75304636dfbc75d0486eddc7366f",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 11.212,
+      "index": 2,
+      "log_sha256": "6b089bebce0757998da800659d106073768a3c233e4551bd2e7d582e288702fc",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 5.861,
+      "index": 3,
+      "log_sha256": "716dc906b4e98b350b5cd9b6f2f8c3689778930d1e57a09058c0d0619a04ee10",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 16.759,
+      "index": 4,
+      "log_sha256": "e2cadb6f74541e38bf31168b633a74d340df9d2032912344002ad9bf9bc941a2",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 9.974,
+      "index": 5,
+      "log_sha256": "003c17f16cf94edfc8f6d4e775613e9bd8f1588a2a481148f6f13d25a92d6dd5",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 11.56,
+      "index": 6,
+      "log_sha256": "d20f132594ca37037e507244189de4f8e76d82411d3642ae37d1502b7b866df7",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 5.014,
+      "index": 7,
+      "log_sha256": "671a97f1b33925e3d45071bfb936554849bba66f7cfce2d9fc3ff58825e221dd",
+      "passed": true,
+      "tests": 22
+    }
+  ],
+  "source_certified": true,
+  "static_gate_ok": true,
+  "version": "3.6.0"
+}

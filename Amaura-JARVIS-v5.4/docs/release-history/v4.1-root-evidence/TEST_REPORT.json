@@ -1,0 +1,47 @@
+{
+  "cognition_cases_passed": 30,
+  "cognition_cases_total": 30,
+  "collected": 317,
+  "compileall_passed": true,
+  "desktop_js_syntax_passed": true,
+  "failed": 0,
+  "generated_at_utc": "2026-08-09T18:03:13.393734+00:00",
+  "passed": 317,
+  "qualification_mode": "bounded_isolated_groups",
+  "schema": "amaura.test-report.v4.1",
+  "shards": [
+    {
+      "failed": 0,
+      "name": "core_company_1",
+      "passed": 41
+    },
+    {
+      "failed": 0,
+      "name": "jarvis_company_2",
+      "passed": 112
+    },
+    {
+      "failed": 0,
+      "name": "production_store_3a",
+      "passed": 28
+    },
+    {
+      "failed": 0,
+      "name": "supervisor_trust_3b",
+      "passed": 41
+    },
+    {
+      "failed": 0,
+      "name": "security_integrations_4",
+      "passed": 59
+    },
+    {
+      "failed": 0,
+      "name": "engines_voice_5",
+      "passed": 36
+    }
+  ],
+  "skipped": 0,
+  "source_digest_sha256": "926f724456f0360b0107e84d105a838dd7da58eae89c9025c5b887eadb013bcc",
+  "version": "4.1.0"
+}

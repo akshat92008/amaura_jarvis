@@ -1,0 +1,78 @@
+{
+  "checks": {
+    "compileall": {
+      "scope": [
+        "jarvis",
+        "aimodel",
+        "scripts",
+        "tests"
+      ],
+      "status": "pass"
+    },
+    "electron_syntax": {
+      "files": [
+        "desktop-app/main.js",
+        "desktop-app/preload.js",
+        "desktop-app/renderer/hud.js",
+        "jarvis/static/app.js"
+      ],
+      "status": "pass"
+    },
+    "pytest": {
+      "failed": 0,
+      "method": "module-isolated bounded qualification",
+      "passed": 347,
+      "status": "pass"
+    },
+    "wheel_build": {
+      "method": "pip wheel --no-deps --no-build-isolation",
+      "status": "pass"
+    },
+    "wheel_import_smoke": {
+      "imports": [
+        "jarvis",
+        "ExecutiveKernel",
+        "MissionRunner",
+        "AntigravityDeliveryAdapter"
+      ],
+      "status": "pass",
+      "version": "5.2.0"
+    },
+    "wheel_sha256": "d8722e625d9d9c48cd9fac3b88d070a3747d4dd6a06b255015cc0ead09d553ea",
+    "wheel_source_parity": {
+      "mismatched": 0,
+      "missing": 0,
+      "source_python_files": 116,
+      "status": "pass",
+      "unexpected": 0,
+      "wheel_python_files": 116
+    }
+  },
+  "generated_at": "2026-08-10T11:14:03.617885+00:00",
+  "production_ready": false,
+  "qualification_boundary": "Source/regression qualified here; live authenticated Antigravity, target-Mac isolation/resources, real providers/integrations and unseen outcome benchmarks remain required.",
+  "release": "Amaura JARVIS v5.2 \u2014 Execution Boundary Hardened",
+  "schema": "amaura.release-validation.v5.2",
+  "source": {
+    "jarvis_python_files": 116,
+    "python_files": 309,
+    "python_lines": 106806
+  },
+  "v52_contracts": {
+    "antigravity_process_tree_cancel": "verified",
+    "antigravity_resource_admission": "implemented_and_contract_covered",
+    "antigravity_streaming_process_control": "verified_with_fake_cli_fixture",
+    "cross_process_mission_runner_lock": "implemented_and compile/regression covered",
+    "effective_project_permission_preflight": "verified",
+    "executive_model_provenance": "implemented",
+    "git_executable_config_block": "verified",
+    "git_hook_escape_block": "verified",
+    "memory_operator_authority": "verified",
+    "mission_generation_and_low_level_authority": "regression_passed",
+    "noryx_experimental_disabled_by_default": "verified",
+    "post_merge_isolated_verification": "implemented_and regression covered",
+    "public_antigravity_default": "verified",
+    "workspace_executable_customization_block": "verified"
+  },
+  "version": "5.2.0"
+}

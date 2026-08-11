@@ -1,0 +1,57 @@
+{
+  "architecture": "AMAURA_JARVIS_V5.md",
+  "changelog": "V5_CHANGELOG.md",
+  "generated_at": "2026-08-09T18:44:08.865557+00:00",
+  "open_qualification_items": [
+    {
+      "id": "target_mac_soak",
+      "requirement": "Run long-duration workload/resource/lease/restart soak on the actual target Mac.",
+      "status": "open"
+    },
+    {
+      "id": "live_noryx_unseen_benchmark",
+      "requirement": "Qualify the actual installed Noryx executable on private unseen repositories with independent hidden verifiers.",
+      "status": "open"
+    },
+    {
+      "id": "live_cognition_provider",
+      "requirement": "Qualify configured planner/intent/reference/memory providers, rate limits and failure recovery using real credentials.",
+      "status": "open"
+    },
+    {
+      "id": "sandbox_runtime",
+      "requirement": "Qualify configured Docker/native sandbox/runtime images on the target machine.",
+      "status": "open"
+    },
+    {
+      "id": "desktop_permissions",
+      "requirement": "Validate Electron installation and macOS microphone/automation permissions if voice/computer capabilities are enabled.",
+      "status": "open"
+    },
+    {
+      "id": "external_integrations",
+      "requirement": "Production credentials/provider receipts/webhooks must be validated per integration before unattended external actions.",
+      "status": "open"
+    },
+    {
+      "id": "intelligence_outcomes",
+      "requirement": "Run a private scenario pack for ambiguous long-running company missions and measure objective completion, interventions and regressions.",
+      "status": "open"
+    }
+  ],
+  "production_ready": false,
+  "schema": "amaura.qualification-evidence.v5",
+  "test_report": "TEST_REPORT.json",
+  "test_totals": {
+    "collected": 327,
+    "failed": 0,
+    "passed": 327
+  },
+  "validation": "V5_VALIDATION.json",
+  "version": "5.0.0",
+  "wheel": {
+    "filename": "jarvis-5.0.0-py3-none-any.whl",
+    "sha256": "791cbed7563378147b186ad97a2e6ac57e3fbb47b585abf3559cd42b2aeb7c2e",
+    "source_parity": true
+  }
+}

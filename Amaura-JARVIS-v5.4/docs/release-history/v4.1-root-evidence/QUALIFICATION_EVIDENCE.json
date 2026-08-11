@@ -1,0 +1,316 @@
+{
+  "cognition_evaluation": {
+    "intent": {
+      "cases": [
+        {
+          "actual": "conversation",
+          "expected": "conversation",
+          "passed": true,
+          "text": "What is Noryx doing?"
+        },
+        {
+          "actual": "conversation",
+          "expected": "conversation",
+          "passed": true,
+          "text": "Why did the release fail?"
+        },
+        {
+          "actual": "conversation",
+          "expected": "conversation",
+          "passed": true,
+          "text": "How should we structure the API?"
+        },
+        {
+          "actual": "conversation",
+          "expected": "conversation",
+          "passed": true,
+          "text": "Can you explain the approval model?"
+        },
+        {
+          "actual": "conversation",
+          "expected": "conversation",
+          "passed": true,
+          "text": "Should I deploy this today?"
+        },
+        {
+          "actual": "mission",
+          "expected": "mission",
+          "passed": true,
+          "text": "Build the client portal"
+        },
+        {
+          "actual": "mission",
+          "expected": "mission",
+          "passed": true,
+          "text": "Fix the failing authentication tests"
+        },
+        {
+          "actual": "mission",
+          "expected": "mission",
+          "passed": true,
+          "text": "Research the current onboarding problem"
+        },
+        {
+          "actual": "mission",
+          "expected": "mission",
+          "passed": true,
+          "text": "Prepare a launch report"
+        },
+        {
+          "actual": "mission",
+          "expected": "mission",
+          "passed": true,
+          "text": "Audit the repository and repair critical issues"
+        },
+        {
+          "actual": "mission",
+          "expected": "mission",
+          "passed": true,
+          "text": "Continue the Noryx release work"
+        },
+        {
+          "actual": "mission",
+          "expected": "mission",
+          "passed": true,
+          "text": "Run the company operating review"
+        },
+        {
+          "actual": "mission",
+          "expected": "mission",
+          "passed": true,
+          "text": "Create a tested API endpoint"
+        },
+        {
+          "actual": "mission",
+          "expected": "mission",
+          "passed": true,
+          "text": "Investigate the build failure"
+        },
+        {
+          "actual": "mission",
+          "expected": "mission",
+          "passed": true,
+          "text": "Refactor the billing module"
+        },
+        {
+          "actual": "memory_write",
+          "expected": "memory_write",
+          "passed": true,
+          "text": "Remember that production deployment always needs my approval"
+        },
+        {
+          "actual": "memory_write",
+          "expected": "memory_write",
+          "passed": true,
+          "text": "Please remember: Noryx owns repository engineering"
+        },
+        {
+          "actual": "memory_forget",
+          "expected": "memory_forget",
+          "passed": true,
+          "text": "Forget the old staging URL"
+        },
+        {
+          "actual": "memory_forget",
+          "expected": "memory_forget",
+          "passed": true,
+          "text": "Please forget about the retired CRM"
+        },
+        {
+          "actual": "status",
+          "expected": "status",
+          "passed": true,
+          "text": "status"
+        },
+        {
+          "actual": "status",
+          "expected": "status",
+          "passed": true,
+          "text": "company status"
+        },
+        {
+          "actual": "status",
+          "expected": "status",
+          "passed": true,
+          "text": "what's happening"
+        },
+        {
+          "actual": "status",
+          "expected": "status",
+          "passed": true,
+          "text": "where are we with the release"
+        },
+        {
+          "actual": "status",
+          "expected": "status",
+          "passed": true,
+          "text": "status of the client portal"
+        }
+      ],
+      "passed": 24,
+      "total": 24
+    },
+    "passed": true,
+    "planning": {
+      "cases": [
+        {
+          "dependencies_valid": true,
+          "domain": "software",
+          "objective": "Build a tested dashboard feature",
+          "passed": true,
+          "reviewers_separated": true,
+          "task_count": 5,
+          "unique_keys": true
+        },
+        {
+          "dependencies_valid": true,
+          "domain": "software",
+          "objective": "Research a release checklist",
+          "passed": true,
+          "reviewers_separated": true,
+          "task_count": 5,
+          "unique_keys": true
+        },
+        {
+          "dependencies_valid": true,
+          "domain": "research",
+          "objective": "Analyze company operating risks",
+          "passed": true,
+          "reviewers_separated": true,
+          "task_count": 3,
+          "unique_keys": true
+        },
+        {
+          "dependencies_valid": true,
+          "domain": "content",
+          "objective": "Prepare a content launch brief",
+          "passed": true,
+          "reviewers_separated": true,
+          "task_count": 3,
+          "unique_keys": true
+        },
+        {
+          "dependencies_valid": true,
+          "domain": "revenue",
+          "objective": "Investigate client acquisition bottlenecks",
+          "passed": true,
+          "reviewers_separated": true,
+          "task_count": 3,
+          "unique_keys": true
+        },
+        {
+          "dependencies_valid": true,
+          "domain": "company",
+          "objective": "Review internal operations and recommend improvements",
+          "passed": true,
+          "reviewers_separated": true,
+          "task_count": 3,
+          "unique_keys": true
+        }
+      ],
+      "passed": 6,
+      "total": 6
+    },
+    "total_cases": 30
+  },
+  "cognition_evaluation_file": "Amaura-JARVIS-v4.1-Cognition-Eval.json",
+  "compileall": {
+    "passed": true,
+    "targets": [
+      "jarvis",
+      "aimodel",
+      "scripts",
+      "tests"
+    ]
+  },
+  "desktop_js_syntax": {
+    "files": [
+      "desktop-app/main.js",
+      "desktop-app/preload.js",
+      "desktop-app/renderer/hud.js"
+    ],
+    "passed": true
+  },
+  "generated_at_utc": "2026-08-09T18:03:13.393734+00:00",
+  "limitations": [
+    "No real installed Noryx/private unseen-repository benchmark was available in this execution environment.",
+    "No target Mac installation, macOS permissions, external-provider credential, or prolonged 8 GB resource-soak qualification was performed here.",
+    "Production readiness remains false until the release-gate blockers are configured and independently validated."
+  ],
+  "schema": "amaura.qualification-evidence.v4.1",
+  "source_digest_sha256": "926f724456f0360b0107e84d105a838dd7da58eae89c9025c5b887eadb013bcc",
+  "static_release_gate": {
+    "blockers": [
+      "approval_key",
+      "audit_checkpoint_path",
+      "audit_checkpoint_separated",
+      "audit_hmac_key",
+      "backup_destination_separated",
+      "distinct_reviewer_model",
+      "evaluation_pack_hmac_key",
+      "evidence_hmac_key",
+      "keys_are_separate",
+      "local_tool_api_auth",
+      "model_routing_valid",
+      "operator_key",
+      "post_merge_validation",
+      "private_model_evaluation_pack",
+      "provider_receipt_key",
+      "review_attestation_key",
+      "reviewer_identity_keys",
+      "sandbox_image_pinned",
+      "strict_audit_checkpoint",
+      "strict_audit_signatures",
+      "strict_evidence_mode",
+      "strict_evidence_signatures",
+      "strict_git_mode",
+      "strict_review_mode"
+    ],
+    "production_ready": false,
+    "security_findings": [],
+    "security_ok": true,
+    "source_certified": true,
+    "source_ready": true
+  },
+  "test_shards": [
+    {
+      "failed": 0,
+      "name": "core_company_1",
+      "passed": 41
+    },
+    {
+      "failed": 0,
+      "name": "jarvis_company_2",
+      "passed": 112
+    },
+    {
+      "failed": 0,
+      "name": "production_store_3a",
+      "passed": 28
+    },
+    {
+      "failed": 0,
+      "name": "supervisor_trust_3b",
+      "passed": 41
+    },
+    {
+      "failed": 0,
+      "name": "security_integrations_4",
+      "passed": 59
+    },
+    {
+      "failed": 0,
+      "name": "engines_voice_5",
+      "passed": 36
+    }
+  ],
+  "version": "4.1.0",
+  "wheel_source_equivalence": {
+    "byte_mismatches": 0,
+    "checked": true,
+    "missing": 0,
+    "source_python_files": 113,
+    "unexpected": 0,
+    "wheel_python_files": 113
+  }
+}

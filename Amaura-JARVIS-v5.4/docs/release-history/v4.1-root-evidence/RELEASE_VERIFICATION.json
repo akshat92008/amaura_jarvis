@@ -1,0 +1,14 @@
+{
+  "cognition_eval": "30/30",
+  "generated_at_utc": "2026-08-09T18:03:13.393734+00:00",
+  "production_ready": false,
+  "release": "Amaura JARVIS v4.1 \u2014 Executive Cognition Upgrade",
+  "schema": "amaura.release-verification.v4.1",
+  "security_findings": 0,
+  "source_certified": true,
+  "source_digest_sha256": "926f724456f0360b0107e84d105a838dd7da58eae89c9025c5b887eadb013bcc",
+  "status": "SOURCE_CERTIFIED_NOT_PRODUCTION_QUALIFIED",
+  "tests": "317/317",
+  "version": "4.1.0",
+  "wheel_source_equivalence": "113/113 Python files; 0 mismatches"
+}

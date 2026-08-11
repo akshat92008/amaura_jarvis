@@ -1,0 +1,139 @@
+{
+  "generated_at": "2026-08-10T04:23:32.916213+00:00",
+  "qualification_boundary": [
+    {
+      "id": "live_antigravity_cli",
+      "requirement": "Qualify the actual authenticated agy CLI, safe permission settings, model availability and structured output on the target Mac.",
+      "status": "open"
+    },
+    {
+      "id": "antigravity_unseen_repos",
+      "requirement": "Run private unseen repository tasks with hidden independent acceptance tests and measure objective completion/intervention/regression rates.",
+      "status": "open"
+    },
+    {
+      "id": "target_mac_soak",
+      "requirement": "Run long-duration mission/resource/lease/pause/cancel/restart soak on the actual target Mac.",
+      "status": "open"
+    },
+    {
+      "id": "verifier_native_runtime",
+      "requirement": "Qualify the configured macOS native or Docker verifier isolation against malicious repository fixtures on the target machine.",
+      "status": "open"
+    },
+    {
+      "id": "live_cognition_provider",
+      "requirement": "Qualify configured executive cognition provider(s), model availability, rate limits, fallback visibility and recovery using real credentials.",
+      "status": "open"
+    },
+    {
+      "id": "desktop_permissions",
+      "requirement": "Validate Electron installation and macOS microphone/automation permissions for enabled assistant capabilities.",
+      "status": "open"
+    },
+    {
+      "id": "external_integrations",
+      "requirement": "Validate production credentials, provider receipts and recovery semantics per external integration before unattended consequential actions.",
+      "status": "open"
+    },
+    {
+      "id": "intelligence_outcomes",
+      "requirement": "Run private ambiguous/long-running company missions and measure objective completion, human intervention, incorrect-action and recovery rates.",
+      "status": "open"
+    }
+  ],
+  "schema": "amaura.qualification-evidence.v5.1",
+  "test_report": {
+    "collection": {
+      "aimodel": 5,
+      "tests_directory": 334,
+      "total": 339
+    },
+    "execution": [
+      {
+        "duration_seconds": 14.71,
+        "failed": 0,
+        "passed": 112,
+        "scope": "tests shard 1"
+      },
+      {
+        "duration_seconds": 21.12,
+        "failed": 0,
+        "passed": 111,
+        "scope": "tests shard 2"
+      },
+      {
+        "duration_seconds": 26.7,
+        "failed": 0,
+        "passed": 111,
+        "scope": "tests shard 3"
+      },
+      {
+        "duration_seconds": 1.18,
+        "failed": 0,
+        "passed": 5,
+        "scope": "aimodel/test_engine.py"
+      }
+    ],
+    "generated_at": "2026-08-10T04:23:32.916213+00:00",
+    "notes": [
+      "Application collection executed in bounded shards; every collected node is covered exactly once.",
+      "Antigravity CLI integration tests use a deterministic fake agy fixture; live authenticated Antigravity remains target-machine qualification."
+    ],
+    "schema": "amaura.test-report.v5.1",
+    "totals": {
+      "failed": 0,
+      "passed": 339,
+      "skipped": 0
+    },
+    "version": "5.1.0"
+  },
+  "validation_summary": {
+    "compileall": {
+      "scope": [
+        "jarvis",
+        "aimodel",
+        "scripts",
+        "tests"
+      ],
+      "status": "pass"
+    },
+    "electron_syntax": {
+      "files": [
+        "desktop-app/main.js",
+        "desktop-app/preload.js",
+        "desktop-app/renderer/hud.js"
+      ],
+      "status": "pass"
+    },
+    "pytest": {
+      "failed": 0,
+      "passed": 339,
+      "status": "pass"
+    },
+    "wheel_build": {
+      "method": "pip wheel --no-deps --no-build-isolation",
+      "status": "pass"
+    },
+    "wheel_import_smoke": {
+      "imports": [
+        "jarvis",
+        "ExecutiveKernel",
+        "MissionRunner",
+        "AntigravityDeliveryAdapter"
+      ],
+      "status": "pass",
+      "version": "5.1.0"
+    },
+    "wheel_sha256": "e3adf6a53e770c23eb50910c46d006842928c5ff5071f997ed25e15a6edfba2b",
+    "wheel_source_parity": {
+      "mismatched": 0,
+      "missing": 0,
+      "source_python_files": 116,
+      "status": "pass",
+      "unexpected": 0,
+      "wheel_python_files": 116
+    }
+  },
+  "version": "5.1.0"
+}

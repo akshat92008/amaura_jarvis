@@ -1,9 +1,0 @@
-{
-  "name": "amaura-company-os-desktop",
-  "version": "3.6.1",
-  "description": "Secure desktop control plane for Amaura Company OS",
-  "main": "main.js",
-  "private": true,
-  "dependencies": {},
-  "devDependencies": {}
-}

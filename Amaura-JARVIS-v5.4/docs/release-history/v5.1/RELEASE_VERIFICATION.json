@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-08-10T04:23:32.916213+00:00",
+  "noryx_default": "disabled_experimental",
+  "open_qualification_item_count": 8,
+  "primary_engineering_backend": "antigravity_cli",
+  "production_ready": false,
+  "schema": "amaura.release-verification.v5.1",
+  "source_certified": true,
+  "tests": {
+    "failed": 0,
+    "passed": 339
+  },
+  "version": "5.1.0",
+  "wheel_sha256": "e3adf6a53e770c23eb50910c46d006842928c5ff5071f997ed25e15a6edfba2b",
+  "wheel_source_parity": {
+    "mismatches": 0,
+    "source_files": 116,
+    "wheel_files": 116
+  }
+}

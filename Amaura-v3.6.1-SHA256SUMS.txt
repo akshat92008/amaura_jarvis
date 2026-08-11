@@ -1,5 +1,0 @@
-922a24dc19be68f52be35bed63809a4276e6a6c5c2e77ed612fd034e7f41d0fa  Amaura-Company-OS-v3.6.1-Resource-Hardened.zip
-9cf5bb5ed69be1774379398dafe7784d2f9add0c047bc643ea0781d30a32755a  jarvis-3.6.1-py3-none-any.whl
-d537436984b83fadfcd81229b0e60a0664621444e7dabe97e02a1816cdee4d0e  Amaura-v3.6.1-Resource-Hardening.patch
-c0419f05f89b4a16d543c3b2f19838ee54f6696a5ead97ecb3018d7fad7ed149  Amaura-v3.6.1-Resource-Hardening-Report.md
-f8fc0e1ff0079094a3abb5cf11c00084e7d6311b95d2ba77a0f9de2fde0266f5  Amaura-v3.6.1-Validation.json

@@ -1,0 +1,64 @@
+{
+  "cognition_summary": {
+    "passed": 30,
+    "total": 30
+  },
+  "generated_at_utc": "2026-08-09T18:03:13.393734+00:00",
+  "production_ready": false,
+  "schema": "amaura.qualification-report.v4.1",
+  "source_certified": true,
+  "source_digest_sha256": "926f724456f0360b0107e84d105a838dd7da58eae89c9025c5b887eadb013bcc",
+  "static_gate": {
+    "blockers": [
+      "approval_key",
+      "audit_checkpoint_path",
+      "audit_checkpoint_separated",
+      "audit_hmac_key",
+      "backup_destination_separated",
+      "distinct_reviewer_model",
+      "evaluation_pack_hmac_key",
+      "evidence_hmac_key",
+      "keys_are_separate",
+      "local_tool_api_auth",
+      "model_routing_valid",
+      "operator_key",
+      "post_merge_validation",
+      "private_model_evaluation_pack",
+      "provider_receipt_key",
+      "review_attestation_key",
+      "reviewer_identity_keys",
+      "sandbox_image_pinned",
+      "strict_audit_checkpoint",
+      "strict_audit_signatures",
+      "strict_evidence_mode",
+      "strict_evidence_signatures",
+      "strict_git_mode",
+      "strict_review_mode"
+    ],
+    "production_ready": false,
+    "security_findings": [],
+    "security_ok": true,
+    "source_certified": true,
+    "source_ready": true
+  },
+  "test_summary": {
+    "collected": 317,
+    "failed": 0,
+    "passed": 317
+  },
+  "unqualified_external_surfaces": {
+    "live_noryx_unseen_repository_benchmark": false,
+    "real_provider_credentials_and_routes": false,
+    "target_mac_installation_and_permissions": false,
+    "target_mac_resource_soak": false
+  },
+  "version": "4.1.0",
+  "wheel_source_equivalence": {
+    "byte_mismatches": 0,
+    "checked": true,
+    "missing": 0,
+    "source_python_files": 113,
+    "unexpected": 0,
+    "wheel_python_files": 113
+  }
+}

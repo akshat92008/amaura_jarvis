@@ -1,0 +1,2347 @@
+{
+  "entries": [
+    {
+      "mode": "0o644",
+      "path": ".env.amaura.example",
+      "sha256": "7273b362b188dd17823d8e8496364e2a561f4a198c2debe0643bfdadfe940bf0",
+      "size": 10231
+    },
+    {
+      "mode": "0o644",
+      "path": ".github/workflows/ci.yml",
+      "sha256": "a6deaba698c231acb07b58f251639d7226137836f6452d28e86f3751eaf391bb",
+      "size": 2910
+    },
+    {
+      "mode": "0o644",
+      "path": ".gitignore",
+      "sha256": "501441a6076a4575ef2bbd498f995b1cc2f92066d0744c43e80a5c60c423aadf",
+      "size": 773
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_HARDENING_CHANGELOG.md",
+      "sha256": "f404bda95daad1dab15e87ca3cf280323d339f137059dd26922886fb45e31f3e",
+      "size": 14111
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_JARVIS_V52.md",
+      "sha256": "13f23960c7eb58d47e0e13459831779f1bf80eb5bd5204a6414863aabcd44725",
+      "size": 1636
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_JARVIS_V54.md",
+      "sha256": "6a6e79218125ceb754220b20c6a62ea26fb6b65641612e7b54aaf3bdb6b8dd51",
+      "size": 3932
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_LAUNCH.md",
+      "sha256": "2b6881ea037be11f95e93a574259830336130d4bd4ee97a8f06b4362bc27a36a",
+      "size": 1249
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_OSS_CAPABILITIES.md",
+      "sha256": "a8508a162f39d020e2fe191d4c2717c136b0e36257da0369fb1173d3f947129a",
+      "size": 4958
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_V3_5_1_REMEDIATION_REPORT.md",
+      "sha256": "6421c1b01ca08204e5a6ff44fff0d609514c2f866bd572aa9ec56f6d7f024f86",
+      "size": 2736
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_V3_5_2_QUALIFICATION.md",
+      "sha256": "e93fc368f8be8ee2bd180f6a75378820b05b57a015118fe823872d6f23f34177",
+      "size": 3509
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_V3_5_2_SECURITY_RELEASE.md",
+      "sha256": "72327ddc96940e724268f8ae15cb57d99210681511db51c4ceb4509953ee1a0a",
+      "size": 3108
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_V3_5_3_NETWORK_SECURITY.md",
+      "sha256": "3df3200719c2f02994daf02face9438c9421dff04f593c384600d5716df7dab7",
+      "size": 1120
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_V3_5_COMPLETION_REPORT.md",
+      "sha256": "e87bdac788519b0609656c544f59cb1732c93b5b1703f0ff80f53dfab2348d07",
+      "size": 11361
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_V3_6_0_FREE_FIRST_INTEGRATIONS.md",
+      "sha256": "bbca4b2858bf835897fda2718db59b5e1e2a371743f6a677758a7d850a4da99e",
+      "size": 2075
+    },
+    {
+      "mode": "0o644",
+      "path": "AMAURA_V3_6_1_RESOURCE_HARDENING_REPORT.md",
+      "sha256": "c0419f05f89b4a16d543c3b2f19838ee54f6696a5ead97ecb3018d7fad7ed149",
+      "size": 9185
+    },
+    {
+      "mode": "0o644",
+      "path": "EVIDENCE_SHA256SUMS",
+      "sha256": "e1cd446db7060fb0b06f844f27c5b49eec23e38454608038d3547b1dd8d4f289",
+      "size": 361
+    },
+    {
+      "mode": "0o755",
+      "path": "Install_Amaura.command",
+      "sha256": "3b7056b6beb4ad91711eb62fdbd6cdb814f92e6106cac8a3a5f076527a5f9d0f",
+      "size": 1358
+    },
+    {
+      "mode": "0o755",
+      "path": "Install_Amaura_Autopilot.command",
+      "sha256": "6b3998e640b928696918fee5c2de68a927315b2174ea15959b697d887a13f5c0",
+      "size": 1098
+    },
+    {
+      "mode": "0o755",
+      "path": "Install_Amaura_Desktop.command",
+      "sha256": "ca3c85ad80800f9b318cdb93aaf0aff68732defc5c5d62d49a09b6746dfda397",
+      "size": 548
+    },
+    {
+      "mode": "0o644",
+      "path": "LICENSE",
+      "sha256": "443536d793b7c210507cce0d78c31540b3dd780360a407a8790b1ec20343f81a",
+      "size": 1068
+    },
+    {
+      "mode": "0o755",
+      "path": "Launch_Amaura.command",
+      "sha256": "7e4b3a5ecc8d0d2056e5962b2d7453bb50a26d7aef4e3b8fcf798f8dac85af49",
+      "size": 2755
+    },
+    {
+      "mode": "0o755",
+      "path": "Launch_Amaura_Desktop.command",
+      "sha256": "4d5b479fff482be57b4e33438982c007c616d0a32bea87f3c48f30185a6cac43",
+      "size": 515
+    },
+    {
+      "mode": "0o644",
+      "path": "QUALIFICATION_EVIDENCE.json",
+      "sha256": "70371750fd0b957b4b8a99b07b3cf9f05380a2a05636465e83c640cc6e1cdb37",
+      "size": 444
+    },
+    {
+      "mode": "0o644",
+      "path": "QUALIFICATION_REPORT.json",
+      "sha256": "f2a40feff481ef1fcf7708e4525b2cf7e26810ecd64edd255ab9ff53bc912327",
+      "size": 3714
+    },
+    {
+      "mode": "0o644",
+      "path": "README.md",
+      "sha256": "0fca6f036915224e05fed7c4db0f22b4bb3fdf829a263ebb1c3b9b960f86732d",
+      "size": 11407
+    },
+    {
+      "mode": "0o644",
+      "path": "RELEASE_VERIFICATION.json",
+      "sha256": "12a826b59c01b5da0226d860006b4dd43712b9147ed1fc518858cfc5402b0116",
+      "size": 488
+    },
+    {
+      "mode": "0o755",
+      "path": "Setup_Amaura_Antigravity.command",
+      "sha256": "3708d0eb8b7fc3babec1bcdec4188c4adcc47abbb401b1b5104891faf078e159",
+      "size": 3532
+    },
+    {
+      "mode": "0o755",
+      "path": "Setup_Amaura_Runtime.command",
+      "sha256": "919937f2000db32cec9a0aaeeef477488749e27823a1cce389dca41526ace7a7",
+      "size": 2968
+    },
+    {
+      "mode": "0o644",
+      "path": "TEST_REPORT.json",
+      "sha256": "d6c640e29982d7b9a9e8e9bd152e5f0499fcfd74a94d6f073e2a6b070ae4078e",
+      "size": 3489
+    },
+    {
+      "mode": "0o755",
+      "path": "Uninstall_Amaura_Autopilot.command",
+      "sha256": "46b3ae8e2c5784742bfa1146770cf19c2aec4f6057b4656636b552b25160a3e3",
+      "size": 244
+    },
+    {
+      "mode": "0o644",
+      "path": "V52_CHANGELOG.md",
+      "sha256": "44ce8459063a45bbbd0abda937740073bb4b32382e62be4da27e4a32760b6b4e",
+      "size": 1950
+    },
+    {
+      "mode": "0o644",
+      "path": "V52_SOURCE_TREE.txt",
+      "sha256": "5977141be49083c6cdc88c3e77a258bb2c08fab4df1f79ae948cd4f55890dbf2",
+      "size": 12619
+    },
+    {
+      "mode": "0o644",
+      "path": "V52_VALIDATION.json",
+      "sha256": "b76e5746aa99055cf47b20a3976c42be50df5f33bc989f601abb36c7c76ae685",
+      "size": 2535
+    },
+    {
+      "mode": "0o644",
+      "path": "V54_CHANGELOG.md",
+      "sha256": "000163e7c9b4bfe2a4371f947a421970bd703f01735c539812d313631e8f7efa",
+      "size": 2170
+    },
+    {
+      "mode": "0o644",
+      "path": "V54_QUALIFICATION.json",
+      "sha256": "f2a40feff481ef1fcf7708e4525b2cf7e26810ecd64edd255ab9ff53bc912327",
+      "size": 3714
+    },
+    {
+      "mode": "0o644",
+      "path": "V54_SOURCE_TREE.txt",
+      "sha256": "fa889a66ba53c1d47d2efcc9cb9bb8857c060119468eff9b09a58fbff3a53cc5",
+      "size": 12860
+    },
+    {
+      "mode": "0o644",
+      "path": "V54_TEST_REPORT.json",
+      "sha256": "d6c640e29982d7b9a9e8e9bd152e5f0499fcfd74a94d6f073e2a6b070ae4078e",
+      "size": 3489
+    },
+    {
+      "mode": "0o644",
+      "path": "V54_VALIDATION.json",
+      "sha256": "6af963225e89c2bb0785bcaab4732641b857fb488372146ee682e1cf4989a8cc",
+      "size": 2698
+    },
+    {
+      "mode": "0o644",
+      "path": "VALIDATION.json",
+      "sha256": "6af963225e89c2bb0785bcaab4732641b857fb488372146ee682e1cf4989a8cc",
+      "size": 2698
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/AUDIT_REPORT.md",
+      "sha256": "8d02d31c4c3e3057519b7f46d6ef0b5612f4bd3df4290fdcbff116a115fd1415",
+      "size": 12825
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/Launch_Fable_Engine.command",
+      "sha256": "4efcc84bf70bf4300ae56142f8f561c3035d7ed15ce87d765aec352b3e0c4c43",
+      "size": 765
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/app.js",
+      "sha256": "378cecbb9f79e67b9f9554ef9b89713d415e7150781be52e155c19aac40adc37",
+      "size": 2174
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/ast_indexer.py",
+      "sha256": "28d661692c67007d0130bf29a860ce5df9e3e8ec27690a698105c5d50d4a3073",
+      "size": 2478
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/config.json",
+      "sha256": "e08756ab9a72959345398002436c768e37886d5878d36659d9bade3f2dc605ae",
+      "size": 165
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/config.py",
+      "sha256": "dee0db506cbec4d9c3e6741b6f53f0a50682f91ab1f0edd9273818ad1f41f8f2",
+      "size": 1571
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/debugger.py",
+      "sha256": "72f3a50109e7d561276cece21f7595596f83eda198025c5b5982cfbc6fe66541",
+      "size": 3092
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/executor.py",
+      "sha256": "6a1bd1f433317c20c67b1742ff9e5c8c32de2076d49a763213cc45018d85f448",
+      "size": 4141
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/fable_planner.py",
+      "sha256": "be7056f5e5de6098db6cc4248c43c568abde1048deac220d370c1036eb07fc89",
+      "size": 3128
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/generate_dataset.py",
+      "sha256": "15e2dc2a355264b051c7bd9f68d77a84439cdbd0f4af9d9c8252d2f5c94ed879",
+      "size": 4139
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/index.html",
+      "sha256": "2a51582673db4e28cfda14e5972c63b70801d7dae02b3b95468ace11140a5112",
+      "size": 2440
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/python_game.py",
+      "sha256": "f9e1a2321fb0170b2a9b61cd979d7f98ec8e2be81aaea614d3bcc33f0bdcafea",
+      "size": 1325
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/router.py",
+      "sha256": "d566c76764ef22563ee23d300255a6deedac834422372437503a49623d1f9d18",
+      "size": 7487
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/server.py",
+      "sha256": "fbc6dc59fe967fcfdfbfd25c837f8dab008b6dec4cd732906bfb968a369111f1",
+      "size": 6609
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/styles.css",
+      "sha256": "2b4ac18a54b755d20352046b178e5c19fe47272bfb526f9adb929585cf068014",
+      "size": 2520
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/test_engine.py",
+      "sha256": "b854cf812b0cf7a81d7eecb1d7483c6eeafc5be0e96079d4834f472f31eaf0a9",
+      "size": 2480
+    },
+    {
+      "mode": "0o644",
+      "path": "aimodel/train_unsloth.py",
+      "sha256": "d078cbf35f0094b013d3c567bf35b817cfb68afb78d8d5b44a035c2ceba6cf25",
+      "size": 2397
+    },
+    {
+      "mode": "0o644",
+      "path": "desktop-app/BUILD.md",
+      "sha256": "f68b8034aeab093c345fab9c0872bd9ef1312ba4f1dc4b00b7f959e1f2d45cff",
+      "size": 904
+    },
+    {
+      "mode": "0o644",
+      "path": "desktop-app/assets/icon.icns",
+      "sha256": "e3a79f18a65ac8a47763d52e4f5c3482ad73c70e8c022cae5d98fc1bf23f770b",
+      "size": 148220
+    },
+    {
+      "mode": "0o644",
+      "path": "desktop-app/assets/icon.png",
+      "sha256": "f03f212e8ec2f21c779f630c59e5f824530deae6566d070d626cce9ce547a7cb",
+      "size": 17093
+    },
+    {
+      "mode": "0o644",
+      "path": "desktop-app/assets/tray-icon.png",
+      "sha256": "0f30e6822260ca6e5fb0ed1b179a1bec17edbccd5e8503479989719c63fe0886",
+      "size": 793
+    },
+    {
+      "mode": "0o644",
+      "path": "desktop-app/entitlements.plist",
+      "sha256": "60d734487b4e64813d396ddd2219ab5dbe2379ff91a9645e44419d3e0fed3b7d",
+      "size": 431
+    },
+    {
+      "mode": "0o644",
+      "path": "desktop-app/main.js",
+      "sha256": "cfb99f29c531cdc72611f4f2cd1771e52448d32a053a2e8ab5bffb54c259f6c0",
+      "size": 20917
+    },
+    {
+      "mode": "0o644",
+      "path": "desktop-app/package.json",
+      "sha256": "93e69bfe03b8b73f1e57eb0de3cedfa12a057133979b48903b60f676ee8e45f2",
+      "size": 288
+    },
+    {
+      "mode": "0o644",
+      "path": "desktop-app/preload.js",
+      "sha256": "676f9068bab74fb65dd6f4a8cf8221a45908b5ed007912c847034200c79567b4",
+      "size": 2924
+    },
+    {
+      "mode": "0o644",
+      "path": "desktop-app/renderer/hud.css",
+      "sha256": "41026580dc841f6687321158563b0725f7e7af3d9ce8aca56414b30107234108",
+      "size": 7450
+    },
+    {
+      "mode": "0o644",
+      "path": "desktop-app/renderer/hud.html",
+      "sha256": "e7bd399a9067f82e45a5724b3b540f2e2dd8c34828523bfca61d73bb339c4709",
+      "size": 8790
+    },
+    {
+      "mode": "0o644",
+      "path": "desktop-app/renderer/hud.js",
+      "sha256": "ab3ac02321394e8dc13466dcb2c50b2416a77eb1e267667eb52da86fb51ad3dc",
+      "size": 21888
+    },
+    {
+      "mode": "0o644",
+      "path": "docker/amaura-sandbox.Dockerfile",
+      "sha256": "78d2799c3889b85e5e42bd1ffc444554e030450151623dbeb474d1855179b5f1",
+      "size": 1055
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/AMAURA_AI_SYSTEM_HANDBOOK.docx",
+      "sha256": "326bf01aec1d8f5e6f4f7657e1015d34a3a72386e75937d33a7d319f512a15e8",
+      "size": 91573
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/AMAURA_AI_SYSTEM_HANDBOOK.md",
+      "sha256": "8483b465636fb92df5f43e616f78cc1784dab6b9eae66c06f0d777347ef5efed",
+      "size": 108983
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/AMAURA_AUTONOMOUS_COMPANY.md",
+      "sha256": "9514ee1f5f182880c522bae453ab47ac89bb6f8e6bccf9e5e7e4a9a0fe23d451",
+      "size": 3786
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/AMAURA_COMPANY_OS_IMPLEMENTATION.md",
+      "sha256": "06f565a5d1b85f4c5e759ef8a81a16461e2b3a324ed69b5e51ab2d1760970ea4",
+      "size": 5498
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/AMAURA_DISTRIBUTION_ENGINE.md",
+      "sha256": "957b9eaeeb891058c176a2e1640b0d22151c3fa7d079cba1b765b7db6f770542",
+      "size": 2498
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/AMAURA_LAUNCH_READY.md",
+      "sha256": "fd278439a1b1adb06ec29c45bc392dd261c235ecf47d034e57deec9a14783b61",
+      "size": 7080
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/AMAURA_MISSION_CONTROL.md",
+      "sha256": "63fce946f075df6511f2a82b1955791af5e0648c8861303c70ba3b8fe268bbee",
+      "size": 2861
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/AMAURA_PRODUCTION.md",
+      "sha256": "e61f9723a31bb47c7d3ff9ad1aa6002e4e655805d0f978b6e71fd176fc67ddc7",
+      "size": 9216
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/AMAURA_STUDIO.md",
+      "sha256": "0cf7dcd6a67bb03bd54789fe515bfe5e656fe4b5130328fc98580f46946957f7",
+      "size": 5324
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/AMAURA_TEST_REPORT.md",
+      "sha256": "422d41504145c69011060dec772c85c377d55617385701d678bdbce95349a783",
+      "size": 3427
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/AMAURA_VENTURES.md",
+      "sha256": "5a95ccb1107a5fb921c72b8301b851845b40154eb0dc87534a53daf7a472f2c3",
+      "size": 6386
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/current-system-map.md",
+      "sha256": "e800d527983fbd6f7cb2edfc572f3ebc8715e8996da0272d8b4bae7c42d56d4b",
+      "size": 1725
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/history/AMAURA_COMPANY_OS_V2_1_VERIFICATION_REPORT.md",
+      "sha256": "e16d74ea475cc24fb5ab4bdd28f678a663f5c168ff34f46daa952f3b2e74365a",
+      "size": 6804
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/history/AMAURA_COMPANY_OS_V2_2_VERIFICATION_REPORT.md",
+      "sha256": "a70ce802aa0974e7bb5d8c4fe4f7c16b26599a4394b34eeb9550bb1a259de66d",
+      "size": 3096
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/history/AMAURA_COMPANY_OS_V2_BUILD_REPORT.md",
+      "sha256": "78c2be6bf040586f9fabef025b11fc26a80095755d482d3a6e2c6a29099dd4c8",
+      "size": 3674
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/history/AMAURA_COMPANY_OS_V3_4_VERIFICATION_REPORT.md",
+      "sha256": "e48e397353897a51d0ad6b9c669ba0b3ddb68b40c0aa9fa9b9b7730b2215f697",
+      "size": 2917
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/history/AMAURA_V3_1_VERIFICATION_REPORT.md",
+      "sha256": "888f10df35e93db42c2fc76ba83ca55fc9fe199f02619e9e7a6f823d07cb053b",
+      "size": 2844
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/history/v3.4-current-test-report.txt",
+      "sha256": "69d8c23c69c7edb5c37778759e901c2ebf4068b212156f044414eb029aadc053",
+      "size": 498
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/migration-plan.md",
+      "sha256": "37ed0663e9709c57c0659ca68a0553a2b5ab6b49107bb607ce6d7d58497d1916",
+      "size": 2714
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/open-source-dependency-decisions.md",
+      "sha256": "fa9cd5a03dcc5cd068080ea891c9d0d565df6ce5b34899289abc3403ae3dd242",
+      "size": 4921
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/pre-v4.1-root-evidence/QUALIFICATION_EVIDENCE.json.bak",
+      "sha256": "e698adb8bf3308823c2d778507074121dbc764040e03b949827954d9638b52b0",
+      "size": 47454
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/pre-v4.1-root-evidence/QUALIFICATION_REPORT.json.bak",
+      "sha256": "789399a15917ccc15b7b899a45e7d100f5f2bcdd4d3ec514bb3563a8454845a0",
+      "size": 45246
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/pre-v4.1-root-evidence/RELEASE_VERIFICATION.json.bak",
+      "sha256": "9f4bc5212940080ae2493e101a7c5bcb5cab6e2d7bbdc95ff96737b870bc2ade",
+      "size": 1828
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/pre-v4.1-root-evidence/TEST_REPORT.json.bak",
+      "sha256": "13dbb84352652ab369c77136b0e0d3af003bbeb0d6015eb109c7a5cd1a2193d0",
+      "size": 5896
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/pre-v4.1-root-evidence/V4_CHANGELOG.md.bak",
+      "sha256": "9d5008eaca6110ce2fcf80e7e9aebbc3b1f22e8b37a19c670f4d0a55210ac59b",
+      "size": 1907
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v3x/QUALIFICATION_EVIDENCE-pre-v4.1.json",
+      "sha256": "e698adb8bf3308823c2d778507074121dbc764040e03b949827954d9638b52b0",
+      "size": 47454
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v3x/QUALIFICATION_REPORT-pre-v4.1.json",
+      "sha256": "789399a15917ccc15b7b899a45e7d100f5f2bcdd4d3ec514bb3563a8454845a0",
+      "size": 45246
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v3x/RELEASE_VERIFICATION-pre-v4.1.json",
+      "sha256": "9f4bc5212940080ae2493e101a7c5bcb5cab6e2d7bbdc95ff96737b870bc2ade",
+      "size": 1828
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v3x/TEST_REPORT-pre-v4.1.json",
+      "sha256": "13dbb84352652ab369c77136b0e0d3af003bbeb0d6015eb109c7a5cd1a2193d0",
+      "size": 5896
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v3x/V3_6_1_VALIDATION.json",
+      "sha256": "f8fc0e1ff0079094a3abb5cf11c00084e7d6311b95d2ba77a0f9de2fde0266f5",
+      "size": 1612
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.0/V4_VALIDATION.json",
+      "sha256": "da0a992d38eb919831e55500b4a7a4691bb873b670e1113a9ebe189a498573fe",
+      "size": 2826
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.0-root-evidence/AMAURA_JARVIS_V4.md",
+      "sha256": "8960f9a9015490679eafe0baa474942c68bc95d3353a0348df2e69c8cfe42c5f",
+      "size": 2566
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.0-root-evidence/V4_CHANGELOG.md",
+      "sha256": "9ad846db5465340127c0cabf2a2cdc4600c5ed90804e30b4c662bbd5a137f7f4",
+      "size": 2060
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.0-root-evidence/V4_SOURCE_TREE.txt",
+      "sha256": "a6d6ed851942339ba5bc77ddc499fe171e14dab494670879efb6a0eaae3af421",
+      "size": 9928
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.1-root-evidence/AMAURA_JARVIS_V4_1.md",
+      "sha256": "bbe851e28686f7f966995af5ce41b6628f1ef2874dc1a9b508334f74f481ef5c",
+      "size": 3836
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.1-root-evidence/QUALIFICATION_EVIDENCE.json",
+      "sha256": "ffc6ae5c9d714f8b2682684c4ec438103703f0293c9cc28ea95df0af62c5780a",
+      "size": 8526
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.1-root-evidence/QUALIFICATION_REPORT.json",
+      "sha256": "9094504676b7444a8555254c6ac68eb75f80c8c0cfc214f696fc11e5e105b74f",
+      "size": 1770
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.1-root-evidence/RELEASE_VERIFICATION.json",
+      "sha256": "cef06640b2cdf01e3db0a40462db0c4bd0f9a57893cccf253bf3cfaf6e4bb8d3",
+      "size": 554
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.1-root-evidence/TEST_REPORT.json",
+      "sha256": "516439d4afca21147c788b1edbb7e71940124ec274e7450d25dd6dfe5488e7be",
+      "size": 1002
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.1-root-evidence/V4_1_CHANGELOG.md",
+      "sha256": "24231efcb805293ffb7039c9a73602aa48aab5609897f185c2bff6ba54fc96cd",
+      "size": 1257
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.1-root-evidence/V4_1_SOURCE_TREE.txt",
+      "sha256": "42079c7fa0ac9a22564ca8057acd8a51ca87cb32126af4332bfb633a272aa29a",
+      "size": 12529
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v4.1-root-evidence/V4_1_VALIDATION.json",
+      "sha256": "aa72c2ee4b5a89febce31bd0e097b05cdabab49e7ed92b1c46bea9b719e58f2c",
+      "size": 9065
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.0/V5_SOURCE_TREE.txt",
+      "sha256": "0703e837892d41027b5e1b5874cac6e933cb880b510cd65be5c80ad3ce43d3e1",
+      "size": 13211
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.0-root-evidence/AMAURA_JARVIS_V5.md",
+      "sha256": "d228d39ac95e910831110c2f175bc84bc12ef583ce97dc28c838a71d08f486ba",
+      "size": 2234
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.0-root-evidence/QUALIFICATION_EVIDENCE.json",
+      "sha256": "cce3f5567e672edb5d8d9e369ada4a85652cab157de373d4c86ea3fabd687949",
+      "size": 2038
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.0-root-evidence/QUALIFICATION_REPORT.json",
+      "sha256": "41199cc1b12548711d2c77cc5c979f7108217512b101884f280a50674d5c56ac",
+      "size": 2511
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.0-root-evidence/RELEASE_VERIFICATION.json",
+      "sha256": "45f2da125269b5a4c7a199ef5a7f4ffe143efa6695dce48edd22f9c70e6db681",
+      "size": 457
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.0-root-evidence/TEST_REPORT.json",
+      "sha256": "31b9e4381e9e8e1e1cab67b4e02db71b099d3fbc52d65a5e516ca654e0b151bd",
+      "size": 920
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.0-root-evidence/V5_CHANGELOG.md",
+      "sha256": "cf65191dad27e86ed54782d119f47aec58b635a0db50f13637d43864acf71eea",
+      "size": 2315
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.0-root-evidence/V5_SOURCE_TREE.txt",
+      "sha256": "0703e837892d41027b5e1b5874cac6e933cb880b510cd65be5c80ad3ce43d3e1",
+      "size": 13211
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.0-root-evidence/V5_VALIDATION.json",
+      "sha256": "e757a4500e6e862ae4d35f23430e92146a64c32aca15323fb585464163696810",
+      "size": 1971
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.1/AMAURA_JARVIS_V51.md",
+      "sha256": "53bad26a2723349384561e5a02f1d162958a09ac2a9fff416f586b5bfe177257",
+      "size": 2312
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.1/QUALIFICATION_EVIDENCE.json",
+      "sha256": "e4d12e26b57e7c5b17cb5ba8485df6f6a1a70da16d42b067b32aba5d551a600d",
+      "size": 4164
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.1/QUALIFICATION_REPORT.json",
+      "sha256": "0f9e5b1a762227b52b6153b64e87d32ece85f375f1d44e26826bb2e5edfe7b4d",
+      "size": 3063
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.1/RELEASE_VERIFICATION.json",
+      "sha256": "899c7120ec161ffe99a2c4d1ccd81fd67c795da38f9a11064872696439ff271f",
+      "size": 558
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.1/TEST_REPORT.json",
+      "sha256": "ff083eb92b8105e51994baef3c2e05939e4ba8ffa86935739284f46e5cd74dd4",
+      "size": 1039
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.1/V51_CHANGELOG.md",
+      "sha256": "bf468ee6180ff096fb05292e29c42f2f2b981f7469922ae8a60370a3133e536b",
+      "size": 2294
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.1/V51_SOURCE_TREE.txt",
+      "sha256": "46a75631c67b2978a78ed55a85f6746fb3e11952dcd789c73f4d3c9f9a89a886",
+      "size": 12163
+    },
+    {
+      "mode": "0o644",
+      "path": "docs/release-history/v5.1/V51_VALIDATION.json",
+      "sha256": "acc683e7d29757277152bc41c781b4ea6fff3f220c200d04827d2f687aaac712",
+      "size": 2361
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/__init__.py",
+      "sha256": "4d8e59fca94527f3c6985f55ff410576a81a1079b0395cee58658d07703d50fc",
+      "size": 162
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/__main__.py",
+      "sha256": "5df377b99157d4bb02dc869821f991658186e72758e2f56b916665e568e7dfd4",
+      "size": 110
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/agent.py",
+      "sha256": "050626dc652df0725fbaa1509ca4a1c0e0985befdf088fc6d3f70c5f170c30f8",
+      "size": 52590
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/__init__.py",
+      "sha256": "7813c0afa31509e301dc60d4289bac6d528f612c59bb4a4d97c7bf7dd11b6284",
+      "size": 604
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/actions.py",
+      "sha256": "bd33a4332cb548510c2804a01356a127e247fb15238f56d3862d83eb4b202216",
+      "size": 3982
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/antigravity_bridge.py",
+      "sha256": "df82d97c133cd0feab617eb9919d37a043ca20c936861f01d11ddf16a40f34d7",
+      "size": 36269
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/auth.py",
+      "sha256": "a78764ce2e672263bffe16e99e56a12ea1923e4fa066d623d58b7c6f964acb61",
+      "size": 1767
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/autopilot.py",
+      "sha256": "33871f25c1ec84c362fc65943e9366bc24d7372168cae456df3d914cf25cabf0",
+      "size": 16654
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/billing.py",
+      "sha256": "058a0ef923c4c0b4d7aeaa6345e931edb202c79bf39dab41c7a25e055cc91866",
+      "size": 7589
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/brain.py",
+      "sha256": "c0dd655901903cd1a205e30a14dc577e922c67332353e12ce044d3820b04cbc0",
+      "size": 68713
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/browser_egress.py",
+      "sha256": "27305e18533374fc258d2855f3c79af497e8f900230023c85bbd97ca4ab8cae4",
+      "size": 5557
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/bus.py",
+      "sha256": "bc90bbb58f09fdb42445d16784754a3c657e449363c4a04fd645c471cd86a336",
+      "size": 1739
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/capabilities.py",
+      "sha256": "ee5ad3742dfd5ccda729c5710e9dd7e88fae1f992be72bf7b3e25825a3bd6d6a",
+      "size": 1810
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/capability_runtime.py",
+      "sha256": "46c5e96fd8637f868dabbc2a951f25aea649c3ecf25eb67267964d1f9dd1d3a5",
+      "size": 117768
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/capability_worker.py",
+      "sha256": "dee122c442c2c53e18d86407b57d8d3243124a7cc9bf04450d1727e51a22b841",
+      "size": 2417
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/channels.py",
+      "sha256": "4f04bf6f4de8c896b9e9d6996ef3b3f336ece7b4befe8934ad68ddec26bfe98c",
+      "size": 18861
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/cli.py",
+      "sha256": "a0c28bda4f51480f2ab4653bc6aed0068b576d00b3cdcdaf9bd51243ae7f962e",
+      "size": 50379
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/cognition.py",
+      "sha256": "a1665dd0a01d90c8696e9eac1875a6fc9b9b285f6d2aa9f2f257d6c76467a2f7",
+      "size": 76000
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/commands.py",
+      "sha256": "ab694723a1f7c4b9427f2c3987439c6edbec90967fe3ad5709a682fd60689b1a",
+      "size": 6779
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/company.py",
+      "sha256": "eba727b08fa05afb9238c986ea38343f5a2cc5875bbace5355929f704d3e61e5",
+      "size": 4327
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/company_autonomy.py",
+      "sha256": "8204b1badcfd78d85e9cd9699c285b5f262f23abb824775b526160a6cc6584c0",
+      "size": 36268
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/content_factory.py",
+      "sha256": "7489086fbcbcf6806fcc0162f114cdd11327af519924f8ca30723fb41e51f8f4",
+      "size": 6055
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/control_plane.py",
+      "sha256": "5b7ab7b761a2ca2f24375ac05dd26068ed47ab5bde7b4351b2d93871ae815154",
+      "size": 48050
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/database.py",
+      "sha256": "5b84938fc5f63571c6c76c1aeebae2710dd749c6f5d7a41a55fab69845cc1062",
+      "size": 5332
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/distribution.py",
+      "sha256": "9cb55ed1b166a14596999cee71375856a7b2f39b594a5bd7c6733d158351eb63",
+      "size": 18625
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/doctor.py",
+      "sha256": "c2865128bc72c57a46236ab0201c111dcfdeceebd956028f54438b40a8f99116",
+      "size": 15528
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/evaluation.py",
+      "sha256": "449a0528cd9ca0692b46cd6af60b92912b57ff87546968c58673b0ef9727cb6b",
+      "size": 15238
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/evidence.py",
+      "sha256": "28e45d189f822d0fa41971269c9aa2a443f161eaa704d9e76cdcbdfca406d9da",
+      "size": 19340
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/executor.py",
+      "sha256": "e949fd72ee42776d2020adc36c15195c2638c89dbf321ac9b590db0fbc58f0b9",
+      "size": 55059
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/experimental/graph_supervisor.py",
+      "sha256": "08c826b9b099ec6f4f4ddc074e1f54aa0ea193f64fb0cf9b6edac8fc150ca8f4",
+      "size": 5719
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/experimental/graphs/content.py",
+      "sha256": "a6fce7a33718094b69b82ce934cb174c7b992ab05199afac8b97173ed35e3145",
+      "size": 2118
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/experimental/graphs/lead.py",
+      "sha256": "957211659deb6dce744bf99c5745533fc7c951183eb69875317585bbe467cb73",
+      "size": 5007
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/experimental/graphs/software.py",
+      "sha256": "5ede5f1221e0518fb6d2c3832cf574c9b63464b5a8b499044ed57878a7203331",
+      "size": 2501
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/gitops.py",
+      "sha256": "4fc4c9d7c7f4720dc5532cf5c426e80e2e8f449c51ef58016967f8a53a091fc2",
+      "size": 19632
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/handoffs.py",
+      "sha256": "a4d432f3603aac2ac35a04bc320b2fb9a1869808ac31ec5d7564e9c99ac467ee",
+      "size": 6930
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/inbox.py",
+      "sha256": "12bfb972f1b5468c313f64c745ba46b1f8b9a3f2deed5630b1e6c4e6edf15216",
+      "size": 20768
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/integration_control.py",
+      "sha256": "1c24ea70e1d60ee60e08711cc96c125172939b24dde300c64a2bdfb0fc56ff1e",
+      "size": 4834
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/integrations.py",
+      "sha256": "6d00a676541ec625ccf39be383caf46569e1b6c17d7b13bff2ece0a694da7693",
+      "size": 28022
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/intelligence_benchmark.py",
+      "sha256": "23ed0e1c1a83636622bc1290367a7d9e8d31bd14fad1745c9b44f08639b02171",
+      "size": 9024
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/macos_service.py",
+      "sha256": "d3a6d0e2d051d94ca9aa7c5565e2b8cff5485b313e9a5fad5fb4168a37897531",
+      "size": 2373
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/mcp_registry.py",
+      "sha256": "48b068680e26a9ed98cfeb4f27803b6960024459436f9f0ab934d75327204631",
+      "size": 7247
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/mission_control.py",
+      "sha256": "d5d36ab53efed93f1773179cf191cb647fbbac105424671622dd58a82b19bfcb",
+      "size": 26990
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/mission_runner.py",
+      "sha256": "9876b3eb1b557a8907b6be1c0967f5b9ce2be67368e15d7033c10e321b913df1",
+      "size": 7842
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/model_gateway.py",
+      "sha256": "d4e6287648587e67e41274520a91f7455f37247e93e619f2e500b425b72efda1",
+      "size": 15722
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/models.py",
+      "sha256": "3e770c00c6f666d8fd484618882a0ee0d4db898441a248546ba862843da29fdc",
+      "size": 3963
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/n8n.py",
+      "sha256": "19b9862c7904cfadd2e666212fe00a222a7027eaf78f55e122175762c88979a4",
+      "size": 5140
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/network.py",
+      "sha256": "dc9b82e41c0a4d99e3cbcb5fda794b6c2960df60bab03b7b139de718c9eccdd2",
+      "size": 12110
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/nexus_bridge.py",
+      "sha256": "d6348280a2cf18fcea84bb0ceb77b180affa1a8fe3e1ff39adea4e5de0de200f",
+      "size": 5908
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/noryx_bridge.py",
+      "sha256": "3fd2728a5b0a37655827fc4e9e31dfb358f187e9bf110ece5cc9c4788754a54e",
+      "size": 18776
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/oauth.py",
+      "sha256": "d8a5fd78bee63a413a4e62a90ea662c4a6f4582bc8475b5d9ecb2768e74a1add",
+      "size": 4953
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/operation_policy.py",
+      "sha256": "2589b502fc41d403b9941e50c34dd5e2cb1f253efd5f950f5667495bec590e9e",
+      "size": 3065
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/pipeline.py",
+      "sha256": "bfa5119858089279bbead8f2dfa66197855025d98446741e7a1c567a20412c52",
+      "size": 32692
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/policies.py",
+      "sha256": "e52af0d27f321bb3dc0baa34f143db7b0f62551c3fa3043cd69288abc427431b",
+      "size": 5570
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/policy.py",
+      "sha256": "47a8debd383fd2b583b37fccc3219e3882f505bb7314937d74be1580a6615208",
+      "size": 20053
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/__init__.py",
+      "sha256": "cb68f7567781ada26f06253ddfea8dd2b0b3101fa48f2ccc862ff5237cbf9f62",
+      "size": 992
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/approval_coordinator.md",
+      "sha256": "8b4cfdb1329733100a73fad71de41c35dbf4e5aef931ef765dbc8c1654355f17",
+      "size": 1082
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/asset_curator.md",
+      "sha256": "94b820bb683ce1724cca5646f4e1d50cdff29fef182e9e4bfeed3690c60e5226",
+      "size": 1107
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/builder.md",
+      "sha256": "214f5095ae73ef9a90286bf96d9f9c853f36235a067c29d32a9728829bb6702e",
+      "size": 1083
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/campaign_manager.md",
+      "sha256": "7bdb90e2f683daa1c52d59d9ff6cf325203c8ac76d970f0dc8ba9f6d98ea64bc",
+      "size": 1066
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/chief_revenue_officer.md",
+      "sha256": "9b1a33d798fb3bda87de2c4234043c631956dc70b12c4c8d1d86b8b404244d7b",
+      "size": 7757
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/client_communication.md",
+      "sha256": "c706e0c455c9b1cd901e631acaa229510542e232f7c1796882b5ed5493439ea6",
+      "size": 1066
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/community_manager.md",
+      "sha256": "47b425b5d9879eb83645f965839ab3751998cac6cd21b2089246759a7901e9ed",
+      "size": 2140
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/compliance_reviewer.md",
+      "sha256": "ae0b91f24b6f309d9a450d07a1f5b29c43c3d9560b00aee10669ef878d1c1ffe",
+      "size": 1076
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/contact_resolver.md",
+      "sha256": "aab62c8839f697ca9fbf3dc97cb8b7c51a7343cf4a519fb0149c90b41e2c2201",
+      "size": 1019
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/content_analytics.md",
+      "sha256": "1da3c748b8e4c4d4d4ba9e1b23d0a9579d6aa1736c0b6857119928ba7a80e38a",
+      "size": 1131
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/content_production.md",
+      "sha256": "fca609ca933f6260bcf28dd5e2333a63f6c3c4de31aadef127a97dac9348a457",
+      "size": 1112
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/content_research.md",
+      "sha256": "4abdb1bce05d4dd7d1fa54ca1b11107b08a088d98ffd95d252fc9a2f761a5383",
+      "size": 1104
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/content_strategy.md",
+      "sha256": "c5a12c9169163b88bdb839bb1121b9e7eb852b9c672765f4bb35fdc986cd0b30",
+      "size": 1070
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/crm.md",
+      "sha256": "449c7d75b9de2f2f87118da98d3f8348e0b3b1d128bb60e2b69d038e0e22eee6",
+      "size": 1012
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/customer_success.md",
+      "sha256": "05cdabc21f84dcb06c04c6fb5cf2cbfa8c73d8b95128d44af1d3a4a48049604c",
+      "size": 2129
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/demo_operator.md",
+      "sha256": "34e9278990f67a87ba8a8a4c8cbf8ee699488a05fa83e95b33981623cd398591",
+      "size": 1055
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/discovery.md",
+      "sha256": "2b8d32a5e2a605bc3ca5c5eb153f65986af89722fc11b8f0225f8b4c09e9ac5d",
+      "size": 1100
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/distribution_manager.md",
+      "sha256": "a3ab9a80876896274aca6571d95408386b27f815fe4ac11410058870159177b1",
+      "size": 2184
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/finance_controller.md",
+      "sha256": "d42ee128e7faff8e68c02e986774afd90325d32650b94140211e6c177c4ad7ac",
+      "size": 2127
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/followup.md",
+      "sha256": "09812366fd27039faaa76a38c17652ecdb91607701dc5670f6ac985933b2cb42",
+      "size": 1057
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/jarvis.md",
+      "sha256": "74203a0954cc3bfdb99e69b712e8731517b2ceb3cbf38f4e0d0e194aa8dcba01",
+      "size": 1211
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/lead_discovery_outreach.md",
+      "sha256": "e9af7dd12ae6bf23160cdc557d938b9b32d4caca2a2b8be284214e7a6fc2c840",
+      "size": 6329
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/lead_qualification.md",
+      "sha256": "4b1301e8bf2e3f14572dd38b9686f862748c5444e7d5896df677323883ec1fe8",
+      "size": 1045
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/lead_scout.md",
+      "sha256": "9abc84ec6ce9e116acc42134e5ee0805b7244efaa5fdd7d8d9baebff35575947",
+      "size": 1070
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/legal_compliance.md",
+      "sha256": "ac35dbee466a79808297208fd4e5c06e0d9b971d4911ce5983e75fb657a946b5",
+      "size": 2180
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/marketing_demand_generation.md",
+      "sha256": "353018799b8922fbee8281c2e904cdfd3b17e6fb9c93bf24497a4db8a0847ad6",
+      "size": 4923
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/marketing_head.md",
+      "sha256": "353018799b8922fbee8281c2e904cdfd3b17e6fb9c93bf24497a4db8a0847ad6",
+      "size": 4923
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/media_qa.md",
+      "sha256": "53600cd8c42bb7b9a0e31f1431fab8f684764f6e05b7340bf25ae0551eb26fff",
+      "size": 1105
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/operations_manager.md",
+      "sha256": "a3357f4376be6630548914d02272dd79876ffbf113dbac811056eb45f395ae32",
+      "size": 2151
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/opportunity_analyst.md",
+      "sha256": "0befbcd84ac5912a6108ec27f89621bf4df6405cbb6ba2c8ae5ee4b3df2f898b",
+      "size": 1037
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/opportunity_scout.md",
+      "sha256": "e9af7dd12ae6bf23160cdc557d938b9b32d4caca2a2b8be284214e7a6fc2c840",
+      "size": 6329
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/outreach_writer.md",
+      "sha256": "269b3802f8960d415dd0c374902a242b37ce781e4d59ca1ef036b146c381ec2e",
+      "size": 1059
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/patch_engineer.md",
+      "sha256": "29f5926cdef684b925e90621069caa6d4bafaddffdd0b1dda9cbfad9213d6a20",
+      "size": 1056
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/portfolio_matcher.md",
+      "sha256": "d3646925a0645daff9ea66b09f6df088e04486e1eb555e9bbc7b751f26f703e3",
+      "size": 1035
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/product_discovery.md",
+      "sha256": "25973142a6bc0fa94d02b0a62609a9f001efdb734e38f62b6db4b371ef7dd167",
+      "size": 2154
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/product_manager.md",
+      "sha256": "d8486849f4d18b431363726a2af2fa5fc3a650f4ea42d0ca3b254a5ba38b261a",
+      "size": 1082
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/project_handoff.md",
+      "sha256": "ee746999f4189416ae1ffe717f99381924b873513a45c10e07e4e2f863de5719",
+      "size": 1121
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/proposal.md",
+      "sha256": "1fc9bf55587911495fce2c68745f7494b6dc9f154d20e4e30f5b362823c8326d",
+      "size": 1060
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/prospect_research.md",
+      "sha256": "09bf67c9c0f414e88b1b40ba9c42d9dd1e4222336e6869046cd4d23edeaca3e9",
+      "size": 1048
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/publishing.md",
+      "sha256": "ccd077b6418973727c716a2bba90613af74232d72c3f1bfc565b0e5692f019eb",
+      "size": 1087
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/qa.md",
+      "sha256": "bab9a52cae104df90a96da5c97c308717ae853294081a22a5125d1913a500c76",
+      "size": 1090
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/reply_intelligence.md",
+      "sha256": "04dba7c3f1abe924e82f5794a3e2071a2c74cc5cf594497b7c6e6b7094b8f53e",
+      "size": 1080
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/repository_intelligence.md",
+      "sha256": "4b789ab5072160eb6cfd446912ac82cec8aea039d04a20856d6ec107df1d9b17",
+      "size": 1127
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/research_evaluation.md",
+      "sha256": "34a140f2f5790e70373a8d8e39d6c873c89b198b8a527a7c2c4c668496f7f9bf",
+      "size": 1144
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/revenue_orchestrator.md",
+      "sha256": "7f991cb7e3782f0b267009bb28b975c5111824ba396f227f8cfc05cb1b21a585",
+      "size": 3146
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/sales_closer.md",
+      "sha256": "ce542f324f864a49eb32b6adf4a69b0465175ba37b67a6f0a489bb451fdb9bc9",
+      "size": 5032
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/scriptwriter.md",
+      "sha256": "4e5b154086b36dda9ec1079fab99873668be99df8935542cb055747731f2cf1c",
+      "size": 1091
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/security_director.md",
+      "sha256": "10ecd5a80e82fbb13085703a469a63a89d379387293551fbbebdba74b749bbb5",
+      "size": 2159
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/shorts_editor.md",
+      "sha256": "ed6116ff256030d9015c8e4be043b24c57048e9d93ff607650a2f26ce96c22d3",
+      "size": 1075
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/strategy_director.md",
+      "sha256": "9ff09a18e8e4d59f707d900281016be0f0235ba78ce197ded9674f94c1bb0a11",
+      "size": 2167
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/technical_architect.md",
+      "sha256": "1ec9edcbb78ef42be5539e60acabbcdb414d296691566e4f785990db46a17752",
+      "size": 1085
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/thumbnail_metadata.md",
+      "sha256": "57b446ee86be1dae6f0853b7d57df51b041561e669e78e684678a0e820932fcf",
+      "size": 1118
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/venture_director.md",
+      "sha256": "7126319118a99978e4921ac700ee929c91b473943dfa300ba254861b3affe570",
+      "size": 1593
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/venture_growth_operator.md",
+      "sha256": "c762b1dd0d6df1d6adb6ac3fd5bf59db25009d0a2bd0891b444632d2f98949f9",
+      "size": 1067
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/venture_opportunity_researcher.md",
+      "sha256": "d0183957b83cd32aeabf167805f3846ecbedd0ac3fec42ce4d78317c64f99f4b",
+      "size": 1262
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/venture_portfolio_analyst.md",
+      "sha256": "a6a9bc57d311729b43439844e2065d7eb4cceed1df70fc7c412dc4f8a24cdc1a",
+      "size": 1184
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/venture_validation_analyst.md",
+      "sha256": "b98c682ee21fc1c66fd0f8bfc7d203d1bc73c5aaf1ef991ae7dc3273b7d0ab33",
+      "size": 992
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/video_production.md",
+      "sha256": "25155472172dccf09c3c6b025a5dd3428ff2eb442bb3ae86eff5fa1e506b3a08",
+      "size": 1081
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/prompts/voice_production.md",
+      "sha256": "c6608f2b62853e6d23898b647f053e8ec046b6e1c767bc807a5986877da8c858",
+      "size": 1075
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/public_sources.py",
+      "sha256": "e5b33710f907059789fc55529e4b8c816d42897175c35cba39fdb24434155a3f",
+      "size": 21781
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/readiness.py",
+      "sha256": "c7521c7ba408031dce0dcabfd97443a80dcca048393808512b8a563fae0cb23b",
+      "size": 23193
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/registry.py",
+      "sha256": "b98cb7e7780a5047cf853372260b0321ba3e2e510e41d4431f76c5faf7fdf290",
+      "size": 35882
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/resource_control.py",
+      "sha256": "bde4b4513bc5e9f9829e1e20384f377beda1d9848bccd5c348f24db5034d9cfe",
+      "size": 23193
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/resources/amaura-sandbox.Dockerfile",
+      "sha256": "78d2799c3889b85e5e42bd1ffc444554e030450151623dbeb474d1855179b5f1",
+      "size": 1055
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/resources/env.amaura.example",
+      "sha256": "6e1e45cbd9e65cc24d0310d1c78ac61b21f5df284ba310ca76dd3197dbfcc94f",
+      "size": 7735
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/resources.py",
+      "sha256": "cb1c17bc12de74264cae2078961ef6fd1a78e361c9b2cdeb8e134c3032fe18c9",
+      "size": 19870
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/runtime.py",
+      "sha256": "9f45c017f891ac759cc9f677b31022e316aef42ef7fdaf01f7533b7e4ab7e25e",
+      "size": 3751
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/sandbox.py",
+      "sha256": "42abf8bfb24b9eb304815a46a7a487a0b2c8ad3eb07b486de4c174f606633fc1",
+      "size": 11301
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/security.py",
+      "sha256": "6b134f357ed87930039ab1b9f3d1dd641af59893a34174b2b3c4f527d017eccd",
+      "size": 2256
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/state.py",
+      "sha256": "e70f1f5cba92b1c19ef785e22e80070c46ef9576d9ec23bf0e45df783d0e9882",
+      "size": 576
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/store.py",
+      "sha256": "b7eafd3e344783ea93745a630f5709c77fa5b90d8a3892ef2df7c12b030f4d11",
+      "size": 202814
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/store_api.py",
+      "sha256": "0181b9d40901aed830d92781fa12bacd417e0fbeb3a77eb58cc3d4e9d69f17fe",
+      "size": 3120
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/supervisor.py",
+      "sha256": "5d655d1f9162851ea3c6c38c74a74d2a92b660e15adb99262199a1346561b3bb",
+      "size": 24037
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/telemetry.py",
+      "sha256": "f4b1de55a08a0fa61536127da4186b4668132d24b7ad7a9e1abea3cf59e1323d",
+      "size": 4372
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/tool_governance.py",
+      "sha256": "92e586b126840695296500d9867425db9737633fa816342826bf77fc00073400",
+      "size": 3040
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/ventures.py",
+      "sha256": "932f3a564a3870d5523bd7a8d00625af072b1f427781dfbd51a6ed9e18b257d2",
+      "size": 22564
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/ventures_cashflow.py",
+      "sha256": "f2c0957d7c1a8e3c4cfa26f0a68d336eadc4042f091cbf94705b8b00add380d8",
+      "size": 52121
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/verification.py",
+      "sha256": "f6b3198b6cad95b589e2bafcd2c3ce70e4e58840d7607ab1707733b9624d5d51",
+      "size": 10694
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/workflows.py",
+      "sha256": "28f6a2cba73a1f225e837bc6e0ee20eed7ec58a1b580ca3c9159e26eedcc37d5",
+      "size": 61246
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/amaura/workspace_integrations.py",
+      "sha256": "35a08a4abdee73d702f351a59d6707cab8b6765b9aa504705d81a08a4aaa7d1d",
+      "size": 11769
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/api.py",
+      "sha256": "850f56128846f9eaeb9b3f709b8734ff57c8e21751805df3b8d40df5a2720153",
+      "size": 14118
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/cli.py",
+      "sha256": "d78bc67dbd3f6870ccbd41dcd2ccbf5149da62fda8032e3a3180211b46da8508",
+      "size": 19703
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/fable_engine.py",
+      "sha256": "571f5d67bb18e8b59a7b03ad82bb5a99e2fb6d0656111da9de1568981c56834f",
+      "size": 29927
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/fleet.py",
+      "sha256": "7ea1ac52d0a2e28a560790a6efaecb463d97b3858a261e29e9bdba3cc66d0417",
+      "size": 15522
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/gcp_model.py",
+      "sha256": "a72da55b73c6e71fe234cd5502dcc073165f9a9055aa138dc9cb5c3c7c8b95de",
+      "size": 6024
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/history.py",
+      "sha256": "30dfe984ea56eab7042aad13d2b66b8136545429d7fca5e28646aeca8c052da1",
+      "size": 4614
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/hud.py",
+      "sha256": "4c69a110d5bedd047ed5168a4db5ad60695dc6795fefa63bdf849ded0634dc60",
+      "size": 1969
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/memory.py",
+      "sha256": "cd7c7b15b8d8bbfb91cf50a46b244873cab211cc812ca1301fdc94185e94a749",
+      "size": 5517
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/models.py",
+      "sha256": "5f017f24e5368383d95acafd7f5b0b77d599e89632dab54271a074b6d94fe586",
+      "size": 5815
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/network_security.py",
+      "sha256": "10d1b9f5140a3ec85d98a84106ffa59197f6de262ab8e42e267b69e2aa5ab17c",
+      "size": 4254
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/paths.py",
+      "sha256": "aa809b7f1ebf6657676d767274cec3e580d372418d33697d09d32d71a3a99119",
+      "size": 1034
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/safety.py",
+      "sha256": "8278cd5bea2adce6febbec4c55dca926e3a583548c90d500be5ce17749409eba",
+      "size": 7630
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/server.py",
+      "sha256": "1bc8df4526fba2c3cb8b5339ac943bf92b59643f66cf5a51ecd94b11ce2b4ee2",
+      "size": 102158
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/static/app.js",
+      "sha256": "9bcf1cec394c78e1749cf9a2a2f318dd29fd14f99e2b61f38cdb1ea851846413",
+      "size": 38219
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/static/index.html",
+      "sha256": "0e4d530d29f972c9192c8322b7ed695ae1947d2364590ce1ae32b83eed762ad9",
+      "size": 15937
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/static/styles.css",
+      "sha256": "47ab118942307545f725b891b08b5a2f689b9d91637f2ca4deb890fae9fd705e",
+      "size": 25078
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/telegram/__init__.py",
+      "sha256": "f8b6345d05d786a7aa5594ed22fd88a317baf6e9e7cf5da15df16d9aa8ad059d",
+      "size": 66
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/telegram/bot.py",
+      "sha256": "20772aed3a017b4ef4451658b70a79eff0a8a56cd3f889f22d9062649e8ee49d",
+      "size": 21503
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/__init__.py",
+      "sha256": "cce49381cee4e713c6cb7dbdbef6d58e3f707cc331e3f958dfbd42210a148a88",
+      "size": 75
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/advanced_coding.py",
+      "sha256": "6eecb13a58d7581b751953c7e55e22aa4eeec421073b6e858933afb625b53315",
+      "size": 91664
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/agent_factory.py",
+      "sha256": "a8072c9b97b42ec4024d5b18449602f545f6db7389aac732a8d5244f0668ac49",
+      "size": 34990
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/amaura.py",
+      "sha256": "ca89bc92c84a900187f377539a7a57411e8a664a22a6c073883ea2e51465c425",
+      "size": 35360
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/app_builder.py",
+      "sha256": "ea4e6143c1367c3c6aa8b6434080a224669655c506d35619028bcd675bd3ba90",
+      "size": 9958
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/ast_indexer.py",
+      "sha256": "3aa0f9b8e7545607892d0a79c079e51b24ca725f9972b9910656f77a004c91d9",
+      "size": 9099
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/browser.py",
+      "sha256": "765814bc58a74e01086f919fd2c6368acccc21c83eb4c7867521202f1d015f4e",
+      "size": 19721
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/coding.py",
+      "sha256": "9ae0223b8509a06c931230c0fa283fb1b397765f811fb1f6c743737ac165006f",
+      "size": 26456
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/communication.py",
+      "sha256": "6d2218f9b452726f5d28c839b628d2c129fbded0a4bcd0e657ed6ace93394f86",
+      "size": 11392
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/desktop.py",
+      "sha256": "4205e7de6943e0c3f8e010e8119a61973665f3d2deb673f32b394f6dcad06f7d",
+      "size": 14678
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/documents.py",
+      "sha256": "59cfedc55cfeb9e56166de922c656f14a419ccfd075d6a0da5f74da0772eb284",
+      "size": 7818
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/process.py",
+      "sha256": "74fc98456758877fc25df6a5907865359d05960369dbada30bfcd820deab905e",
+      "size": 2506
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/registry.py",
+      "sha256": "ba640b7ed2fb5b1b4999750dd285159a1148c73aad6f0eb7bb36c0ffb356100f",
+      "size": 6476
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/research.py",
+      "sha256": "4dcb9bb4344855d36180dc8b5ac04e321ece03d35629c41fe5c88f5c6c06af3b",
+      "size": 12279
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/result.py",
+      "sha256": "f270162f944311949bebf4d1bfe85d95c56d5f95812ed9daa4cbde6ffe4e32b9",
+      "size": 2783
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/schema_validation.py",
+      "sha256": "0f37fc12cd82a432c688d44e49f900805cbd3a14532f50ac947a25fd142300a8",
+      "size": 4882
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/security.py",
+      "sha256": "ecf7aa834a4dbac54608704982020642f93b69cdd0fdc91decaed4f829bbe275",
+      "size": 3935
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/tdd_loop.py",
+      "sha256": "6d23c60aab653c4ec0accc588d8f2209a8aafbdf6e155446c1c1faed17acfeb7",
+      "size": 5534
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/vector_memory.py",
+      "sha256": "e1ff5bbce02dd0fe7278e72a4f2ff1a955812bd5a44f788e1efaa0ac93996489",
+      "size": 20276
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/tools/vision.py",
+      "sha256": "009d1eaffee1b224e37dcc62136d3eb1fb64180e3cd2ed1a88ce0ac48e48306e",
+      "size": 15497
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/ui.py",
+      "sha256": "6f08dddc9e159101da7574d305e6205430b742ae7c3e8dddfdb2d47d7109d9c7",
+      "size": 11565
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/user_memory.py",
+      "sha256": "7319dc018a45be9b1aba0d3624a69e7a4c147a02311e073a8972c1ee31180b71",
+      "size": 7552
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/voice/__init__.py",
+      "sha256": "2113e668debd443d5350063dd65d84266d27482e19ff69cb02f6b26409392603",
+      "size": 74
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/voice/duplex_voice.py",
+      "sha256": "cc8d07179c94fcd39e4d00773d552299800fd220f443072a8376b0034bfd5987",
+      "size": 13898
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/voice/engine.py",
+      "sha256": "b66291e6e725d3b2d0881ff67217591d3b803fd7a98cbaf68c2a11c77b86585c",
+      "size": 1680
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/voice/listener.py",
+      "sha256": "63de4f12663fa4d783c924c99754222460d4fe44f487741b0e6341c0da7c6c6b",
+      "size": 2226
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/voice/speaker.py",
+      "sha256": "043bd2b33e338d4d82f863c18cc3a28390f17d57b6916044dc8b364bb63785ff",
+      "size": 7782
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis/web.py",
+      "sha256": "d5c44168592cf54fe877a9eadd27231e44377c578263e6695473bc40d5d67bb9",
+      "size": 400
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis.egg-info/PKG-INFO",
+      "sha256": "8541b460c278889186e8801a707613465d64e11ebd5f4bd1b4d0eecf7dc10ee1",
+      "size": 13703
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis.egg-info/SOURCES.txt",
+      "sha256": "b0b9aac8adda051ba96478a9ba1739af7632c766c4e9e4ebbd65f7661c4ba543",
+      "size": 7478
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis.egg-info/dependency_links.txt",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "size": 1
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis.egg-info/entry_points.txt",
+      "sha256": "9eedf051d3a26d5711de3de342ff9dd2777d0567fe40f75b9ab70abce671dfdc",
+      "size": 145
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis.egg-info/requires.txt",
+      "sha256": "0f771956e2f96aa2f62f81f0da4ac15be548ffdf8946d25d2fc1ec116da56bec",
+      "size": 868
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis.egg-info/top_level.txt",
+      "sha256": "34110b146df264c5c45faf21e052b39ec834e95ac6757e7d31dbeac42927ef7c",
+      "size": 18
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis.sh",
+      "sha256": "728cefc10cd6f5d9dc9326e2bb466bda01ccf47eeb7a7551722d0082757891ec",
+      "size": 1641
+    },
+    {
+      "mode": "0o644",
+      "path": "jarvis_app/index.html",
+      "sha256": "60bd88c0e286b905498833bf49a830b037a1528d3678a026b844c11025c88dff",
+      "size": 17121
+    },
+    {
+      "mode": "0o644",
+      "path": "pyproject.toml",
+      "sha256": "7aa54df67b12f5d81bd68300eb8339449423d896992c542d62998281122e355c",
+      "size": 2230
+    },
+    {
+      "mode": "0o644",
+      "path": "requirements-dev.lock",
+      "sha256": "c64a051cb77035c23a7ac6219ff8ddbb02a8ecedb213963dc8bde63c1fc9df9a",
+      "size": 135556
+    },
+    {
+      "mode": "0o644",
+      "path": "requirements.lock",
+      "sha256": "1d05c411389572bafe45ccde8510084d492da171925a5f4637ca809f28ff8f62",
+      "size": 123214
+    },
+    {
+      "mode": "0o644",
+      "path": "requirements.txt",
+      "sha256": "187dceab274473d752aadbbd5555ef7f11c15627ae653b76d6e95b89f6103c1b",
+      "size": 442
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/amaura_local.py",
+      "sha256": "65d0a3babc3fab41497cf3fe5a0a3cf25ab3a19f93fa128b54dc21ca80605eda",
+      "size": 747
+    },
+    {
+      "mode": "0o755",
+      "path": "scripts/benchmark_noryx_live.py",
+      "sha256": "8eaa64b845f45ff2c7643704ed20cfbf4dd151d910ffe1cca5cc8a5d9b3a97e8",
+      "size": 3949
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/build_amaura_handbook.py",
+      "sha256": "158e811fe5051348523d5cf7d30a9274a376d47143a7634000c632f8d9509544",
+      "size": 94521
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/build_desktop_app.py",
+      "sha256": "767add22d07b066ec0e7490908d21bb3f8cc9076d4f4020c5caf05e9ed5a2704",
+      "size": 5623
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/build_desktop_backend.py",
+      "sha256": "dcc6d148d2c02315aeff3d86f794130f034b65775b45212bced36e9f0aea9cd8",
+      "size": 1892
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/build_release.py",
+      "sha256": "3c07e0c1687df6943bc4497b779f187400896ebe3c09b9f88c27d66a65c25c67",
+      "size": 26047
+    },
+    {
+      "mode": "0o755",
+      "path": "scripts/evaluate_jarvis_cognition.py",
+      "sha256": "5acf07caea86744807b3ab89bd8b03f7e93d26d9dda0b11096be693cc6644ab9",
+      "size": 5610
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/generate_env.py",
+      "sha256": "92923e034464e081d1b7da457a6bf76f5b18b4fe27daa162bfa9cc762f75d356",
+      "size": 3525
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/live_eval.py",
+      "sha256": "664df23dc33ec8e774efa141dd4da57af7edd6e5cb31816d80700907163a39b9",
+      "size": 1907
+    },
+    {
+      "mode": "0o755",
+      "path": "scripts/qualify_release.py",
+      "sha256": "68b6f7ab92e7961f15a8d9ab08e0feeb933895928900666837afef69f1d1af83",
+      "size": 14141
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/release_gate.py",
+      "sha256": "6ef27a2338a12a8ded971f436909c7d5f069b9c8854ece51a099a4b63ce4b340",
+      "size": 1417
+    },
+    {
+      "mode": "0o755",
+      "path": "scripts/run_jarvis_intelligence_benchmark.py",
+      "sha256": "bbb21ef9bf91a1075c5f5f0be6c6da2e54a039dfb0161c4bc08252524687a5ef",
+      "size": 1099
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/run_verified_tests.py",
+      "sha256": "7682c8d03a1bf764a6989ef133954bf8eeac5534c5eef7407b20d6b4d403fe61",
+      "size": 4794
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/security_gate.py",
+      "sha256": "5701822ff4d3ada60c8bcdc6a33bf629ce96fdbf13b3cfdd378f056ddec784ca",
+      "size": 769
+    },
+    {
+      "mode": "0o755",
+      "path": "scripts/setup_oss_capabilities.py",
+      "sha256": "c3505870fd9f763c92dd38bff0504dcd59345211609c5e9b9ab885c70116ddcb",
+      "size": 3965
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/sign_evaluation_pack.py",
+      "sha256": "7321f7f265b0a0b23755b2162888a8127816ee65b5e95f556b9f072c81bdc0a5",
+      "size": 1462
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/start_amaura.sh",
+      "sha256": "8a8ea60ac031560c08b3a4f245c65da9985c9693c244b4aafefcf4801559a2c7",
+      "size": 470
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/stress_amaura.py",
+      "sha256": "e0784926bd1ff6fd55ddaffd7424d95cac47fb9e9dde6f3ed63d00aa508003d7",
+      "size": 7291
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/stress_trust_foundation.py",
+      "sha256": "4d6f9f2ffd0d9195094132560ebc29cf8d0ce4bfdf89da5586aafbb738f217ea",
+      "size": 6604
+    },
+    {
+      "mode": "0o644",
+      "path": "scripts/verify_amaura.sh",
+      "sha256": "6fe186844e1e37f88cd2e7f7e040ea27186207d2fc4c9b441d5dd610627acb0b",
+      "size": 733
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/conftest.py",
+      "sha256": "41c1193820d1c0465f220878abac384fc31aa79e5aeeaeb716b3fe7901dae1f2",
+      "size": 621
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_assets.py",
+      "sha256": "58469ae46c94821ad30dfcb7c95a99fd89fa9fe7264a698cf1de6a0fbb512e68",
+      "size": 2271
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_autopilot.py",
+      "sha256": "fb70999025cb9feacc56d0d263e48851ecdaf3b4b49a354eb8d896efb88846c9",
+      "size": 1874
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_commands.py",
+      "sha256": "1a67598771675336c800936356547d8025492be3455a7b9fbc4040751e1a4b43",
+      "size": 1776
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_company_api.py",
+      "sha256": "b1f2eb5d72d10a0ebcc07607c5d552cc2aeeda1c2ce09904dd099e135f728aa1",
+      "size": 10348
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_company_system.py",
+      "sha256": "4cec3f0e5e8891c74078afae4df548968906e8d35eee849042aba42d49c7d5a5",
+      "size": 6853
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_contract.py",
+      "sha256": "d54cc91313bfa30ad6e939a263a868fd4b070d421c7fcdd40e83a1206449781d",
+      "size": 1387
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_distribution.py",
+      "sha256": "e8cf4b40532c3594c0776a4774f82409e6dc81d3f0e900d1089d7abbb7bd6dcd",
+      "size": 11441
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_e2e.py",
+      "sha256": "7f3e45e0fe15904cc981c4b65954ef0e1b988c0d5f27ba70528526b7415f548d",
+      "size": 1513
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_full_company_autonomy.py",
+      "sha256": "2719a0478671ffa9677ac0202ef2f957a2682f7f7f831a65b17866eccd5885eb",
+      "size": 15130
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_growth.py",
+      "sha256": "c579ce45468922f142004c37c27ff65c2b8a5ad28f0c2fcd3b1f92b0cf741ec4",
+      "size": 14248
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_jarvis_v4.py",
+      "sha256": "05cc7552c4748655d00de2d69d930da1840399f9ef4212ff6108add131228fd9",
+      "size": 5462
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_jarvis_v41.py",
+      "sha256": "66e744ec387485e58de32d34ea80388e9ea9a61b7765880681fd4df7a730d02a",
+      "size": 11760
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_jarvis_v5.py",
+      "sha256": "5d1d151616b047133ad3205ecf7db7e6260e0a19277b2b7ecb20f8f1ce798d34",
+      "size": 9618
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_jarvis_v51.py",
+      "sha256": "2ae16bac173f507f1cc02e50dade9dac4b2838e338b740d5c34c53f01a3e3485",
+      "size": 10612
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_jarvis_v52.py",
+      "sha256": "6ab87aa90fc9c24e408457d7f8fe6772b17639a208ce8a5f8783b7b62419b19b",
+      "size": 8251
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_launch_hardening.py",
+      "sha256": "cf77f30fdb8ff9a6e5841fc4309a134f8951f5c27794e6285f06799fe51688fb",
+      "size": 17155
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_macos_service.py",
+      "sha256": "0d94856fdaa45ae8e50870b3c13f1528f0c1e8e5f7836cd15c1d590dff49ebb2",
+      "size": 1411
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_mission_control.py",
+      "sha256": "fe0740f06d30bb579f068cdbd685f079aba8c2d01404724e9a7efc1cd80f88c1",
+      "size": 17415
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_os.py",
+      "sha256": "07e34aa9b3086fabbd921408a8da06e5d77f91650b06cecd4c858a6b77f52944",
+      "size": 14348
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_oss_capabilities.py",
+      "sha256": "fd73587c3040305362b3984c89cb91a9202f5d337180416c0aef1e284b2e1916",
+      "size": 12373
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_p0_fixes.py",
+      "sha256": "a1d88f2fe2e7a2f182fee4e859d082700ab0b60423f3bb9a24269f87c978372d",
+      "size": 16989
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_p0_remediation.py",
+      "sha256": "4f3d77738313695b123595e9329ffc01ecc6ed9020c0a934308f090294cba25a",
+      "size": 9741
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_production.py",
+      "sha256": "ccad52843923c41b220dbd9561b51cfad0335258835e854b3a10e99742675312",
+      "size": 14174
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_providers.py",
+      "sha256": "08d801302b095988f726bde43615a1bcc81e205491a4b5434a986df0b5757baa",
+      "size": 3428
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_release_builder.py",
+      "sha256": "426ec38e694809762536329c67dcc725e2c2db71e7573d5e4e012deba100c5da",
+      "size": 506
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_store.py",
+      "sha256": "ad1351d067d6a8417aa8d8557f22680bb7783d2e71a4f2bf3479f138331d0db1",
+      "size": 1047
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_supervisor.py",
+      "sha256": "4d0b920c2152e0d9f5e0348cedbe2dd6036becb958ce1838f35d8ad16dd84bcd",
+      "size": 16269
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_trust_foundation.py",
+      "sha256": "793da9a2fef41712bc1df4840182b3774ac5ab50ad84b20a97e11cf706ccca93",
+      "size": 9066
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_v350_hardening.py",
+      "sha256": "eedc04dff35957d7cefa4bff45cb98a7e86dbe30a1bc77b60e951dd9a66611a0",
+      "size": 8468
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_v351_remediation.py",
+      "sha256": "cb5dee3cf768402cdb403e7a841ddefaccf802b89c401ea91d516a4b21b998be",
+      "size": 5927
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_v352_security.py",
+      "sha256": "95b0de2368c8ee63e0a4651b5eec3a53cf8dfac71300319e7951847bb26b7737",
+      "size": 3947
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_v353_security.py",
+      "sha256": "a46d75e4cbb44505ce7ed151f2cd7efa36d7d9069b07b29e2a5f572708982c24",
+      "size": 3624
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_v360_integrations.py",
+      "sha256": "93bb0f4e66ff5337e70866b6a5e0529dc4448a9e09b62a20e13d0b4db75352e9",
+      "size": 18624
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_v361_blocker_fixes.py",
+      "sha256": "2160e6a166d58ca0fdeb552debefa90e9d4770b5bd6732f291870e9a93bc03d7",
+      "size": 10619
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_v361_resource_security.py",
+      "sha256": "50e7c487b7e8729f106cb8a92d76ff8fbd3a941b4c64d809865ff93c7531801c",
+      "size": 6883
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_ventures.py",
+      "sha256": "1e62629b688ac7ea294f21dd032127db344744a33d1a27aac6dd8ae500bbb0d6",
+      "size": 8755
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_amaura_ventures_cashflow.py",
+      "sha256": "888d5e0957bfb65ec2768ec8f2ccc5b9cd5564e26a16ce0254f482846ae8f24c",
+      "size": 41307
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_app_builder.py",
+      "sha256": "197a21f4b5cfa4bd7303c5dd1016fea66c4dd0730e92b0560e361e510899a866",
+      "size": 997
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_ast_indexer.py",
+      "sha256": "c5b81fd845215f4515ab7aa845fb48fdc87fe06dcfb922aad803d993582dd468",
+      "size": 840
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_browser.py",
+      "sha256": "c08969e33a3f1dbbbc47a2f6051dcbd697c5499bf655fc3f3252e53766ceacfc",
+      "size": 1713
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_fable_engine.py",
+      "sha256": "969ac63187368e50a16762a3d7be22ae3c28bb3355b702f3c14364da6e46e667",
+      "size": 3974
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_fleet.py",
+      "sha256": "c0fff791580b510b998ce01e2071ab70671127079936ccef965f5d76b4813f72",
+      "size": 1074
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_registry.py",
+      "sha256": "81f1315b7a46efd4dd0be2211241279c750185bc4749a561aa5f8f013550c1fd",
+      "size": 609
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_router.py",
+      "sha256": "eb645c3408d28fc4ac638f8282af104aa25943259e28e047353c423f7230dc66",
+      "size": 794
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_tdd_loop.py",
+      "sha256": "644b9317b62260c8260e7c25a7921db90298ce2a2780abbd4f851544ddd2e172",
+      "size": 318
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_vector_memory.py",
+      "sha256": "015c7085fb8ac25bcd9e90b7dd92abf3d4ee7d16cd2e9058624d6bddd0e9836a",
+      "size": 3113
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_vision.py",
+      "sha256": "21662a4ac03c1c3765cc98c020fc0a32679dfad8fe6fdd44febff8149faf17c5",
+      "size": 2143
+    },
+    {
+      "mode": "0o644",
+      "path": "tests/test_voice.py",
+      "sha256": "0c823b1c73748987e02af15711bd9053df40b93933cd40df07dcf951b2ff0803",
+      "size": 1871
+    },
+    {
+      "mode": "0o644",
+      "path": "uv.lock",
+      "sha256": "c1c973f78e4417d1d329b4842d08975296fd87d25919cbdff4baecc526a3107c",
+      "size": 512519
+    }
+  ],
+  "schema": "amaura.release-manifest.v5.4",
+  "self_excluded": true,
+  "version": "5.4.0"
+}

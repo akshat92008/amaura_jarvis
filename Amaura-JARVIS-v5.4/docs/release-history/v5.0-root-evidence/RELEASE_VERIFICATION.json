@@ -1,0 +1,11 @@
+{
+  "generated_at": "2026-08-09T18:44:08.865557+00:00",
+  "production_ready": false,
+  "reason_not_production_ready": "Live target Mac/Noryx/provider/integration/soak qualification is outside this build environment.",
+  "release": "Amaura JARVIS v5.0 \u2014 Persistent Executive Runtime",
+  "schema": "amaura.release-verification.v5",
+  "source_certified": true,
+  "tests": "327/327 passed",
+  "version": "5.0.0",
+  "wheel_source_parity": "114/114 exact"
+}

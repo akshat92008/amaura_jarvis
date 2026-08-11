@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>Amaura JARVIS</title>
+  <link rel="stylesheet" href="hud.css">
+</head>
+<body>
+  <div id="boot-screen" class="boot-screen">
+    <div class="reactor"><div class="reactor-core"></div><div class="reactor-ring r1"></div><div class="reactor-ring r2"></div></div>
+    <h1>AMAURA JARVIS</h1>
+    <p id="boot-status">Connecting to governed execution core…</p>
+  </div>
+
+  <div id="app" class="app hidden">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">◈</span><div><strong>AMAURA</strong><small>JARVIS EXECUTIVE SYSTEM</small></div></div>
+      <div class="top-stats">
+        <span id="hud-model">MODEL: AUTO</span>
+        <span id="hud-time">--:--:--</span>
+        <span class="status"><i id="status-dot"></i><b id="hud-status-text">ONLINE</b></span>
+      </div>
+      <div class="window-actions">
+        <button id="btn-minimize">—</button><button id="btn-hide">◈</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="left-rail">
+        <button class="nav active" data-view="chat">JARVIS</button>
+        <button class="nav" data-view="mission">ACTIVITY</button>
+        <button class="nav" data-view="memory">MEMORY</button>
+        <button class="nav" data-view="company">COMPANY</button>
+        <button class="nav" data-view="ventures">VENTURES</button>
+        <button class="nav" data-view="approvals">APPROVALS</button>
+        <div class="rail-bottom">
+          <button id="btn-status" class="nav">STATUS</button>
+        </div>
+      </aside>
+
+      <section class="center">
+        <div id="view-mission" class="view">
+          <div class="hero">
+            <p class="eyebrow">FOUNDER → OUTCOME</p>
+            <h2>Tell Amaura what you want done.</h2>
+            <p>Amaura will understand the objective, build a task graph, delegate work, verify results, replan failures, and stop at approval boundaries.</p>
+          </div>
+          <div class="mission-composer glass">
+            <textarea id="goal-objective" rows="5" placeholder="Example: Build a client portal for our real-estate automation service, add authentication and project status, test it, and prepare it for release."></textarea>
+            <div class="mission-grid">
+              <label>Workspace<input id="goal-workspace" placeholder="/path/to/git/repository (optional)"></label>
+              <label>Coding backend<select id="goal-backend"><option value="antigravity" selected>Antigravity CLI (primary)</option><option value="internal">Amaura internal (manual override)</option><option value="noryx">Noryx (experimental)</option><option value="auto">Legacy auto fallback</option></select></label>
+              <label>Autonomy<select id="goal-autonomy"><option value="execute_until_approval">Execute until approval</option><option value="execute">Execute</option><option value="plan_only">Plan only</option></select></label>
+              <label>Priority<select id="goal-priority"><option value="1">P1</option><option value="2">P2</option><option value="3" selected>P3</option><option value="4">P4</option><option value="5">P5</option></select></label>
+            </div>
+            <input id="goal-criteria" placeholder="Success criteria (semicolon separated, optional)">
+            <input id="goal-constraints" placeholder="Constraints (semicolon separated, optional)">
+            <div class="composer-actions"><button id="btn-launch-goal" class="primary">EXECUTE MISSION</button><span id="mission-feedback"></span></div>
+          </div>
+          <div class="section-head"><h3>Active missions</h3><button id="btn-refresh-goals">Refresh</button></div>
+          <div id="goal-list" class="cards"></div>
+        </div>
+
+        <div id="view-chat" class="view active">
+          <div class="section-head"><div><p class="eyebrow">ONE ASSISTANT</p><h2>Talk to JARVIS. Ask or delegate.</h2></div><button id="btn-clear">Clear</button></div>
+          <div id="chat-messages" class="chat-messages"><div class="message assistant"><strong>AMAURA</strong><div>All systems connected. Tell me what you need.</div></div></div>
+          <div class="glass chat-context">
+            <label>Workspace<input id="chat-workspace" placeholder="Optional repository/project path"></label>
+            <label>Engineering<select id="chat-backend"><option value="antigravity" selected>Antigravity CLI (primary)</option><option value="internal">Amaura internal (manual override)</option><option value="noryx">Noryx (experimental)</option><option value="auto">Legacy auto fallback</option></select></label>
+            <label>Autonomy<select id="chat-autonomy"><option value="execute_until_approval">Execute until approval</option><option value="execute">Execute governed work</option><option value="plan_only">Plan only</option></select></label>
+          </div>
+          <div class="chat-compose"><input id="chat-input" placeholder="Ask a question or say: build, fix, research, run, prepare…"><button id="btn-voice">VOICE</button><button id="btn-send" class="primary">SEND</button></div>
+        </div>
+
+        <div id="view-memory" class="view">
+          <div class="hero"><p class="eyebrow">WORLD MODEL</p><h2>What Amaura should remember</h2><p>Store durable project context and personal working preferences so future missions start with context instead of from zero.</p></div>
+          <div class="glass memory-form">
+            <input id="memory-key" placeholder="Key, e.g. noryx.release_goal">
+            <textarea id="memory-value" rows="3" placeholder="What should Amaura remember?"></textarea>
+            <select id="memory-scope"><option value="project">Project</option><option value="personal">Personal</option></select>
+            <button id="btn-memory-save" class="primary">REMEMBER</button>
+          </div>
+          <div id="memory-list" class="cards"></div>
+        </div>
+
+        <div id="view-company" class="view">
+          <div class="section-head"><div><p class="eyebrow">COMPANY OS</p><h2>Amaura operating state</h2></div><button id="btn-refresh-company">Refresh</button></div>
+          <pre id="company-output" class="terminal">Loading…</pre>
+        </div>
+
+        <div id="view-ventures" class="view">
+          <div class="section-head"><div><p class="eyebrow">AMAURA VENTURES</p><h2>Cash-flow portfolio</h2></div><div><button id="btn-ventures-tick" class="primary">RUN CASHFLOW CYCLE</button><button id="btn-refresh-ventures">Refresh</button></div></div>
+          <div class="glass note"><strong>Operating rule</strong><p>JARVIS may research, rank, draft and reconcile automatically. Publishing, spend, pricing, account actions and stream activation remain founder-approved.</p></div>
+          <div id="ventures-summary" class="cards"></div>
+          <div class="section-head"><h3>Action queue</h3></div>
+          <div id="ventures-actions" class="cards"></div>
+          <div class="section-head"><h3>Ranked opportunities</h3></div>
+          <div id="ventures-opportunities" class="cards"></div>
+        </div>
+
+        <div id="view-approvals" class="view">
+          <div class="section-head"><div><p class="eyebrow">HUMAN AUTHORITY</p><h2>Founder approvals</h2></div><button id="btn-refresh-approvals">Refresh</button></div>
+          <div id="approval-list" class="cards"></div>
+        </div>
+      </section>
+
+      <aside class="right-rail">
+        <div class="reactor mini"><div class="reactor-core"></div><div class="reactor-ring r1"></div><div class="reactor-ring r2"></div></div>
+        <div class="metric"><span>GOALS</span><b id="metric-goals">0</b></div>
+        <div class="metric"><span>PENDING</span><b id="metric-approvals">0</b></div>
+        <div class="metric"><span>AGENTS</span><b id="metric-agents">0</b></div>
+        <div class="metric"><span>TOOLS</span><b id="metric-tools">0</b></div>
+        <div class="metric"><span>VENTURES</span><b id="metric-ventures">0</b></div>
+        <div class="glass note"><strong>Operating principle</strong><p>Understand → Plan → Execute → Verify → Replan → Escalate only when needed.</p></div><div class="glass note"><strong>Proactive intelligence</strong><div id="proactive-list">No urgent insight.</div></div>
+      </aside>
+    </main>
+
+    <div id="modal-status" class="modal hidden"><div class="modal-card"><div class="section-head"><h3>System status</h3><button id="btn-close-status">✕</button></div><pre id="status-content" class="terminal"></pre></div></div>
+  </div>
+  <script src="hud.js"></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "checks": {
+    "compileall": {
+      "scope": [
+        "jarvis",
+        "aimodel",
+        "scripts",
+        "tests"
+      ],
+      "status": "pass"
+    },
+    "electron_syntax": {
+      "files": [
+        "desktop-app/main.js",
+        "desktop-app/preload.js",
+        "desktop-app/renderer/hud.js",
+        "jarvis/static/app.js"
+      ],
+      "status": "pass"
+    },
+    "pytest": {
+      "failed": 0,
+      "method": "bounded exact-node qualification",
+      "passed": 376,
+      "status": "pass"
+    },
+    "wheel_build": {
+      "method": "pip wheel --no-deps --no-build-isolation",
+      "status": "pass"
+    },
+    "wheel_import_smoke": {
+      "imports": [
+        "jarvis",
+        "ExecutiveKernel",
+        "MissionRunner",
+        "CashflowEngine"
+      ],
+      "status": "pass",
+      "version": "5.4.0"
+    },
+    "wheel_sha256": "f9468c7d4b7e6e2ebf41f1efe94183886f022155334870d28dabdede21945af5",
+    "wheel_size": 633574,
+    "wheel_source_parity": {
+      "mismatched": 0,
+      "missing": 0,
+      "source_python_files": 117,
+      "status": "pass",
+      "unexpected": 0,
+      "wheel_python_files": 117
+    }
+  },
+  "generated_at": "2026-08-10T16:31:30.639918+00:00",
+  "production_ready": false,
+  "qualification_boundary": "Source/regression qualified here; live target-Mac, authenticated Antigravity, real cognition providers, revenue-platform accounts, provider adapters/payouts, external integrations and real cash-flow outcome qualification remain required.",
+  "release": "Amaura JARVIS v5.4 \u2014 Closed-Loop Ventures Trust Hardening",
+  "schema": "amaura.release-validation.v5.4",
+  "source": {
+    "jarvis_python_files": 117,
+    "python_files": 195,
+    "python_lines": 62296
+  },
+  "source_certified": true,
+  "v54_contracts": {
+    "action_to_mission_closed_loop": "verified",
+    "approval_payload_mutation_rejection": "verified",
+    "atomic_founder_attention_admission": "verified",
+    "atomic_live_stream_activation": "verified",
+    "canonical_company_approval_binding": "verified",
+    "empirical_lane_learning": "verified",
+    "evidence_vault_label_cannot_mint_provider_revenue": "verified",
+    "failed_action_fresh_mission_retry": "verified",
+    "failed_provider_receipt_rejected": "verified",
+    "founder_manual_event_identity": "verified",
+    "provider_and_manual_replay_conflict_detection": "verified",
+    "provider_receipt_required_for_automated_money": "verified",
+    "runtime_status_surface": "verified",
+    "unified_autopilot_leader_lock": "verified",
+    "unit_economics_layers": "verified",
+    "v52_antigravity_execution_boundary": "regression_preserved",
+    "v53_database_migration": "verified"
+  },
+  "version": "5.4.0"
+}

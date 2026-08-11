@@ -1,0 +1,9 @@
+ae7f336c3b1dbd2145a434e4f04505429c6b7b77031bc89c9e010636500b0367  Amaura-JARVIS-v5.4-Full-Source.zip
+f9468c7d4b7e6e2ebf41f1efe94183886f022155334870d28dabdede21945af5  jarvis-5.4.0-py3-none-any.whl
+6a6e79218125ceb754220b20c6a62ea26fb6b65641612e7b54aaf3bdb6b8dd51  Amaura-JARVIS-v5.4-Architecture.md
+000163e7c9b4bfe2a4371f947a421970bd703f01735c539812d313631e8f7efa  Amaura-JARVIS-v5.4-Changelog.md
+5a95ccb1107a5fb921c72b8301b851845b40154eb0dc87534a53daf7a472f2c3  Amaura-JARVIS-v5.4-Ventures.md
+d6c640e29982d7b9a9e8e9bd152e5f0499fcfd74a94d6f073e2a6b070ae4078e  Amaura-JARVIS-v5.4-Test-Report.json
+b6dee9f773cf5fe7166780c90935c097216ac875a25e19aa7bbbda5abfca35a9  Amaura-JARVIS-v5.4-Validation.json
+f2a40feff481ef1fcf7708e4525b2cf7e26810ecd64edd255ab9ff53bc912327  Amaura-JARVIS-v5.4-Qualification.json
+a7dd10c938c421ec395ee3601c989f91b9291cfbbd454f67300fa7466679fb99  Amaura-JARVIS-v5.4-Full-Release-Bundle.zip

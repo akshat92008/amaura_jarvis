@@ -1,0 +1,77 @@
+{
+  "architecture_status": {
+    "antigravity_execution_boundary": "v5.2 hardening regression preserved; live backend pending",
+    "company_os_legacy_features": "regression_passed",
+    "executive_kernel": "regression_passed",
+    "persistent_mission_runner": "regression_passed",
+    "unified_company_autopilot_runtime": "source_and_api_regression_qualified",
+    "v53_database_upgrade_path": "qualified_by_migration_regression",
+    "ventures_action_to_mission_bridge": "qualified_by_regression",
+    "ventures_atomic_portfolio_admission": "qualified_by_concurrency_regression",
+    "ventures_canonical_approval_binding": "qualified_by_regression",
+    "ventures_empirical_lane_learning": "qualified_by_regression",
+    "ventures_financial_provider_truth": "qualified_by_adversarial_regression",
+    "ventures_founder_manual_idempotency": "qualified_by_regression",
+    "ventures_unit_economics": "qualified_by_regression"
+  },
+  "generated_at": "2026-08-10T16:31:30.639918+00:00",
+  "open_qualification_items": [
+    {
+      "id": "live_antigravity_cli",
+      "requirement": "Qualify the exact authenticated agy CLI, effective project permissions, model availability and structured streaming on the target Mac.",
+      "status": "open"
+    },
+    {
+      "id": "target_mac_soak",
+      "requirement": "Run long-duration mission/resource/lease/pause/cancel/restart/crash-reconciliation and unified Autopilot/Ventures soak on the target Mac.",
+      "status": "open"
+    },
+    {
+      "id": "malicious_repository_isolation",
+      "requirement": "Attack native/Docker verifier and Antigravity boundaries with malicious repository fixtures on the target Mac.",
+      "status": "open"
+    },
+    {
+      "id": "live_cognition_provider",
+      "requirement": "Qualify configured executive cognition providers, rate limits, provenance, fallbacks and recovery with real credentials.",
+      "status": "open"
+    },
+    {
+      "id": "revenue_platform_accounts",
+      "requirement": "Qualify real KDP/store/payment/social accounts, permissions, listing/publishing rules and platform-specific safety boundaries before unattended external actions.",
+      "status": "open"
+    },
+    {
+      "id": "provider_receipt_adapters",
+      "requirement": "Qualify each real financial adapter so ProviderReceipt is issued only from authenticated provider responses/webhooks and its receipt credential is not exposed to agents.",
+      "status": "open"
+    },
+    {
+      "id": "payout_reconciliation",
+      "requirement": "Reconcile real provider revenue/refund/fee/tax/payout records against Ventures and verify duplicate/retry/correction behaviour.",
+      "status": "open"
+    },
+    {
+      "id": "external_integrations",
+      "requirement": "Validate production credentials, provider receipts and recovery semantics per consequential external integration.",
+      "status": "open"
+    },
+    {
+      "id": "cashflow_outcomes",
+      "requirement": "Run real low-capital Ventures experiments and measure time-to-first-cash, verified net cash flow, founder minutes, intervention rate, kill/scale quality and policy violations.",
+      "status": "open"
+    }
+  ],
+  "production_ready": false,
+  "regression": {
+    "compileall": "pass",
+    "electron_syntax": "pass",
+    "tests_failed": 0,
+    "tests_passed": 376,
+    "wheel_source_parity": "pass"
+  },
+  "schema": "amaura.qualification-report.v5.4",
+  "source_certified": true,
+  "verdict": "Closed-loop Ventures trust/execution defects are source/regression fixed. This is a strong controlled release candidate, but production-ready remains false until live Mac, Antigravity, provider-account, payout and real-outcome qualification succeeds.",
+  "version": "5.4.0"
+}

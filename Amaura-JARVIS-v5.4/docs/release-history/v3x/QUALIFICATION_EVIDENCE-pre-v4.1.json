@@ -1,0 +1,1467 @@
+{
+  "compilation": {
+    "command": [
+      "/opt/pyvenv/bin/python",
+      "-m",
+      "compileall",
+      "-q",
+      "-f",
+      "jarvis",
+      "aimodel",
+      "scripts",
+      "tests"
+    ],
+    "duration_seconds": 0.933,
+    "log": "compileall.log",
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "passed": true,
+    "returncode": 0,
+    "timed_out": false
+  },
+  "environment": {
+    "executable": "/opt/pyvenv/bin/python",
+    "platform": "Linux-6.18.35-x86_64-with-glibc2.41",
+    "python": "3.13.5 (main, May  5 2026, 21:05:52) [GCC 14.2.0]"
+  },
+  "evidence_policy": {
+    "clean_git_required": true,
+    "generated_from_single_commit": true,
+    "isolated_os_process_shards": true,
+    "pytest_plugin_autoload_disabled": true,
+    "shard_records_are_digest_bound": true,
+    "warnings_as_errors": true
+  },
+  "finished_at": "2026-08-07T10:44:26.679543+00:00",
+  "git": {
+    "available": true,
+    "commit": "ba1a162e3dacd42ba5655e2990e2b5d0a470b20a",
+    "dirty": false,
+    "status": []
+  },
+  "log_files": {
+    "compileall.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pytest-collect.log": {
+      "bytes": 27018,
+      "sha256": "367174443bebad2a7619bdf495db6fcf385ebb036815daf63077f21246d3b2ab"
+    },
+    "pytest-shard-1.log": {
+      "bytes": 203,
+      "sha256": "6b32bec6f9421bf36a9f0302fbe5bdc4cb5b75304636dfbc75d0486eddc7366f"
+    },
+    "pytest-shard-2.log": {
+      "bytes": 203,
+      "sha256": "6b089bebce0757998da800659d106073768a3c233e4551bd2e7d582e288702fc"
+    },
+    "pytest-shard-3.log": {
+      "bytes": 203,
+      "sha256": "716dc906b4e98b350b5cd9b6f2f8c3689778930d1e57a09058c0d0619a04ee10"
+    },
+    "pytest-shard-4.log": {
+      "bytes": 204,
+      "sha256": "e2cadb6f74541e38bf31168b633a74d340df9d2032912344002ad9bf9bc941a2"
+    },
+    "pytest-shard-5.log": {
+      "bytes": 203,
+      "sha256": "003c17f16cf94edfc8f6d4e775613e9bd8f1588a2a481148f6f13d25a92d6dd5"
+    },
+    "pytest-shard-6.log": {
+      "bytes": 203,
+      "sha256": "d20f132594ca37037e507244189de4f8e76d82411d3642ae37d1502b7b866df7"
+    },
+    "pytest-shard-7.log": {
+      "bytes": 203,
+      "sha256": "671a97f1b33925e3d45071bfb936554849bba66f7cfce2d9fc3ff58825e221dd"
+    }
+  },
+  "production_ready": false,
+  "schema_version": 1,
+  "security_scan": {
+    "bytes_scanned": 3813761,
+    "code_contracts_checked": [
+      "no_shell_true",
+      "no_os_system",
+      "no_hard_coded_wildcard_bind",
+      "safe_read_only_allowlist",
+      "pre_dispatch_schema_validation"
+    ],
+    "files_scanned": 311,
+    "findings": [],
+    "ok": true,
+    "patterns_checked": [
+      "aws_access_key",
+      "credentialed_url",
+      "generic_secret_assignment",
+      "github_token",
+      "gitlab_token",
+      "google_api_key",
+      "jwt",
+      "nvidia_api_key",
+      "openai_api_key",
+      "private_key",
+      "slack_token",
+      "stripe_live_key",
+      "telegram_bot_token"
+    ],
+    "scanner_version": 4
+  },
+  "shard_records": {
+    "shard-1.json": {
+      "bytes": 663,
+      "sha256": "3bd7cbb703704d3a9e1d3f5b3b6653d412060c62dfe18ef2ab524f401fe99268"
+    },
+    "shard-2.json": {
+      "bytes": 663,
+      "sha256": "27e8685136c22b9c73cf9cbf39c0280c1c4f837e1d6851247ce0c4e1354a7490"
+    },
+    "shard-3.json": {
+      "bytes": 662,
+      "sha256": "61ba1f7f1b4e8616fdc87ebd0dc9d301c10a81f349acf53222ca201d60a43f12"
+    },
+    "shard-4.json": {
+      "bytes": 663,
+      "sha256": "f479d783358078bd82278848b5137428cf76a1e6bbd768cc06814995bfc691e6"
+    },
+    "shard-5.json": {
+      "bytes": 662,
+      "sha256": "68582ef105a41bff0a18d0bb39b4bec04255c5511539765e641a192246ac678c"
+    },
+    "shard-6.json": {
+      "bytes": 662,
+      "sha256": "e8882002cce90f6a2c6a280d34e1100564f931ff0ba84e65f49e09d8059456b7"
+    },
+    "shard-7.json": {
+      "bytes": 662,
+      "sha256": "a27076d48820e33066ca7608cc46bc4a816f4aee04db497f886894e67d49f351"
+    }
+  },
+  "source_certified": true,
+  "started_at": "2026-08-07T10:42:01.998556+00:00",
+  "static_release_gate": {
+    "backup_restore": {
+      "bytes": 860160,
+      "foreign_key_violations": 0,
+      "integrity": "ok",
+      "ok": true,
+      "path": "/tmp/amaura-release-gate-pnkvd16g/amaura-backup.db",
+      "schema_sha256": "06dbabb8da0e442900f066c646a69a8697b770b652971faa7218809d573710af"
+    },
+    "blockers": [
+      "approval_key",
+      "audit_checkpoint_path",
+      "audit_checkpoint_separated",
+      "audit_hmac_key",
+      "backup_destination_separated",
+      "distinct_reviewer_model",
+      "evaluation_pack_hmac_key",
+      "evidence_hmac_key",
+      "keys_are_separate",
+      "local_tool_api_auth",
+      "model_routing_valid",
+      "operator_key",
+      "post_merge_validation",
+      "private_model_evaluation_pack",
+      "provider_receipt_key",
+      "review_attestation_key",
+      "reviewer_identity_keys",
+      "sandbox_image_pinned",
+      "strict_audit_checkpoint",
+      "strict_audit_signatures",
+      "strict_evidence_mode",
+      "strict_evidence_signatures",
+      "strict_git_mode",
+      "strict_review_mode"
+    ],
+    "mode": "static",
+    "model_evaluation": {
+      "expected_routes": [],
+      "pack": {
+        "authenticated": false,
+        "cases": 0,
+        "configured": false,
+        "error": "",
+        "source": "builtin_public_smoke"
+      },
+      "ready": true,
+      "results": [],
+      "status": "skipped_static"
+    },
+    "production_ready": false,
+    "readiness": {
+      "blockers": [
+        "model_routing_valid",
+        "distinct_reviewer_model",
+        "operator_key",
+        "approval_key",
+        "reviewer_identity_keys",
+        "review_attestation_key",
+        "provider_receipt_key",
+        "audit_hmac_key",
+        "evidence_hmac_key",
+        "evaluation_pack_hmac_key",
+        "private_model_evaluation_pack",
+        "audit_checkpoint_path",
+        "audit_checkpoint_separated",
+        "keys_are_separate",
+        "strict_evidence_mode",
+        "strict_evidence_signatures",
+        "strict_audit_signatures",
+        "strict_audit_checkpoint",
+        "local_tool_api_auth",
+        "strict_review_mode",
+        "strict_git_mode",
+        "post_merge_validation",
+        "sandbox_image_pinned",
+        "backup_destination_separated"
+      ],
+      "checks": {
+        "approval_key": false,
+        "audit_checkpoint_path": false,
+        "audit_checkpoint_separated": false,
+        "audit_hmac_key": false,
+        "backup_destination_separated": false,
+        "backup_destination_writable": true,
+        "database_integrity": true,
+        "distinct_reviewer_model": false,
+        "dns_pinned_transport": true,
+        "durable_supervisor_store": true,
+        "durable_telemetry": true,
+        "evaluation_pack_hmac_key": false,
+        "evidence_hmac_key": false,
+        "experimental_langgraph_disabled": true,
+        "founder_prompt_catalogue": true,
+        "free_first_resource_catalogue": true,
+        "gmail_adapter": true,
+        "governed_crm_outbox": true,
+        "hud_assets_packaged": true,
+        "hud_xss_hardened": true,
+        "imessage_adapter": true,
+        "keys_are_separate": false,
+        "leased_outbox_delivery": true,
+        "legacy_direct_execution_disabled": true,
+        "local_tool_api_auth": false,
+        "loopback_binding": true,
+        "model_routing_valid": false,
+        "n8n_adapter": true,
+        "operator_key": false,
+        "outbox_attempt_policy": true,
+        "post_merge_validation": false,
+        "private_model_evaluation_pack": false,
+        "private_publication_adapter": true,
+        "provenance_bound_evidence": true,
+        "provider_receipt_key": false,
+        "public_publication_adapter": true,
+        "remote_api_auth": true,
+        "review_attestation_key": false,
+        "review_mode_valid": true,
+        "reviewer_contract": true,
+        "reviewer_identity_keys": false,
+        "sandbox_fail_closed": true,
+        "sandbox_image_pinned": false,
+        "sandbox_toolchain_contract": true,
+        "single_configuration_boundary": true,
+        "strict_audit_checkpoint": false,
+        "strict_audit_signatures": false,
+        "strict_evidence_mode": false,
+        "strict_evidence_signatures": false,
+        "strict_git_mode": false,
+        "strict_review_mode": false,
+        "tamper_evident_audit_chain": true,
+        "telegram_founder_bound": true,
+        "unique_tool_schemas": true,
+        "workflow_catalogue": true,
+        "workforce_permission_contract": true,
+        "workforce_registry": true,
+        "workforce_tool_contract": true
+      },
+      "configuration_checks": {
+        "approval_key": false,
+        "audit_checkpoint_path": false,
+        "audit_checkpoint_separated": false,
+        "audit_hmac_key": false,
+        "backup_destination_separated": false,
+        "backup_destination_writable": true,
+        "distinct_reviewer_model": false,
+        "evaluation_pack_hmac_key": false,
+        "evidence_hmac_key": false,
+        "experimental_langgraph_disabled": true,
+        "gmail_adapter": true,
+        "imessage_adapter": true,
+        "keys_are_separate": false,
+        "local_tool_api_auth": false,
+        "loopback_binding": true,
+        "model_routing_valid": false,
+        "n8n_adapter": true,
+        "operator_key": false,
+        "outbox_attempt_policy": true,
+        "post_merge_validation": false,
+        "private_model_evaluation_pack": false,
+        "private_publication_adapter": true,
+        "provider_receipt_key": false,
+        "public_publication_adapter": true,
+        "remote_api_auth": true,
+        "review_attestation_key": false,
+        "review_mode_valid": true,
+        "reviewer_identity_keys": false,
+        "sandbox_image_pinned": false,
+        "strict_audit_checkpoint": false,
+        "strict_audit_signatures": false,
+        "strict_evidence_mode": false,
+        "strict_evidence_signatures": false,
+        "strict_git_mode": false,
+        "strict_review_mode": false,
+        "telegram_founder_bound": true
+      },
+      "core_operational": true,
+      "details": {
+        "invalid_permission_agents": [],
+        "invalid_reviewers": [],
+        "live": {
+          "skipped": true
+        },
+        "missing_employee_tools": [],
+        "private_evaluation_pack": {
+          "authenticated": false,
+          "cases": 10,
+          "configured": false,
+          "error": "",
+          "source": "builtin_public_smoke"
+        },
+        "resources": [
+          {
+            "available": true,
+            "capabilities": [
+              "orchestration",
+              "approvals",
+              "audit",
+              "task_queue",
+              "company_memory",
+              "reporting"
+            ],
+            "description": "Durable company control plane, policy engine, evidence vault and supervisor.",
+            "executable": "",
+            "executable_path": "",
+            "key": "amaura_builtin",
+            "licence_note": "",
+            "local_ram_mb": 0,
+            "missing_env": [],
+            "mode": "builtin",
+            "module_available": false,
+            "name": "Amaura governed runtime",
+            "optional": false,
+            "python_module": "",
+            "reason": "built into Amaura OS",
+            "required_env": [],
+            "tier": "builtin"
+          },
+          {
+            "available": true,
+            "capabilities": [
+              "structured_storage",
+              "company_memory",
+              "crm",
+              "finance_ledger"
+            ],
+            "description": "Embedded durable database used by the local-first control plane.",
+            "executable": "",
+            "executable_path": "",
+            "key": "sqlite",
+            "licence_note": "Public domain",
+            "local_ram_mb": 0,
+            "missing_env": [],
+            "mode": "builtin",
+            "module_available": false,
+            "name": "SQLite",
+            "optional": false,
+            "python_module": "",
+            "reason": "built into Amaura OS",
+            "required_env": [],
+            "tier": "builtin"
+          },
+          {
+            "available": true,
+            "capabilities": [
+              "version_control",
+              "engineering_workspace",
+              "rollback"
+            ],
+            "description": "Versioned engineering delivery and auditable rollback.",
+            "executable": "git",
+            "executable_path": "/usr/bin/git",
+            "key": "git",
+            "licence_note": "GPL-2.0",
+            "local_ram_mb": 50,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "Git",
+            "optional": false,
+            "python_module": "",
+            "reason": "available",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": true,
+            "capabilities": [
+              "browser_extract",
+              "browser_screenshot",
+              "browser_validation"
+            ],
+            "description": "Deterministic browser automation used before agentic browsing.",
+            "executable": "",
+            "executable_path": "",
+            "key": "playwright",
+            "licence_note": "Apache-2.0",
+            "local_ram_mb": 650,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": true,
+            "name": "Playwright",
+            "optional": true,
+            "python_module": "playwright",
+            "reason": "available",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "web_crawl",
+              "research_extract",
+              "website_markdown"
+            ],
+            "description": "Bounded web crawling and structured research extraction.",
+            "executable": "",
+            "executable_path": "",
+            "key": "crawl4ai",
+            "licence_note": "Apache-2.0",
+            "local_ram_mb": 850,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "Crawl4AI",
+            "optional": true,
+            "python_module": "crawl4ai",
+            "reason": "missing Python module: crawl4ai",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "agentic_browser_research"
+            ],
+            "description": "Read-only agentic browser research fallback with explicit domain allowlists.",
+            "executable": "",
+            "executable_path": "",
+            "key": "browser_use",
+            "licence_note": "MIT",
+            "local_ram_mb": 1400,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "Browser Use",
+            "optional": true,
+            "python_module": "browser_use",
+            "reason": "missing Python module: browser_use",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "metasearch",
+              "private_search"
+            ],
+            "description": "Self-hostable metasearch backend using the JSON search API.",
+            "executable": "",
+            "executable_path": "",
+            "key": "searxng",
+            "licence_note": "AGPL-3.0-or-later",
+            "local_ram_mb": 250,
+            "missing_env": [
+              "SEARXNG_URL"
+            ],
+            "mode": "api",
+            "module_available": false,
+            "name": "SearXNG",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing configuration: SEARXNG_URL",
+            "required_env": [
+              "SEARXNG_URL"
+            ],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "document_understanding",
+              "document_to_markdown",
+              "table_extraction"
+            ],
+            "description": "Primary rich document understanding pipeline, spawned only when needed.",
+            "executable": "",
+            "executable_path": "",
+            "key": "docling",
+            "licence_note": "MIT",
+            "local_ram_mb": 1800,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "Docling",
+            "optional": true,
+            "python_module": "docling",
+            "reason": "missing Python module: docling",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": true,
+            "capabilities": [
+              "pdf_text",
+              "pdf_render"
+            ],
+            "description": "Lightweight PDF text extraction and page rendering.",
+            "executable": "",
+            "executable_path": "",
+            "key": "pymupdf",
+            "licence_note": "AGPL-3.0/commercial dual licence",
+            "local_ram_mb": 300,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": true,
+            "name": "PyMuPDF",
+            "optional": true,
+            "python_module": "fitz",
+            "reason": "available",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "ocr",
+              "document_ocr"
+            ],
+            "description": "OCR specialist fallback using CPU-friendly settings on small Macs.",
+            "executable": "",
+            "executable_path": "",
+            "key": "paddleocr",
+            "licence_note": "Apache-2.0",
+            "local_ram_mb": 1700,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "PaddleOCR",
+            "optional": true,
+            "python_module": "paddleocr",
+            "reason": "missing Python module: paddleocr",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "rag_chunking",
+              "knowledge_ingestion"
+            ],
+            "description": "Optional RAG document/node utilities without replacing Amaura orchestration.",
+            "executable": "",
+            "executable_path": "",
+            "key": "llamaindex",
+            "licence_note": "MIT",
+            "local_ram_mb": 350,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "LlamaIndex Core",
+            "optional": true,
+            "python_module": "llama_index.core",
+            "reason": "missing Python module: llama_index.core",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "vector_memory",
+              "semantic_search",
+              "local_embeddings",
+              "knowledge_base"
+            ],
+            "description": "Local semantic memory with lightweight ONNX embeddings; remote Qdrant remains optional.",
+            "executable": "",
+            "executable_path": "",
+            "key": "qdrant_fastembed",
+            "licence_note": "Apache-2.0",
+            "local_ram_mb": 650,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "Qdrant + FastEmbed",
+            "optional": true,
+            "python_module": "qdrant_client",
+            "reason": "missing Python module: qdrant_client",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "transcription",
+              "captions",
+              "speech_analysis"
+            ],
+            "description": "Memory-efficient Whisper implementation used as the preferred transcription backend.",
+            "executable": "",
+            "executable_path": "",
+            "key": "faster_whisper",
+            "licence_note": "MIT",
+            "local_ram_mb": 1600,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "faster-whisper",
+            "optional": true,
+            "python_module": "faster_whisper",
+            "reason": "missing Python module: faster_whisper",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "text_to_speech",
+              "voiceover"
+            ],
+            "description": "Lightweight local voice generation for approved content production.",
+            "executable": "",
+            "executable_path": "",
+            "key": "kokoro",
+            "licence_note": "Apache-2.0",
+            "local_ram_mb": 900,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "Kokoro TTS",
+            "optional": true,
+            "python_module": "kokoro",
+            "reason": "missing Python module: kokoro",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": true,
+            "capabilities": [
+              "programmatic_video",
+              "reel_render",
+              "video_template"
+            ],
+            "description": "Programmatic video renderer executed inside an already-installed Remotion project.",
+            "executable": "node",
+            "executable_path": "/opt/nvm/versions/node/v22.16.0/bin/node",
+            "key": "remotion",
+            "licence_note": "Check Remotion licence for organisation usage",
+            "local_ram_mb": 1800,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "Remotion",
+            "optional": true,
+            "python_module": "",
+            "reason": "available",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": true,
+            "capabilities": [
+              "image_resize",
+              "thumbnail",
+              "image_transform"
+            ],
+            "description": "Cheap deterministic image transforms before invoking generative models.",
+            "executable": "magick",
+            "executable_path": "/opt/imagemagick/bin/magick",
+            "key": "image_tools",
+            "licence_note": "ImageMagick licence / LGPL libvips",
+            "local_ram_mb": 300,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "ImageMagick/libvips",
+            "optional": true,
+            "python_module": "",
+            "reason": "available",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "media_metadata",
+              "approved_media_ingest"
+            ],
+            "description": "Governed media metadata/ingest utility for media the operator is authorised to use.",
+            "executable": "",
+            "executable_path": "",
+            "key": "yt_dlp",
+            "licence_note": "Unlicense; source-site terms and media rights still apply",
+            "local_ram_mb": 250,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "yt-dlp",
+            "optional": true,
+            "python_module": "yt_dlp",
+            "reason": "missing Python module: yt_dlp",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "image_generation",
+              "image_workflow"
+            ],
+            "description": "Optional heavy image-generation server; recommended remote/on-demand on 8 GB Macs.",
+            "executable": "",
+            "executable_path": "",
+            "key": "comfyui",
+            "licence_note": "GPL-3.0 code; model licences vary",
+            "local_ram_mb": 5000,
+            "missing_env": [
+              "COMFYUI_URL"
+            ],
+            "mode": "api",
+            "module_available": false,
+            "name": "ComfyUI",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing configuration: COMFYUI_URL",
+            "required_env": [
+              "COMFYUI_URL"
+            ],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "external_tool_protocol",
+              "capability_bridge"
+            ],
+            "description": "Standard protocol bridge for explicitly configured external tools and servers.",
+            "executable": "",
+            "executable_path": "",
+            "key": "mcp",
+            "licence_note": "MIT",
+            "local_ram_mb": 250,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "Model Context Protocol",
+            "optional": true,
+            "python_module": "mcp",
+            "reason": "missing Python module: mcp",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "agent_observability",
+              "trace",
+              "evaluation_telemetry"
+            ],
+            "description": "Optional observability and evaluation telemetry; the core audit log remains authoritative.",
+            "executable": "",
+            "executable_path": "",
+            "key": "langfuse",
+            "licence_note": "MIT SDK / self-hosted components",
+            "local_ram_mb": 120,
+            "missing_env": [
+              "LANGFUSE_PUBLIC_KEY",
+              "LANGFUSE_SECRET_KEY"
+            ],
+            "mode": "api",
+            "module_available": false,
+            "name": "Langfuse",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing configuration: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY",
+            "required_env": [
+              "LANGFUSE_PUBLIC_KEY",
+              "LANGFUSE_SECRET_KEY"
+            ],
+            "tier": "open_source"
+          },
+          {
+            "available": true,
+            "capabilities": [
+              "video_editing",
+              "audio_processing",
+              "caption_rendering",
+              "media_validation"
+            ],
+            "description": "Primary free media assembly and validation engine.",
+            "executable": "ffmpeg",
+            "executable_path": "/usr/bin/ffmpeg",
+            "key": "ffmpeg",
+            "licence_note": "LGPL/GPL depending on build",
+            "local_ram_mb": 500,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "FFmpeg",
+            "optional": true,
+            "python_module": "",
+            "reason": "available",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "transcription",
+              "captions",
+              "speech_analysis"
+            ],
+            "description": "Local transcription for captions and repurposing.",
+            "executable": "whisper",
+            "executable_path": null,
+            "key": "whisper",
+            "licence_note": "MIT",
+            "local_ram_mb": 1800,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "Whisper CLI",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing executable: whisper",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "local_llm",
+              "private_reasoning",
+              "fallback_inference"
+            ],
+            "description": "Optional local inference for private or zero-cost tasks.",
+            "executable": "ollama",
+            "executable_path": null,
+            "key": "ollama",
+            "licence_note": "MIT",
+            "local_ram_mb": 4500,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "Ollama",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing executable: ollama",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "sandbox",
+              "isolated_execution",
+              "reproducible_builds"
+            ],
+            "description": "Hardened execution boundary for code and experiments.",
+            "executable": "docker",
+            "executable_path": null,
+            "key": "docker",
+            "licence_note": "Apache-2.0 components / Docker Desktop terms may apply",
+            "local_ram_mb": 1200,
+            "missing_env": [],
+            "mode": "local",
+            "module_available": false,
+            "name": "Docker",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing executable: docker",
+            "required_env": [],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "workflow_automation",
+              "integrations",
+              "webhooks"
+            ],
+            "description": "Optional self-hosted business automation bridge.",
+            "executable": "",
+            "executable_path": "",
+            "key": "n8n",
+            "licence_note": "Sustainable Use License / Enterprise License",
+            "local_ram_mb": 700,
+            "missing_env": [
+              "N8N_BASE_URL",
+              "N8N_API_KEY"
+            ],
+            "mode": "api",
+            "module_available": false,
+            "name": "n8n",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing configuration: N8N_BASE_URL, N8N_API_KEY",
+            "required_env": [
+              "N8N_BASE_URL",
+              "N8N_API_KEY"
+            ],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "vector_memory",
+              "semantic_search",
+              "knowledge_base"
+            ],
+            "description": "Optional semantic company-memory backend; SQLite remains the minimum baseline.",
+            "executable": "",
+            "executable_path": "",
+            "key": "qdrant",
+            "licence_note": "Apache-2.0",
+            "local_ram_mb": 500,
+            "missing_env": [
+              "QDRANT_URL"
+            ],
+            "mode": "api",
+            "module_available": false,
+            "name": "Qdrant",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing configuration: QDRANT_URL",
+            "required_env": [
+              "QDRANT_URL"
+            ],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "crm",
+              "sales_pipeline",
+              "relationship_memory"
+            ],
+            "description": "Optional CRM integration; the internal lead ledger remains the fallback.",
+            "executable": "",
+            "executable_path": "",
+            "key": "twenty_crm",
+            "licence_note": "AGPL-3.0",
+            "local_ram_mb": 1500,
+            "missing_env": [
+              "TWENTY_BASE_URL",
+              "TWENTY_API_KEY"
+            ],
+            "mode": "api",
+            "module_available": false,
+            "name": "Twenty CRM",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing configuration: TWENTY_BASE_URL, TWENTY_API_KEY",
+            "required_env": [
+              "TWENTY_BASE_URL",
+              "TWENTY_API_KEY"
+            ],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "product_analytics",
+              "growth_analytics",
+              "experiments"
+            ],
+            "description": "Optional product and growth analytics provider.",
+            "executable": "",
+            "executable_path": "",
+            "key": "posthog",
+            "licence_note": "MIT core with separate enterprise features",
+            "local_ram_mb": 0,
+            "missing_env": [
+              "POSTHOG_HOST",
+              "POSTHOG_API_KEY"
+            ],
+            "mode": "api",
+            "module_available": false,
+            "name": "PostHog",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing configuration: POSTHOG_HOST, POSTHOG_API_KEY",
+            "required_env": [
+              "POSTHOG_HOST",
+              "POSTHOG_API_KEY"
+            ],
+            "tier": "open_source"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "general_reasoning",
+              "coding_reasoning",
+              "vision",
+              "tool_calling",
+              "cloud_llm"
+            ],
+            "description": "Default cloud intelligence when an NVIDIA key is configured.",
+            "executable": "",
+            "executable_path": "",
+            "key": "nvidia_api",
+            "licence_note": "",
+            "local_ram_mb": 0,
+            "missing_env": [
+              "NVIDIA_API_KEY"
+            ],
+            "mode": "api",
+            "module_available": false,
+            "name": "NVIDIA API / NIM",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing configuration: NVIDIA_API_KEY",
+            "required_env": [
+              "NVIDIA_API_KEY"
+            ],
+            "tier": "free_api"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "senior_coding",
+              "repository_refactor",
+              "browser_testing",
+              "engineering_artifacts"
+            ],
+            "description": "Founder-approved engineering handoff. Automation requires an official CLI/SDK adapter.",
+            "executable": "",
+            "executable_path": "",
+            "key": "antigravity",
+            "licence_note": "",
+            "local_ram_mb": 0,
+            "missing_env": [
+              "AMAURA_ANTIGRAVITY_ENABLED"
+            ],
+            "mode": "manual_handoff",
+            "module_available": false,
+            "name": "Google Antigravity",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing configuration: AMAURA_ANTIGRAVITY_ENABLED",
+            "required_env": [
+              "AMAURA_ANTIGRAVITY_ENABLED"
+            ],
+            "tier": "existing_subscription"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "cinematic_video",
+              "storyboard_realisation",
+              "premium_visuals"
+            ],
+            "description": "Founder-approved creative handoff; Flow is not treated as the only media engine.",
+            "executable": "",
+            "executable_path": "",
+            "key": "google_flow",
+            "licence_note": "",
+            "local_ram_mb": 0,
+            "missing_env": [
+              "AMAURA_GOOGLE_FLOW_ENABLED"
+            ],
+            "mode": "manual_handoff",
+            "module_available": false,
+            "name": "Google Flow",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing configuration: AMAURA_GOOGLE_FLOW_ENABLED",
+            "required_env": [
+              "AMAURA_GOOGLE_FLOW_ENABLED"
+            ],
+            "tier": "existing_subscription"
+          },
+          {
+            "available": false,
+            "capabilities": [
+              "programmatic_video",
+              "premium_visuals"
+            ],
+            "description": "Optional programmatic video generation, kept separate from the Flow subscription.",
+            "executable": "",
+            "executable_path": "",
+            "key": "gemini_video_api",
+            "licence_note": "",
+            "local_ram_mb": 0,
+            "missing_env": [
+              "GEMINI_API_KEY",
+              "AMAURA_ALLOW_PAID_MEDIA"
+            ],
+            "mode": "api",
+            "module_available": false,
+            "name": "Gemini video API",
+            "optional": true,
+            "python_module": "",
+            "reason": "missing configuration: GEMINI_API_KEY, AMAURA_ALLOW_PAID_MEDIA",
+            "required_env": [
+              "GEMINI_API_KEY",
+              "AMAURA_ALLOW_PAID_MEDIA"
+            ],
+            "tier": "paid_api"
+          }
+        ]
+      },
+      "live_checks": {},
+      "note": "Optional adapters are reported separately. Production readiness passes only when source, configuration, models, and isolation are real.",
+      "optional_integrations": [
+        {
+          "available": false,
+          "configured": false,
+          "kind": "python",
+          "name": "PydanticAI",
+          "probe": "pydantic_ai"
+        },
+        {
+          "available": false,
+          "configured": false,
+          "kind": "python",
+          "name": "LangGraph",
+          "probe": "langgraph"
+        },
+        {
+          "available": false,
+          "configured": false,
+          "kind": "python",
+          "name": "DBOS",
+          "probe": "dbos"
+        },
+        {
+          "available": false,
+          "configured": false,
+          "kind": "python",
+          "name": "LiteLLM",
+          "probe": "litellm"
+        },
+        {
+          "available": true,
+          "configured": false,
+          "kind": "python",
+          "name": "OpenTelemetry",
+          "probe": "opentelemetry"
+        },
+        {
+          "available": true,
+          "configured": false,
+          "kind": "binary",
+          "name": "FFmpeg",
+          "probe": "ffmpeg"
+        },
+        {
+          "available": false,
+          "configured": false,
+          "kind": "python",
+          "name": "Crawl4AI",
+          "probe": "crawl4ai"
+        },
+        {
+          "available": false,
+          "configured": false,
+          "kind": "binary",
+          "name": "OBS",
+          "probe": "obs"
+        },
+        {
+          "available": false,
+          "configured": false,
+          "kind": "binary",
+          "name": "Promptfoo",
+          "probe": "promptfoo"
+        }
+      ],
+      "production_ready": false,
+      "ready": false,
+      "source_blockers": [],
+      "source_certified": true,
+      "source_checks": {
+        "database_integrity": true,
+        "dns_pinned_transport": true,
+        "durable_supervisor_store": true,
+        "durable_telemetry": true,
+        "founder_prompt_catalogue": true,
+        "free_first_resource_catalogue": true,
+        "governed_crm_outbox": true,
+        "hud_assets_packaged": true,
+        "hud_xss_hardened": true,
+        "leased_outbox_delivery": true,
+        "legacy_direct_execution_disabled": true,
+        "provenance_bound_evidence": true,
+        "reviewer_contract": true,
+        "sandbox_fail_closed": true,
+        "sandbox_toolchain_contract": true,
+        "single_configuration_boundary": true,
+        "tamper_evident_audit_chain": true,
+        "unique_tool_schemas": true,
+        "workflow_catalogue": true,
+        "workforce_permission_contract": true,
+        "workforce_registry": true,
+        "workforce_tool_contract": true
+      },
+      "source_ready": true
+    },
+    "ready": false,
+    "security": {
+      "bytes_scanned": 3813761,
+      "code_contracts_checked": [
+        "no_shell_true",
+        "no_os_system",
+        "no_hard_coded_wildcard_bind",
+        "safe_read_only_allowlist",
+        "pre_dispatch_schema_validation"
+      ],
+      "files_scanned": 311,
+      "findings": [],
+      "ok": true,
+      "patterns_checked": [
+        "aws_access_key",
+        "credentialed_url",
+        "generic_secret_assignment",
+        "github_token",
+        "gitlab_token",
+        "google_api_key",
+        "jwt",
+        "nvidia_api_key",
+        "openai_api_key",
+        "private_key",
+        "slack_token",
+        "stripe_live_key",
+        "telegram_bot_token"
+      ],
+      "scanner_version": 4
+    },
+    "source_certified": true
+  },
+  "tests": {
+    "collected": 292,
+    "collection": {
+      "collected_tests": 292,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "-m",
+        "pytest",
+        "--collect-only",
+        "-q"
+      ],
+      "duration_seconds": 2.263,
+      "log": "pytest-collect.log",
+      "log_sha256": "367174443bebad2a7619bdf495db6fcf385ebb036815daf63077f21246d3b2ab",
+      "passed": true,
+      "returncode": 0,
+      "timed_out": false
+    },
+    "passed": true,
+    "shard_size": 45,
+    "shard_total": 7,
+    "shards": [
+      {
+        "collected_tests": 292,
+        "command": [
+          "/opt/pyvenv/bin/python",
+          "scripts/run_verified_tests.py",
+          "--shard-size",
+          "45",
+          "--timeout",
+          "240",
+          "--shard-index",
+          "1"
+        ],
+        "duration_seconds": 11.954,
+        "finished_at": "2026-08-07T10:42:13.952559+00:00",
+        "git_commit": "ba1a162e3dacd42ba5655e2990e2b5d0a470b20a",
+        "index": 1,
+        "log": "pytest-shard-1.log",
+        "log_sha256": "6b32bec6f9421bf36a9f0302fbe5bdc4cb5b75304636dfbc75d0486eddc7366f",
+        "passed": true,
+        "returncode": 0,
+        "shard_size": 45,
+        "shard_total": 7,
+        "started_at": "2026-08-07T10:42:01.998556+00:00",
+        "tests": 45,
+        "timed_out": false,
+        "version": "3.6.0"
+      },
+      {
+        "collected_tests": 292,
+        "command": [
+          "/opt/pyvenv/bin/python",
+          "scripts/run_verified_tests.py",
+          "--shard-size",
+          "45",
+          "--timeout",
+          "240",
+          "--shard-index",
+          "2"
+        ],
+        "duration_seconds": 11.212,
+        "finished_at": "2026-08-07T10:42:27.585290+00:00",
+        "git_commit": "ba1a162e3dacd42ba5655e2990e2b5d0a470b20a",
+        "index": 2,
+        "log": "pytest-shard-2.log",
+        "log_sha256": "6b089bebce0757998da800659d106073768a3c233e4551bd2e7d582e288702fc",
+        "passed": true,
+        "returncode": 0,
+        "shard_size": 45,
+        "shard_total": 7,
+        "started_at": "2026-08-07T10:42:16.373591+00:00",
+        "tests": 45,
+        "timed_out": false,
+        "version": "3.6.0"
+      },
+      {
+        "collected_tests": 292,
+        "command": [
+          "/opt/pyvenv/bin/python",
+          "scripts/run_verified_tests.py",
+          "--shard-size",
+          "45",
+          "--timeout",
+          "240",
+          "--shard-index",
+          "3"
+        ],
+        "duration_seconds": 5.861,
+        "finished_at": "2026-08-07T10:43:00.304775+00:00",
+        "git_commit": "ba1a162e3dacd42ba5655e2990e2b5d0a470b20a",
+        "index": 3,
+        "log": "pytest-shard-3.log",
+        "log_sha256": "716dc906b4e98b350b5cd9b6f2f8c3689778930d1e57a09058c0d0619a04ee10",
+        "passed": true,
+        "returncode": 0,
+        "shard_size": 45,
+        "shard_total": 7,
+        "started_at": "2026-08-07T10:42:54.443200+00:00",
+        "tests": 45,
+        "timed_out": false,
+        "version": "3.6.0"
+      },
+      {
+        "collected_tests": 292,
+        "command": [
+          "/opt/pyvenv/bin/python",
+          "scripts/run_verified_tests.py",
+          "--shard-size",
+          "45",
+          "--timeout",
+          "240",
+          "--shard-index",
+          "4"
+        ],
+        "duration_seconds": 16.759,
+        "finished_at": "2026-08-07T10:43:25.717664+00:00",
+        "git_commit": "ba1a162e3dacd42ba5655e2990e2b5d0a470b20a",
+        "index": 4,
+        "log": "pytest-shard-4.log",
+        "log_sha256": "e2cadb6f74541e38bf31168b633a74d340df9d2032912344002ad9bf9bc941a2",
+        "passed": true,
+        "returncode": 0,
+        "shard_size": 45,
+        "shard_total": 7,
+        "started_at": "2026-08-07T10:43:08.958039+00:00",
+        "tests": 45,
+        "timed_out": false,
+        "version": "3.6.0"
+      },
+      {
+        "collected_tests": 292,
+        "command": [
+          "/opt/pyvenv/bin/python",
+          "scripts/run_verified_tests.py",
+          "--shard-size",
+          "45",
+          "--timeout",
+          "240",
+          "--shard-index",
+          "5"
+        ],
+        "duration_seconds": 9.974,
+        "finished_at": "2026-08-07T10:43:43.034872+00:00",
+        "git_commit": "ba1a162e3dacd42ba5655e2990e2b5d0a470b20a",
+        "index": 5,
+        "log": "pytest-shard-5.log",
+        "log_sha256": "003c17f16cf94edfc8f6d4e775613e9bd8f1588a2a481148f6f13d25a92d6dd5",
+        "passed": true,
+        "returncode": 0,
+        "shard_size": 45,
+        "shard_total": 7,
+        "started_at": "2026-08-07T10:43:33.060802+00:00",
+        "tests": 45,
+        "timed_out": false,
+        "version": "3.6.0"
+      },
+      {
+        "collected_tests": 292,
+        "command": [
+          "/opt/pyvenv/bin/python",
+          "scripts/run_verified_tests.py",
+          "--shard-size",
+          "45",
+          "--timeout",
+          "240",
+          "--shard-index",
+          "6"
+        ],
+        "duration_seconds": 11.56,
+        "finished_at": "2026-08-07T10:44:05.631271+00:00",
+        "git_commit": "ba1a162e3dacd42ba5655e2990e2b5d0a470b20a",
+        "index": 6,
+        "log": "pytest-shard-6.log",
+        "log_sha256": "d20f132594ca37037e507244189de4f8e76d82411d3642ae37d1502b7b866df7",
+        "passed": true,
+        "returncode": 0,
+        "shard_size": 45,
+        "shard_total": 7,
+        "started_at": "2026-08-07T10:43:54.070890+00:00",
+        "tests": 45,
+        "timed_out": false,
+        "version": "3.6.0"
+      },
+      {
+        "collected_tests": 292,
+        "command": [
+          "/opt/pyvenv/bin/python",
+          "scripts/run_verified_tests.py",
+          "--shard-size",
+          "45",
+          "--timeout",
+          "240",
+          "--shard-index",
+          "7"
+        ],
+        "duration_seconds": 5.014,
+        "finished_at": "2026-08-07T10:44:17.913876+00:00",
+        "git_commit": "ba1a162e3dacd42ba5655e2990e2b5d0a470b20a",
+        "index": 7,
+        "log": "pytest-shard-7.log",
+        "log_sha256": "671a97f1b33925e3d45071bfb936554849bba66f7cfce2d9fc3ff58825e221dd",
+        "passed": true,
+        "returncode": 0,
+        "shard_size": 45,
+        "shard_total": 7,
+        "started_at": "2026-08-07T10:44:12.899887+00:00",
+        "tests": 22,
+        "timed_out": false,
+        "version": "3.6.0"
+      }
+    ],
+    "verified": 292
+  },
+  "version": "3.6.0"
+}

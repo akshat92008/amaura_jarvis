@@ -1,0 +1,13 @@
+{
+  "name": "amaura-jarvis-desktop",
+  "version": "5.4.0",
+  "description": "Amaura JARVIS Mission Control desktop application",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
