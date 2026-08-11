@@ -22,7 +22,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -677,6 +677,7 @@ async def favicon():
 @app.get("/api/health")
 async def health(
     bootstrap_challenge: str = Header(default="", alias="X-Amaura-Bootstrap-Challenge"),
+    service_challenge: str = Header(default="", alias="X-Amaura-Service-Challenge"),
 ):
     """Health check with an optional parent/child authenticity proof.
 
@@ -687,12 +688,22 @@ async def health(
     """
     bootstrap_secret = os.environ.get("AMAURA_DESKTOP_BOOTSTRAP_TOKEN", "")
     proof = ""
+    service_proof = ""
     if bootstrap_secret:
         if len(bootstrap_challenge) < 32:
             raise HTTPException(status_code=403, detail="Desktop bootstrap challenge required")
         proof = hmac.new(
             bootstrap_secret.encode("utf-8"),
             bootstrap_challenge.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+    if service_challenge:
+        service_secret = os.environ.get("JARVIS_API_KEY", "")
+        if len(service_secret) < MIN_API_KEY_LENGTH or len(service_challenge) < 32:
+            raise HTTPException(status_code=403, detail="Authenticated service challenge required")
+        service_proof = hmac.new(
+            service_secret.encode("utf-8"),
+            service_challenge.encode("utf-8"),
             hashlib.sha256,
         ).hexdigest()
     return {
@@ -703,6 +714,7 @@ async def health(
         "tools": get_tool_count(),
         "pid": os.getpid(),
         "bootstrap_proof": proof,
+        "service_proof": service_proof,
     }
 
 
@@ -761,6 +773,76 @@ async def chat(
         "state": executive.get("state", ""),
         "executive": executive,
     }
+
+
+@app.post("/api/chat/stream")
+async def chat_stream(
+    req: ChatRequest,
+    operator_key: str = Header(default="", alias="X-Amaura-Operator-Key"),
+):
+    """NDJSON token stream for the desktop; missions may still emit one final chunk."""
+    agent = get_or_create_agent(req.session_id, req.model)
+    expected_operator = os.environ.get("AMAURA_OPERATOR_KEY", "")
+    operator_valid = bool(
+        operator_key and expected_operator and hmac.compare_digest(operator_key, expected_operator)
+    )
+    if operator_key and not operator_valid:
+        raise HTTPException(status_code=403, detail="Invalid Amaura operator key")
+    if operator_valid:
+        agent.set_amaura_session_token(operator_key)
+
+    async def events():
+        loop = asyncio.get_running_loop()
+        token_queue: asyncio.Queue[dict | None] = asyncio.Queue()
+
+        def on_token(token: str) -> None:
+            loop.call_soon_threadsafe(token_queue.put_nowait, {"type": "token", "content": token})
+
+        async def execute() -> None:
+            try:
+                executive = await asyncio.to_thread(
+                    agent.run_executive,
+                    req.message,
+                    control=_amaura_control(),
+                    session_id=req.session_id,
+                    workspace=req.workspace,
+                    autonomy=req.autonomy,
+                    coding_backend=req.coding_backend,
+                    allow_missions=operator_valid,
+                    allow_memory_mutation=operator_valid,
+                    on_token=on_token,
+                )
+                provenance = executive.get("model_provenance") or {}
+                await token_queue.put({
+                    "type": "complete",
+                    "response": executive.get("message", ""),
+                    "session_id": req.session_id,
+                    "model": provenance.get("model") or agent.model_cfg["name"],
+                    "model_key": provenance.get("model") or agent.model_key,
+                    "model_provider": provenance.get("provider") or "legacy",
+                    "model_fallback_used": bool(provenance.get("fallback_used")),
+                    "model_fallback_reason": provenance.get("fallback_reason") or "",
+                    "intent": executive.get("intent", "conversation"),
+                    "goal_id": executive.get("goal_id", ""),
+                    "state": executive.get("state", ""),
+                    "executive": executive,
+                })
+            except Exception as exc:
+                await token_queue.put({"type": "error", "error": str(exc)})
+            finally:
+                await token_queue.put(None)
+
+        task = asyncio.create_task(execute())
+        try:
+            while True:
+                item = await token_queue.get()
+                if item is None:
+                    break
+                yield json.dumps(item, ensure_ascii=False) + "\n"
+        finally:
+            await task
+
+    return StreamingResponse(events(), media_type="application/x-ndjson")
 
 
 @app.post("/api/tool")

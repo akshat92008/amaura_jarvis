@@ -62,9 +62,10 @@ ALLOWED_ROOT_FILES = {
     "AMAURA_V3_5_COMPLETION_REPORT.md", "AMAURA_V3_5_1_REMEDIATION_REPORT.md", "AMAURA_V3_5_2_SECURITY_RELEASE.md",
     "AMAURA_V3_5_2_QUALIFICATION.md", "AMAURA_V3_5_3_NETWORK_SECURITY.md",
     "AMAURA_V3_6_0_FREE_FIRST_INTEGRATIONS.md", "AMAURA_OSS_CAPABILITIES.md", "AMAURA_LAUNCH.md",
-    "Install_Amaura.command", "Install_Amaura_Autopilot.command",
-    "LICENSE", "Launch_Amaura.command", "README.md",
-    "Setup_Amaura_Runtime.command", "Uninstall_Amaura_Autopilot.command", "jarvis.sh",
+    "Install_Amaura.command", "Install_Amaura_Autopilot.command", "Install_Amaura_Desktop.command",
+    "LICENSE", "Launch_Amaura.command", "Launch_Amaura_Desktop.command", "README.md",
+    "Setup_Amaura_Runtime.command", "Setup_Amaura_Antigravity.command", "Setup_Amaura_OmniRoute.command",
+    "Uninstall_Amaura_Autopilot.command", "jarvis.sh",
     "pyproject.toml", "requirements-dev.lock", "requirements.lock", "requirements.txt",
     "uv.lock",
 }

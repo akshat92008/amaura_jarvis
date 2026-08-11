@@ -177,7 +177,7 @@ Pause/cancel changes the mission generation, prevents stale result acceptance, a
 
 ## Verification baseline
 
-The current v5.4.1 source collects **398 tests**. Release evidence must be regenerated from the exact final tree; older v5.4.0 reports do not certify this source.
+The current v5.4.1 source collects **403 tests**. Release evidence must be regenerated from the exact final tree; older v5.4.0 reports do not certify this source.
 
 The release qualification runs modules in isolated pytest processes because several legacy tests intentionally exercise multiprocessing/background runtimes. Python compilation and Electron JavaScript syntax checks are required before publishing.
 

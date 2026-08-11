@@ -62,6 +62,9 @@ class _ReusableHTTPServer(http.server.HTTPServer):
 
 
 def _run_server(handler_class, port: int):
+    if CognitiveModelGateway._pooled_client is not None:
+        CognitiveModelGateway._pooled_client.close()
+        CognitiveModelGateway._pooled_client = None
     server = _ReusableHTTPServer(("127.0.0.1", port), handler_class)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -91,6 +94,12 @@ def test_omniroute_selected_when_configured(omniroute_env):
     assert sel is not None
     assert sel.provider == "omniroute"
     assert sel.model == "gpt-4o-mini"
+
+def test_general_chat_uses_fast_model_override(omniroute_env, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AMAURA_OMNIROUTE_CHAT_MODEL", "fast-chat-model")
+    sel = CognitiveModelGateway.select(purpose="general")
+    assert sel is not None
+    assert sel.model == "fast-chat-model"
 
 def test_omniroute_available_when_configured(omniroute_env):
     assert CognitiveModelGateway.available(purpose="general") is True
@@ -206,6 +215,62 @@ def test_omniroute_successful_response(omniroute_env):
         thread.join(timeout=2.0)
 
 
+def test_omniroute_reuses_process_http_pool(omniroute_env):
+    class SuccessHandler(_MockHTTPHandler):
+        _body = {"model": "gpt-4o-mini", "choices": [{"message": {"content": "ok"}}]}
+
+    server, thread = _run_server(SuccessHandler, 19999)
+    try:
+        CognitiveModelGateway._omniroute(
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "one"}],
+            temperature=0.1, max_tokens=20,
+        )
+        client = CognitiveModelGateway._pooled_client
+        CognitiveModelGateway._omniroute(
+            model="gpt-4o-mini", messages=[{"role": "user", "content": "two"}],
+            temperature=0.1, max_tokens=20,
+        )
+        assert CognitiveModelGateway._pooled_client is client
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2.0)
+
+
+def test_omniroute_stream_emits_incremental_tokens(omniroute_env):
+    class StreamHandler(_MockHTTPHandler):
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length", "0"))
+            payload = json.loads(self.rfile.read(length).decode())
+            assert payload["stream"] is True
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.end_headers()
+            for token in ("Hello", " world"):
+                self.wfile.write(("data: " + json.dumps({
+                    "model": "gpt-4o-mini",
+                    "choices": [{"delta": {"content": token}}],
+                }) + "\n\n").encode())
+                self.wfile.flush()
+            self.wfile.write(b"data: [DONE]\n\n")
+
+    server, thread = _run_server(StreamHandler, 19999)
+    tokens: list[str] = []
+    try:
+        result = CognitiveModelGateway.generate_stream(
+            messages=[{"role": "user", "content": "hello"}],
+            purpose="general",
+            on_token=tokens.append,
+            max_tokens=100,
+        )
+        assert tokens == ["Hello", " world"]
+        assert result.text == "Hello world"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2.0)
+
+
 # ── API Key Never Appears in Error ─────────────────────────────────────
 
 def test_omniroute_api_key_never_in_error_messages(omniroute_env):
@@ -251,6 +316,45 @@ def test_cognitive_model_result_all_provenance_fields():
     assert r.latency_ms == 250
     assert r.request_id == "req-prov-123"
     assert r.resolved_provider == "openai"
+
+
+def test_real_fallback_preserves_requested_and_resolved_model(omniroute_env, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AMAURA_OMNIROUTE_FALLBACK_MODEL", "fallback-fast")
+    monkeypatch.setenv("AMAURA_OMNIROUTE_MAX_RETRIES", "0")
+
+    class FallbackHandler(_MockHTTPHandler):
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length", "0"))
+            payload = json.loads(self.rfile.read(length).decode())
+            if payload.get("model") == "gpt-4o-mini":
+                self.send_response(503)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "model": "fallback-fast",
+                "choices": [{"message": {"content": "fallback answer"}}],
+            }).encode())
+
+    server, thread = _run_server(FallbackHandler, 19999)
+    try:
+        result = CognitiveModelGateway._omniroute(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": "hello"}],
+            temperature=0.1,
+            max_tokens=100,
+        )
+        assert result.text == "fallback answer"
+        assert result.requested_model == "gpt-4o-mini"
+        assert result.resolved_model == "fallback-fast"
+        assert result.fallback_used is True
+        assert result.fallback_reason == "provider_unavailable"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2.0)
 
 
 # ── generate() raises without provider ────────────────────────────────

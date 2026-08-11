@@ -175,6 +175,7 @@ def main() -> int:
     print(DIM("  Examples: claude-3-5-sonnet-20241022  |  gpt-4o  |  gemini-2.5-pro"))
     primary_model = _prompt("  Primary Model", default="claude-3-5-sonnet-20241022")
     fallback_model = _prompt("  Fallback Model (optional, press Enter to skip)", default="")
+    chat_model = _prompt("  Fast Chat Model", default=fallback_model or primary_model)
     print()
 
     print(HEAD("Step 5/5 — Preflight Connectivity Check"))
@@ -195,6 +196,7 @@ def main() -> int:
         "AMAURA_OMNIROUTE_BASE_URL": base_url.rstrip("/"),
         "AMAURA_OMNIROUTE_API_KEY": api_key,
         "AMAURA_OMNIROUTE_MODEL": primary_model,
+        "AMAURA_OMNIROUTE_CHAT_MODEL": chat_model,
     }
     if fallback_model:
         values["AMAURA_OMNIROUTE_FALLBACK_MODEL"] = fallback_model
@@ -208,6 +210,7 @@ def main() -> int:
     print(f"  Gateway:         OmniRoute")
     print(f"  Base URL:        {base_url}")
     print(f"  Primary Model:   {primary_model}")
+    print(f"  Fast Chat Model: {chat_model}")
     print(f"  Fallback Model:  {fallback_model or '(none)'}")
     print(f"  Status:          {'READY ✓' if probe['ok'] else 'BLOCKED ⚠  (check connectivity)'}")
     print()

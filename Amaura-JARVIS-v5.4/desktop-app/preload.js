@@ -14,6 +14,18 @@ contextBridge.exposeInMainWorld('jarvis', {
     getWsUrl: () => ipcRenderer.invoke('get-ws-url'),
     getConfig: () => ipcRenderer.invoke('get-config'),
     request: (request) => ipcRenderer.invoke('backend-request', request),
+    stream: async (request, onToken) => {
+        const streamId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const listener = (_event, payload) => {
+            if (payload && payload.streamId === streamId) onToken(String(payload.token || ''));
+        };
+        ipcRenderer.on('chat-stream-token', listener);
+        try {
+            return await ipcRenderer.invoke('backend-stream', { ...request, streamId });
+        } finally {
+            ipcRenderer.removeListener('chat-stream-token', listener);
+        }
+    },
 
     // ── Backend Management ───────────────────────────────────────────────
     restartBackend: () => ipcRenderer.invoke('restart-backend'),

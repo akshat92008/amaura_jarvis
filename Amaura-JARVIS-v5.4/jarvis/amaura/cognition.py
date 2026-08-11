@@ -635,7 +635,7 @@ class UnifiedMemoryService:
         # reranker over already-retrieved candidates. It may not invent memory,
         # alter trust labels, or turn candidate text into instructions.
         ambiguous_ranking = len(candidates) > 1 and abs(candidates[0].score - candidates[1].score) < 0.08
-        if os.environ.get("AMAURA_JARVIS_MEMORY_RERANK", "1") == "1" and ambiguous_ranking:
+        if os.environ.get("AMAURA_JARVIS_MEMORY_RERANK", "0") == "1" and ambiguous_ranking:
             try:
                 from jarvis.amaura.model_gateway import CognitiveModelGateway
                 if CognitiveModelGateway.available(purpose="memory"):

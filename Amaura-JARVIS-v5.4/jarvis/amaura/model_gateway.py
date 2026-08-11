@@ -121,10 +121,11 @@ class ModelGateway:
 
 from dataclasses import dataclass as _dataclass
 import json as _json
+import threading as _threading
 import time as _time
 import urllib.error as _urlerror
 import urllib.request as _urlrequest
-from typing import Any as _Any
+from typing import Any as _Any, Callable as _Callable
 
 
 @_dataclass(frozen=True, slots=True)
@@ -157,6 +158,23 @@ class CognitiveModelGateway:
     """
 
     PROVIDERS = ("omniroute", "openrouter", "openai", "anthropic", "nvidia", "groq", "ollama")
+    _pooled_client: _Any = None
+    _pooled_client_lock = _threading.Lock()
+
+    @classmethod
+    def _http_client(cls):
+        """Process-wide keep-alive pool for executive provider traffic."""
+        with cls._pooled_client_lock:
+            if cls._pooled_client is None or cls._pooled_client.is_closed:
+                try:
+                    import httpx
+                except ImportError as exc:
+                    raise GovernanceError("httpx is required for pooled cognition requests") from exc
+                cls._pooled_client = httpx.Client(
+                    limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+                    headers={"User-Agent": "Amaura-JARVIS/5.4.1"},
+                )
+            return cls._pooled_client
 
     @staticmethod
     def _model_for(provider: str, purpose: str = "general") -> str:
@@ -166,6 +184,7 @@ class CognitiveModelGateway:
                 "intent": "AMAURA_OMNIROUTE_INTENT_MODEL",
                 "reference": "AMAURA_OMNIROUTE_REFERENCE_MODEL",
                 "memory": "AMAURA_OMNIROUTE_MEMORY_MODEL",
+                "general": "AMAURA_OMNIROUTE_CHAT_MODEL",
             }.get(purpose, "AMAURA_OMNIROUTE_MODEL")
             specific = os.environ.get(purpose_key, "").strip()
             if specific and specific.lower() not in {"auto", "on", "true", "1"}:
@@ -347,6 +366,8 @@ class CognitiveModelGateway:
         messages: list[dict[str, str]],
         temperature: float,
         max_tokens: int,
+        requested_model: str | None = None,
+        fallback_reason: str = "",
     ) -> CognitiveModelResult:
         key = os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
         base_url = (os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()).rstrip("/")
@@ -368,8 +389,8 @@ class CognitiveModelGateway:
             endpoint = f"{base_url}/v1/chat/completions" if "/v1/" not in base_url else f"{base_url}/chat/completions"
 
         target_model = model
-        fallback_used = False
-        fallback_reason = ""
+        original_model = requested_model or model
+        fallback_used = model != original_model
         last_error_class = "unknown_error"
 
         for attempt in range(max_retries + 1):
@@ -380,23 +401,19 @@ class CognitiveModelGateway:
                 "temperature": temperature,
                 "max_tokens": max_tokens,
             }
-            req_data = _json.dumps(payload).encode("utf-8")
-            request = _urlrequest.Request(
-                endpoint,
-                data=req_data,
-                headers={
+            headers = {
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {key}",
                     "Accept": "application/json",
-                    "User-Agent": "Amaura-JARVIS/5.4.1",
-                },
-                method="POST",
-            )
+                }
             try:
-                with _urlrequest.urlopen(request, timeout=timeout_sec) as response:
-                    latency_ms = int((_time.monotonic() - t0) * 1000)
-                    raw_text = response.read().decode("utf-8", errors="replace")
-                    headers = {k.lower(): v for k, v in response.headers.items()}
+                response = cls._http_client().post(
+                    endpoint, json=payload, headers=headers, timeout=timeout_sec,
+                )
+                response.raise_for_status()
+                latency_ms = int((_time.monotonic() - t0) * 1000)
+                raw_text = response.text
+                headers = {k.lower(): v for k, v in response.headers.items()}
                 
                 request_id = str(
                     headers.get("x-request-id")
@@ -448,7 +465,7 @@ class CognitiveModelGateway:
                     text=text,
                     provider="omniroute",
                     model=resolved_model,
-                    requested_model=model,
+                    requested_model=original_model,
                     resolved_provider=resolved_provider,
                     resolved_model=resolved_model,
                     fallback_used=fallback_used,
@@ -457,9 +474,23 @@ class CognitiveModelGateway:
                     latency_ms=latency_ms,
                     gateway="omniroute",
                 )
-            except _urlerror.HTTPError as exc:
+            except Exception as exc:
+                try:
+                    import httpx
+                except ImportError:
+                    httpx = None  # type: ignore[assignment]
                 latency_ms = int((_time.monotonic() - t0) * 1000)
-                code = exc.code
+                if httpx is None or not isinstance(exc, (httpx.HTTPStatusError, httpx.RequestError)):
+                    raise
+                code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else 0
+                if isinstance(exc, httpx.RequestError):
+                    last_error_class = "timeout" if isinstance(exc, httpx.TimeoutException) else "network_error"
+                    # A pooled connection can become stale after a server or
+                    # route restart. Recreate the pool before the next attempt.
+                    with cls._pooled_client_lock:
+                        if cls._pooled_client is not None:
+                            cls._pooled_client.close()
+                            cls._pooled_client = None
                 if code in (401, 403):
                     last_error_class = "authentication_failure"
                     break  # Don't retry auth errors
@@ -470,22 +501,11 @@ class CognitiveModelGateway:
                     break
                 elif code in (502, 503, 504):
                     last_error_class = "provider_unavailable"
-                else:
+                elif code:
                     last_error_class = "invalid_response"
-                
-                if attempt < (max_retries - 1) and last_error_class in {"rate_limit", "provider_unavailable", "invalid_response"}:
+
+                if attempt < max_retries and last_error_class in {"rate_limit", "provider_unavailable", "invalid_response", "network_error", "timeout"}:
                     _time.sleep(0.5 * (2 ** attempt))
-                    continue
-            except (_urlerror.URLError, TimeoutError, OSError) as exc:
-                latency_ms = int((_time.monotonic() - t0) * 1000)
-                last_error_class = "timeout" if isinstance(exc, TimeoutError) else "network_error"
-                if attempt < (max_retries - 1):
-                    _time.sleep(0.5 * (2 ** attempt))
-                    continue
-            except _json.JSONDecodeError:
-                last_error_class = "structured_output_failure"
-                if attempt < (max_retries - 1):
-                    _time.sleep(0.5)
                     continue
 
         # If primary model failed and fallback model is configured
@@ -495,6 +515,8 @@ class CognitiveModelGateway:
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                requested_model=original_model,
+                fallback_reason=last_error_class,
             )
 
         raise GovernanceError(
@@ -627,6 +649,97 @@ class CognitiveModelGateway:
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
+        )
+
+    @classmethod
+    def generate_stream(
+        cls,
+        *,
+        messages: list[dict[str, str]],
+        on_token: _Callable[[str], None],
+        purpose: str = "general",
+        temperature: float = 0.1,
+        max_tokens: int = 4000,
+    ) -> CognitiveModelResult:
+        """Stream OmniRoute SSE deltas; other providers retain safe buffering."""
+        selection = cls.select(purpose=purpose)
+        if selection is None:
+            raise GovernanceError(f"No configured cognition model is available for {purpose}")
+        if selection.provider != "omniroute":
+            result = cls.generate(
+                messages=messages, purpose=purpose, temperature=temperature, max_tokens=max_tokens,
+            )
+            if result.text:
+                on_token(result.text)
+            return result
+
+        key = os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
+        base_url = (os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()).rstrip("/")
+        if not key or not base_url or not base_url.startswith(("http://", "https://")):
+            raise GovernanceError("OmniRoute is not properly configured for streaming")
+        endpoint = (
+            base_url if base_url.endswith("/chat/completions")
+            else f"{base_url}/chat/completions" if base_url.endswith("/v1") or "/v1/" in base_url
+            else f"{base_url}/v1/chat/completions"
+        )
+        timeout_sec = max(5.0, min(float(os.environ.get("AMAURA_OMNIROUTE_TIMEOUT_SECONDS", "60")), 300.0))
+        payload = {
+                "model": selection.model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": True,
+            }
+        headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {key}",
+                "Accept": "text/event-stream",
+            }
+        started = _time.monotonic()
+        chunks: list[str] = []
+        request_id = ""
+        resolved_provider = "omniroute"
+        resolved_model = selection.model
+        try:
+            with cls._http_client().stream(
+                "POST", endpoint, json=payload, headers=headers, timeout=timeout_sec,
+            ) as response:
+                response.raise_for_status()
+                headers = {k.lower(): v for k, v in response.headers.items()}
+                request_id = str(headers.get("x-request-id") or headers.get("x-omniroute-request-id") or "")
+                resolved_provider = str(headers.get("x-resolved-provider") or headers.get("x-provider") or "omniroute")
+                resolved_model = str(headers.get("x-resolved-model") or headers.get("x-omniroute-model") or selection.model)
+                for raw_line in response.iter_lines():
+                    line = raw_line.strip()
+                    if not line.startswith("data:") or line == "data: [DONE]":
+                        continue
+                    try:
+                        data = _json.loads(line[5:].strip())
+                    except _json.JSONDecodeError:
+                        continue
+                    request_id = request_id or str(data.get("id") or "")
+                    resolved_model = str(data.get("model") or resolved_model)
+                    choices = data.get("choices") or []
+                    if choices and isinstance(choices[0], dict):
+                        delta = choices[0].get("delta") or {}
+                        token = str(delta.get("content") or "")
+                        if token:
+                            chunks.append(token)
+                            on_token(token)
+        except Exception:
+            if chunks:
+                raise GovernanceError("OmniRoute stream interrupted after output began")
+            result = cls._omniroute(
+                model=selection.model, messages=messages, temperature=temperature, max_tokens=max_tokens,
+            )
+            if result.text:
+                on_token(result.text)
+            return result
+        return CognitiveModelResult(
+            text="".join(chunks), provider="omniroute", model=resolved_model,
+            requested_model=selection.model, resolved_provider=resolved_provider,
+            resolved_model=resolved_model, request_id=request_id,
+            latency_ms=int((_time.monotonic() - started) * 1000), gateway="omniroute",
         )
 
     @classmethod

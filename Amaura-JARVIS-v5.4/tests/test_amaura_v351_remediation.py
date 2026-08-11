@@ -109,6 +109,18 @@ def test_desktop_health_challenge_requires_child_secret(monkeypatch: pytest.Monk
     assert response.json()["bootstrap_proof"] == expected
 
 
+def test_background_service_health_uses_jarvis_key_hmac(monkeypatch: pytest.MonkeyPatch):
+    secret = "service-" + "d" * 64
+    challenge = "challenge-" + "e" * 64
+    monkeypatch.delenv("AMAURA_DESKTOP_BOOTSTRAP_TOKEN", raising=False)
+    monkeypatch.setenv("JARVIS_API_KEY", secret)
+    with TestClient(app) as client:
+        response = client.get("/api/health", headers={"X-Amaura-Service-Challenge": challenge})
+    assert response.status_code == 200
+    expected = hmac.new(secret.encode(), challenge.encode(), hashlib.sha256).hexdigest()
+    assert response.json()["service_proof"] == expected
+
+
 def test_desktop_package_uses_sidecar_dynamic_port_and_authentication():
     root = Path(__file__).parents[1]
     main = (root / "desktop-app" / "main.js").read_text(encoding="utf-8")
@@ -120,6 +132,8 @@ def test_desktop_package_uses_sidecar_dynamic_port_and_authentication():
     assert "amaura-backend" in main
     assert "BACKEND_VERSION = '5.4.1'" in main
     assert "tryAttachBackgroundService" in main
+    assert "X-Amaura-Service-Challenge" in main
+    assert "backendAttached" in main
     assert package["version"] == "5.4.1"
     assert package["dependencies"] == {}
     assert package["devDependencies"] == {}

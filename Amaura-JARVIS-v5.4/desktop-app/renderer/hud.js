@@ -32,6 +32,7 @@ function addMessage(role, text) {
   node.append(title, content);
   host.appendChild(node);
   host.scrollTop = host.scrollHeight;
+  return content;
 }
 
 async function refreshHealth() {
@@ -55,16 +56,28 @@ async function sendMessage() {
   state.busy = true; input.value = ''; input.disabled = true;
   addMessage('user', message); setStatus('THINKING', true);
   try {
-    const result = await request('/api/chat', 'POST', {
+    const requestBody = {
       message,
       session_id: state.sessionId,
       model: state.model,
       workspace: byId('chat-workspace').value.trim(),
       autonomy: byId('chat-autonomy').value,
       coding_backend: byId('chat-backend').value,
-    });
+    };
+    const streamingContent = addMessage('assistant', '');
+    let streamed = '';
+    const result = window.jarvis?.stream
+      ? await window.jarvis.stream(
+          { path: '/api/chat/stream', body: requestBody },
+          (token) => {
+            streamed += token;
+            streamingContent.textContent = streamed;
+            byId('chat-messages').scrollTop = byId('chat-messages').scrollHeight;
+          },
+        )
+      : await request('/api/chat', 'POST', requestBody);
     state.lastIntent = result.intent || 'conversation';
-    addMessage('assistant', result.response || 'No response');
+    if (!streamed) streamingContent.textContent = result.response || 'No response';
     if (result.model_key) {
       state.model = result.model_key;
       const provider = result.model_provider ? `${result.model_provider} · ` : '';

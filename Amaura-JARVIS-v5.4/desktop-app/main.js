@@ -37,6 +37,7 @@ let backendRestartTimer = null;
 let backendBootstrapToken = null;
 let backendVerified = false;
 let backendGeneration = 0;
+let backendAttached = false;
 
 // ── Runtime Configuration ─────────────────────────────────────────────────────
 
@@ -105,6 +106,38 @@ async function backendRequest({ path: requestPath, method = 'GET', body = null }
     }
 }
 
+async function backendStream(event, { streamId, path: requestPath, body }) {
+    if (!backendVerified || !CONFIG.serverPort) throw new Error('Authenticated backend is not ready');
+    if (requestPath !== '/api/chat/stream') throw new Error('Unsupported streaming path');
+    const credentials = runtimeCredentials();
+    const headers = { 'Content-Type': 'application/json' };
+    if (credentials.jarvisKey) headers['X-Jarvis-Key'] = credentials.jarvisKey;
+    if (credentials.operatorKey) headers['X-Amaura-Operator-Key'] = credentials.operatorKey;
+    const response = await fetch(`http://${CONFIG.serverHost}:${CONFIG.serverPort}${requestPath}`, {
+        method: 'POST', headers, body: JSON.stringify(body || {}), redirect: 'error',
+    });
+    if (!response.ok || !response.body) throw new Error(`Backend HTTP ${response.status}`);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let complete = {};
+    while (true) {
+        const { done, value } = await reader.read();
+        buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+            if (!line.trim()) continue;
+            const item = JSON.parse(line);
+            if (item.type === 'token') event.sender.send('chat-stream-token', { streamId, token: item.content || '' });
+            else if (item.type === 'complete') complete = item;
+            else if (item.type === 'error') throw new Error(item.error || 'Streaming request failed');
+        }
+        if (done) break;
+    }
+    return complete;
+}
+
 // ── Backend Management ────────────────────────────────────────────────────────
 
 function getPythonCommand() {
@@ -156,6 +189,7 @@ function allocateLoopbackPort() {
 async function startBackendServer() {
     const generation = ++backendGeneration;
     backendVerified = false;
+    backendAttached = false;
     CONFIG.serverPort = await allocateLoopbackPort();
     backendBootstrapToken = crypto.randomBytes(32).toString('hex');
     const launch = getBackendLaunch();
@@ -215,6 +249,7 @@ function stopBackendServer() {
     backendGeneration += 1;
     backendVerified = false;
     backendBootstrapToken = null;
+    backendAttached = false;
     if (backendRestartTimer) {
         clearTimeout(backendRestartTimer);
         backendRestartTimer = null;
@@ -242,9 +277,13 @@ function verifyHealthPayload(payload, challenge) {
 async function tryAttachBackgroundService() {
     const port = Number(process.env.AMAURA_BACKGROUND_PORT || 8000);
     if (!Number.isInteger(port) || port < 1 || port > 65535) return false;
+    const serviceSecret = runtimeCredentials().jarvisKey;
+    if (!serviceSecret || serviceSecret.length < 32) return false;
+    const challenge = crypto.randomBytes(32).toString('hex');
     return new Promise((resolve) => {
         const req = http.request({
             hostname: CONFIG.serverHost, port, path: '/api/health', method: 'GET', timeout: 1000,
+            headers: { 'X-Amaura-Service-Challenge': challenge },
         }, (res) => {
             let body = '';
             res.setEncoding('utf8');
@@ -252,9 +291,14 @@ async function tryAttachBackgroundService() {
             res.on('end', () => {
                 try {
                     const payload = JSON.parse(body);
-                    if (res.statusCode === 200 && payload.status === 'online' && payload.version === BACKEND_VERSION) {
+                    const expected = crypto.createHmac('sha256', serviceSecret).update(challenge).digest('hex');
+                    const supplied = String(payload.service_proof || '');
+                    const authenticated = expected.length === supplied.length
+                        && crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(supplied, 'hex'));
+                    if (res.statusCode === 200 && authenticated && payload.status === 'online' && payload.version === BACKEND_VERSION) {
                         CONFIG.serverPort = port;
                         backendVerified = true;
+                        backendAttached = true;
                         console.log(`[Amaura] Attached to background backend on ${CONFIG.serverHost}:${port}`);
                         resolve(true);
                         return;
@@ -270,6 +314,7 @@ async function tryAttachBackgroundService() {
 }
 
 function waitForServer(retries = 40, delay = 250) {
+    if (backendAttached && backendVerified) return Promise.resolve(true);
     return new Promise((resolve, reject) => {
         let attempts = 0;
         const check = () => {
@@ -505,8 +550,15 @@ function setupIPC() {
     ipcMain.handle('backend-request', async (_event, request) => {
         return backendRequest(request || {});
     });
+    ipcMain.handle('backend-stream', async (event, request) => backendStream(event, request || {}));
 
     ipcMain.handle('restart-backend', async () => {
+        if (backendAttached) {
+            const attached = await tryAttachBackgroundService();
+            return attached
+                ? { success: true, managedBy: 'background-service' }
+                : { success: false, error: 'Background service is unavailable; restart it through launchd.' };
+        }
         stopBackendServer();
         try {
             await startBackendServer();
