@@ -26,6 +26,7 @@ const CONFIG = {
     summonShortcut: 'CommandOrControl+Shift+J',
     voiceShortcut: 'CommandOrControl+Shift+V',
 };
+const BACKEND_VERSION = '5.4.1';
 
 let mainWindow = null;
 let tray = null;
@@ -230,12 +231,42 @@ function stopBackendServer() {
 }
 
 function verifyHealthPayload(payload, challenge) {
-    if (!payload || payload.status !== 'online' || payload.version !== '5.4.0') return false;
+    if (!payload || payload.status !== 'online' || payload.version !== BACKEND_VERSION) return false;
     if (!serverProcess || Number(payload.pid) !== Number(serverProcess.pid)) return false;
     const expected = crypto.createHmac('sha256', backendBootstrapToken).update(challenge).digest('hex');
     const supplied = String(payload.bootstrap_proof || '');
     if (expected.length !== supplied.length) return false;
     return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(supplied, 'hex'));
+}
+
+async function tryAttachBackgroundService() {
+    const port = Number(process.env.AMAURA_BACKGROUND_PORT || 8000);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) return false;
+    return new Promise((resolve) => {
+        const req = http.request({
+            hostname: CONFIG.serverHost, port, path: '/api/health', method: 'GET', timeout: 1000,
+        }, (res) => {
+            let body = '';
+            res.setEncoding('utf8');
+            res.on('data', (chunk) => { body += chunk; });
+            res.on('end', () => {
+                try {
+                    const payload = JSON.parse(body);
+                    if (res.statusCode === 200 && payload.status === 'online' && payload.version === BACKEND_VERSION) {
+                        CONFIG.serverPort = port;
+                        backendVerified = true;
+                        console.log(`[Amaura] Attached to background backend on ${CONFIG.serverHost}:${port}`);
+                        resolve(true);
+                        return;
+                    }
+                } catch (_) { /* unavailable or not Amaura */ }
+                resolve(false);
+            });
+        });
+        req.on('error', () => resolve(false));
+        req.on('timeout', () => { req.destroy(); resolve(false); });
+        req.end();
+    });
 }
 
 function waitForServer(retries = 40, delay = 250) {
@@ -526,9 +557,10 @@ app.whenReady().then(async () => {
     // Setup IPC
     setupIPC();
 
-    // Start the bundled/authenticated backend sidecar.
+    // Reuse the login/background service when it is available. The desktop
+    // starts its authenticated sidecar only as a local fallback.
     try {
-        await startBackendServer();
+        if (!await tryAttachBackgroundService()) await startBackendServer();
     } catch (error) {
         console.error('[Amaura] Backend launch failed:', error.message);
     }

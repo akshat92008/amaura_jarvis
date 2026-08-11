@@ -28,11 +28,13 @@ WORKER_MODEL="${REMAINDER%% *}"
 REVIEWER_MODEL="${REMAINDER#* }"
 
 if ! command -v ollama >/dev/null 2>&1; then
-  print -u2 "Ollama is required. Install it with: brew install ollama"
-  exit 1
+  print "Ollama is not installed; skipping optional local-model setup (cloud/native verifier profile)."
+  SKIP_OLLAMA=1
+else
+  SKIP_OLLAMA=0
 fi
 
-if ! curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+if [[ "$SKIP_OLLAMA" == "0" ]] && ! curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
   if [[ "$(uname -s)" == "Darwin" ]] && [[ -d /Applications/Ollama.app ]]; then
     open -a Ollama
   else
@@ -43,34 +45,36 @@ if ! curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
     sleep 1
   done
 fi
-if ! curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
-  print -u2 "Ollama is installed but its local server is not reachable. Open Ollama and rerun this file."
-  exit 1
+if [[ "$SKIP_OLLAMA" == "0" ]] && ! curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+  print -u2 "Ollama is installed but unavailable; skipping optional local-model setup."
+  SKIP_OLLAMA=1
 fi
 
-if [[ "$REVIEW_MODE" == "local" ]]; then
+if [[ "$SKIP_OLLAMA" == "0" && "$REVIEW_MODE" == "local" ]]; then
   if ! ollama list | awk 'NR>1 {print $1}' | grep -Fxq "$REVIEWER_MODEL"; then
     print "Installing independent reviewer model: $REVIEWER_MODEL"
     ollama pull "$REVIEWER_MODEL"
   fi
 fi
-if ! ollama list | awk 'NR>1 {print $1}' | grep -Fxq "$WORKER_MODEL"; then
+if [[ "$SKIP_OLLAMA" == "0" ]] && ! ollama list | awk 'NR>1 {print $1}' | grep -Fxq "$WORKER_MODEL"; then
   print "Worker model '$WORKER_MODEL' is not installed. Attempting Ollama pull."
   if ! ollama pull "$WORKER_MODEL"; then
     print -u2 "The custom worker model '$WORKER_MODEL' must be created/imported in Ollama before Amaura can launch."
     exit 1
   fi
 fi
-if [[ "$REVIEW_MODE" == "local" ]] && [[ "$WORKER_MODEL" == "$REVIEWER_MODEL" ]]; then
+if [[ "$SKIP_OLLAMA" == "0" && "$REVIEW_MODE" == "local" ]] && [[ "$WORKER_MODEL" == "$REVIEWER_MODEL" ]]; then
   print -u2 "Worker and reviewer models must be different. Edit .env.amaura and rerun."
   exit 1
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
-  print -u2 "Docker Desktop is required. Install it with: brew install --cask docker"
-  exit 1
+  print "Docker is not installed; using the native macOS verifier when available."
+  SKIP_DOCKER=1
+else
+  SKIP_DOCKER=0
 fi
-if ! docker info >/dev/null 2>&1; then
+if [[ "$SKIP_DOCKER" == "0" ]] && ! docker info >/dev/null 2>&1; then
   if [[ "$(uname -s)" == "Darwin" ]] && [[ -d /Applications/Docker.app ]]; then
     open -a Docker
     for _ in {1..90}; do
@@ -79,12 +83,18 @@ if ! docker info >/dev/null 2>&1; then
     done
   fi
 fi
-if ! docker info >/dev/null 2>&1; then
-  print -u2 "Docker is installed but the daemon is not running. Open Docker Desktop and rerun this file."
-  exit 1
+if [[ "$SKIP_DOCKER" == "0" ]] && ! docker info >/dev/null 2>&1; then
+  print -u2 "Docker is installed but unavailable; using the native macOS verifier when available."
+  SKIP_DOCKER=1
 fi
 
-.venv/bin/python -m jarvis.amaura.cli build-sandbox
+if [[ "$SKIP_DOCKER" == "0" ]]; then
+  .venv/bin/python -m jarvis.amaura.cli build-sandbox
+fi
 .venv/bin/python -m jarvis.amaura.cli doctor
 .venv/bin/python -m jarvis.amaura.cli company bootstrap --repository "$PWD" >/dev/null
-print "Amaura local runtime and company objective portfolio are certified."
+if [[ "$SKIP_OLLAMA" == "1" || "$SKIP_DOCKER" == "1" ]]; then
+  print "Amaura company objective portfolio is initialized. Optional runtime capabilities were skipped; use the doctor report as the current readiness truth."
+else
+  print "Amaura local runtime and company objective portfolio are ready."
+fi

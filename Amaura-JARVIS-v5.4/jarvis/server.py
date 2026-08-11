@@ -169,7 +169,7 @@ async def app_lifespan(_app: FastAPI):
 app = FastAPI(
     title="J.A.R.V.I.S. Server",
     description="Just A Rather Very Intelligent System — Backend API",
-    version="5.4.0",
+    version="5.4.1",
     lifespan=app_lifespan,
 )
 

@@ -8,6 +8,7 @@ safety layer, and the Jarvis system prompt.
 import json
 import os
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -259,6 +260,12 @@ class JarvisAgent:
         # Amaura session token — must be set explicitly via set_amaura_session_token()
         # before Amaura tool calls are permitted from this agent session (P0-3).
         self._amaura_session_token: str | None = None
+        # ExecutiveKernel owns short-lived conversational continuity and its
+        # bounded consolidation worker. Keep one per agent/control plane rather
+        # than rebuilding it for every REST request.
+        self._executive_kernel = None
+        self._executive_control = None
+        self._executive_lock = threading.Lock()
 
         # Build system prompt with personal memory
         self._update_system_prompt()
@@ -997,7 +1004,15 @@ class JarvisAgent:
                 })
             return self.run_non_interactive(text, context_addon=context)
 
-        kernel = ExecutiveKernel(control, conversation_handler=_executive_conversation)
+        with self._executive_lock:
+            if self._executive_kernel is None or self._executive_control is not control:
+                self._executive_kernel = ExecutiveKernel(control, conversation_handler=_executive_conversation)
+                self._executive_control = control
+            else:
+                # The handler captures request-local provenance, so refresh it
+                # while retaining the kernel's shared session history.
+                self._executive_kernel.conversation_handler = _executive_conversation
+            kernel = self._executive_kernel
         response = kernel.handle(
             ExecutiveRequest(
                 text=user_input,

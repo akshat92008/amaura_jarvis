@@ -19,6 +19,7 @@ import inspect
 import json
 import math
 import os
+import queue
 import re
 import threading
 import time
@@ -1373,6 +1374,9 @@ class ExecutiveKernel:
         self.conversation_handler = conversation_handler
         self._session_history: dict[str, list[tuple[str, str]]] = {}
         self._history_lock = threading.Lock()
+        self._consolidation_queue: queue.Queue[tuple[str, str, str]] = queue.Queue(maxsize=32)
+        self._consolidation_worker: threading.Thread | None = None
+        self._consolidation_lock = threading.Lock()
 
     @staticmethod
     def _needs_reference_resolution(text: str, intent: ExecutiveIntent) -> bool:
@@ -1407,12 +1411,45 @@ class ExecutiveKernel:
     def _consolidate_async(self, *, user_text: str, assistant_text: str, session_id: str) -> None:
         if os.environ.get("AMAURA_JARVIS_MEMORY_CONSOLIDATION", "1") != "1":
             return
-        threading.Thread(
-            target=self.consolidator.consolidate,
-            kwargs={"user_text": user_text, "assistant_text": assistant_text, "session_id": session_id},
-            name="amaura-memory-consolidation",
-            daemon=True,
-        ).start()
+        try:
+            self._consolidation_queue.put_nowait((user_text, assistant_text, session_id))
+        except queue.Full:
+            # Consolidation is best-effort secondary work; never let it delay
+            # a founder-facing answer or cause unbounded provider traffic.
+            return
+        with self._consolidation_lock:
+            if self._consolidation_worker is None or not self._consolidation_worker.is_alive():
+                self._consolidation_worker = threading.Thread(
+                    target=self._drain_consolidation_queue,
+                    name="amaura-memory-consolidation",
+                    daemon=True,
+                )
+                self._consolidation_worker.start()
+
+    def _drain_consolidation_queue(self) -> None:
+        while True:
+            try:
+                first = self._consolidation_queue.get(timeout=0.5)
+            except queue.Empty:
+                return
+            # Debounce bursts: one latest consolidation per session is enough
+            # to preserve durable facts while avoiding a model call per turn.
+            pending = [first]
+            while True:
+                try:
+                    pending.append(self._consolidation_queue.get_nowait())
+                except queue.Empty:
+                    break
+            latest: dict[str, tuple[str, str, str]] = {item[2]: item for item in pending}
+            for user_text, assistant_text, session_id in latest.values():
+                try:
+                    self.consolidator.consolidate(
+                        user_text=user_text,
+                        assistant_text=assistant_text,
+                        session_id=session_id,
+                    )
+                except Exception:
+                    pass
 
     @staticmethod
     def _memory_payload(text: str, *, forget: bool = False) -> tuple[str, str]:

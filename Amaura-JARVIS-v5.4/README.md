@@ -177,12 +177,9 @@ Pause/cancel changes the mission generation, prevents stale result acceptance, a
 
 ## Verification baseline
 
-The final v5.4 source collects **376 tests**:
+The current v5.4.1 source collects **398 tests**. Release evidence must be regenerated from the exact final tree; older v5.4.0 reports do not certify this source.
 
-- **371** application / Company OS / JARVIS tests under `tests/`;
-- **5** coding-engine tests under `aimodel/test_engine.py`.
-
-The release qualification runs modules in isolated pytest processes because several legacy tests intentionally exercise multiprocessing/background runtimes. Every collected node passed in the release environment; the seven trust-foundation nodes were also isolated to avoid cross-process teardown affecting unrelated tests. Python compilation and Electron JavaScript syntax checks pass.
+The release qualification runs modules in isolated pytest processes because several legacy tests intentionally exercise multiprocessing/background runtimes. Python compilation and Electron JavaScript syntax checks are required before publishing.
 
 Passing tests establish source/regression contracts. They do **not** prove a real authenticated Antigravity account will solve every unseen repository task.
 
