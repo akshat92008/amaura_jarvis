@@ -48,6 +48,45 @@ def test_intent_engine_routes_questions_and_explicit_work():
     assert engine.classify("Remember that Noryx owns repository engineering") == "memory_write"
 
 
+def test_lightning_path_skips_heavy_context_and_consolidates_after_response(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """A normal question must not pay for world/reference/memory model work."""
+    control = AmauraControlPlane(tmp_path / "amaura.db")
+    try:
+        kernel = ExecutiveKernel(control, conversation_handler=lambda text, context: f"ANSWER:{text}")
+        monkeypatch.setattr(kernel.world, "context", lambda *_args, **_kwargs: pytest.fail("world lookup on chat fast path"))
+        monkeypatch.setattr(kernel.memory, "context", lambda *_args, **_kwargs: pytest.fail("memory lookup on chat fast path"))
+        monkeypatch.setattr(kernel.references, "resolve", lambda *_args, **_kwargs: pytest.fail("reference lookup on chat fast path"))
+        calls: list[tuple[str, str]] = []
+        monkeypatch.setattr(
+            kernel,
+            "_consolidate_async",
+            lambda *, user_text, assistant_text, session_id: calls.append((user_text, assistant_text)),
+        )
+        result = kernel.handle(ExecutiveRequest(text="Why is the sky blue?", session_id="fast"))
+        assert result.intent == "conversation"
+        assert result.message == "ANSWER:Why is the sky blue?"
+        assert calls == [("Why is the sky blue?", "ANSWER:Why is the sky blue?")]
+    finally:
+        control.close()
+
+
+def test_lightning_path_retains_short_session_history(tmp_path: Path):
+    control = AmauraControlPlane(tmp_path / "amaura.db")
+    contexts: list[str] = []
+    try:
+        def reply(text: str, context: str) -> str:
+            contexts.append(context)
+            return f"ANSWER:{text}"
+
+        kernel = ExecutiveKernel(control, conversation_handler=reply)
+        kernel.handle(ExecutiveRequest(text="Hello", session_id="history"))
+        kernel.handle(ExecutiveRequest(text="What did I just say?", session_id="history"))
+        assert "User: Hello" in contexts[-1]
+        assert "Assistant: ANSWER:Hello" in contexts[-1]
+    finally:
+        control.close()
+
+
 def test_executive_kernel_is_one_front_door_and_fail_closed_without_operator(tmp_path: Path):
     control = AmauraControlPlane(tmp_path / "amaura.db")
     try:

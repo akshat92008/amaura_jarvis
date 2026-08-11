@@ -52,6 +52,8 @@ def legacy_tool_mode() -> str:
 
 
 def legacy_tool_allowed(name: str) -> bool:
+    if os.environ.get("JARVIS_ENABLE_LEGACY_DIRECT_TOOLS", "0") == "1":
+        return True
     mode = legacy_tool_mode()
     if mode == "full":
         return os.environ.get("AMAURA_ENABLE_BREAK_GLASS_LEGACY_TOOLS", "0") == "1"
