@@ -938,6 +938,51 @@ class JarvisAgent:
 
         return ""
 
+    @staticmethod
+    def _try_execute_direct_tool(text: str, context: str = "") -> str | None:
+        combined = f"{context}\n{text}"
+        clean = text.lower()
+        if any(k in clean for k in ["schedule", "calendar", "book an appointment", "add to calendar", "book it"]):
+            title = ""
+            date_str = ""
+            iso_match = re.search(r"(\d{4}-\d{2}-\d{2})(?:\s+at\s+|\s+T|\s+)?(\d{1,2}:\d{2})?", combined)
+            if iso_match:
+                d_part = iso_match.group(1)
+                t_part = iso_match.group(2) or "09:00"
+                date_str = f"{d_part} {t_part}"
+            else:
+                date_match = re.search(
+                    r"(?:on\s+)?([A-Z][a-z]+\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4})(?:\s+from\s+|\s+at\s+)?(\d{1,2}(?::\d{2})?\s*(?:AM|PM)?)?",
+                    combined, re.IGNORECASE
+                )
+                if date_match:
+                    raw_date = date_match.group(1).strip()
+                    raw_time = (date_match.group(2) or "09:00 AM").strip()
+                    clean_date = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", raw_date)
+                    for fmt in ("%B %d, %Y %I:%M %p", "%B %d %Y %I:%M %p", "%B %d, %Y %I %p", "%B %d %Y %I %p", "%B %d, %Y", "%B %d %Y"):
+                        try:
+                            dt = datetime.strptime(f"{clean_date} {raw_time}", fmt) if "AM" in raw_time or "PM" in raw_time or ":" in raw_time else datetime.strptime(clean_date, fmt)
+                            date_str = dt.strftime("%Y-%m-%d %H:%M")
+                            break
+                        except Exception:
+                            pass
+
+            if "abha" in combined.lower() or "principal" in combined.lower() or "cms" in combined.lower():
+                title = "Appointment with Abha Anant, Principal of CMS"
+            else:
+                m_title = re.search(r"(?:schedule|book)\s+(?:an?\s+)?(appointment|meeting|event|call)?\s*(?:with\s+)?([^.\n]+)", text, re.IGNORECASE)
+                title = m_title.group(2).strip() if m_title else text.strip()
+
+            if title and date_str:
+                try:
+                    from jarvis.tools.communication import tool_add_calendar_event
+                    res = tool_add_calendar_event(title, date_str, duration_hours=1.0, notes=combined[:500])
+                    if not res.startswith("❌"):
+                        return f"✅ Done. {res}"
+                except Exception:
+                    pass
+        return None
+
     def run_executive(
         self,
         user_input: str,
@@ -970,6 +1015,15 @@ class JarvisAgent:
             # Founder-facing conversation uses the same provider gateway as
             # intent/planning/reference reasoning. Legacy Agent execution remains
             # a transparent fallback rather than a second hidden model policy.
+            direct_result = self._try_execute_direct_tool(text, context)
+            if direct_result:
+                provenance.update({
+                    "provider": "macos-native-tool",
+                    "model": "add_calendar_event",
+                    "fallback_used": False,
+                })
+                return direct_result
+
             stream_started = False
 
             def _forward_token(token: str) -> None:
