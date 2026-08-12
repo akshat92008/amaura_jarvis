@@ -1,6 +1,6 @@
 import pytest
 import sys
-from jarvis.amaura.cognition import IntentEngine
+from jarvis.amaura.cognition import IntentEngine, ExecutiveKernel, ExecutiveRequest
 from jarvis.amaura.capability_runtime import MacOSAppAdapter, CapabilityRuntime, GovernanceError, CapabilityExecutionError
 
 def test_intent_engine_boundary():
@@ -65,3 +65,66 @@ def test_capability_runtime_registration():
     health = runtime.health("macos_app")
     assert health["capability"] == "macos_app"
     assert "open" in health["contracts"]
+
+def test_cognition_dict_response_regression(monkeypatch):
+    """Regression test: CapabilityRuntime.execute() returns a dict, not a CapabilityResult object.
+    cognition.py must use res.get('ok') instead of res.ok.
+    """
+    class MockMemory:
+        def record_episode(self, *args, **kwargs):
+            pass
+        def context(self, *args, **kwargs):
+            return "context", []
+
+    class MockControlPlane:
+        pass
+        
+    engine = ExecutiveKernel(MockControlPlane())
+    engine.memory = MockMemory()
+    engine._consolidate_async = lambda *args, **kwargs: None
+
+    import jarvis.amaura.capability_runtime
+    
+    def mock_execute(self, capability, operation, params=None):
+        assert capability == "macos_app"
+        return {"ok": True, "output": {"app": "safari"}, "error": "", "duration": 0.1, "artifacts": []}
+    
+    monkeypatch.setattr(jarvis.amaura.capability_runtime.CapabilityRuntime, "execute", mock_execute)
+    
+    request = ExecutiveRequest(text="open safari", session_id="test-123", force_intent="macos_app")
+    response = engine.handle(request)
+    assert response.intent == "macos_app"
+    assert "✅ Successfully opened" in response.message
+
+def test_cognition_plan_only_isolation(monkeypatch):
+    """Ensure that autonomy='plan_only' prevents execution of macos_app actions."""
+    class MockMemory:
+        def record_episode(self, *args, **kwargs):
+            pass
+        def context(self, *args, **kwargs):
+            return "context", []
+
+    class MockControlPlane:
+        pass
+        
+    engine = ExecutiveKernel(MockControlPlane())
+    engine.memory = MockMemory()
+    engine._consolidate_async = lambda *args, **kwargs: None
+
+    import jarvis.amaura.capability_runtime
+    
+    executed = False
+    def mock_execute(self, capability, operation, params=None):
+        nonlocal executed
+        executed = True
+        return {"ok": True, "output": {"app": "safari"}}
+    
+    monkeypatch.setattr(jarvis.amaura.capability_runtime.CapabilityRuntime, "execute", mock_execute)
+    
+    request = ExecutiveRequest(text="open safari", session_id="test-123", force_intent="macos_app", autonomy="plan_only")
+    response = engine.handle(request)
+    assert response.intent == "macos_app"
+    assert response.state == "held"
+    assert executed is False
+
+

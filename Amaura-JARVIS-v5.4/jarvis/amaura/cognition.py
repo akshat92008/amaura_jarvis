@@ -1718,9 +1718,20 @@ class ExecutiveKernel:
                 app_name = re.sub(rf"\b{v}\b", "", app_name, flags=re.IGNORECASE)
             app_name = app_name.strip()
             
+            if request.autonomy == "plan_only":
+                message = f"[PLANNING MODE] Would {'close' if op == 'close' else 'open'} {app_name}."
+                return ExecutiveResponse(
+                    intent=intent,
+                    message=message,
+                    session_id=request.session_id,
+                    state="held",
+                    result={"app_control": message, "plan_only": True},
+                    context_sources=memory_sources,
+                )
+
             try:
                 res = CapabilityRuntime().execute("macos_app", op, {"name": app_name})
-                message = f"✅ Successfully {'closed' if op == 'close' else 'opened'} {app_name}." if res.ok else f"❌ Failed: {res.output}"
+                message = f"✅ Successfully {'closed' if op == 'close' else 'opened'} {app_name}." if res.get("ok") else f"❌ Failed: {res.get('error') or res.get('output')}"
             except Exception as exc:
                 message = f"❌ Error: {exc}"
                 

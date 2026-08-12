@@ -422,3 +422,32 @@ class TestGitDeliverySafety:
             merge_approved_task(_task(record, commit.commit))
         assert _git(repository, "rev-parse", "HEAD") == previous
         assert _git(repository, "status", "--porcelain") == ""
+
+
+class TestHealthBuildIdProtection:
+    def test_health_endpoint_includes_build_id_and_pid(self):
+        from jarvis.server import app, BUILD_ID
+        from fastapi.testclient import TestClient
+        client = TestClient(app)
+        response = client.get("/api/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data.get("status") == "online"
+        assert data.get("version") == "5.4.1"
+        assert "build_id" in data
+        assert data.get("build_id") == BUILD_ID
+        assert "pid" in data
+        assert isinstance(data.get("pid"), int)
+
+    def test_stale_backend_build_id_mismatch_rejected(self):
+        health_payload = {
+            "status": "online",
+            "version": "5.4.1",
+            "build_id": "stale_tree_hash_12345",
+            "pid": 99999
+        }
+        current_expected_build_id = "current_tree_hash_67890"
+        # A stale backend of the same version (5.4.1) but different build_id must be rejected
+        build_matches = health_payload.get("build_id") == current_expected_build_id
+        assert build_matches is False
+

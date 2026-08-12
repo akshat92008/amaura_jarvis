@@ -305,8 +305,9 @@ function stopBackendServer() {
     killTimer.unref();
 }
 
-function verifyHealthPayload(payload, challenge) {
+function verifyHealthPayload(payload, challenge, expectedBuildId = null) {
     if (!payload || payload.status !== 'online' || payload.version !== BACKEND_VERSION) return false;
+    if (expectedBuildId && payload.build_id && payload.build_id !== expectedBuildId) return false;
     if (!serverProcess) return false;
     // macOS virtual-environment launchers may exec through a Python shim, so
     // the child PID seen by Electron is not guaranteed to equal the Uvicorn
@@ -323,6 +324,7 @@ async function tryAttachBackgroundService() {
     if (!Number.isInteger(port) || port < 1 || port > 65535) return false;
     const serviceSecret = runtimeCredentials().jarvisKey;
     if (!serviceSecret || serviceSecret.length < 32) return false;
+    const expectedBuildId = process.env.AMAURA_EXPECTED_BUILD_ID || null;
     const challenge = crypto.randomBytes(32).toString('hex');
     return new Promise((resolve) => {
         const req = http.request({
@@ -339,12 +341,13 @@ async function tryAttachBackgroundService() {
                     const supplied = String(payload.service_proof || '');
                     const authenticated = expected.length === supplied.length
                         && crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(supplied, 'hex'));
-                    if (res.statusCode === 200 && authenticated && payload.status === 'online' && payload.version === BACKEND_VERSION) {
+                    const buildMatches = !expectedBuildId || !payload.build_id || payload.build_id === expectedBuildId;
+                    if (res.statusCode === 200 && authenticated && payload.status === 'online' && payload.version === BACKEND_VERSION && buildMatches) {
                         CONFIG.serverPort = port;
                         backendVerified = true;
                         backendHealth = payload;
                         backendAttached = true;
-                        console.log(`[Amaura] Attached to background backend on ${CONFIG.serverHost}:${port}`);
+                        console.log(`[Amaura] Attached to background backend on ${CONFIG.serverHost}:${port} (build_id=${payload.build_id || 'unknown'})`);
                         resolve(true);
                         return;
                     }

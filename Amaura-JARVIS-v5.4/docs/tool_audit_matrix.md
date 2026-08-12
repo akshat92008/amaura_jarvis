@@ -42,8 +42,8 @@
 | create_agent_tool | Yes | No | No | No |
 | export_agent | Yes | No | No | No |
 | create_multi_agent_system | Yes | No | No | No |
-| open_app | Yes | macos_app | Yes | not execution-verified |
-| close_app | Yes | macos_app | Yes | not execution-verified |
+| open_app | Yes | macos_app | Yes | Yes (Phase 2 Qualification) |
+| close_app | Yes | macos_app | Yes | Yes (Phase 2 Qualification) |
 | set_volume | Yes | No | No | No |
 | get_system_info | Yes | No | No | No |
 | take_screenshot | Yes | No | No | No |
