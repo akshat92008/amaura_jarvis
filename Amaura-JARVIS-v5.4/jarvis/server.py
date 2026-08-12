@@ -48,6 +48,37 @@ from jarvis.voice.speaker import Speaker, get_speaker
 
 load_amaura_env()
 
+def _fetch_build_id() -> str:
+    # 1. Check development Git tree hash
+    try:
+        import subprocess
+        res = subprocess.run(
+            ["git", "rev-parse", "HEAD^{tree}"],
+            capture_output=True,
+            text=True,
+            timeout=1,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip()
+    except Exception:
+        pass
+
+    # 2. Check for release validation manifest
+    try:
+        import json
+        manifest_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "RELEASE_VERIFICATION.json")
+        if os.path.exists(manifest_path):
+            with open(manifest_path, "r") as f:
+                data = json.load(f)
+                return data.get("version", "unknown") + "_release"
+    except Exception:
+        pass
+    
+    return "unknown"
+
+BUILD_ID = _fetch_build_id()
+
 _RUNTIME_OBSERVABILITY: dict[str, str] = {
     "company_autopilot_state": "stopped",
     "company_autopilot_started_at": "",
@@ -730,6 +761,7 @@ async def health(
     return {
         "status": "online",
         "version": "5.4.1",
+        "build_id": BUILD_ID,
         "timestamp": datetime.now().isoformat(),
         "sessions": len(sessions),
         "tools": get_tool_count(),
