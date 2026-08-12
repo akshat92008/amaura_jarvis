@@ -444,14 +444,9 @@ def write_provenance(output: Path, artifacts: list[Path], *, source_files: int) 
                     "platform": platform.platform(),
                 },
                 "resolvedDependencies": [
-                    {
-                        "uri": "file:uv.lock",
-                        "digest": {"sha256": sha256(ROOT / "uv.lock")},
-                    },
-                    {
-                        "uri": "file:desktop-app/package-lock.json",
-                        "digest": {"sha256": sha256(ROOT / "desktop-app" / "package-lock.json")},
-                    },
+                    {"uri": f"file:{f.relative_to(ROOT).as_posix()}", "digest": {"sha256": sha256(f)}}
+                    for f in (ROOT / "uv.lock", ROOT / "desktop-app" / "package-lock.json", ROOT / "pyproject.toml")
+                    if f.is_file()
                 ],
             },
             "runDetails": {
