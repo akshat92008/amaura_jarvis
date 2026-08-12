@@ -433,7 +433,7 @@ class TestHealthBuildIdProtection:
         assert response.status_code == 200
         data = response.json()
         assert data.get("status") == "online"
-        assert data.get("version") == "5.4.1"
+        assert data.get("version") == "5.4.2"
         assert "build_id" in data
         assert data.get("build_id") == BUILD_ID
         assert "pid" in data

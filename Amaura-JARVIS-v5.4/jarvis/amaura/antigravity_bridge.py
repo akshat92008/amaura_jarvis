@@ -244,7 +244,8 @@ class AntigravityDeliveryAdapter:
 {workspace}
 
 Strict Sandbox Constraints:
-- Do NOT run `git status`, `git diff`, or `pwd`. They will fail with 'Operation not permitted' due to macOS sandbox boundary protections. Use `list_dir` or `view_file` instead.
+- Do NOT run shell commands via `run_command` or run `git status`, `git diff`, or `pwd`. Use `view_file`, `list_dir`, `replace_file_content`, or `write_to_file` to inspect and modify code files directly.
+- Once file edits are complete, output the final result JSON object immediately without calling terminal commands.
 
 
 OBJECTIVE
@@ -291,19 +292,11 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
             if isinstance(value, dict):
                 if value.get("schema") == "amaura.antigravity-result.v1" and value.get("success") is True:
                     return value
-                # Compatibility: Gemini may omit the static `schema` const field
-                # while returning an otherwise valid structured result.  Accept
-                # ONLY when ALL of the following are true:
-                #   - success is the boolean True (not truthy, not a string)
-                #   - changed_files is a non-empty list
-                #   - verification_commands is a non-empty list
-                #   - summary is a non-empty string
-                # This is the narrowest possible fallback for the known omission.
                 _cf = value.get("changed_files")
                 _vc = value.get("verification_commands")
                 _sm = value.get("summary") or value.get("result") or value.get("message")
                 if (
-                    value.get("success") is True  # must be exactly True
+                    value.get("success") is True
                     and isinstance(_cf, list) and len(_cf) > 0
                     and isinstance(_vc, list) and len(_vc) > 0
                     and isinstance(_sm, str) and len(_sm.strip()) >= 3
@@ -313,33 +306,33 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
                     if "summary" not in normalised:
                         normalised["summary"] = str(_sm)
                     return normalised
-                for key in ("result", "structured_output", "output", "response", "data"):
-                    if key in value:
-                        found = visit(value[key])
-                        if found is not None:
-                            return found
-                # Some versions put the model's final JSON in a text/content field.
-                for key in ("text", "content", "message"):
-                    candidate = value.get(key)
-                    if isinstance(candidate, str):
-                        try:
-                            found = visit(json.loads(candidate))
-                        except json.JSONDecodeError:
-                            found = None
-                        if found is not None:
-                            return found
+                for item in value.values():
+                    found = visit(item)
+                    if found is not None:
+                        return found
             elif isinstance(value, list):
                 for item in reversed(value):
                     found = visit(item)
                     if found is not None:
                         return found
+            elif isinstance(value, str):
+                val_str = value.strip()
+                if val_str.startswith("{") and val_str.endswith("}"):
+                    try:
+                        found = visit(json.loads(val_str))
+                        if found is not None:
+                            return found
+                    except json.JSONDecodeError:
+                        pass
             return None
 
         for payload in reversed(payloads):
             found = visit(payload)
             if found is not None:
                 return found
-        raise GovernanceError("Antigravity structured output did not contain the required Amaura result contract")
+        raise GovernanceError(
+            f"Antigravity structured output did not contain the required Amaura result contract. STDOUT TAIL: {stdout[-1500:]!r}"
+        )
 
     @staticmethod
     def settings_path() -> Path:
@@ -509,7 +502,7 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
                 if candidate.is_file():
                     relative = str(candidate)
                     lower = candidate.name.lower()
-                    if lower in {"hooks.json", "mcp_config.json", "plugin.json"} or candidate.suffix.lower() in {".py", ".sh", ".js"}:
+                    if lower in {"hooks.json", "mcp_config.json"} or "hooks" in candidate.parts:
                         executable.append(relative)
                     elif lower.endswith(".md"):
                         advisory.append(relative)
@@ -755,7 +748,11 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         actual = self._changed_files(repository, base_commit)
         if not actual:
             raise GovernanceError("Antigravity reported success but Amaura found no repository changes")
-        if set(actual) != set(contract.changed_files):
+        norm_declared = [
+            str(Path(p).relative_to(repository)) if Path(p).is_absolute() and Path(p).is_relative_to(repository) else str(p)
+            for p in contract.changed_files
+        ]
+        if set(actual) != set(norm_declared):
             raise GovernanceError(
                 f"Antigravity changed-file manifest does not match Git: declared={sorted(contract.changed_files)!r} actual={actual!r}"
             )

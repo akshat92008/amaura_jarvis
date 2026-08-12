@@ -136,6 +136,8 @@ class SecureVerifierRunner:
         read_roots = [
             workspace,
             temp_home,
+            Path(sys.prefix),
+            Path(sys.executable).parent,
             Path("/System"),
             Path("/usr"),
             Path("/bin"),

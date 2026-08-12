@@ -135,14 +135,14 @@ def test_desktop_package_uses_sidecar_dynamic_port_and_authentication():
     assert "AMAURA_DESKTOP_BOOTSTRAP_TOKEN" in main
     assert "timingSafeEqual" in main
     assert "amaura-backend" in main
-    assert "BACKEND_VERSION = '5.4.1'" in main
+    assert "BACKEND_VERSION = '5.4.2'" in main
     assert "tryAttachBackgroundService" in main
     assert "X-Amaura-Service-Challenge" in main
     assert "backendAttached" in main
     assert "app.requestSingleInstanceLock()" in main
     assert "child.exitCode === null" in main
     assert "AMAURA_RESOURCE_PROFILE" in main
-    assert package["version"] == "5.4.1"
+    assert package["version"] == "5.4.2"
     assert package["dependencies"] == {}
     assert package["devDependencies"] == {}
     desktop_builder = (root / "scripts" / "build_desktop_app.py").read_text(encoding="utf-8")
@@ -156,8 +156,8 @@ def test_server_and_desktop_versions_match_current_package():
     root = Path(__file__).parents[1]
     server = (root / "jarvis" / "server.py").read_text(encoding="utf-8")
     package = json.loads((root / "desktop-app" / "package.json").read_text(encoding="utf-8"))
-    assert 'version="5.4.1"' in server
-    assert package["version"] == "5.4.1"
+    assert 'version="5.4.2"' in server
+    assert package["version"] == "5.4.2"
 
 
 def test_secret_scan_detects_generic_and_url_credentials(tmp_path: Path):

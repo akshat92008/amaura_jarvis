@@ -222,7 +222,7 @@ class CognitiveModelGateway:
                     raise GovernanceError("httpx is required for pooled cognition requests") from exc
                 cls._pooled_client = httpx.Client(
                     limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
-                    headers={"User-Agent": "Amaura-JARVIS/5.4.1"},
+                    headers={"User-Agent": "Amaura-JARVIS/5.4.2"},
                 )
             return cls._pooled_client
 

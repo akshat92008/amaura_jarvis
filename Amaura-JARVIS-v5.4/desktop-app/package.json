@@ -1,6 +1,6 @@
 {
   "name": "amaura-jarvis-desktop",
-  "version": "5.4.1",
+  "version": "5.4.2",
   "description": "Amaura JARVIS Mission Control desktop application",
   "main": "main.js",
   "private": true,

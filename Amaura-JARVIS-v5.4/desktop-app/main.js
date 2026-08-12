@@ -26,7 +26,7 @@ const CONFIG = {
     summonShortcut: 'CommandOrControl+Shift+J',
     voiceShortcut: 'CommandOrControl+Shift+V',
 };
-const BACKEND_VERSION = '5.4.1';
+const BACKEND_VERSION = '5.4.2';
 
 let mainWindow = null;
 let tray = null;

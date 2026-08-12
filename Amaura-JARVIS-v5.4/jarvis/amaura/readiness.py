@@ -136,7 +136,7 @@ def _probe_omniroute() -> dict[str, Any]:
         headers={
             "Authorization": f"Bearer {key}",
             "Accept": "application/json",
-            "User-Agent": "Amaura-JARVIS/5.4.1-preflight",
+            "User-Agent": "Amaura-JARVIS/5.4.2-preflight",
         },
         method="GET",
     )
