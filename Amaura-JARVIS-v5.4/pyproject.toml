@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jarvis"
-version = "5.4.1"
+version = "5.4.2"
 description = "Amaura JARVIS — general executive assistant and governed autonomous Company OS."
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
