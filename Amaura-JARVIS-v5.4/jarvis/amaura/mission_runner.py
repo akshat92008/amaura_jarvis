@@ -89,7 +89,8 @@ class MissionRunner:
 
     def runnable_goals(self, *, limit: int = 100) -> list[dict[str, Any]]:
         goals = self.control.store.list_work_items(item_type="programme", limit=max(1, min(limit, 500)))
-        return [goal for goal in goals if self._is_runnable(goal)]
+        runnable = [goal for goal in goals if self._is_runnable(goal)]
+        return sorted(runnable, key=lambda g: g.get("created_at") or "", reverse=True)
 
     @staticmethod
     def _failure_class(exc: Exception) -> tuple[str, int]:

@@ -65,7 +65,7 @@ _RUNTIME_OBSERVABILITY: dict[str, str] = {
 async def _mission_runner_loop() -> None:
     """Advance durable JARVIS missions independently of originating requests."""
     interval = max(1, min(float(os.environ.get("AMAURA_JARVIS_MISSION_POLL_SECONDS", "5")), 60.0))
-    max_goals = max(1, min(int(os.environ.get("AMAURA_JARVIS_MISSION_MAX_GOALS", "3")), 20))
+    max_goals = max(1, min(int(os.environ.get("AMAURA_JARVIS_MISSION_MAX_GOALS", "10")), 20))
     while True:
         try:
             from jarvis.amaura.mission_runner import MissionRunner
