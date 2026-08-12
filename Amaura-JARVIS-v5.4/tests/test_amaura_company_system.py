@@ -153,3 +153,46 @@ def test_legacy_fable_dashboard_is_disabled_by_default(monkeypatch):
     monkeypatch.delenv("FABLE_SERVER_ENABLED", raising=False)
     with pytest.raises(RuntimeError, match="disabled"):
         run_fable_dashboard()
+
+
+def test_incident_response_workflow_policy_validation(tmp_path):
+    db_path = tmp_path / "test.db"
+    control = AmauraControlPlane(db_path=db_path)
+    try:
+        prog = control.create_program(
+            objective="Contain and recover from suspected credentials leak",
+            success_metric="Incident contained, patch applied, verified",
+            workflow_key="incident_response",
+            inputs={"incident_summary": "API key leak in dev logs", "repository_path": str(tmp_path)},
+        )
+        assert len(prog["tasks"]) == 4
+        assert prog["tasks"][0]["metadata"]["step_key"] == "triage"
+        assert prog["tasks"][1]["metadata"]["step_key"] == "contain"
+        assert prog["tasks"][1]["owner_id"] == "security_director"
+        assert prog["tasks"][1]["risk"] == "medium"
+        assert prog["tasks"][2]["metadata"]["step_key"] == "root_cause"
+        assert prog["tasks"][2]["owner_id"] == "patch_engineer"
+        assert prog["tasks"][2]["risk"] == "medium"
+    finally:
+        control.close()
+
+
+def test_policy_engine_rejects_unauthorized_risk_assignment():
+    from jarvis.amaura.policy import PolicyEngine
+    from jarvis.amaura.registry import get_agent
+    from jarvis.amaura.models import RiskLevel
+
+    qa_agent = get_agent("qa")
+    assert qa_agent.max_risk == RiskLevel.LOW
+
+    unauthorized_task = {
+        "id": "task_1",
+        "owner_id": "qa",
+        "risk": "medium",
+        "budget_cents": 100,
+        "reviewer_id": "jarvis",
+    }
+    decision = PolicyEngine.validate_assignment(unauthorized_task)
+    assert decision.allowed is False
+    assert any("may not own medium-risk work" in r for r in decision.reasons)
+

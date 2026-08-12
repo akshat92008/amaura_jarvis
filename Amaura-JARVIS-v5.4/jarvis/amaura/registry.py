@@ -725,7 +725,7 @@ COMPANY_OPERATIONS_AGENTS: tuple[CompanyAgent, ...] = (
         ("analyse_repo", "approve_or_reject", "run_safe_commands", "recommend"),
         ("repositories", "security_policy", "audit_log", "incident_evidence"),
         650,
-        RiskLevel.LOW,
+        RiskLevel.MEDIUM,
         "jarvis",
         ("policy escapes", "mean time to contain", "security regression coverage"),
         prompt_profile="security_director",

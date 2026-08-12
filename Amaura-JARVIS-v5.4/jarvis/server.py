@@ -210,7 +210,7 @@ async def app_lifespan(_app: FastAPI):
 app = FastAPI(
     title="J.A.R.V.I.S. Server",
     description="Just A Rather Very Intelligent System — Backend API",
-    version="5.4.2",
+    version="5.4.3",
     lifespan=app_lifespan,
 )
 
@@ -760,7 +760,7 @@ async def health(
         ).hexdigest()
     return {
         "status": "online",
-        "version": "5.4.2",
+        "version": "5.4.3",
         "build_id": BUILD_ID,
         "timestamp": datetime.now().isoformat(),
         "sessions": len(sessions),

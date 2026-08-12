@@ -239,7 +239,7 @@ WORKFLOWS.update(
                     "root_cause",
                     "Verify root cause and repair",
                     "Reproduce safely, identify root cause, create tests, implement bounded repair and report residual risk.",
-                    "qa",
+                    "patch_engineer",
                     "security_director",
                     ("Reproduction evidence attached", "Regression test added", "Residual risk reported"),
                     ("contain",),
