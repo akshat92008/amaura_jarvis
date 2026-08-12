@@ -41,7 +41,7 @@ GOVERNED_ONLY_TOOLS = frozenset(
         "create_presentation", "send_email", "send_message", "send_imessage",
         "add_reminder", "add_calendar_event", "schedule_post",
         "publish_content", "create_gmail_draft", "payment", "refund",
-        "delete_data", "production_deploy",
+        "delete_data", "production_deploy", "automate_macos_app",
     }
 )
 

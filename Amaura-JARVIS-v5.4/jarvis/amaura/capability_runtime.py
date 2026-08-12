@@ -1868,6 +1868,96 @@ class AntigravityAdapter(_BaseAdapter):
         output_path = _safe_local_output(str(params.get("output_path", ".amaura-antigravity-handoff.json")))
         output_path.write_text(json.dumps(packet, indent=2, sort_keys=True), encoding="utf-8")
         return self._result(operation, started=started, output={"packet": packet, "output_path": str(output_path)}, artifacts=[_artifact(output_path)])
+import re
+
+class MacOSAppAdapter(_BaseAdapter):
+    descriptor = CapabilityDescriptor(
+        key="macos_app",
+        name="macOS App Control",
+        category="desktop",
+        operations=("open", "close", "activate"),
+        ram_mb=50,
+        heavy=False,
+        networked=False,
+        side_effects=True,
+        install_hint="Native macOS capability",
+        licence="Proprietary",
+    )
+
+    ALLOWED_APPS = {
+        "safari", "finder", "spotify", "terminal", "iterm", "iterm2", 
+        "music", "calculator", "notes", "mail", "messages", "textedit",
+        "system settings", "calendar", "photos", "slack", "discord"
+    }
+
+    def available(self) -> tuple[bool, str]:
+        if sys.platform != "darwin":
+            return False, "This capability is only available on macOS"
+        return True, "macOS native control available"
+
+    def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
+        self._check_operation(operation)
+        available, reason = self.available()
+        if not available:
+            raise CapabilityUnavailable(reason)
+        
+        raw_app_name = str(params.get("name", "")).strip()
+        if not raw_app_name:
+            raise GovernanceError("Application name is required")
+            
+        app_name = raw_app_name.lower()
+        if app_name not in self.ALLOWED_APPS:
+            raise GovernanceError(f"Application '{raw_app_name}' is not in the strict allowlist.")
+            
+        if not re.match(r"^[A-Za-z0-9 -]{1,30}$", raw_app_name):
+            raise GovernanceError(f"Application name '{raw_app_name}' failed security validation.")
+            
+        started = time.monotonic()
+        
+        try:
+            if operation in ("open", "activate"):
+                result = subprocess.run(
+                    ["open", "-a", raw_app_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    shell=False
+                )
+                if result.returncode != 0:
+                    raise CapabilityExecutionError(f"Failed to open '{raw_app_name}': {result.stderr.strip()}")
+            elif operation == "close":
+                # osa script tell app to quit safely
+                script = f'tell application "{raw_app_name}" to quit'
+                result = subprocess.run(
+                    ["osascript", "-e", script],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    shell=False
+                )
+                if result.returncode != 0:
+                    raise CapabilityExecutionError(f"Failed to close '{raw_app_name}': {result.stderr.strip()}")
+                    
+            # Verify app status
+            check = subprocess.run(
+                ["pgrep", "-ix", raw_app_name],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                shell=False
+            )
+            is_running = check.returncode == 0
+            
+            return self._result(
+                operation, 
+                started=started, 
+                output={"app": raw_app_name, "is_running": is_running, "returncode": result.returncode}
+            )
+        except subprocess.TimeoutExpired:
+            raise CapabilityExecutionError(f"Command timed out for application '{raw_app_name}'.")
+        except Exception as e:
+            raise CapabilityExecutionError(f"Execution error for application '{raw_app_name}': {e}")
+
 
 
 ADAPTER_TYPES: tuple[type[_BaseAdapter], ...] = (
@@ -1890,10 +1980,16 @@ ADAPTER_TYPES: tuple[type[_BaseAdapter], ...] = (
     MCPAdapter,
     LangfuseAdapter,
     AntigravityAdapter,
+    MacOSAppAdapter,
 )
 
 
 CAPABILITY_OPERATION_CONTRACTS: dict[str, dict[str, dict[str, tuple[str, ...]]]] = {
+    "macos_app": {
+        "open": {"required": ("name",), "optional": ()},
+        "close": {"required": ("name",), "optional": ()},
+        "activate": {"required": ("name",), "optional": ()},
+    },
     "playwright": {
         "extract": {"required": ("url",), "optional": ("selector", "timeout_ms")},
         "screenshot": {"required": ("url", "output_path"), "optional": ("full_page", "timeout_ms")},
@@ -2046,6 +2142,7 @@ def _cross_process_heavy_lock(timeout: float):
             with contextlib.suppress(OSError):
                 fcntl.flock(fd, fcntl.LOCK_UN)
         os.close(fd)
+
 
 
 

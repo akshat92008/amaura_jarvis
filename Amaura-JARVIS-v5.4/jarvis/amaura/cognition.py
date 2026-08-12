@@ -969,7 +969,7 @@ class IntentEngine:
         "run", "execute", "research", "investigate", "analyze", "analyse", "prepare", "handle",
         "manage", "deploy", "test", "audit", "review", "generate", "update", "repair", "launch",
         "find", "draft", "organize", "organise", "continue", "finish", "complete", "set up", "setup",
-        "make", "monetize", "monetise", "grow", "sell", "validate",
+        "make", "monetize", "monetise", "grow", "sell", "validate", "open", "activate", "quit", "close", "show", "focus",
     }
     MISSION_NOUNS = {
         "repo", "repository", "code", "app", "website", "feature", "bug", "company", "client",
@@ -1042,6 +1042,13 @@ class IntentEngine:
         if clean in {"hi", "hello", "hey", "hello there", "good morning", "good evening", "thanks", "thank you"}:
             return "conversation"
         words = _tokens(clean)
+        
+        # Fast path for explicit desktop app control (e.g. "open Safari", "quit Finder")
+        desktop_verbs = {"open", "launch", "activate", "quit", "close", "show", "focus"}
+        if len(words) >= 2 and any(clean.startswith(v + " ") for v in desktop_verbs) or any(clean.startswith(f"please {v} ") for v in desktop_verbs):
+            if not clean.startswith(("open source", "open a ", "close the ", "close a ")):
+                return "mission"
+
         has_action = any(verb in clean.split()[:4] for verb in self.ACTION_VERBS) or any(
             clean.startswith(prefix) for prefix in ("please build", "please fix", "please run", "please research", "please handle")
         )

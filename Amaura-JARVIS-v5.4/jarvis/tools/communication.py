@@ -65,6 +65,20 @@ COMMUNICATION_TOOL_DEFINITIONS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "automate_macos_app",
+            "description": "Automate any macOS application by running dynamically generated AppleScript (e.g. Mail, Spotify, Music, System Settings). Use carefully.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "script": {"type": "string", "description": "The raw AppleScript string to execute."},
+                },
+                "required": ["script"],
+            },
+        },
+    },
 ]
 
 
@@ -282,6 +296,13 @@ def tool_add_calendar_event(title: str, date: str, duration_hours: float = 1, no
     return result if result.startswith("❌") else f"✅ Calendar event added: {event_title} on {start.isoformat(timespec='minutes')}"
 
 
+def tool_automate_macos_app(script: str) -> str:
+    """Run an arbitrary AppleScript string to control macOS apps."""
+    if not script or not script.strip():
+        return "❌ Empty AppleScript provided"
+    return _run_applescript(script)
+
+
 COMMUNICATION_DISPATCH = {
     "send_imessage": lambda **kw: tool_send_imessage(kw.get("to", ""), kw.get("message", "")),
     "add_reminder": lambda **kw: tool_add_reminder(kw.get("title", ""), kw.get("notes", "")),
@@ -289,4 +310,5 @@ COMMUNICATION_DISPATCH = {
     "add_calendar_event": lambda **kw: tool_add_calendar_event(
         kw.get("title", ""), kw.get("date", ""), kw.get("duration_hours", 1), kw.get("notes", "")
     ),
+    "automate_macos_app": lambda **kw: tool_automate_macos_app(kw.get("script", "")),
 }

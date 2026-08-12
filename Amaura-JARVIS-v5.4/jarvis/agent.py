@@ -7,6 +7,7 @@ safety layer, and the Jarvis system prompt.
 
 import json
 import os
+import re
 import sys
 import threading
 from datetime import datetime
