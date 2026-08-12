@@ -41,6 +41,7 @@ ExecutiveIntent = Literal[
     "memory_write",
     "memory_forget",
     "mission_control",
+    "macos_app",
 ]
 
 
@@ -1047,7 +1048,7 @@ class IntentEngine:
         desktop_verbs = {"open", "launch", "activate", "quit", "close", "show", "focus"}
         if len(words) >= 2 and any(clean.startswith(v + " ") for v in desktop_verbs) or any(clean.startswith(f"please {v} ") for v in desktop_verbs):
             if not clean.startswith(("open source", "open a ", "close the ", "close a ")):
-                return "mission"
+                return "macos_app"
 
         has_action = any(verb in clean.split()[:4] for verb in self.ACTION_VERBS) or any(
             clean.startswith(prefix) for prefix in ("please build", "please fix", "please run", "please research", "please handle")
@@ -1705,6 +1706,38 @@ class ExecutiveKernel:
                 context_sources=memory_sources,
             )
             return response
+
+
+        if intent == "macos_app":
+            from jarvis.amaura.capability_runtime import CapabilityRuntime
+            clean = " ".join(str(request.text).strip().lower().split())
+            op = "close" if "quit" in clean or "close" in clean else "open"
+            
+            app_name = str(request.text)
+            for v in {"open", "launch", "activate", "quit", "close", "show", "focus", "please"}:
+                app_name = re.sub(rf"\b{v}\b", "", app_name, flags=re.IGNORECASE)
+            app_name = app_name.strip()
+            
+            try:
+                res = CapabilityRuntime().execute("macos_app", op, {"name": app_name})
+                message = f"✅ Successfully {'closed' if op == 'close' else 'opened'} {app_name}." if res.ok else f"❌ Failed: {res.output}"
+            except Exception as exc:
+                message = f"❌ Error: {exc}"
+                
+            self.memory.record_episode(
+                summary=f"App control: {request.text}\nOutcome: {message}",
+                session_id=request.session_id,
+                outcome="macos_app",
+            )
+            self._consolidate_async(user_text=request.text, assistant_text=message, session_id=request.session_id)
+            return ExecutiveResponse(
+                intent=intent,
+                message=message,
+                session_id=request.session_id,
+                state="completed" if "✅" in message else "failed",
+                result={"app_control": message},
+                context_sources=memory_sources,
+            )
 
         if intent == "mission":
             if not allow_missions:

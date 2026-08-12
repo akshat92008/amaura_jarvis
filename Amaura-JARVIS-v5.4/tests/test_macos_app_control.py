@@ -7,15 +7,15 @@ def test_intent_engine_boundary():
     engine = IntentEngine()
     
     # Governed missions (desktop actions)
-    assert engine.classify("open Safari") == "mission"
-    assert engine.classify("launch Finder") == "mission"
-    assert engine.classify("activate Safari") == "mission"
-    assert engine.classify("quit Spotify") == "mission"
-    assert engine.classify("close Terminal") == "mission"
+    assert engine.classify("open Safari") == "macos_app"
+    assert engine.classify("please launch Terminal") == "macos_app"
+    assert engine.classify("quit Finder") == "macos_app"
+    assert engine.classify("close Chrome") == "macos_app"
+    assert engine.classify("focus Xcode") == "macos_app"
     
     # Action verbs with PLEASE
-    assert engine.classify("please open Safari") == "mission"
-    assert engine.classify("please quit Notes") == "mission"
+    assert engine.classify("please open Safari") == "macos_app"
+    assert engine.classify("please quit Notes") == "macos_app"
     
     # Safe conversational bounds
     assert engine.classify("tell me about Safari") == "conversation"
