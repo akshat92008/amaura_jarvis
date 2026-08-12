@@ -22,9 +22,12 @@ from jarvis.amaura.models import GovernanceError
 
 @pytest.fixture()
 def omniroute_env(monkeypatch: pytest.MonkeyPatch):
+    CognitiveModelGateway._circuit_failures.clear()
+    CognitiveModelGateway._circuit_open_until.clear()
     monkeypatch.setenv("AMAURA_OMNIROUTE_BASE_URL", "http://127.0.0.1:19999")
     monkeypatch.setenv("AMAURA_OMNIROUTE_API_KEY", "sk-test-" + "x" * 32)
     monkeypatch.setenv("AMAURA_OMNIROUTE_MODEL", "gpt-4o-mini")
+    monkeypatch.setenv("AMAURA_OMNIROUTE_MAX_RETRIES", "1")
     monkeypatch.setenv("AMAURA_MODEL_PROVIDER", "omniroute")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
@@ -32,6 +35,8 @@ def omniroute_env(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     yield
+    CognitiveModelGateway._circuit_failures.clear()
+    CognitiveModelGateway._circuit_open_until.clear()
 
 
 class _MockHTTPHandler(http.server.BaseHTTPRequestHandler):
@@ -40,6 +45,9 @@ class _MockHTTPHandler(http.server.BaseHTTPRequestHandler):
     _extra_headers: dict[str, str] = {}
 
     def do_POST(self):
+        length = int(self.headers.get("Content-Length", "0"))
+        if length:
+            self.rfile.read(length)
         self.send_response(self._status)
         self.send_header("Content-Type", "application/json")
         for k, v in self._extra_headers.items():
@@ -103,6 +111,68 @@ def test_general_chat_uses_fast_model_override(omniroute_env, monkeypatch: pytes
 
 def test_omniroute_available_when_configured(omniroute_env):
     assert CognitiveModelGateway.available(purpose="general") is True
+
+
+def test_interactive_budget_is_bounded(omniroute_env, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AMAURA_JARVIS_INTERACTIVE_DEADLINE_SECONDS", "7")
+    monkeypatch.setenv("AMAURA_JARVIS_INTERACTIVE_MAX_RETRIES", "0")
+    before = __import__("time").monotonic()
+    deadline, retries = CognitiveModelGateway._interactive_budget("general")
+    assert deadline is not None and 6.5 <= deadline - before <= 7.5
+    assert retries == 0
+
+
+def test_empty_completion_uses_configured_fallback(omniroute_env, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AMAURA_OMNIROUTE_FALLBACK_MODEL", "fallback-model")
+    monkeypatch.setenv("AMAURA_OMNIROUTE_MAX_RETRIES", "0")
+
+    class EmptyThenHealthyHandler(_MockHTTPHandler):
+        _body = {"choices": [{"message": {"content": ""}}]}
+
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length", "0"))
+            request = json.loads(self.rfile.read(length) or b"{}")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            body = {"choices": [{"message": {"content": "fallback answer" if request.get("model") == "fallback-model" else ""}}]}
+            self.wfile.write(json.dumps(body).encode())
+
+    # Keep the fixture concise by simulating the two provider results instead
+    # of depending on a particular wire format for empty SSE responses.
+    server, thread = _run_server(EmptyThenHealthyHandler, 19999)
+    try:
+        result = CognitiveModelGateway._omniroute(
+            model="primary-model", messages=[{"role": "user", "content": "hello"}],
+            temperature=0.1, max_tokens=20,
+        )
+        assert result.text == "fallback answer"
+        assert result.fallback_used is True
+        assert result.fallback_reason == "empty_response"
+    finally:
+        server.shutdown(); server.server_close(); thread.join(timeout=2)
+
+
+def test_circuit_opens_and_skips_unhealthy_gateway(omniroute_env, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AMAURA_PROVIDER_CIRCUIT_FAILURES", "1")
+    monkeypatch.setenv("AMAURA_OMNIROUTE_MAX_RETRIES", "0")
+    monkeypatch.delenv("AMAURA_OMNIROUTE_FALLBACK_MODEL", raising=False)
+
+    class UnavailableHandler(_MockHTTPHandler):
+        _status = 503
+
+    server, thread = _run_server(UnavailableHandler, 19999)
+    try:
+        with pytest.raises(GovernanceError):
+            CognitiveModelGateway._omniroute(
+                model="gpt-4o-mini", messages=[{"role": "user", "content": "hello"}],
+                temperature=0.1, max_tokens=20,
+            )
+        assert CognitiveModelGateway.select(purpose="general") is None
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2.0)
 
 def test_omniroute_not_available_without_key(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AMAURA_MODEL_PROVIDER", "omniroute")

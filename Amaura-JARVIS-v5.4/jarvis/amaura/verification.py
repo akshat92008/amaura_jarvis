@@ -13,6 +13,7 @@ import platform
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -97,6 +98,15 @@ class SecureVerifierRunner:
             "PYTHONDONTWRITEBYTECODE": "1",
             "PYTHONPYCACHEPREFIX": str(Path(temp_home) / "pycache"),
             "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+            # GUI/game test suites must remain headless inside the verifier.
+            # On macOS SDL can abort the process (SIGABRT/-6) while probing
+            # CoreAudio or Cocoa even when individual tests set only the video
+            # driver. These deterministic dummy backends prevent that without
+            # weakening process, filesystem, or network isolation.
+            "SDL_VIDEODRIVER": "dummy",
+            "SDL_AUDIODRIVER": "dummy",
+            "SDL_RENDER_DRIVER": "software",
+            "PYGAME_HIDE_SUPPORT_PROMPT": "1",
             "npm_config_update_notifier": "false",
             "GIT_CONFIG_NOSYSTEM": "1",
         })
@@ -154,6 +164,17 @@ class SecureVerifierRunner:
         ]
         lines.extend(f'(allow file-read* (subpath "{q(path)}"))' for path in read_roots)
         return "\n".join(lines)
+
+    @staticmethod
+    def _host_fallback_after_sandbox_abort_enabled() -> bool:
+        return (
+            os.environ.get("AMAURA_VERIFIER_HOST_FALLBACK_ON_SANDBOX_ABORT", "0") == "1"
+            and os.environ.get("AMAURA_ALLOW_HOST_VERIFICATION", "0") == "1"
+        )
+
+    @staticmethod
+    def _looks_like_macos_sandbox_abort(completed: subprocess.CompletedProcess[str]) -> bool:
+        return completed.returncode in {-6, 134}
 
     def run(self, repository: str | Path, command: str, *, timeout_seconds: int = 300) -> VerificationResult:
         repo = Path(repository).expanduser().resolve()
@@ -214,6 +235,34 @@ class SecureVerifierRunner:
                 )
             except subprocess.TimeoutExpired as exc:
                 raise GovernanceError(f"Independent verifier timed out: {command}") from exc
+            if (
+                mode == "native"
+                and self._looks_like_macos_sandbox_abort(completed)
+                and self._host_fallback_after_sandbox_abort_enabled()
+            ):
+                try:
+                    host_completed = subprocess.run(
+                        resolved_argv,
+                        cwd=repo,
+                        env=env,
+                        stdin=subprocess.DEVNULL,
+                        capture_output=True,
+                        text=True,
+                        timeout=timeout,
+                        check=False,
+                    )
+                except subprocess.TimeoutExpired as exc:
+                    raise GovernanceError(f"Independent verifier timed out after sandbox abort: {command}") from exc
+                return VerificationResult(
+                    command=command,
+                    argv=argv,
+                    exit_code=host_completed.returncode,
+                    passed=host_completed.returncode == 0,
+                    stdout_tail=redact_sensitive_text((host_completed.stdout or "")[-6000:]),
+                    stderr_tail=redact_sensitive_text((host_completed.stderr or "")[-6000:]),
+                    isolation="host-breakglass-after-macos-sandbox-abort",
+                    network_disabled=False,
+                )
             return VerificationResult(
                 command=command,
                 argv=argv,

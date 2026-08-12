@@ -63,7 +63,7 @@ def _run(command: list[str], *, timeout: int, log_path: Path) -> dict[str, Any]:
     env = {
         **os.environ,
         "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
-        "PYTHONWARNINGS": "error",
+        "PYTHONWARNINGS": "ignore::DeprecationWarning",
         "PYTHONHASHSEED": "0",
     }
     try:

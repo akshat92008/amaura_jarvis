@@ -52,6 +52,11 @@ class TestFableEngineIntegration(unittest.TestCase):
         self.assertIn("max_heal_attempts", conf)
         self.assertIn("ollama_url", conf)
 
+    def test_agent_does_not_mutate_process_working_directory(self):
+        before = os.getcwd()
+        JarvisAgent(working_dir=self.test_dir)
+        self.assertEqual(os.getcwd(), before)
+
     def test_router_providers(self):
         router = MultiProviderRouter()
         providers = router.get_available_providers()

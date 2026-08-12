@@ -47,10 +47,21 @@ import json, pathlib, sys
 if "--version" in sys.argv or (len(sys.argv) > 1 and sys.argv[1] == "version"):
     print("Antigravity CLI v1.1.11"); raise SystemExit(0)
 assert "--sandbox" in sys.argv
+assert "--new-project" in sys.argv
+assert "--project=default-cli-project" not in sys.argv
+assert "--add-dir" in sys.argv and pathlib.Path(sys.argv[sys.argv.index("--add-dir")+1]).resolve() == pathlib.Path.cwd().resolve()
+assert "--mode" in sys.argv and sys.argv[sys.argv.index("--mode")+1] == "accept-edits"
 assert "--output-format" in sys.argv and sys.argv[sys.argv.index("--output-format")+1] == "stream-json"
 assert "--json-schema" in sys.argv
+assert "--print-timeout" in sys.argv
 assert "--dangerously-skip-permissions" not in sys.argv
 assert "-p" in sys.argv
+prompt=sys.argv[sys.argv.index("-p")+1]
+assert str(pathlib.Path.cwd().resolve()) in prompt
+# Removed from prompt: sandbox instruction now tells the model to avoid git
+# commands that fail under macOS sandbox (git status, git diff, pwd).
+# Assert the replacement constraint is present instead.
+assert "Strict Sandbox Constraints" in prompt
 repo=pathlib.Path.cwd(); (repo/"agy_fix.py").write_text("VALUE = 51\\n")
 result={{"schema":"amaura.antigravity-result.v1","success":True,"summary":"Implemented the requested change","changed_files":["agy_fix.py"],"verification_commands":[{test_command!r}],"remaining_failures":[],"models_used":["gemini-fixture"],"conversation_id":"agy-fixture-1"}}
 print(json.dumps({{"result": result, "usage": {{"total_tokens": 42}}}}))

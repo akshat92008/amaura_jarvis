@@ -62,6 +62,70 @@ class _LocalOllamaClient:
             raise GovernanceError("Device-only inference failed; no cloud fallback was attempted. Start Ollama and configure AMAURA_LOCAL_MODEL.") from exc
 
 
+class _OmniRouteClient:
+    """OpenAI-compatible governed worker client routed through local OmniRoute."""
+
+    def __init__(self):
+        from openai import OpenAI
+
+        raw_base = (
+            os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
+            or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+        ).rstrip("/")
+        api_key = (
+            os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip()
+            or os.environ.get("OMNIROUTE_API_KEY", "").strip()
+        )
+        if not raw_base or not api_key:
+            raise GovernanceError("OmniRoute worker execution requires its base URL and API key")
+        if not raw_base.startswith(("http://", "https://")):
+            raise GovernanceError("OmniRoute base URL must start with http:// or https://")
+        if raw_base.endswith("/chat/completions"):
+            raw_base = raw_base[: -len("/chat/completions")]
+        if not raw_base.endswith("/v1"):
+            raw_base += "/v1"
+        timeout = max(5.0, min(float(os.environ.get("AMAURA_OMNIROUTE_WORKER_TIMEOUT_SECONDS", "180")), 600.0))
+        self._client = OpenAI(base_url=raw_base, api_key=api_key, timeout=timeout)
+        self.last_execution_metadata: dict[str, Any] = {}
+
+    def chat_sync(self, *, model_id: str, messages: list[dict], tools: list[dict] | None = None):
+        fallback_model = os.environ.get("AMAURA_OMNIROUTE_FALLBACK_MODEL", "").strip()
+        models = [model_id]
+        if fallback_model and fallback_model != model_id:
+            models.append(fallback_model)
+        last_error: Exception | None = None
+        for index, model in enumerate(models):
+            kwargs: dict[str, Any] = {
+                "model": model,
+                "messages": messages,
+                "temperature": 0.2,
+            }
+            if tools:
+                kwargs["tools"] = tools
+            try:
+                response = self._client.chat.completions.create(**kwargs)
+                if not getattr(response, "choices", None):
+                    raise GovernanceError("OmniRoute returned no completion choices")
+                message = response.choices[0].message
+                if not str(getattr(message, "content", "") or "").strip() and not (getattr(message, "tool_calls", None) or []):
+                    raise GovernanceError("OmniRoute returned an empty worker completion")
+                actual_model = str(getattr(response, "model", "") or model)
+                self.last_execution_metadata = {
+                    "requested_provider": "omniroute",
+                    "actual_provider": "omniroute",
+                    "requested_model": model_id,
+                    "actual_model": actual_model,
+                    "fallback_reason": "primary_failed" if index else "",
+                    "gateway": "omniroute",
+                    "credential_id": "omniroute-local-gateway",
+                }
+                return response
+            except Exception as exc:  # the configured fallback receives one bounded attempt
+                last_error = exc
+        detail = redact_sensitive_text(str(last_error or "unknown error"))[:1000]
+        raise GovernanceError(f"OmniRoute worker execution failed: {detail}") from last_error
+
+
 class GovernedTaskRunner:
     """Runs one company employee strictly inside a JARVIS-issued task packet."""
 
@@ -72,7 +136,7 @@ class GovernedTaskRunner:
         "run_command": "cwd",
         "run_tests": "cwd",
         "lint_code": "cwd",
-        "analyze_code": "cwd",
+        "analyze_code": "path",
         "git_status": "cwd",
         "git_diff": "cwd",
         "git_log": "cwd",
@@ -89,6 +153,8 @@ class GovernedTaskRunner:
             return self.client_factory(route, employee)
         if route["provider"] == "local":
             return _LocalOllamaClient()
+        if route["provider"] == "omniroute":
+            return _OmniRouteClient()
         if os.environ.get("AMAURA_DISABLE_CLOUD") == "1":
             raise GovernanceError(
                 "Cloud model access is disabled for this execution"
@@ -351,12 +417,20 @@ class GovernedTaskRunner:
                 repository_root=str(metadata.get("git_repository_root", "")), worktree_path=str(metadata.get("git_worktree_path", "")),
                 branch=str(metadata.get("git_branch", "")), base_branch=str(metadata.get("git_base_branch", "")),
                 base_commit=str(metadata.get("git_base_commit", "")),
+                isolation_mode=str(metadata.get("git_isolation_mode", "linked_worktree")),
             )
             commit = finalize_task_commit(worktree, task_id=task_id, title=str(task.get("title", "Antigravity engineering update")))
             observed, committed = set(result.verification.get("changed_files") or []), set(commit.changed_files)
             if observed != committed:
                 raise GovernanceError(f"Antigravity verification delta does not match finalized commit: verified={sorted(observed)!r} committed={sorted(committed)!r}")
-            metadata.update({"git_commit": commit.commit, "git_changed_files": list(commit.changed_files)})
+            verification_commands = list(result.verification.get("verification_commands") or [])
+            metadata.update({
+                "git_commit": commit.commit,
+                "git_changed_files": list(commit.changed_files),
+                "verification_commands": verification_commands,
+            })
+            if verification_commands and not metadata.get("post_merge_validation"):
+                metadata["post_merge_validation"] = str(verification_commands[0])
             metadata.update({"engineering_phase": "commit_created", "engineering_phase_at": time.time()})
             self.control.store.update_work_item(task_id, metadata=metadata)
             commit_record = self.control.evidence.put_json(commit.to_dict(), source=f"task:{task_id}:git_commit")
@@ -497,6 +571,7 @@ class GovernedTaskRunner:
                 branch=str(metadata.get("git_branch", "")),
                 base_branch=str(metadata.get("git_base_branch", "")),
                 base_commit=str(metadata.get("git_base_commit", "")),
+                isolation_mode=str(metadata.get("git_isolation_mode", "linked_worktree")),
             )
             commit = finalize_task_commit(
                 worktree,
@@ -567,6 +642,7 @@ class GovernedTaskRunner:
                 "git_branch": worktree.branch,
                 "git_base_branch": worktree.base_branch,
                 "git_base_commit": worktree.base_commit,
+                "git_isolation_mode": worktree.isolation_mode,
             }
             task = self.control.store.update_work_item(task_id, metadata=metadata)
             packet_dict["_workspace"] = worktree.worktree_path
@@ -751,6 +827,7 @@ class GovernedTaskRunner:
                 branch=str(metadata.get("git_branch", "")),
                 base_branch=str(metadata.get("git_base_branch", "")),
                 base_commit=str(metadata.get("git_base_commit", "")),
+                isolation_mode=str(metadata.get("git_isolation_mode", "linked_worktree")),
             )
             commit = finalize_task_commit(
                 worktree,
@@ -884,6 +961,8 @@ class GovernedReviewRunner:
         route = {"provider": provider, "model_key": model_key}
         if self.client_factory is not None:
             return self.client_factory(route, reviewer)
+        if provider == "omniroute":
+            return _OmniRouteClient()
         if provider == "nvidia":
             if os.environ.get("AMAURA_DISABLE_CLOUD") == "1":
                 raise GovernanceError("Cloud review is disabled for this execution")
@@ -926,11 +1005,36 @@ class GovernedReviewRunner:
         self.control._ensure_agent_enabled(reviewer_id)
         reviewer = get_agent(reviewer_id)
 
-        review_mode = os.environ.get("AMAURA_REVIEW_MODE", "local").strip().lower()
-        if review_mode not in {"local", "cloud"}:
-            raise GovernanceError("AMAURA_REVIEW_MODE must be local or cloud")
+        review_mode = os.environ.get("AMAURA_REVIEW_MODE", "auto").strip().lower()
+        if review_mode == "auto":
+            review_mode = (
+                "omniroute"
+                if os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower() == "omniroute"
+                else "local"
+            )
+        if review_mode not in {"local", "cloud", "omniroute"}:
+            raise GovernanceError("AMAURA_REVIEW_MODE must be auto, local, cloud, or omniroute")
         worker_model = os.environ.get("AMAURA_LOCAL_MODEL", "nova:3b").strip()
-        if review_mode == "cloud":
+        if review_mode == "omniroute":
+            model_id = (
+                os.environ.get("AMAURA_OMNIROUTE_REVIEW_MODEL", "").strip()
+                or "auto/best-reasoning"
+            )
+            if not (
+                os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
+                or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+            ) or not (
+                os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip()
+                or os.environ.get("OMNIROUTE_API_KEY", "").strip()
+            ):
+                raise GovernanceError("OmniRoute review requires its base URL and API key")
+            worker_models = self._worker_models_from_evidence(task)
+            if model_id in worker_models:
+                raise GovernanceError(
+                    "Independent reviewer model must differ from every worker model used for the task"
+                )
+            review_provider = "omniroute"
+        elif review_mode == "cloud":
             model_id = os.environ.get("AMAURA_CLOUD_REVIEW_MODEL", "").strip()
             if not model_id:
                 raise GovernanceError(
@@ -999,10 +1103,11 @@ class GovernedReviewRunner:
         route_metadata = dict(getattr(review_client, "last_execution_metadata", {}) or {})
         actual_provider = str(route_metadata.get("actual_provider") or review_provider).strip()
         actual_model = str(route_metadata.get("actual_model") or model_id).strip()
-        if review_mode == "cloud":
-            if actual_provider != "nvidia":
+        if review_mode in {"cloud", "omniroute"}:
+            expected_provider = "nvidia" if review_mode == "cloud" else "omniroute"
+            if actual_provider != expected_provider:
                 raise GovernanceError(
-                    "Cloud independent review may not fall back to another provider"
+                    f"{expected_provider} independent review may not fall back to another provider"
                 )
             worker_models = self._worker_models_from_evidence(task)
             if actual_model in worker_models:
@@ -1045,8 +1150,8 @@ class GovernedReviewRunner:
             decision=decision,
             deterministic_review=deterministic,
         )
-        self.control.store.record_review_attestation(attestation)
         updated = self.control.review_task(task_id, actor=reviewer_id, approve=approve, findings=findings.strip(), attestation=attestation)
+        self.control.store.record_review_attestation(attestation)
         self.control.store.audit(
             reviewer_id,
             "automated_independent_review",

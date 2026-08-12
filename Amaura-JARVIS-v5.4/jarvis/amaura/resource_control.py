@@ -235,16 +235,27 @@ def sample_host_memory(policy: MemoryPolicy | None = None) -> HostMemorySnapshot
         total_mb, available_mb, used_percent, swap_used_mb, swap_total_mb, swap_percent = _native_memory_values(policy)
 
     mac_free = _mac_free_percent()
+    # On macOS, swap is intentionally sticky: pages can remain swapped out
+    # long after native memory pressure has recovered. Treating swap percentage
+    # alone as an emergency signal permanently blocks lightweight remote CLIs
+    # on an 8 GB machine. When `memory_pressure` is available, combine swap
+    # with that current native signal instead.
+    swap_red = swap_percent >= policy.red_swap_percent and (
+        mac_free is None or sys.platform != "darwin" or mac_free <= 15.0
+    )
+    swap_yellow = swap_percent >= policy.yellow_swap_percent and (
+        mac_free is None or sys.platform != "darwin" or mac_free <= 25.0
+    )
     red = (
         available_mb <= policy.red_available_mb
         or used_percent >= policy.red_used_percent
-        or swap_percent >= policy.red_swap_percent
+        or swap_red
         or (mac_free is not None and mac_free <= 8.0)
     )
     yellow = (
         available_mb <= policy.yellow_available_mb
         or used_percent >= policy.yellow_used_percent
-        or swap_percent >= policy.yellow_swap_percent
+        or swap_yellow
         or (mac_free is not None and mac_free <= 15.0)
     )
     if os.environ.get("AMAURA_IGNORE_RAM_PRESSURE") == "1":
@@ -515,13 +526,14 @@ class CrossProcessResourceLedger:
                 return None, "system memory pressure is red; heavy workers are blocked", {
                     "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
                 }
-            if host.pressure == "yellow" and heavy:
-                return None, "system memory pressure is yellow; no new heavy worker is admitted", {
+            if host.pressure == "yellow" and heavy and int(ram_mb) > policy.pressure_limit_mb:
+                return None, "system memory pressure is yellow; requested heavy worker exceeds the pressure-safe allowance", {
                     "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
+                    "pressure_safe_allowance_mb": policy.pressure_limit_mb,
                 }
 
             effective_limit = (
-                policy.pressure_limit_mb if host.pressure == "red"
+                policy.pressure_limit_mb if host.pressure in {"red", "yellow"}
                 else policy.burst_limit_mb if heavy
                 else policy.normal_target_mb
             )

@@ -99,12 +99,17 @@ def test_stripped_audit_integrity_is_not_resigned_on_restart(tmp_path: Path, mon
 
 def test_desktop_health_challenge_requires_child_secret(monkeypatch: pytest.MonkeyPatch):
     secret = "desktop-" + "b" * 64
+    api_key = "api-" + "a" * 64
     challenge = "challenge-" + "c" * 64
     monkeypatch.setenv("AMAURA_DESKTOP_BOOTSTRAP_TOKEN", secret)
+    monkeypatch.setenv("JARVIS_API_KEY", api_key)
     with TestClient(app) as client:
         assert client.get("/api/health").status_code == 403
         response = client.get("/api/health", headers={"X-Amaura-Bootstrap-Challenge": challenge})
+        authenticated_response = client.get("/api/health", headers={"X-Jarvis-Key": api_key})
     assert response.status_code == 200
+    assert authenticated_response.status_code == 200
+    assert authenticated_response.json()["bootstrap_proof"] == ""
     expected = hmac.new(secret.encode(), challenge.encode(), hashlib.sha256).hexdigest()
     assert response.json()["bootstrap_proof"] == expected
 
@@ -134,6 +139,9 @@ def test_desktop_package_uses_sidecar_dynamic_port_and_authentication():
     assert "tryAttachBackgroundService" in main
     assert "X-Amaura-Service-Challenge" in main
     assert "backendAttached" in main
+    assert "app.requestSingleInstanceLock()" in main
+    assert "child.exitCode === null" in main
+    assert "AMAURA_RESOURCE_PROFILE" in main
     assert package["version"] == "5.4.1"
     assert package["dependencies"] == {}
     assert package["devDependencies"] == {}

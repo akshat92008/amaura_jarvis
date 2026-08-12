@@ -146,6 +146,7 @@ class CognitiveModelResult:
     fallback_reason: str = ""
     request_id: str = ""
     latency_ms: int = 0
+    ttft_ms: int = 0
     gateway: str = ""
 
 
@@ -160,6 +161,55 @@ class CognitiveModelGateway:
     PROVIDERS = ("omniroute", "openrouter", "openai", "anthropic", "nvidia", "groq", "ollama")
     _pooled_client: _Any = None
     _pooled_client_lock = _threading.Lock()
+    _circuit_lock = _threading.Lock()
+    _circuit_failures: dict[str, int] = {}
+    _circuit_open_until: dict[str, float] = {}
+
+    @classmethod
+    def _circuit_key(cls, provider: str) -> str:
+        if provider == "omniroute":
+            return "omniroute:" + (
+                os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
+                or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+            )
+        return provider
+
+    @classmethod
+    def _circuit_is_open(cls, provider: str) -> bool:
+        key = cls._circuit_key(provider)
+        now = _time.monotonic()
+        with cls._circuit_lock:
+            until = cls._circuit_open_until.get(key, 0.0)
+            if until and until <= now:
+                cls._circuit_open_until.pop(key, None)
+                return False
+            return until > now
+
+    @classmethod
+    def _record_provider_success(cls, provider: str) -> None:
+        key = cls._circuit_key(provider)
+        with cls._circuit_lock:
+            cls._circuit_failures.pop(key, None)
+            cls._circuit_open_until.pop(key, None)
+
+    @classmethod
+    def _record_provider_failure(cls, provider: str) -> None:
+        key = cls._circuit_key(provider)
+        threshold = max(1, min(int(os.environ.get("AMAURA_PROVIDER_CIRCUIT_FAILURES", "2")), 10))
+        cooldown = max(5.0, min(float(os.environ.get("AMAURA_PROVIDER_CIRCUIT_COOLDOWN_SECONDS", "30")), 300.0))
+        with cls._circuit_lock:
+            failures = cls._circuit_failures.get(key, 0) + 1
+            cls._circuit_failures[key] = failures
+            if failures >= threshold:
+                cls._circuit_open_until[key] = _time.monotonic() + cooldown
+
+    @staticmethod
+    def _interactive_budget(purpose: str) -> tuple[float | None, int | None]:
+        if purpose not in {"general", "intent", "reference", "memory"}:
+            return None, None
+        seconds = max(3.0, min(float(os.environ.get("AMAURA_JARVIS_INTERACTIVE_DEADLINE_SECONDS", "12")), 30.0))
+        retries = max(0, min(int(os.environ.get("AMAURA_JARVIS_INTERACTIVE_MAX_RETRIES", "0")), 1))
+        return _time.monotonic() + seconds, retries
 
     @classmethod
     def _http_client(cls):
@@ -223,6 +273,8 @@ class CognitiveModelGateway:
 
     @classmethod
     def _provider_available(cls, provider: str, *, purpose: str = "general") -> bool:
+        if cls._circuit_is_open(provider):
+            return False
         if not cls._model_for(provider, purpose):
             return False
         if provider == "omniroute":
@@ -368,6 +420,8 @@ class CognitiveModelGateway:
         max_tokens: int,
         requested_model: str | None = None,
         fallback_reason: str = "",
+        deadline_monotonic: float | None = None,
+        max_retries_override: int | None = None,
     ) -> CognitiveModelResult:
         key = os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
         base_url = (os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()).rstrip("/")
@@ -377,8 +431,11 @@ class CognitiveModelGateway:
         if not (base_url.startswith("http://") or base_url.startswith("https://")):
             raise GovernanceError("OmniRoute base URL must start with http:// or https://")
 
-        timeout_sec = max(5.0, min(float(os.environ.get("AMAURA_OMNIROUTE_TIMEOUT_SECONDS", "60")), 300.0))
-        max_retries = max(0, min(int(os.environ.get("AMAURA_OMNIROUTE_MAX_RETRIES", "2")), 5))
+        timeout_sec = max(2.0, min(float(os.environ.get("AMAURA_OMNIROUTE_TIMEOUT_SECONDS", "8")), 300.0))
+        max_retries = (
+            max_retries_override if max_retries_override is not None
+            else max(0, min(int(os.environ.get("AMAURA_OMNIROUTE_MAX_RETRIES", "0")), 5))
+        )
         fallback_model = os.environ.get("AMAURA_OMNIROUTE_FALLBACK_MODEL", "").strip()
 
         if base_url.endswith("/chat/completions"):
@@ -394,6 +451,11 @@ class CognitiveModelGateway:
         last_error_class = "unknown_error"
 
         for attempt in range(max_retries + 1):
+            remaining = deadline_monotonic - _time.monotonic() if deadline_monotonic is not None else timeout_sec
+            if remaining <= 0:
+                last_error_class = "interactive_deadline_exceeded"
+                break
+            attempt_timeout = max(0.5, min(timeout_sec, remaining))
             t0 = _time.monotonic()
             payload = {
                 "model": target_model,
@@ -408,7 +470,7 @@ class CognitiveModelGateway:
                 }
             try:
                 response = cls._http_client().post(
-                    endpoint, json=payload, headers=headers, timeout=timeout_sec,
+                    endpoint, json=payload, headers=headers, timeout=attempt_timeout,
                 )
                 response.raise_for_status()
                 latency_ms = int((_time.monotonic() - t0) * 1000)
@@ -461,6 +523,28 @@ class CognitiveModelGateway:
                                 continue
                     text = "".join(chunks)
 
+                # Some upstream routes acknowledge a request with HTTP 200 but
+                # send only an empty SSE terminator.  Treat that as a failed
+                # completion so the configured fallback can answer instead of
+                # making the founder-facing UI look mysteriously unavailable.
+                if not text.strip():
+                    last_error_class = "empty_response"
+                    if fallback_model and target_model != fallback_model:
+                        return cls._omniroute(
+                            model=fallback_model,
+                            messages=messages,
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                            requested_model=original_model,
+                            fallback_reason=last_error_class,
+                            deadline_monotonic=deadline_monotonic,
+                            max_retries_override=max_retries_override,
+                        )
+                    cls._record_provider_failure("omniroute")
+                    raise GovernanceError(
+                        cls._redact_secrets(f"OmniRoute returned an empty completion for model {target_model}")
+                    )
+                cls._record_provider_success("omniroute")
                 return CognitiveModelResult(
                     text=text,
                     provider="omniroute",
@@ -517,8 +601,11 @@ class CognitiveModelGateway:
                 max_tokens=max_tokens,
                 requested_model=original_model,
                 fallback_reason=last_error_class,
+                deadline_monotonic=deadline_monotonic,
+                max_retries_override=max_retries_override,
             )
 
+        cls._record_provider_failure("omniroute")
         raise GovernanceError(
             cls._redact_secrets(f"OmniRoute request failed [{last_error_class}] for model {model}")
         )
@@ -630,11 +717,14 @@ class CognitiveModelGateway:
         if selection is None:
             raise GovernanceError(f"No configured cognition model is available for {purpose}")
         if selection.provider == "omniroute":
+            deadline, retry_override = cls._interactive_budget(purpose)
             return cls._omniroute(
                 model=selection.model,
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                deadline_monotonic=deadline,
+                max_retries_override=retry_override,
             )
         if selection.provider == "anthropic":
             return cls._anthropic(
@@ -682,7 +772,10 @@ class CognitiveModelGateway:
             else f"{base_url}/chat/completions" if base_url.endswith("/v1") or "/v1/" in base_url
             else f"{base_url}/v1/chat/completions"
         )
-        timeout_sec = max(5.0, min(float(os.environ.get("AMAURA_OMNIROUTE_TIMEOUT_SECONDS", "60")), 300.0))
+        deadline, retry_override = cls._interactive_budget(purpose)
+        timeout_sec = max(2.0, min(float(os.environ.get("AMAURA_OMNIROUTE_TIMEOUT_SECONDS", "8")), 300.0))
+        if deadline is not None:
+            timeout_sec = max(0.5, min(timeout_sec, deadline - _time.monotonic()))
         payload = {
                 "model": selection.model,
                 "messages": messages,
@@ -700,6 +793,7 @@ class CognitiveModelGateway:
         request_id = ""
         resolved_provider = "omniroute"
         resolved_model = selection.model
+        ttft_ms = 0
         try:
             with cls._http_client().stream(
                 "POST", endpoint, json=payload, headers=headers, timeout=timeout_sec,
@@ -724,6 +818,8 @@ class CognitiveModelGateway:
                         delta = choices[0].get("delta") or {}
                         token = str(delta.get("content") or "")
                         if token:
+                            if not chunks:
+                                ttft_ms = int((_time.monotonic() - started) * 1000)
                             chunks.append(token)
                             on_token(token)
         except Exception:
@@ -731,15 +827,17 @@ class CognitiveModelGateway:
                 raise GovernanceError("OmniRoute stream interrupted after output began")
             result = cls._omniroute(
                 model=selection.model, messages=messages, temperature=temperature, max_tokens=max_tokens,
+                deadline_monotonic=deadline, max_retries_override=retry_override,
             )
             if result.text:
                 on_token(result.text)
             return result
+        cls._record_provider_success("omniroute")
         return CognitiveModelResult(
             text="".join(chunks), provider="omniroute", model=resolved_model,
             requested_model=selection.model, resolved_provider=resolved_provider,
             resolved_model=resolved_model, request_id=request_id,
-            latency_ms=int((_time.monotonic() - started) * 1000), gateway="omniroute",
+            latency_ms=int((_time.monotonic() - started) * 1000), ttft_ms=ttft_ms, gateway="omniroute",
         )
 
     @classmethod

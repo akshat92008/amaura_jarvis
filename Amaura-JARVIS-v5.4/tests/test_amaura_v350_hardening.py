@@ -146,6 +146,25 @@ def test_model_gateway_uses_explicit_cloud_model_and_local_fallback():
     assert route.fallback_model_key == "local-worker"
 
 
+def test_model_gateway_routes_workers_through_omniroute():
+    from jarvis.amaura.model_gateway import ModelGateway
+    with patch.dict(os.environ, {
+        "AMAURA_MODEL_PROVIDER": "omniroute",
+        "AMAURA_OMNIROUTE_MODEL": "auto/best-coding",
+    }, clear=False):
+        route = ModelGateway().route("builder", remaining_budget_cents=100)
+    assert route.model_key == "auto/best-coding"
+    assert route.provider == "omniroute"
+
+
+def test_worker_scopes_analyze_code_with_its_declared_path_argument(tmp_path):
+    from jarvis.amaura.executor import GovernedTaskRunner
+
+    scoped = GovernedTaskRunner._scope_tool_args("analyze_code", {}, str(tmp_path))
+    assert scoped == {"path": str(tmp_path.resolve())}
+    assert "cwd" not in scoped
+
+
 def test_private_evaluation_pack_is_hmac_authenticated(tmp_path):
     import hashlib
     import hmac

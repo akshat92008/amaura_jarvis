@@ -9,7 +9,7 @@ What this does:
   1. Detects the JARVIS installation directory.
   2. Backs up any existing .env.amaura to .env.amaura.bak.<timestamp>.
   3. Prompts (securely / hidden input) for OmniRoute credentials.
-  4. Writes config to .env.amaura.local with chmod 0600.
+  4. Updates the canonical .env.amaura with chmod 0600.
   5. Runs preflight connectivity check — reports READY or BLOCKED.
 
 Security guarantees:
@@ -118,8 +118,8 @@ def _backup_existing(jarvis_dir: pathlib.Path) -> None:
         os.chmod(bak, 0o600)
         print(DIM(f"  ↳ Backed up existing .env.amaura → {bak.name}"))
 
-def _write_env_local(jarvis_dir: pathlib.Path, values: dict[str, str]) -> pathlib.Path:
-    env_local = jarvis_dir / ".env.amaura.local"
+def _write_env(jarvis_dir: pathlib.Path, values: dict[str, str]) -> pathlib.Path:
+    env_local = jarvis_dir / ".env.amaura"
     existing: dict[str, str] = {}
     if env_local.exists():
         for line in env_local.read_text(encoding="utf-8").splitlines():
@@ -201,7 +201,7 @@ def main() -> int:
     if fallback_model:
         values["AMAURA_OMNIROUTE_FALLBACK_MODEL"] = fallback_model
 
-    env_local = _write_env_local(jarvis_dir, values)
+    env_local = _write_env(jarvis_dir, values)
     print(OK(f"  ✓ Config saved to {env_local}  (chmod 0600)"))
     print()
 
@@ -214,8 +214,8 @@ def main() -> int:
     print(f"  Fallback Model:  {fallback_model or '(none)'}")
     print(f"  Status:          {'READY ✓' if probe['ok'] else 'BLOCKED ⚠  (check connectivity)'}")
     print()
-    print(DIM("  To apply: source .env.amaura.local  or add it to your .env.amaura"))
-    print(DIM("  Then restart JARVIS:  ./Launch_Amaura.command"))
+    print(DIM("  The canonical .env.amaura is loaded automatically."))
+    print(DIM("  Restart JARVIS:  ./Launch_Amaura.command"))
     print()
     return 0
 

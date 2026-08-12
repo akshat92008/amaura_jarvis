@@ -13,7 +13,17 @@ fi
 
 chmod 600 .env.amaura
 source .venv/bin/activate
-python -m jarvis.amaura.cli doctor
+export AMAURA_RESOURCE_PROFILE="${AMAURA_RESOURCE_PROFILE:-macbook-8gb}"
+export AMAURA_JARVIS_PROACTIVE="${AMAURA_JARVIS_PROACTIVE:-0}"
+export AMAURA_JARVIS_MISSION_RUNNER="${AMAURA_JARVIS_MISSION_RUNNER:-1}"
+export AMAURA_JARVIS_MISSION_POLL_SECONDS="${AMAURA_JARVIS_MISSION_POLL_SECONDS:-3}"
+export AMAURA_JARVIS_MISSION_MAX_GOALS="${AMAURA_JARVIS_MISSION_MAX_GOALS:-1}"
+export AMAURA_COMPANY_AUTOPILOT_RUNTIME="${AMAURA_COMPANY_AUTOPILOT_RUNTIME:-0}"
+export AMAURA_JARVIS_OLLAMA_PROBE="${AMAURA_JARVIS_OLLAMA_PROBE:-0}"
+# This launcher is for the local control surface.  Full doctor runs the
+# authenticated production model-evaluation pack and is intentionally a
+# release gate, not a prerequisite for opening the interactive UI.
+python -m jarvis.amaura.cli doctor --static
 
 # The bootstrap is idempotent. It creates the complete recurring company
 # objective portfolio only when it has not already been created.
@@ -36,7 +46,6 @@ fi
 
 mkdir -p .amaura-data/logs
 SERVER_LOG=".amaura-data/logs/server.log"
-AUTOPILOT_LOG=".amaura-data/logs/autopilot.log"
 python -m jarvis.server >>"$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 
@@ -48,17 +57,13 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-read HOST PORT POLL MAX_WORK MAX_PROGRAMMES MAX_SIGNALS < <(python - <<'PY'
+read HOST PORT < <(python - <<'PY'
 from jarvis.amaura.runtime import load_amaura_env
 load_amaura_env(require_private_permissions=True)
 import os
 print(
     os.environ.get("JARVIS_HOST", "127.0.0.1"),
     os.environ.get("JARVIS_PORT", "8000"),
-    os.environ.get("AMAURA_AUTOPILOT_POLL_SECONDS", "30"),
-    os.environ.get("AMAURA_AUTOPILOT_MAX_WORK_UNITS", "4"),
-    os.environ.get("AMAURA_AUTOPILOT_MAX_NEW_PROGRAMMES", "3"),
-    os.environ.get("AMAURA_AUTOPILOT_MAX_SIGNALS", "3"),
 )
 PY
 )
@@ -68,14 +73,10 @@ for _ in {1..40}; do
   if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
     print "Amaura control surface: http://${HOST}:${PORT}"
     print "Server log: $SERVER_LOG"
-    print "Autopilot log: $AUTOPILOT_LOG"
-    print "Company autopilot is active. Press Control-C to stop it."
-    python -m jarvis.amaura.cli autopilot \
-      --poll-seconds "$POLL" \
-      --max-work-units "$MAX_WORK" \
-      --max-new-programmes "$MAX_PROGRAMMES" \
-      --max-signals "$MAX_SIGNALS" 2>&1 | tee -a "$AUTOPILOT_LOG"
-    exit ${pipestatus[1]}
+    print "The server owns MissionRunner, proactive cognition, and Company Autopilot."
+    print "Press Control-C to stop the single runtime."
+    wait "$SERVER_PID"
+    exit $?
   fi
   if ! kill -0 "$SERVER_PID" 2>/dev/null; then
     print -u2 "Amaura server failed to start. Last log lines:"

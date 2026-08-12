@@ -144,7 +144,11 @@ class MissionRunner:
             with self._leader_lock() as leader:
                 if leader is False:
                     return {"status": "standby", "missions": [], "reason": "another MissionRunner process holds the leader lease"}
-                for goal in self.runnable_goals(limit=max_goals * 4)[: max(1, min(max_goals, 20))]:
+                # Filtering happens after the store query. A tiny pre-filter
+                # limit lets old completed/cancelled programmes permanently
+                # hide newer runnable missions once enough history exists.
+                scan_limit = max(100, max_goals * 20)
+                for goal in self.runnable_goals(limit=scan_limit)[: max(1, min(max_goals, 20))]:
                     goal_id = str(goal["id"])
                     try:
                         before = JarvisBrain(self.control).status(goal_id)

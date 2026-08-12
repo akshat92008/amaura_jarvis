@@ -38,6 +38,38 @@ def test_goal_compiler_creates_dynamic_software_dag(tmp_path: Path):
     assert plan.tasks[4].depends_on == ["implementation"]
 
 
+def test_goal_compiler_recognises_new_game_as_software(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AMAURA_JARVIS_LLM_PLANNER", "off")
+    request = GoalRequest(objective="Create a platform game on my desktop", autonomy="execute")
+    plan = GoalCompiler().compile(request)
+    assert plan.domain == "software"
+    assert [task.key for task in plan.tasks] == ["implementation", "verification"]
+    assert plan.tasks[0].action_type == "repository_write"
+    assert plan.tasks[0].depends_on == []
+    assert plan.tasks[1].depends_on == ["implementation"]
+    assert GoalCompiler.is_new_software_project(request) is True
+
+
+def test_new_software_project_gets_isolated_managed_workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    projects = tmp_path / "projects"
+    monkeypatch.setenv("AMAURA_PROJECTS_ROOT", str(projects))
+    monkeypatch.setenv("AMAURA_JARVIS_LLM_PLANNER", "off")
+    control = AmauraControlPlane(tmp_path / "amaura.db")
+    try:
+        result = JarvisBrain(control).submit(
+            GoalRequest(objective="Create a platformer game", autonomy="plan_only")
+        )
+        workspace = Path(result["goal"]["metadata"]["workspace"])
+        assert workspace.parent == projects
+        assert (workspace / ".git").is_dir()
+        assert (workspace / "README.md").is_file()
+        assert result["plan"]["domain"] == "software"
+        implementation = next(task for task in result["tasks"] if task["action_type"] == "repository_write")
+        assert implementation["metadata"]["workspace"] == str(workspace)
+    finally:
+        control.close()
+
+
 def test_jarvis_memory_and_plan_only_goal_are_durable(tmp_path: Path):
     control = AmauraControlPlane(tmp_path / "amaura.db")
     try:

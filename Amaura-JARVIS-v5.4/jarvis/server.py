@@ -54,30 +54,39 @@ _RUNTIME_OBSERVABILITY: dict[str, str] = {
     "company_autopilot_last_tick_at": "",
     "company_autopilot_last_status": "",
     "company_autopilot_last_error": "",
+    "mission_runner_last_error": "",
+    "mission_runner_last_tick_at": "",
+    "mission_runner_last_status": "",
+    "proactive_last_error": "",
 }
 
 # ── App Setup ──────────────────────────────────────────────────────────────────
 
 async def _mission_runner_loop() -> None:
     """Advance durable JARVIS missions independently of originating requests."""
-    interval = max(1, min(float(os.environ.get("AMAURA_JARVIS_MISSION_POLL_SECONDS", "2")), 60.0))
+    interval = max(1, min(float(os.environ.get("AMAURA_JARVIS_MISSION_POLL_SECONDS", "5")), 60.0))
     max_goals = max(1, min(int(os.environ.get("AMAURA_JARVIS_MISSION_MAX_GOALS", "3")), 20))
     while True:
         try:
             from jarvis.amaura.mission_runner import MissionRunner
-            await asyncio.to_thread(MissionRunner(_amaura_control()).tick, max_goals=max_goals)
+            result = await asyncio.to_thread(MissionRunner(_amaura_control()).tick, max_goals=max_goals)
+            _RUNTIME_OBSERVABILITY["mission_runner_last_error"] = ""
+            _RUNTIME_OBSERVABILITY["mission_runner_last_tick_at"] = datetime.now().isoformat()
+            _RUNTIME_OBSERVABILITY["mission_runner_last_status"] = str(result.get("status") or "unknown")
         except asyncio.CancelledError:
             raise
-        except Exception:
+        except Exception as exc:
             # Durable state is preserved; the next cycle retries. Runner errors
             # are also written by MissionRunner when a specific goal fails.
-            pass
+            _RUNTIME_OBSERVABILITY["mission_runner_last_error"] = f"{type(exc).__name__}: {str(exc)[:500]}"
+            _RUNTIME_OBSERVABILITY["mission_runner_last_tick_at"] = datetime.now().isoformat()
+            _RUNTIME_OBSERVABILITY["mission_runner_last_status"] = "failed"
         await asyncio.sleep(interval)
 
 
 async def _proactive_cognition_loop() -> None:
     """Continuously refresh JARVIS world insights while the backend is alive."""
-    interval = max(15, min(int(os.environ.get("AMAURA_JARVIS_PROACTIVE_INTERVAL_SECONDS", "60")), 3600))
+    interval = max(15, min(int(os.environ.get("AMAURA_JARVIS_PROACTIVE_INTERVAL_SECONDS", "120")), 3600))
     auto_investigate = os.environ.get("AMAURA_JARVIS_PROACTIVE_INVESTIGATIONS", "0") == "1"
     while True:
         try:
@@ -86,12 +95,13 @@ async def _proactive_cognition_loop() -> None:
                 ProactiveCognition(_amaura_control()).tick,
                 auto_investigate=auto_investigate,
             )
+            _RUNTIME_OBSERVABILITY["proactive_last_error"] = ""
         except asyncio.CancelledError:
             raise
-        except Exception:
+        except Exception as exc:
             # Ambient cognition must never take down the assistant process. The
             # next cycle retries from authoritative CompanyStore state.
-            pass
+            _RUNTIME_OBSERVABILITY["proactive_last_error"] = f"{type(exc).__name__}: {str(exc)[:500]}"
         await asyncio.sleep(interval)
 
 
@@ -678,6 +688,7 @@ async def favicon():
 async def health(
     bootstrap_challenge: str = Header(default="", alias="X-Amaura-Bootstrap-Challenge"),
     service_challenge: str = Header(default="", alias="X-Amaura-Service-Challenge"),
+    jarvis_key: str = Header(default="", alias="X-Jarvis-Key"),
 ):
     """Health check with an optional parent/child authenticity proof.
 
@@ -690,13 +701,23 @@ async def health(
     proof = ""
     service_proof = ""
     if bootstrap_secret:
-        if len(bootstrap_challenge) < 32:
+        # Startup identity verification must use the inherited bootstrap
+        # secret.  Once the desktop has verified that sidecar, its renderer
+        # reaches this endpoint only through the authenticated Electron main
+        # process bridge, which supplies the regular local API credential.
+        # This avoids exposing the bootstrap secret to the renderer while
+        # keeping an unauthenticated caller out.
+        api_secret = os.environ.get("JARVIS_API_KEY", "")
+        bootstrap_authenticated = len(bootstrap_challenge) >= 32
+        api_authenticated = bool(api_secret) and api_key_matches(jarvis_key, api_secret)
+        if not bootstrap_authenticated and not api_authenticated:
             raise HTTPException(status_code=403, detail="Desktop bootstrap challenge required")
-        proof = hmac.new(
-            bootstrap_secret.encode("utf-8"),
-            bootstrap_challenge.encode("utf-8"),
-            hashlib.sha256,
-        ).hexdigest()
+        if bootstrap_authenticated:
+            proof = hmac.new(
+                bootstrap_secret.encode("utf-8"),
+                bootstrap_challenge.encode("utf-8"),
+                hashlib.sha256,
+            ).hexdigest()
     if service_challenge:
         service_secret = os.environ.get("JARVIS_API_KEY", "")
         if len(service_secret) < MIN_API_KEY_LENGTH or len(service_challenge) < 32:
@@ -768,6 +789,8 @@ async def chat(
         "model_provider": provenance.get("provider") or "legacy",
         "model_fallback_used": bool(provenance.get("fallback_used")),
         "model_fallback_reason": provenance.get("fallback_reason") or "",
+        "model_latency_ms": int(provenance.get("latency_ms") or 0),
+        "model_ttft_ms": int(provenance.get("ttft_ms") or 0),
         "intent": executive.get("intent", "conversation"),
         "goal_id": executive.get("goal_id", ""),
         "state": executive.get("state", ""),
@@ -822,6 +845,8 @@ async def chat_stream(
                     "model_provider": provenance.get("provider") or "legacy",
                     "model_fallback_used": bool(provenance.get("fallback_used")),
                     "model_fallback_reason": provenance.get("fallback_reason") or "",
+                    "model_latency_ms": int(provenance.get("latency_ms") or 0),
+                    "model_ttft_ms": int(provenance.get("ttft_ms") or 0),
                     "intent": executive.get("intent", "conversation"),
                     "goal_id": executive.get("goal_id", ""),
                     "state": executive.get("state", ""),
@@ -1444,6 +1469,9 @@ async def amaura_runtime_status(
     return {
         "jarvis_server": "online",
         "mission_runner": os.environ.get("AMAURA_JARVIS_MISSION_RUNNER", "1") == "1",
+        "mission_runner_last_error": _RUNTIME_OBSERVABILITY["mission_runner_last_error"],
+        "mission_runner_last_tick_at": _RUNTIME_OBSERVABILITY["mission_runner_last_tick_at"],
+        "mission_runner_last_status": _RUNTIME_OBSERVABILITY["mission_runner_last_status"],
         "proactive_cognition": os.environ.get("AMAURA_JARVIS_PROACTIVE", "1") == "1",
         "company_autopilot_runtime": configured,
         "company_autopilot_enabled": control.store.get_control("autopilot_enabled", "1") == "1",
@@ -1781,12 +1809,19 @@ async def jarvis_world_state(
 
 @app.get("/api/amaura/jarvis/proactive")
 async def jarvis_proactive_insights(
+    refresh: bool = False,
     operator_key: str = Header(default="", alias="X-Amaura-Operator-Key"),
 ):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
-    from jarvis.amaura.cognition import ProactiveCognition
-
-    return {"insights": ProactiveCognition(_amaura_control()).scan()}
+    control = _amaura_control()
+    if refresh:
+        from jarvis.amaura.cognition import ProactiveCognition
+        return {"insights": ProactiveCognition(control).scan()}
+    try:
+        latest = control.store.get_knowledge("jarvis.proactive", "latest").get("value") or {}
+        return {"insights": list(latest.get("insights") or [])[:25]}
+    except KeyError:
+        return {"insights": []}
 
 
 @app.post("/api/amaura/jarvis/execute")
@@ -2668,11 +2703,12 @@ def main():
   ╚══════════════════════════════════════════╝
 """)
 
+    reload_enabled = os.environ.get("JARVIS_RELOAD", "0") == "1"
     uvicorn.run(
-        "jarvis.server:app",
+        "jarvis.server:app" if reload_enabled else app,
         host=host,
         port=port,
-        reload=os.environ.get("JARVIS_RELOAD", "0") == "1",
+        reload=reload_enabled,
         log_level="info",
     )
 

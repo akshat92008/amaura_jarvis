@@ -87,6 +87,27 @@ def test_lightning_path_retains_short_session_history(tmp_path: Path):
         control.close()
 
 
+def test_status_reuses_one_world_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    control = AmauraControlPlane(tmp_path / "amaura.db")
+    try:
+        world = WorldModel(control)
+        original_refresh = world.refresh
+        refresh_count = 0
+
+        def counted_refresh(*args, **kwargs):
+            nonlocal refresh_count
+            refresh_count += 1
+            return original_refresh(*args, **kwargs)
+
+        monkeypatch.setattr(world, "refresh", counted_refresh)
+        kernel = ExecutiveKernel(control, conversation_handler=lambda text, context: "ok", world=world)
+        response = kernel.handle(ExecutiveRequest(text="company status"))
+        assert response.intent == "status"
+        assert refresh_count == 1
+    finally:
+        control.close()
+
+
 def test_executive_kernel_is_one_front_door_and_fail_closed_without_operator(tmp_path: Path):
     control = AmauraControlPlane(tmp_path / "amaura.db")
     try:
@@ -161,10 +182,17 @@ def test_replanning_mutates_dag_and_preserves_failed_history(tmp_path: Path):
         verification = next(t for t in tasks if (t.get("metadata") or {}).get("step_key") == "verification")
         assert implementation["id"] in verification["dependencies"]
 
+        failed_metadata = dict(implementation.get("metadata") or {})
+        failed_metadata.update({
+            "engineering_phase": "executor_started",
+            "antigravity_pid": 12345,
+            "git_worktree_path": "/tmp/stale-worktree",
+        })
         control.store.update_work_item(
             implementation["id"],
             state=TaskState.FAILED.value,
             summary="Implementation failed because the selected architecture conflicts with the fixture API.",
+            metadata=failed_metadata,
         )
         created = brain._replan_failed(goal_id)
         assert len(created) == 2
@@ -172,6 +200,11 @@ def test_replanning_mutates_dag_and_preserves_failed_history(tmp_path: Path):
         diagnose = next(t for key, t in created_by_key.items() if str(key).startswith("diagnose_"))
         repair = next(t for key, t in created_by_key.items() if str(key).startswith("repair_"))
         assert diagnose["id"] in repair["dependencies"]
+        for replacement in created:
+            replacement_metadata = replacement.get("metadata") or {}
+            assert "engineering_phase" not in replacement_metadata
+            assert "antigravity_pid" not in replacement_metadata
+            assert "git_worktree_path" not in replacement_metadata
 
         failed_after = control.store.get_work_item(implementation["id"])
         assert repair["id"] in (failed_after.get("metadata") or {})["superseded_by"]

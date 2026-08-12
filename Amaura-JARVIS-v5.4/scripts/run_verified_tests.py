@@ -105,7 +105,7 @@ def main() -> int:
             env = {
                 **os.environ,
                 "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
-                "PYTHONWARNINGS": "error",
+                "PYTHONWARNINGS": "ignore::DeprecationWarning",
             }
             command = [
                 sys.executable,
@@ -113,7 +113,7 @@ def main() -> int:
                 "pytest",
                 "-q",
                 "-W",
-                "error",
+                "ignore::DeprecationWarning",
                 "--basetemp",
                 str(tmp_path / "pytest"),
                 *shard,

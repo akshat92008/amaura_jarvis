@@ -104,15 +104,13 @@ document.addEventListener("DOMContentLoaded", () => {
         setupSpeechSynthesis();
         setupEventListeners();
         fetchSystemMetrics();
-        fetchToolsList();
-        fetchMemoryList();
-        fetchAmauraDashboard();
-        fetchCognitionStatus();
 
-        // System polling every 4 seconds
-        systemPollInterval = setInterval(fetchSystemMetrics, 4000);
-        setInterval(fetchAmauraDashboard, 12000);
-        setInterval(fetchCognitionStatus, 30000);
+        // Low-impact Mac profile: chat opens immediately and the expensive
+        // tools/memory/company panels load only when the user asks for them.
+        // Keep one lightweight system refresh per minute while visible.
+        systemPollInterval = setInterval(() => {
+            if (!document.hidden) fetchSystemMetrics();
+        }, 60000);
     }
 
     // ── CLOCK ───────────────────────────────────────────────────────────────
@@ -929,6 +927,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 const targetPane = document.getElementById(btn.dataset.tab);
                 if (targetPane) targetPane.classList.add("active");
                 if (btn.dataset.tab === "tab-amaura") fetchAmauraDashboard();
+                if (btn.dataset.tab === "tab-tools" && !toolsData.length) fetchToolsList();
+                if (btn.dataset.tab === "tab-memory") fetchMemoryList();
             };
         });
 

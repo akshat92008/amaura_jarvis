@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import uuid
 from datetime import datetime
 from dataclasses import dataclass
@@ -222,7 +223,13 @@ class GoalCompiler:
         "build", "code", "coding", "app", "website", "software", "repository", "repo",
         "bug", "fix", "debug", "refactor", "implement", "feature", "api", "frontend",
         "backend", "test", "tests", "cli", "deploy", "release", "package", "migration",
+        "game", "games", "platformer", "webapp", "web-app", "tool", "plugin", "extension",
         "noryx", "antigravity",
+    }
+    _NEW_PROJECT_VERBS = {"build", "create", "develop", "make", "generate", "start", "scaffold"}
+    _NEW_PROJECT_NOUNS = {
+        "app", "application", "website", "webapp", "web-app", "software", "game", "games",
+        "platformer", "api", "cli", "tool", "plugin", "extension",
     }
     _VENTURE_TERMS = {
         "venture", "ventures", "side hustle", "side hustles", "cashflow", "cash flow", "kdp",
@@ -290,6 +297,11 @@ class GoalCompiler:
         tokens = set(re.findall(r"[a-z0-9_+-]+", text))
         if any(term in text for term in self._VENTURE_TERMS):
             return "ventures"
+        # An explicit research verb describes the requested operation even
+        # when its subject contains a software word such as "release" or
+        # "API". An explicit workspace still makes repository context primary.
+        if not request.workspace and tokens & self._RESEARCH_TERMS:
+            return "research"
         if request.workspace or tokens & self._SOFTWARE_TERMS:
             return "software"
         if tokens & self._REVENUE_TERMS:
@@ -301,6 +313,11 @@ class GoalCompiler:
         if tokens & self._COMPANY_TERMS:
             return "company"
         return "general"
+
+    @classmethod
+    def is_new_software_project(cls, request: GoalRequest) -> bool:
+        tokens = set(re.findall(r"[a-z0-9_+-]+", request.objective.lower()))
+        return bool(tokens & cls._NEW_PROJECT_VERBS and tokens & cls._NEW_PROJECT_NOUNS)
 
     @staticmethod
     def _default_success_metric(request: GoalRequest) -> str:
@@ -412,6 +429,18 @@ class GoalCompiler:
                 budget_cents=650,
             ),
         ]
+        if self.is_new_software_project(request) and (
+            not workspace or request.metadata.get("managed_new_project") is True
+        ):
+            # A newly provisioned repository has no legacy architecture to
+            # inspect. Antigravity performs its own bounded implementation
+            # planning and returns independently verified Git evidence, so
+            # sending three preliminary employees through an empty repository
+            # only adds latency and tool-failure surface.
+            tasks = [
+                tasks[3].model_copy(update={"depends_on": []}),
+                tasks[4],
+            ]
         return GoalPlan(
             domain="software",
             objective=objective,
@@ -627,6 +656,10 @@ class GoalCompiler:
     def compile(self, request: GoalRequest, *, memory_context: str = "") -> GoalPlan:
         workspace = self._normalise_workspace(request.workspace)
         domain = self.classify(request)
+        if domain == "software" and self.is_new_software_project(request) and (
+            not workspace or request.metadata.get("managed_new_project") is True
+        ):
+            return self._software_plan(request, workspace)
         use_llm = self.llm_planning_enabled()
         if use_llm:
             prompt = self._planner_prompt(request, domain, workspace, memory_context)
@@ -872,6 +905,51 @@ class JarvisBrain:
         self.memory = JarvisMemory(control)
         self.supervisor_factory = supervisor_factory or (lambda cp: AmauraSupervisor(cp))
 
+    @staticmethod
+    def _provision_project_workspace(request: GoalRequest, plan: GoalPlan) -> str:
+        """Create a clean, isolated Git repository for an explicitly new project."""
+        root = Path(
+            os.environ.get("AMAURA_PROJECTS_ROOT", "").strip()
+            or (Path.home() / "Desktop" / "Amaura Projects")
+        ).expanduser().resolve()
+        root.mkdir(parents=True, exist_ok=True)
+        words = [
+            word for word in re.findall(r"[a-z0-9]+", request.objective.lower())
+            if word not in {"a", "an", "the", "create", "build", "make", "develop", "generate", "in", "on", "for", "desktop"}
+        ]
+        slug = "-".join(words[:6]).strip("-")[:56] or "amaura-project"
+        workspace = root / slug
+        if workspace.exists():
+            workspace = root / f"{slug}-{plan.plan_id.rsplit('_', 1)[-1][:8]}"
+        workspace.mkdir(mode=0o700)
+        (workspace / "README.md").write_text(
+            f"# {request.title.strip() or slug.replace('-', ' ').title()}\n\nManaged by Amaura JARVIS.\n",
+            encoding="utf-8",
+        )
+        (workspace / ".gitignore").write_text(
+            ".DS_Store\nnode_modules/\n__pycache__/\n*.pyc\ndist/\nbuild/\n",
+            encoding="utf-8",
+        )
+        environment = {
+            key: value for key, value in os.environ.items()
+            if key in {"PATH", "HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "TMPDIR", "TEMP", "TMP"}
+        }
+        environment.update({"GIT_TERMINAL_PROMPT": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull})
+        commands = (
+            ["git", "init", "-q"],
+            ["git", "add", "README.md", ".gitignore"],
+            [
+                "git", "-c", "user.name=Amaura JARVIS", "-c", "user.email=amaura@local.invalid",
+                "commit", "-qm", "chore: initialize Amaura project",
+            ],
+        )
+        try:
+            for command in commands:
+                subprocess.run(command, cwd=workspace, env=environment, check=True, capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise GovernanceError(f"Unable to initialize managed project workspace: {workspace}") from exc
+        return str(workspace)
+
     def _materialize(self, request: GoalRequest, plan: GoalPlan) -> dict[str, Any]:
         workflow_id = plan.plan_id
         programme_id = _id("goal")
@@ -1008,6 +1086,14 @@ class JarvisBrain:
         memory_context = self.memory.context(request.objective)
         combined_context = "\n".join(part for part in (memory_context, external_context) if part.strip())
         plan = self.compiler.compile(request, memory_context=combined_context)
+        if plan.domain == "software" and not plan.workspace:
+            if not self.compiler.is_new_software_project(request):
+                raise GovernanceError(
+                    "Existing-project software work requires a workspace. Select the repository before submitting the mission."
+                )
+            workspace = self._provision_project_workspace(request, plan)
+            request = request.model_copy(update={"workspace": workspace})
+            plan = plan.model_copy(update={"workspace": workspace})
         result = self._materialize(request, plan)
         if request.coding_backend == "antigravity" and os.environ.get("AMAURA_ANTIGRAVITY_MODE", "cli").strip().lower() == "handoff":
             if not plan.workspace:
@@ -1290,9 +1376,18 @@ class JarvisBrain:
             ):
                 raise GovernanceError("Mission lifecycle changed while replanning; stale DAG mutation discarded")
             for spec in mutation.add_tasks:
+                inherited_metadata = dict(failed_task.get("metadata") or {})
+                execution_prefixes = ("engineering_", "antigravity_", "git_")
+                for key in list(inherited_metadata):
+                    if key.startswith(execution_prefixes):
+                        inherited_metadata.pop(key, None)
+                spec_metadata = dict(spec.metadata)
+                for key in list(spec_metadata):
+                    if key.startswith(execution_prefixes):
+                        spec_metadata.pop(key, None)
                 task_meta = {
-                    **dict(failed_task.get("metadata") or {}),
-                    **spec.metadata,
+                    **inherited_metadata,
+                    **spec_metadata,
                     "step_key": spec.key,
                     "replan_attempt": used + 1,
                     "replan_mutation_id": mutation.mutation_id,

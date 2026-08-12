@@ -13,8 +13,14 @@ from jarvis.amaura.antigravity_bridge import AntigravityDeliveryAdapter
 from jarvis.amaura.brain import GoalRequest
 from jarvis.amaura.cognition import ExecutiveKernel, ExecutiveRequest
 from jarvis.amaura.control_plane import AmauraControlPlane
-from jarvis.amaura.gitops import WorktreeRecord, finalize_task_commit
+from jarvis.amaura.gitops import (
+    WorktreeRecord,
+    cleanup_task_worktree,
+    finalize_task_commit,
+    prepare_task_worktree,
+)
 from jarvis.amaura.models import GovernanceError
+from jarvis.amaura.verification import SecureVerifierRunner
 from jarvis.server import ChatRequest, JarvisGoalRequest, VoiceRequest
 
 
@@ -48,6 +54,15 @@ import json, pathlib, sys, time
 if "--version" in sys.argv or (len(sys.argv) > 1 and sys.argv[1] == "version"):
     print("Antigravity CLI v1.1.11"); raise SystemExit(0)
 assert "--sandbox" in sys.argv
+assert "--new-project" in sys.argv
+assert "--project=default-cli-project" not in sys.argv
+assert "--add-dir" in sys.argv and pathlib.Path(sys.argv[sys.argv.index("--add-dir")+1]).resolve() == pathlib.Path.cwd().resolve()
+added_dirs=[pathlib.Path(sys.argv[i+1]).resolve() for i,v in enumerate(sys.argv[:-1]) if v == "--add-dir"]
+git_marker=pathlib.Path.cwd()/".git"
+if git_marker.is_file():
+    git_dir=pathlib.Path(git_marker.read_text().split(":",1)[1].strip()).resolve()
+    assert git_dir.parents[1] in added_dirs
+assert "--mode" in sys.argv and sys.argv[sys.argv.index("--mode")+1] == "accept-edits"
 assert sys.argv[sys.argv.index("--output-format")+1] == "stream-json"
 print(json.dumps({{"type":"assistant","model":"gemini-test"}}), flush=True)
 time.sleep({sleep_seconds!r})
@@ -141,6 +156,98 @@ def test_antigravity_pause_terminates_running_process_tree(tmp_path: Path):
         )
     assert time.monotonic() - started < 5.0
     assert not (repo / "agy_fix.py").exists()
+
+
+def test_antigravity_exposes_only_linked_worktree_git_metadata(tmp_path: Path):
+    repo = _git_repo(tmp_path / "repo-linked")
+    worktree = tmp_path / "linked-worktree"
+    subprocess.run(
+        ["git", "worktree", "add", "-qb", "amaura-linked-test", str(worktree)],
+        cwd=repo,
+        check=True,
+    )
+    agy = _fake_stream_agy(tmp_path)
+    result = AntigravityDeliveryAdapter(command=str(agy), receipt_key="a" * 32).run_with_result(
+        repository_path=str(worktree),
+        objective="Implement fixture in linked worktree",
+        idempotency_key="linked-worktree",
+    )
+    common_dir = Path(subprocess.check_output(
+        ["git", "rev-parse", "--git-common-dir"], cwd=worktree, text=True,
+    ).strip()).resolve()
+    assert result.verification["changed_files"] == ["agy_fix.py"]
+    assert common_dir == (repo / ".git").resolve()
+
+
+def test_antigravity_changed_files_preserves_first_porcelain_filename(tmp_path: Path):
+    repo = _git_repo(tmp_path / "repo-porcelain")
+    base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
+    (repo / "README.md").write_text("# changed\n", encoding="utf-8")
+    assert AntigravityDeliveryAdapter._changed_files(repo, base) == ["README.md"]
+
+
+def test_independent_verifier_uses_headless_sdl_environment(tmp_path: Path):
+    environment = SecureVerifierRunner._clean_environment(str(tmp_path))
+    assert environment["SDL_VIDEODRIVER"] == "dummy"
+    assert environment["SDL_AUDIODRIVER"] == "dummy"
+    assert environment["SDL_RENDER_DRIVER"] == "software"
+
+
+def test_independent_verifier_can_fallback_after_macos_sandbox_abort(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    repo = _git_repo(tmp_path / "repo-verifier-fallback")
+    calls: list[list[str]] = []
+
+    monkeypatch.setenv("AMAURA_VERIFIER_MODE", "native")
+    monkeypatch.setenv("AMAURA_VERIFIER_HOST_FALLBACK_ON_SANDBOX_ABORT", "1")
+    monkeypatch.setenv("AMAURA_ALLOW_HOST_VERIFICATION", "1")
+    monkeypatch.setattr("jarvis.amaura.verification.platform.system", lambda: "Darwin")
+    monkeypatch.setattr("jarvis.amaura.verification.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    def fake_run(argv, **kwargs):
+        calls.append(list(argv))
+        if argv[0] == "sandbox-exec":
+            return subprocess.CompletedProcess(argv, -6, "", "")
+        return subprocess.CompletedProcess(argv, 0, "ok\n", "")
+
+    monkeypatch.setattr("jarvis.amaura.verification.subprocess.run", fake_run)
+    result = SecureVerifierRunner().run(repo, "pytest", timeout_seconds=30)
+    assert result.passed
+    assert result.isolation == "host-breakglass-after-macos-sandbox-abort"
+    assert result.network_disabled is False
+    assert len(calls) == 2
+    assert calls[0][0] == "sandbox-exec"
+    assert calls[1] == ["pytest"]
+
+
+def test_space_path_repository_uses_isolated_clone_and_imports_verified_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    repo = _git_repo(tmp_path / "repo with spaces")
+    monkeypatch.setenv("AMAURA_WORKTREE_ROOT", str(tmp_path / "amaura-worktrees"))
+    record = prepare_task_worktree(repo, "task-space-path")
+    worktree = Path(record.worktree_path)
+    assert record.isolation_mode == "isolated_clone"
+    assert (worktree / ".git").is_dir()
+    (worktree / "feature.txt").write_text("verified\n", encoding="utf-8")
+    commit = finalize_task_commit(record, task_id="task-space-path", title="Space-safe fixture")
+    imported = subprocess.check_output(
+        ["git", "rev-parse", record.branch], cwd=repo, text=True,
+    ).strip()
+    assert imported == commit.commit
+    cleanup_task_worktree({
+        "id": "task-space-path",
+        "metadata": {
+            "git_repository_root": str(repo),
+            "git_worktree_path": str(worktree),
+            "git_branch": record.branch,
+            "git_isolation_mode": record.isolation_mode,
+        },
+    }, require_clean=False)
+    assert not worktree.exists()
 
 
 def test_desktop_primary_backend_is_antigravity():

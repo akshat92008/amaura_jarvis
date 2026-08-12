@@ -39,7 +39,11 @@ async function refreshHealth() {
   try {
     const health = await request('/api/health');
     setStatus(`ONLINE · v${health.version}`, true);
-    byId('metric-tools').textContent = health.tools || 0;
+    // Health reports a category breakdown; the HUD metric needs its total.
+    const toolCount = typeof health.tools === 'object'
+      ? Number(health.tools?.total || 0)
+      : Number(health.tools || 0);
+    byId('metric-tools').textContent = String(toolCount);
     byId('boot-screen').classList.add('hidden');
     byId('app').classList.remove('hidden');
   } catch (error) {
@@ -82,7 +86,8 @@ async function sendMessage() {
       state.model = result.model_key;
       const provider = result.model_provider ? `${result.model_provider} · ` : '';
       const fallback = result.model_fallback_used ? ' · FALLBACK' : '';
-      byId('hud-model').textContent = `MODEL: ${provider}${result.model || state.model}${fallback}`;
+      const latency = result.model_ttft_ms ? ` · TTFT ${result.model_ttft_ms}ms` : '';
+      byId('hud-model').textContent = `MODEL: ${provider}${result.model || state.model}${fallback}${latency}`;
     }
     if (result.intent === 'mission' || result.intent === 'mission_control') {
       addMessage('assistant', `Mission ${result.goal_id || ''} is ${result.state || 'accepted'}. I will keep its execution and evidence in Activity.`);
@@ -395,8 +400,13 @@ function bind() {
   window.jarvis?.onStartVoice(toggleVoice);
   window.jarvis?.onToggleVoice((enabled) => { if (Boolean(enabled) !== state.voiceActive) toggleVoice(); });
   setInterval(() => { byId('hud-time').textContent = new Date().toLocaleTimeString(); }, 1000);
-  setInterval(() => { if (!document.hidden) Promise.all([refreshGoals(), refreshApprovals(), refreshProactive()]); }, 5000);
-  refreshHealth(); refreshGoals(); refreshApprovals(); refreshCompany(); refreshVentures(); refreshProactive();
+  // An 8 GB Mac should spend its resources on conversation, not repeatedly
+  // rebuilding company/world state while the user is idle. Refresh only the
+  // cheap counters once per minute; heavier views refresh when opened.
+  setInterval(() => {
+    if (!document.hidden && !state.busy) Promise.all([refreshGoals(), refreshApprovals()]);
+  }, 60000);
+  refreshHealth();
 }
 
 document.addEventListener('DOMContentLoaded', bind);

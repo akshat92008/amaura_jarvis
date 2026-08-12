@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
@@ -256,6 +257,29 @@ def test_invalid_signal_and_non_founder_department_change_are_rejected(monkeypat
                 engine.set_department(
                     "finance", enabled=False, reason="test", actor="jarvis"
                 )
+        finally:
+            control.close()
+
+
+def test_autonomy_run_results_are_bounded(monkeypatch):
+    with TemporaryDirectory() as temp:
+        control = _control(monkeypatch, temp)
+        try:
+            monkeypatch.setenv("AMAURA_AUTONOMY_RUN_RESULT_MAX_BYTES", "4096")
+            run = control.store.start_autonomy_run(worker_id="test-worker", mode="tick")
+            completed = control.store.finish_autonomy_run(
+                run["id"],
+                status="completed",
+                result={
+                    "run_id": "run-large",
+                    "status": "ok",
+                    "summary": "x" * 200_000,
+                    "nested": [{"payload": "y" * 100_000} for _ in range(10)],
+                },
+            )
+            assert completed["result"]["_amaura_truncated"] is True
+            assert completed["result"]["run_id"] == "run-large"
+            assert len(json.dumps(completed["result"])) < 10_000
         finally:
             control.close()
 

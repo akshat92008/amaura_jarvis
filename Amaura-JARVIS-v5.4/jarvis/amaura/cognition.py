@@ -709,7 +709,7 @@ class MemoryConsolidator:
         self.memory = memory
 
     def consolidate(self, *, user_text: str, assistant_text: str, session_id: str) -> list[dict[str, Any]]:
-        if os.environ.get("AMAURA_JARVIS_MEMORY_CONSOLIDATION", "1") != "1":
+        if os.environ.get("AMAURA_JARVIS_MEMORY_CONSOLIDATION", "0") != "1":
             return []
         if any(term in user_text.lower() for term in self.SECRET_TERMS):
             return []
@@ -1048,7 +1048,10 @@ class IntentEngine:
         has_work_subject = bool(words & self.MISSION_NOUNS)
         imperative = has_action and (has_work_subject or len(words) >= 3)
         if imperative:
-            return "mission"
+            if clean.startswith(("my ", "the ", "this ", "our ", "a ", "i ")):
+                pass # Ambiguous statement-like phrasing; let the LLM classify.
+            else:
+                return "mission"
 
         # Only ambiguous imperative-like phrasing pays for a classifier call.
         # Normal conversation reaches the answer model directly.
@@ -1198,8 +1201,8 @@ class ProactiveCognition:
         self.control = control
         self.world = world or WorldModel(control)
 
-    def scan(self) -> list[dict[str, Any]]:
-        snapshot = self.world.refresh()
+    def scan(self, *, snapshot: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        snapshot = snapshot or self.world.refresh()
         insights: list[ProactiveInsight] = []
         for alert in snapshot["open_alerts"]:
             severity = str(alert.get("severity") or "warning")
@@ -1409,7 +1412,7 @@ class ExecutiveKernel:
             del turns[:-16]
 
     def _consolidate_async(self, *, user_text: str, assistant_text: str, session_id: str) -> None:
-        if os.environ.get("AMAURA_JARVIS_MEMORY_CONSOLIDATION", "1") != "1":
+        if os.environ.get("AMAURA_JARVIS_MEMORY_CONSOLIDATION", "0") != "1":
             return
         try:
             self._consolidation_queue.put_nowait((user_text, assistant_text, session_id))
@@ -1659,7 +1662,7 @@ class ExecutiveKernel:
             )
 
         if intent == "status":
-            snapshot = self.world.refresh()
+            snapshot = self.world.get(refresh=False)
             if resolution.resolved:
                 target = self.control.store.get_work_item(resolution.target_id)
                 focused: dict[str, Any] = {"reference": resolution.model_dump(mode="json"), "item": target}
@@ -1688,7 +1691,10 @@ class ExecutiveKernel:
                 intent=intent,
                 message=message,
                 session_id=request.session_id,
-                result={"world": snapshot, "proactive": ProactiveCognition(self.control, world=self.world).scan()},
+                result={
+                    "world": snapshot,
+                    "proactive": ProactiveCognition(self.control, world=self.world).scan(snapshot=snapshot),
+                },
                 context_sources=memory_sources,
             )
             return response

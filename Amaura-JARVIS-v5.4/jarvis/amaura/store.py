@@ -25,6 +25,64 @@ def utc_now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _json_size(value: Any) -> int:
+    return len(json.dumps(value, ensure_ascii=False, default=str))
+
+
+def _compact_json_value(value: Any, *, depth: int = 0) -> Any:
+    if depth >= 4:
+        if isinstance(value, dict):
+            return {"_truncated": True, "keys": list(value.keys())[:20]}
+        if isinstance(value, list):
+            return {"_truncated": True, "count": len(value)}
+    if isinstance(value, str):
+        return value if len(value) <= 4000 else value[:4000] + "\n...[truncated]"
+    if isinstance(value, list):
+        compacted = [_compact_json_value(item, depth=depth + 1) for item in value[:25]]
+        if len(value) > 25:
+            compacted.append({"_truncated": True, "remaining": len(value) - 25})
+        return compacted
+    if isinstance(value, dict):
+        items = list(value.items())
+        compacted = {
+            str(key): _compact_json_value(item, depth=depth + 1)
+            for key, item in items[:40]
+        }
+        if len(items) > 40:
+            compacted["_truncated_keys"] = len(items) - 40
+        return compacted
+    return value
+
+
+def _bounded_json_record(value: dict[str, Any], *, max_bytes: int) -> dict[str, Any]:
+    if _json_size(value) <= max_bytes:
+        return value
+    compacted = _compact_json_value(value)
+    if isinstance(compacted, dict):
+        compacted["_amaura_truncated"] = True
+        compacted["_amaura_original_bytes"] = _json_size(value)
+    if _json_size(compacted) <= max_bytes:
+        return compacted
+    keep = {
+        key: compacted[key]
+        for key in (
+            "run_id",
+            "status",
+            "mode",
+            "worker_id",
+            "actions",
+            "errors",
+            "summary",
+            "_amaura_truncated",
+            "_amaura_original_bytes",
+        )
+        if isinstance(compacted, dict) and key in compacted
+    }
+    keep["_amaura_truncated"] = True
+    keep["_amaura_compaction"] = "large autonomy result stored as bounded summary"
+    return keep
+
+
 class CompanyStore:
     """Thread-safe, append-audited company state store."""
 
@@ -4358,10 +4416,15 @@ class CompanyStore:
         if status not in {"completed", "partial", "failed", "paused"}:
             raise ValueError("Invalid autonomy run status")
         finished_at = utc_now()
+        max_result_bytes = max(
+            4096,
+            min(int(os.environ.get("AMAURA_AUTONOMY_RUN_RESULT_MAX_BYTES", "65536")), 1_000_000),
+        )
+        bounded_result = _bounded_json_record(result, max_bytes=max_result_bytes)
         with self._lock:
             cursor = self._connection.execute(
                 "UPDATE autonomy_runs SET status=?,result=?,finished_at=? WHERE id=? AND status='running'",
-                (status, json.dumps(result), finished_at, run_id),
+                (status, json.dumps(bounded_result), finished_at, run_id),
             )
             if cursor.rowcount != 1:
                 raise KeyError(f"Unknown or completed autonomy run: {run_id}")

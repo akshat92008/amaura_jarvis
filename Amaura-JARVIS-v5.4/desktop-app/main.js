@@ -36,8 +36,16 @@ let backendRestartCount = 0;
 let backendRestartTimer = null;
 let backendBootstrapToken = null;
 let backendVerified = false;
+let backendHealth = null;
 let backendGeneration = 0;
 let backendAttached = false;
+
+// Do not allow several Electron runtimes (and therefore several Python
+// sidecars) to accumulate when the launcher is clicked more than once.
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+    app.quit();
+}
 
 // ── Runtime Configuration ─────────────────────────────────────────────────────
 
@@ -71,6 +79,10 @@ function runtimeCredentials() {
 }
 
 async function backendRequest({ path: requestPath, method = 'GET', body = null }) {
+    // The renderer loads before the sidecar has completed its identity proof.
+    // Hold its first requests until that proof succeeds instead of surfacing a
+    // transient startup error in the HUD.
+    if (!backendVerified) await waitForServer();
     if (!backendVerified || !CONFIG.serverPort) throw new Error('Authenticated backend is not ready');
     if (typeof requestPath !== 'string' || !requestPath.startsWith('/api/')) {
         throw new Error('Only local /api/ paths are permitted');
@@ -79,8 +91,21 @@ async function backendRequest({ path: requestPath, method = 'GET', body = null }
     if (!['GET', 'POST', 'DELETE'].includes(normalizedMethod)) {
         throw new Error('Unsupported backend method');
     }
+    // Health was already authenticated with a fresh challenge in
+    // waitForServer(). Returning that result avoids a second startup request
+    // racing with the renderer and makes the boot screen deterministic.
+    if (requestPath === '/api/health' && normalizedMethod === 'GET' && backendHealth) {
+        return backendHealth;
+    }
     const credentials = runtimeCredentials();
     const headers = { 'Content-Type': 'application/json' };
+    // The sidecar's health endpoint proves its parent-child relationship.
+    // Renderer health requests still travel through this authenticated main
+    // process bridge, so attach a fresh challenge rather than exposing the
+    // bootstrap token to the renderer.
+    if (requestPath === '/api/health' && backendBootstrapToken) {
+        headers['X-Amaura-Bootstrap-Challenge'] = crypto.randomBytes(32).toString('hex');
+    }
     if (credentials.jarvisKey) headers['X-Jarvis-Key'] = credentials.jarvisKey;
     if (credentials.operatorKey) headers['X-Amaura-Operator-Key'] = credentials.operatorKey;
     if (credentials.approvalKey) headers['X-Amaura-Approval-Key'] = credentials.approvalKey;
@@ -189,6 +214,7 @@ function allocateLoopbackPort() {
 async function startBackendServer() {
     const generation = ++backendGeneration;
     backendVerified = false;
+    backendHealth = null;
     backendAttached = false;
     CONFIG.serverPort = await allocateLoopbackPort();
     backendBootstrapToken = crypto.randomBytes(32).toString('hex');
@@ -201,6 +227,13 @@ async function startBackendServer() {
         JARVIS_HOST: CONFIG.serverHost,
         JARVIS_RELOAD: '0',
         PYTHONUNBUFFERED: '1',
+        AMAURA_RESOURCE_PROFILE: process.env.AMAURA_RESOURCE_PROFILE || 'macbook-8gb',
+        AMAURA_JARVIS_PROACTIVE: process.env.AMAURA_JARVIS_PROACTIVE || '0',
+        AMAURA_JARVIS_MISSION_RUNNER: process.env.AMAURA_JARVIS_MISSION_RUNNER || '1',
+        AMAURA_JARVIS_MISSION_POLL_SECONDS: process.env.AMAURA_JARVIS_MISSION_POLL_SECONDS || '3',
+        AMAURA_JARVIS_MISSION_MAX_GOALS: process.env.AMAURA_JARVIS_MISSION_MAX_GOALS || '1',
+        AMAURA_COMPANY_AUTOPILOT_RUNTIME: process.env.AMAURA_COMPANY_AUTOPILOT_RUNTIME || '0',
+        AMAURA_JARVIS_OLLAMA_PROBE: process.env.AMAURA_JARVIS_OLLAMA_PROBE || '0',
         AMAURA_DESKTOP_BOOTSTRAP_TOKEN: backendBootstrapToken,
     };
 
@@ -249,6 +282,7 @@ function stopBackendServer() {
     backendGeneration += 1;
     backendVerified = false;
     backendBootstrapToken = null;
+    backendHealth = null;
     backendAttached = false;
     if (backendRestartTimer) {
         clearTimeout(backendRestartTimer);
@@ -260,14 +294,24 @@ function stopBackendServer() {
     console.log('[Amaura] Stopping backend server...');
     child.kill('SIGTERM');
     const killTimer = setTimeout(() => {
-        if (!child.killed) child.kill('SIGKILL');
+        // child.killed only means Node successfully *sent* a signal. It does
+        // not mean Python exited. Check process completion and force-stop a
+        // wedged sidecar so it cannot retain gigabytes of compressed memory.
+        if (child.exitCode === null && child.signalCode === null) {
+            console.warn('[Amaura] Backend did not stop promptly; sending SIGKILL');
+            child.kill('SIGKILL');
+        }
     }, 3000);
     killTimer.unref();
 }
 
 function verifyHealthPayload(payload, challenge) {
     if (!payload || payload.status !== 'online' || payload.version !== BACKEND_VERSION) return false;
-    if (!serverProcess || Number(payload.pid) !== Number(serverProcess.pid)) return false;
+    if (!serverProcess) return false;
+    // macOS virtual-environment launchers may exec through a Python shim, so
+    // the child PID seen by Electron is not guaranteed to equal the Uvicorn
+    // process PID.  The per-launch HMAC below is the actual authenticity
+    // boundary and cannot be forged by a process that only captures the port.
     const expected = crypto.createHmac('sha256', backendBootstrapToken).update(challenge).digest('hex');
     const supplied = String(payload.bootstrap_proof || '');
     if (expected.length !== supplied.length) return false;
@@ -298,6 +342,7 @@ async function tryAttachBackgroundService() {
                     if (res.statusCode === 200 && authenticated && payload.status === 'online' && payload.version === BACKEND_VERSION) {
                         CONFIG.serverPort = port;
                         backendVerified = true;
+                        backendHealth = payload;
                         backendAttached = true;
                         console.log(`[Amaura] Attached to background backend on ${CONFIG.serverHost}:${port}`);
                         resolve(true);
@@ -340,6 +385,7 @@ function waitForServer(retries = 40, delay = 250) {
                     try { payload = JSON.parse(body); } catch (_) { payload = null; }
                     if (res.statusCode === 200 && verifyHealthPayload(payload, challenge)) {
                         backendVerified = true;
+                        backendHealth = payload;
                         resolve(true);
                     } else if (attempts < retries) {
                         setTimeout(check, delay);
@@ -603,7 +649,7 @@ function setupIPC() {
 
 // ── App Lifecycle ──────────────────────────────────────────────────────────────
 
-app.whenReady().then(async () => {
+if (hasSingleInstanceLock) app.whenReady().then(async () => {
     console.log('[JARVIS] Starting up...');
 
     // Setup IPC
@@ -640,6 +686,14 @@ app.whenReady().then(async () => {
         if (mainWindow) {
             mainWindow.webContents.send('backend-error', e.message);
         }
+    }
+});
+
+app.on('second-instance', () => {
+    if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.show();
+        mainWindow.focus();
     }
 });
 

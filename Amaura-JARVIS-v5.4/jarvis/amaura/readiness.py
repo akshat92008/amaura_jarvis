@@ -457,7 +457,7 @@ def production_readiness(
 
     configuration_checks = {
         "model_routing_valid": model_routing_valid,
-        "review_mode_valid": review_mode in {"local", "cloud"},
+        "review_mode_valid": review_mode in {"local", "cloud", "omniroute"},
         "distinct_reviewer_model": (
             True if omniroute_key_present else (
                 bool(reviewer_model) and reviewer_model != worker_model

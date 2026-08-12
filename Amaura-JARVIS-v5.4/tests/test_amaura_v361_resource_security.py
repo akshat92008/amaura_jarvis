@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -62,6 +63,20 @@ def test_native_resource_fallback_works_without_psutil(monkeypatch: pytest.Monke
     assert snapshot.pressure in {"green", "yellow", "red"}
     assert resource_module.process_tree_rss_mb(os.getpid()) >= 0
 
+
+def test_mac_recovered_native_pressure_is_not_red_from_sticky_swap(monkeypatch: pytest.MonkeyPatch) -> None:
+    mib = 1024 * 1024
+    fake_psutil = SimpleNamespace(
+        virtual_memory=lambda: SimpleNamespace(total=8192 * mib, available=1800 * mib, percent=78.0),
+        swap_memory=lambda: SimpleNamespace(used=2100 * mib, total=3072 * mib, percent=68.0),
+    )
+    monkeypatch.setattr(resource_module, "psutil", fake_psutil)
+    monkeypatch.setattr(resource_module.sys, "platform", "darwin")
+    monkeypatch.setattr(resource_module, "_mac_free_percent", lambda: 44.0)
+    snapshot = resource_module.sample_host_memory(MemoryPolicy())
+    assert snapshot.swap_percent > MemoryPolicy().red_swap_percent
+    assert snapshot.pressure == "green"
+
 def test_cross_process_ledger_allows_only_one_heavy_job(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AMAURA_RESOURCE_LEDGER_PATH", str(tmp_path / "ledger.json"))
     monkeypatch.setattr(resource_module, "sample_host_memory", lambda policy=None: _host())
@@ -86,6 +101,17 @@ def test_pressure_mode_blocks_new_heavy_workers(tmp_path: Path, monkeypatch: pyt
     assert reservation is None
     assert "yellow" in reason
     assert state["host"]["pressure"] == "yellow"
+
+
+def test_yellow_pressure_allows_one_pressure_bounded_remote_worker(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AMAURA_RESOURCE_LEDGER_PATH", str(tmp_path / "ledger.json"))
+    monkeypatch.setattr(resource_module, "sample_host_memory", lambda policy=None: _host(pressure="yellow", available_mb=1400))
+    monkeypatch.setattr(resource_module, "process_tree_rss_mb", lambda pid: 100)
+    policy = MemoryPolicy(normal_target_mb=768, burst_limit_mb=1536, absolute_limit_mb=2048, pressure_limit_mb=768)
+    ledger = CrossProcessResourceLedger(policy)
+    reservation, reason, _state = ledger.try_reserve(capability="antigravity", ram_mb=768, heavy=True)
+    assert reservation and reason == "reserved"
+    ledger.release(reservation)
 
 
 def test_isolated_worker_environment_scrubs_unrelated_secrets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

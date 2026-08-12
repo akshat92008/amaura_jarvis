@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import shutil
 import shlex
 import subprocess
 import tempfile
@@ -20,6 +21,8 @@ _SAFE_VALIDATION_PREFIXES: tuple[tuple[str, ...], ...] = (
     ("python", "-m", "pytest"),
     ("python3", "-m", "pytest"),
     ("pytest",),
+    ("python", "-m", "unittest"),
+    ("python3", "-m", "unittest"),
     ("python", "-m", "ruff"),
     ("python3", "-m", "ruff"),
     ("ruff",),
@@ -46,6 +49,7 @@ class WorktreeRecord:
     branch: str
     base_branch: str
     base_commit: str
+    isolation_mode: str = "linked_worktree"
 
     def to_dict(self) -> dict[str, str]:
         return asdict(self)
@@ -228,21 +232,43 @@ def prepare_task_worktree(workspace: str | Path, task_id: str) -> WorktreeRecord
     branch = _branch_name(task_id)
     worktree_path = _worktree_root() / task_id
     worktree_path.parent.mkdir(parents=True, exist_ok=True)
+    # Antigravity's current macOS sandbox cannot traverse a linked worktree's
+    # external common-Git directory when that path contains whitespace. Use a
+    # full local clone in that case so both files and Git metadata remain below
+    # the one sandbox root. The verified commit is imported into the source
+    # repository by ``finalize_task_commit`` before review.
+    isolation_mode = (
+        "isolated_clone"
+        if any(character.isspace() for character in str(_common_git_dir(repository)))
+        else "linked_worktree"
+    )
 
     if worktree_path.exists():
         existing_root = _run_git(worktree_path, ["rev-parse", "--show-toplevel"]).stdout.strip()
         existing_branch = _run_git(worktree_path, ["symbolic-ref", "--quiet", "--short", "HEAD"]).stdout.strip()
         if Path(existing_root).resolve() != worktree_path.resolve() or existing_branch != branch:
             raise GovernanceError(f"Unexpected worktree already exists at {worktree_path}")
-        return WorktreeRecord(str(repository), str(worktree_path), branch, base_branch, base_commit)
+        existing_mode = "isolated_clone" if (worktree_path / ".git").is_dir() else "linked_worktree"
+        return WorktreeRecord(str(repository), str(worktree_path), branch, base_branch, base_commit, existing_mode)
 
     existing_branch = _run_git(repository, ["show-ref", "--verify", f"refs/heads/{branch}"], allow_failure=True)
     if existing_branch.returncode == 0:
         raise GovernanceError(
             f"Task branch '{branch}' already exists without its expected worktree. Reconcile or remove it before retrying."
         )
-    _run_git(repository, ["worktree", "add", "-b", branch, str(worktree_path), base_commit], timeout=120)
-    return WorktreeRecord(str(repository), str(worktree_path), branch, base_branch, base_commit)
+    if isolation_mode == "isolated_clone":
+        _run_git(
+            repository,
+            ["clone", "--local", "--no-hardlinks", "--no-checkout", str(repository), str(worktree_path)],
+            timeout=300,
+        )
+        _run_git(worktree_path, ["checkout", "-b", branch, base_commit], timeout=120)
+        # The coding worker has no reason to write back to the source. Remove
+        # the local origin; Amaura imports the exact verified commit itself.
+        _run_git(worktree_path, ["remote", "remove", "origin"], allow_failure=True)
+    else:
+        _run_git(repository, ["worktree", "add", "-b", branch, str(worktree_path), base_commit], timeout=120)
+    return WorktreeRecord(str(repository), str(worktree_path), branch, base_branch, base_commit, isolation_mode)
 
 
 def finalize_task_commit(
@@ -281,6 +307,26 @@ def finalize_task_commit(
     )
     if not changed_files or not diff.strip():
         raise GovernanceError("Engineering task commit contains no verifiable diff")
+    if record.isolation_mode == "isolated_clone":
+        repository = Path(record.repository_root).expanduser().resolve()
+        existing = _run_git(
+            repository,
+            ["show-ref", "--verify", f"refs/heads/{record.branch}"],
+            allow_failure=True,
+        )
+        if existing.returncode == 0:
+            existing_commit = _run_git(repository, ["rev-parse", record.branch]).stdout.strip()
+            if existing_commit != commit:
+                raise GovernanceError("Isolated task branch already exists with a different commit")
+        else:
+            _run_git(
+                repository,
+                ["fetch", "--no-tags", str(worktree), f"{commit}:refs/heads/{record.branch}"],
+                timeout=300,
+            )
+            imported = _run_git(repository, ["rev-parse", record.branch]).stdout.strip()
+            if imported != commit:
+                raise GovernanceError("Unable to import the verified isolated task commit")
     return CommitRecord(commit, record.base_commit, record.branch, diff, changed_files)
 
 
@@ -451,11 +497,17 @@ def cleanup_task_worktree(task: dict[str, Any], *, require_clean: bool = True) -
         return
     repository = _repository_root(str(repository_raw))
     worktree = Path(str(worktree_raw)).expanduser().resolve()
+    isolation_mode = str(metadata.get("git_isolation_mode") or "linked_worktree")
     if worktree.exists() and require_clean:
         status = _run_git(worktree, ["status", "--porcelain"]).stdout.strip()
         if status:
             raise GovernanceError("Refusing to remove a worktree with uncommitted task changes")
-    if worktree.exists():
+    if worktree.exists() and isolation_mode == "isolated_clone":
+        root = _worktree_root()
+        if not worktree.is_relative_to(root) or worktree == root:
+            raise GovernanceError("Refusing to remove an isolated clone outside Amaura's worktree root")
+        shutil.rmtree(worktree)
+    elif worktree.exists():
         _run_git(repository, ["worktree", "remove", "--force", str(worktree)], allow_failure=False)
     _run_git(repository, ["branch", "-D", branch], allow_failure=True)
     _run_git(repository, ["worktree", "prune"], allow_failure=True)

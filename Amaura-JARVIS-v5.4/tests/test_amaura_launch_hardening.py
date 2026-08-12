@@ -144,6 +144,11 @@ def _approved_email(control: AmauraControlPlane) -> tuple[dict, dict]:
 
 
 class TestRuntimeConfiguration:
+    def test_omniroute_setup_writes_canonical_env_file(self):
+        setup = (Path(__file__).parents[1] / "Setup_Amaura_OmniRoute.command").read_text(encoding="utf-8")
+        assert 'jarvis_dir / ".env.amaura"' in setup
+        assert 'jarvis_dir / ".env.amaura.local"' not in setup
+
     def test_env_loader_does_not_execute_shell_syntax(self, tmp_path, monkeypatch):
         target = tmp_path / ".env.amaura"
         marker = tmp_path / "should-not-exist"

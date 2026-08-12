@@ -230,7 +230,8 @@ class JarvisAgent:
         working_dir: str | None = None,
     ):
         self.working_dir = str(Path(working_dir or os.getcwd()).resolve())
-        os.chdir(self.working_dir)
+        # Never mutate process-global cwd from a multi-session server agent.
+        # Governed tools and execution adapters receive explicit workspaces.
 
         # API Client
         self.client = NvidiaClient(api_key=api_key)
@@ -1001,6 +1002,8 @@ class JarvisAgent:
                             "resolved_model": result.resolved_model,
                             "fallback_used": result.fallback_used,
                             "fallback_reason": result.fallback_reason,
+                            "latency_ms": result.latency_ms,
+                            "ttft_ms": result.ttft_ms,
                         })
                         return result.text.strip()
             except Exception as exc:
@@ -1009,18 +1012,24 @@ class JarvisAgent:
                     # have already reached the user.
                     raise
                 provenance.update({
-                    "provider": "legacy-agent-fallback",
-                    "model": self.model_key,
+                    "provider": "unavailable",
+                    "model": "",
                     "fallback_used": True,
                     "fallback_reason": str(exc)[:500],
                 })
+                if os.environ.get("AMAURA_JARVIS_INTERACTIVE_LEGACY_FALLBACK", "0") != "1":
+                    return "I couldn't reach the interactive cognition service within the response deadline. Please try again shortly."
             if provenance["provider"] == "not-invoked":
                 provenance.update({
-                    "provider": "legacy-agent-fallback",
-                    "model": self.model_key,
+                    "provider": "unavailable",
+                    "model": "",
                     "fallback_used": True,
                     "fallback_reason": "executive cognition provider unavailable",
                 })
+                if os.environ.get("AMAURA_JARVIS_INTERACTIVE_LEGACY_FALLBACK", "0") != "1":
+                    return "The interactive cognition service is temporarily unavailable. Please try again shortly."
+            provenance["provider"] = "legacy-agent-fallback"
+            provenance["model"] = self.model_key
             return self.run_non_interactive(text, context_addon=context)
 
         with self._executive_lock:
