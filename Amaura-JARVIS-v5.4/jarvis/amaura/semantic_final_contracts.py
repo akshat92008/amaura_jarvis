@@ -73,23 +73,19 @@ def install_semantic_final_contracts() -> None:
     def _explicit_write_contract(text: str) -> tuple[str, str] | None:
         """Return payload,target only when both are bound by explicit write syntax."""
         patterns = (
-            # Quoted payload first, quoted or bare target (including extensionless).
             r"^\s*(?:please\s+)?(?:save|write|put|store|output|record|dump)\s+(?:out\s+)?(?:the\s+)?"
             r"(?:text\s+|data\s+|content\s+|payload\s+|following\s+)?(?P<q>['\"`])(?P<payload>.*?)(?P=q)\s+"
             r"(?:to|into|in|at)\s+(?:file\s+|destination\s+)?(?P<qp>['\"`]?)(?P<path>[~/A-Za-z0-9_.\-/]+)(?P=qp)\s*[.!]?\s*$",
-            # Create target with quoted payload.
             r"^\s*(?:please\s+)?create\s+(?:a\s+)?(?:new\s+)?(?:text\s+)?file\s+(?:at\s+)?"
             r"(?P<qp>['\"`]?)(?P<path>[~/A-Za-z0-9_.\-/]+)(?P=qp)\s+(?:containing|with\s+(?:content|text|data|payload))\s+"
             r"(?:exactly\s+)?(?:this\s+)?(?:text\s*:?[ ]*)?(?P<q>['\"`])(?P<payload>.*?)(?P=q)\s*[.!]?\s*$",
-            # Target first + colon payload.
             r"^\s*(?:write|save|store)\s+to\s+(?P<path>[~/A-Za-z0-9_.\-/]+)\s*:\s*(?P<payload>.+?)\s*$",
-            # Target first + labelled unquoted payload.
             r"^\s*(?:write|save|store)\s+(?:to\s+)?(?P<path>[~/A-Za-z0-9_.\-/]+)\s+"
             r"(?:with\s+(?:content|text|data|payload)|payload\s+is|text\s+is|content\s+is)\s+(?P<payload>.+?)\s*$",
-            # Create file target containing unquoted payload.
-            r"^\s*create\s+(?:a\s+)?(?:text\s+)?file\s+(?P<path>[~/A-Za-z0-9_.\-/]+)\s+containing\s+"
-            r"(?:exactly\s+)?(?:this\s+)?(?:text\s*:?[ ]*)?(?P<payload>.+?)\s*$",
-            # Single-token/numeric payload first. Restrict to one token so target role is unambiguous.
+            # Generic unquoted `containing` means every following word is data.
+            # More instruction-like `containing exactly this text:` forms are
+            # normalized by the earlier strict compatibility layer.
+            r"^\s*create\s+(?:a\s+)?(?:text\s+)?file\s+(?P<path>[~/A-Za-z0-9_.\-/]+)\s+containing\s+(?P<payload>.+?)\s*$",
             r"^\s*(?:save|write|put|store|output)\s+(?P<payload>[^\s'\"`]+)\s+(?:to|into)\s+"
             r"(?:destination\s+)?(?P<path>[~/A-Za-z0-9_.\-/]+)\s*[.!]?\s*$",
         )
@@ -106,8 +102,6 @@ def install_semantic_final_contracts() -> None:
         text: str,
         known_extensions: tuple[str, ...],
     ) -> Any:
-        # Exact compatibility is checked before the older parser so a known-safe
-        # phrase cannot retain residual instruction words such as "the token".
         literal = _explicit_exact_literal(text, known_extensions)
         if literal is not None:
             return core.SemanticRequestGraph(
@@ -120,9 +114,6 @@ def install_semantic_final_contracts() -> None:
 
         graph = current_parse(cls, text, known_extensions)
         lower = text.lower()
-
-        # Explicit write grammar may carry an extensionless target or an unquoted
-        # payload. It supersedes only UNKNOWN or rejected FILE_WRITE parses.
         write_contract = _explicit_write_contract(text)
         if write_contract is not None and (
             graph.action == core.SemanticAction.UNKNOWN
@@ -239,6 +230,17 @@ def install_semantic_final_contracts() -> None:
             return False, tool_result.error or "write tool failed"
         return True, ""
 
+    def _policy_failure(da_module: Any, exc: PermissionError) -> Any:
+        return da_module.DirectActionResult(
+            False,
+            f"Policy refusal: {exc}",
+            execution_type="policy_enforcement",
+            tool_name="effect_authorizer",
+            provider="security-policy",
+            policy_decision="refused",
+            telemetry={"reason": "workspace_escape", "error": str(exc), "verification_passed": False},
+        )
+
     def _execute_arithmetic_workflow(text: str, workspace: str) -> Any | None:
         contract = _arithmetic_contract(text)
         if contract is None:
@@ -293,7 +295,7 @@ def install_semantic_final_contracts() -> None:
                 },
             )
         except PermissionError as exc:
-            return da.DirectActionResult(False, f"Policy refusal: {exc}", execution_type="policy_enforcement", tool_name="effect_authorizer", provider="security-policy", policy_decision="refused", telemetry={"reason": "workspace_escape", "error": str(exc), "verification_passed": False})
+            return _policy_failure(da, exc)
         except FileNotFoundError as exc:
             return da.DirectActionResult(False, f"Arithmetic workflow input not found: {exc}", execution_type="workflow", tool_name="multi_step_workflow", provider="local-filesystem", telemetry={"reason": "input_file_not_found", "error": str(exc), "verification_passed": False})
         except Exception as exc:
@@ -344,7 +346,7 @@ def install_semantic_final_contracts() -> None:
                 telemetry={"verification_passed": True, "input_path": str(inputs[0]), "output_path": str(output), "semantic_verifier": "fresh_source_plus_prefix_equals_persisted_output"},
             )
         except PermissionError as exc:
-            return da.DirectActionResult(False, f"Policy refusal: {exc}", execution_type="policy_enforcement", tool_name="effect_authorizer", provider="security-policy", policy_decision="refused", telemetry={"reason": "workspace_escape", "error": str(exc), "verification_passed": False})
+            return _policy_failure(da, exc)
         except Exception as exc:
             return da.DirectActionResult(False, f"Prefix workflow failed: {exc}", execution_type="workflow", tool_name="multi_step_workflow", provider="local-filesystem", telemetry={"reason": "prefix_workflow_failed", "error": str(exc), "verification_passed": False})
         finally:
@@ -411,7 +413,6 @@ def install_semantic_final_contracts() -> None:
             ok, error = _verified_write(ws, output, payload)
             if not ok:
                 raise RuntimeError(error)
-            # Independent verifier re-parses fresh source and fresh persisted JSON.
             expected_again = _parse_markdown_table(inputs[0].read_text(encoding="utf-8", errors="replace"))
             observed = json.loads(output.read_text(encoding="utf-8"))
             if observed != expected_again:
@@ -425,9 +426,96 @@ def install_semantic_final_contracts() -> None:
                 telemetry={"verification_passed": True, "input_path": str(inputs[0]), "output_path": str(output), "value": observed, "semantic_verifier": "fresh_table_parse_equals_persisted_json"},
             )
         except PermissionError as exc:
-            return da.DirectActionResult(False, f"Policy refusal: {exc}", execution_type="policy_enforcement", tool_name="effect_authorizer", provider="security-policy", policy_decision="refused", telemetry={"reason": "workspace_escape", "error": str(exc), "verification_passed": False})
+            return _policy_failure(da, exc)
         except Exception as exc:
             return da.DirectActionResult(False, f"Table workflow failed: {exc}", execution_type="workflow", tool_name="multi_step_workflow", provider="local-filesystem", telemetry={"reason": "table_workflow_failed", "error": str(exc), "verification_passed": False})
+        finally:
+            core._OUTPUT_SCOPE.reset(output_token)
+            core._EFFECT_SCOPE.reset(effect_token)
+
+    def _kv_contract(text: str) -> tuple[str, str] | None:
+        match = re.match(
+            r"^\s*read\s+(?P<input>\S+)\s+and\s+convert\s+key[- ]value\s+pairs\s+to\s+json\s+(?:in|to|into|at)\s+(?P<output>\S+)\s*[.!]?\s*$",
+            text,
+            re.IGNORECASE,
+        )
+        if not match:
+            return None
+        return match.group("input").strip("'\"`"), match.group("output").strip("'\"`").rstrip(".!?")
+
+    def _parse_key_values(source: str) -> dict[str, Any]:
+        parsed: dict[str, Any] = {}
+        for line in source.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if "=" not in stripped:
+                raise ValueError(f"invalid key-value line without '=': {stripped}")
+            key, value = stripped.split("=", 1)
+            normalized_key = key.strip().lower()
+            if not normalized_key:
+                raise ValueError("empty key in key-value source")
+            if normalized_key in parsed:
+                raise ValueError(f"duplicate key in key-value source: {normalized_key}")
+            parsed[normalized_key] = _scalar(value)
+        if not parsed:
+            raise ValueError("key-value source contained no fields")
+        return parsed
+
+    def _execute_kv_workflow(text: str, workspace: str) -> Any | None:
+        contract = _kv_contract(text)
+        if contract is None:
+            return None
+        input_path, output_path = contract
+        effect_token = core._EFFECT_SCOPE.set(frozenset({"write_file"}))
+        output_token = core._OUTPUT_SCOPE.set(frozenset({output_path}))
+        try:
+            ws, inputs, output = _workflow_paths(workspace, [input_path], output_path)
+            source_path = inputs[0]
+            expected = _parse_key_values(source_path.read_text(encoding="utf-8", errors="replace"))
+            payload = json.dumps(expected, ensure_ascii=False, indent=2)
+            ok, error = _verified_write(ws, output, payload)
+            if not ok:
+                raise RuntimeError(error)
+
+            # Independent postcondition: parse a fresh source read and compare it
+            # semantically with a fresh JSON load from persisted output.
+            expected_again = _parse_key_values(source_path.read_text(encoding="utf-8", errors="replace"))
+            observed = json.loads(output.read_text(encoding="utf-8"))
+            if observed != expected_again:
+                return da.DirectActionResult(
+                    False,
+                    "Key-value workflow verification failed: persisted JSON differs from recomputed source transform.",
+                    execution_type="workflow",
+                    tool_name="multi_step_workflow",
+                    provider="local-filesystem",
+                    telemetry={"reason": "content_mismatch", "verification_passed": False},
+                )
+            return da.DirectActionResult(
+                True,
+                f"Converted {source_path} key-value data to JSON and independently verified {output}.",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="local-filesystem",
+                telemetry={
+                    "verification_passed": True,
+                    "input_path": str(source_path),
+                    "output_path": str(output),
+                    "value": observed,
+                    "semantic_verifier": "fresh_key_value_parse_equals_persisted_json",
+                },
+            )
+        except PermissionError as exc:
+            return _policy_failure(da, exc)
+        except Exception as exc:
+            return da.DirectActionResult(
+                False,
+                f"Key-value workflow failed: {exc}",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="local-filesystem",
+                telemetry={"reason": "key_value_workflow_failed", "error": str(exc), "verification_passed": False},
+            )
         finally:
             core._OUTPUT_SCOPE.reset(output_token)
             core._EFFECT_SCOPE.reset(effect_token)
@@ -486,7 +574,13 @@ def install_semantic_final_contracts() -> None:
         control: Any = None,
         workspace: str = "",
     ) -> Any:
-        for executor in (_execute_arithmetic_workflow, _execute_prefix_workflow, _execute_table_workflow):
+        executors = (
+            _execute_arithmetic_workflow,
+            _execute_prefix_workflow,
+            _execute_table_workflow,
+            _execute_kv_workflow,
+        )
+        for executor in executors:
             result = executor(text, workspace)
             if result is not None:
                 render_graph = core.SemanticRequestGraph(
