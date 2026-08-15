@@ -106,24 +106,18 @@ def install_semantic_release_contracts() -> None:
             with da.tool_workspace(ws):
                 resolved_input = da.resolve_workspace_path(input_path, must_exist=True)
                 resolved_output = da.resolve_workspace_path(output_path, must_exist=False)
-                read_result = da.parse_tool_result(
-                    da.execute_tool("read_file", {"path": str(resolved_input)})
-                )
-            if not read_result.ok:
-                return da.DirectActionResult(
-                    False,
-                    f"Workflow read failed: {read_result.error or 'read tool failed'}",
-                    execution_type="workflow",
-                    tool_name="multi_step_workflow",
-                    provider="local-filesystem",
-                    telemetry={"reason": "tool_failed", "verification_passed": False},
-                )
 
-            raw = core._tool_output(read_result)
-            if isinstance(raw, dict):
-                raw = raw.get("content", raw.get("text", raw.get("output", "")))
+            # Read the authorized input directly from the resolved path. The
+            # read_file tool intentionally returns a human-oriented presentation
+            # with headers/line numbers; semantic transformation must operate on
+            # raw source bytes, and direct reading also keeps verification
+            # independent from tool presentation formatting.
+            if not resolved_input.is_file():
+                raise FileNotFoundError(f"not a regular file: {resolved_input}")
+            raw = resolved_input.read_text(encoding="utf-8", errors="replace")
+
             parsed: dict[str, Any] = {}
-            for line in str(raw).splitlines():
+            for line in raw.splitlines():
                 if ":" not in line:
                     continue
                 key, value = line.split(":", 1)
@@ -213,7 +207,7 @@ def install_semantic_release_contracts() -> None:
                     "input_path": str(resolved_input),
                     "output_path": str(resolved_output),
                     "value": parsed,
-                    "semantic_verifier": "parsed_source_equals_persisted_json",
+                    "semantic_verifier": "raw_source_transform_equals_persisted_json",
                 },
             )
         except PermissionError as exc:
