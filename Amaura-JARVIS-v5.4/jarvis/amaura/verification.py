@@ -98,7 +98,7 @@ class SecureVerifierRunner:
         # discoverable after environment sanitization. User-supplied executable
         # paths are still rejected by parse_command(), so this does not weaken
         # the command-name allowlist.
-        runtime_bin = str(Path(sys.executable).resolve().parent)
+        runtime_bin = str(Path(sys.executable).parent)
         inherited_path = env.get("PATH", "")
         env["PATH"] = runtime_bin + (os.pathsep + inherited_path if inherited_path else "")
         env.update({"HOME": temp_home, "TMPDIR": temp_home, "TEMP": temp_home, "TMP": temp_home})
