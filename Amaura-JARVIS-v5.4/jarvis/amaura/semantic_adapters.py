@@ -8,7 +8,6 @@ behind the graph/effect firewall.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import Any
 
 _INSTALLED = False
