@@ -82,9 +82,6 @@ def install_semantic_final_contracts() -> None:
             r"^\s*(?:write|save|store)\s+to\s+(?P<path>[~/A-Za-z0-9_.\-/]+)\s*:\s*(?P<payload>.+?)\s*$",
             r"^\s*(?:write|save|store)\s+(?:to\s+)?(?P<path>[~/A-Za-z0-9_.\-/]+)\s+"
             r"(?:with\s+(?:content|text|data|payload)|payload\s+is|text\s+is|content\s+is)\s+(?P<payload>.+?)\s*$",
-            # Generic unquoted `containing` means every following word is data.
-            # More instruction-like `containing exactly this text:` forms are
-            # normalized by the earlier strict compatibility layer.
             r"^\s*create\s+(?:a\s+)?(?:text\s+)?file\s+(?P<path>[~/A-Za-z0-9_.\-/]+)\s+containing\s+(?P<payload>.+?)\s*$",
             r"^\s*(?:save|write|put|store|output)\s+(?P<payload>[^\s'\"`]+)\s+(?:to|into)\s+"
             r"(?:destination\s+)?(?P<path>[~/A-Za-z0-9_.\-/]+)\s*[.!]?\s*$",
@@ -112,13 +109,12 @@ def install_semantic_final_contracts() -> None:
                 evidence=["explicit_exact_literal_compat"],
             )
 
-        graph = current_parse(cls, text, known_extensions)
-        lower = text.lower()
+        # A complete grammar proof of payload + mutation destination is stronger
+        # than a legacy parser's nominal FILE_WRITE classification. Bind those
+        # roles before legacy parsing so extension/verb heuristics cannot steal
+        # or erase a proven target such as `put token into auth.secret`.
         write_contract = _explicit_write_contract(text)
-        if write_contract is not None and (
-            graph.action == core.SemanticAction.UNKNOWN
-            or (graph.action == core.SemanticAction.FILE_WRITE and graph.errors)
-        ):
+        if write_contract is not None:
             payload, target = write_contract
             return core.SemanticRequestGraph(
                 original_text=text,
@@ -128,6 +124,9 @@ def install_semantic_final_contracts() -> None:
                 write_payload=payload,
                 evidence=["explicit_payload_and_output_grammar"],
             )
+
+        graph = current_parse(cls, text, known_extensions)
+        lower = text.lower()
 
         if graph.action == core.SemanticAction.BROWSER and graph.browser is not None:
             if re.search(r"\b(?:extract|get|read|return|show)\b", lower):
@@ -477,9 +476,6 @@ def install_semantic_final_contracts() -> None:
             ok, error = _verified_write(ws, output, payload)
             if not ok:
                 raise RuntimeError(error)
-
-            # Independent postcondition: parse a fresh source read and compare it
-            # semantically with a fresh JSON load from persisted output.
             expected_again = _parse_key_values(source_path.read_text(encoding="utf-8", errors="replace"))
             observed = json.loads(output.read_text(encoding="utf-8"))
             if observed != expected_again:
