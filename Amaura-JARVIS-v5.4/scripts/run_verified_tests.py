@@ -5,6 +5,11 @@ Each shard is launched through ``python -m pytest`` rather than embedding
 ``pytest.main``. Historical qualification workspaces are immutable evidence,
 not live regression suites, so default collection is intentionally scoped to
 ``tests/`` plus the maintained ``aimodel/test_engine.py`` suite.
+
+When running the full suite, every shard is executed even if an earlier shard
+fails. This keeps the release gate truthful while exposing the complete current
+regression surface in one CI run. A non-zero aggregate exit is returned only
+after all selected shards have reported.
 """
 from __future__ import annotations
 
@@ -105,6 +110,10 @@ def main() -> int:
     indices = [args.shard_index - 1] if args.shard_index else list(range(total))
     print(f"Collected {len(nodes)} maintained tests; running {len(indices)} of {total} isolated shards", flush=True)
 
+    failed: list[tuple[int, int]] = []
+    timed_out: list[int] = []
+    verified = 0
+
     for index in indices:
         shard = nodes[index * shard_size : (index + 1) * shard_size]
         with tempfile.TemporaryDirectory(prefix=f"amaura-tests-{index + 1}-") as tmp:
@@ -128,13 +137,22 @@ def main() -> int:
             ]
             print(f"[{index + 1}/{total}] {len(shard)} tests", flush=True)
             returncode = _run_shard(command, env=env, timeout=args.timeout, log_path=tmp_path / "pytest.log")
+            verified += len(shard)
             if returncode == 124:
-                print(f"Shard {index + 1} exceeded {args.timeout}s and was terminated", file=sys.stderr)
-                return 124
-            if returncode != 0:
-                return returncode
+                timed_out.append(index + 1)
+                print(f"Shard {index + 1} exceeded {args.timeout}s and was terminated", file=sys.stderr, flush=True)
+            elif returncode != 0:
+                failed.append((index + 1, returncode))
+                print(f"Shard {index + 1} failed with exit code {returncode}; continuing to expose remaining shards", file=sys.stderr, flush=True)
 
-    verified = len(nodes) if not args.shard_index else len(nodes[(args.shard_index - 1) * shard_size:args.shard_index * shard_size])
+    if timed_out or failed:
+        if failed:
+            print("Failed shards: " + ", ".join(f"{idx}(exit={code})" for idx, code in failed), file=sys.stderr)
+        if timed_out:
+            print("Timed out shards: " + ", ".join(map(str, timed_out)), file=sys.stderr)
+        print(f"Executed {verified} maintained tests across all selected isolated shards; release gate remains failed", file=sys.stderr)
+        return 124 if timed_out else 1
+
     print(f"Verified {verified} maintained tests in isolated shards", flush=True)
     return 0
 
