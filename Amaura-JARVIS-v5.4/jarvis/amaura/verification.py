@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable
 
@@ -91,6 +91,16 @@ class SecureVerifierRunner:
             "REQUESTS_CA_BUNDLE", "SYSTEMROOT", "WINDIR",
         }
         env = {k: v for k, v in os.environ.items() if k in allowed}
+        # Keep only the trusted executable directory of the interpreter running
+        # JARVIS plus the sanitized inherited PATH.  This is essential when
+        # JARVIS itself runs from a project virtualenv: allowlisted commands such
+        # as pytest/ruff/mypy live beside sys.executable and must remain
+        # discoverable after environment sanitization.  User-supplied executable
+        # paths are still rejected by parse_command(), so this does not weaken
+        # the command-name allowlist.
+        runtime_bin = str(Path(sys.executable).resolve().parent)
+        inherited_path = env.get("PATH", "")
+        env["PATH"] = runtime_bin + (os.pathsep + inherited_path if inherited_path else "")
         env.update({"HOME": temp_home, "TMPDIR": temp_home, "TEMP": temp_home, "TMP": temp_home})
         # Prevent common language tooling from inheriting user-global config.
         env.update({
@@ -275,20 +285,3 @@ class SecureVerifierRunner:
                 isolation=isolation,
                 network_disabled=network_disabled,
             )
-
-    def run_all(self, repository: str | Path, commands: Iterable[str], *, timeout_seconds: int = 300) -> list[dict]:
-        results: list[dict] = []
-        for command in commands:
-            result = self.run(repository, str(command), timeout_seconds=timeout_seconds)
-            record = result.to_dict()
-            results.append(record)
-            if not result.passed:
-                raise GovernanceError(
-                    f"Independent verification failed: {command} (exit {result.exit_code})"
-                )
-        if not results:
-            raise GovernanceError("Autonomous repository success requires at least one independently rerun verifier command")
-        return results
-
-
-__all__ = ["SecureVerifierRunner", "VerificationResult"]
