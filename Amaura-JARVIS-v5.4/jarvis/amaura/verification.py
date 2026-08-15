@@ -92,10 +92,10 @@ class SecureVerifierRunner:
         }
         env = {k: v for k, v in os.environ.items() if k in allowed}
         # Keep only the trusted executable directory of the interpreter running
-        # JARVIS plus the sanitized inherited PATH.  This is essential when
+        # JARVIS plus the sanitized inherited PATH. This is essential when
         # JARVIS itself runs from a project virtualenv: allowlisted commands such
         # as pytest/ruff/mypy live beside sys.executable and must remain
-        # discoverable after environment sanitization.  User-supplied executable
+        # discoverable after environment sanitization. User-supplied executable
         # paths are still rejected by parse_command(), so this does not weaken
         # the command-name allowlist.
         runtime_bin = str(Path(sys.executable).resolve().parent)
@@ -109,10 +109,6 @@ class SecureVerifierRunner:
             "PYTHONPYCACHEPREFIX": str(Path(temp_home) / "pycache"),
             "PIP_DISABLE_PIP_VERSION_CHECK": "1",
             # GUI/game test suites must remain headless inside the verifier.
-            # On macOS SDL can abort the process (SIGABRT/-6) while probing
-            # CoreAudio or Cocoa even when individual tests set only the video
-            # driver. These deterministic dummy backends prevent that without
-            # weakening process, filesystem, or network isolation.
             "SDL_VIDEODRIVER": "dummy",
             "SDL_AUDIODRIVER": "dummy",
             "SDL_RENDER_DRIVER": "software",
@@ -136,13 +132,9 @@ class SecureVerifierRunner:
 
     @staticmethod
     def _mac_profile(workspace: Path, temp_home: Path) -> str:
-        # sandbox-exec profiles use literal paths; quote backslashes/quotes.
         def q(path: Path) -> str:
             return str(path).replace("\\", "\\\\").replace('"', '\\"')
-        # Start from deny-by-default. The allowlist covers macOS runtime files,
-        # common developer runtimes and the assigned worktree/temp home. This is
-        # intentionally stricter than the v5.1 profile, which allowed arbitrary
-        # host reads and only denied writes/network.
+
         read_roots = [
             workspace,
             temp_home,
@@ -199,8 +191,8 @@ class SecureVerifierRunner:
             temp_home = Path(temp).resolve()
             env = self._clean_environment(str(temp_home))
             resolved_argv = list(argv)
-            if resolved_argv and resolved_argv[0] == "python" and not shutil.which("python"):
-                resolved_argv[0] = shutil.which("python3") or sys.executable
+            if resolved_argv and resolved_argv[0] == "python" and not shutil.which("python", path=env.get("PATH")):
+                resolved_argv[0] = shutil.which("python3", path=env.get("PATH")) or sys.executable
             if mode == "host":
                 if os.environ.get("AMAURA_ALLOW_HOST_VERIFICATION", "0") != "1":
                     raise GovernanceError("Host verification requires AMAURA_ALLOW_HOST_VERIFICATION=1")
@@ -220,9 +212,6 @@ class SecureVerifierRunner:
                 if not shutil.which("docker"):
                     raise GovernanceError("Docker verifier mode requested but docker is unavailable")
                 image = os.environ.get("AMAURA_VERIFIER_IMAGE", "python:3.11-slim").strip() or "python:3.11-slim"
-                # The worktree is the only host mount. Network is disabled and the
-                # container is resource bounded. Dependencies must already exist in
-                # the image/worktree; verification never installs from the network.
                 launch = [
                     "docker", "run", "--rm", "--network=none", "--cpus=2", "--memory=2g", "--pids-limit=256",
                     "--security-opt", "no-new-privileges", "-v", f"{repo}:/workspace:rw", "-w", "/workspace",
@@ -231,7 +220,7 @@ class SecureVerifierRunner:
                 cwd = repo
                 isolation = f"docker:{image}"
                 network_disabled = True
-            else:  # defensive
+            else:
                 raise GovernanceError(f"Unsupported verifier mode: {mode}")
 
             try:
@@ -285,3 +274,32 @@ class SecureVerifierRunner:
                 isolation=isolation,
                 network_disabled=network_disabled,
             )
+
+    def run_all(
+        self,
+        repository: str | Path,
+        commands: Iterable[str],
+        *,
+        timeout_seconds: int = 300,
+    ) -> list[dict]:
+        """Run every declared verification command independently and fail closed.
+
+        Executor-reported pass/fail values are never consumed here. Each command
+        is re-parsed against the verifier allowlist and executed through the same
+        isolation boundary as ``run``. The first non-zero result rejects the
+        delivery; only independently observed passes are returned as evidence.
+        """
+        command_list = [str(command).strip() for command in commands if str(command).strip()]
+        if not command_list:
+            raise GovernanceError("Independent verification requires at least one command")
+        evidence: list[dict] = []
+        for command in command_list:
+            result = self.run(repository, command, timeout_seconds=timeout_seconds)
+            payload = result.to_dict()
+            evidence.append(payload)
+            if not result.passed:
+                detail = result.stderr_tail or result.stdout_tail or f"exit code {result.exit_code}"
+                raise GovernanceError(
+                    f"Command failed independent verification: {command!r}: {detail[-1200:]}"
+                )
+        return evidence
