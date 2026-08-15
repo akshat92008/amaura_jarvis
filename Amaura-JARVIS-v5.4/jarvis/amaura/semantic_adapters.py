@@ -58,6 +58,24 @@ def install_semantic_adapters() -> None:
         graph = original_parse(cls, normalized, known_extensions)
         graph.original_text = text
 
+        # Natural read phrasing retained from the pre-Phase-9 API. We only map
+        # "what is inside" to a file read when the extracted path is visibly a
+        # file (known extension); directories remain directory/list intents.
+        if graph.action == core.SemanticAction.UNKNOWN:
+            paths = core.extract_paths(normalized, known_extensions)
+            if (
+                paths
+                and re.search(r"\bwhat\s+is\s+inside\b", normalized, re.IGNORECASE)
+                and any(paths[0].lower().endswith(ext) for ext in known_extensions)
+            ):
+                graph = core.SemanticRequestGraph(
+                    original_text=text,
+                    action=core.SemanticAction.FILE_READ,
+                    response_mode=core._response_mode(text),
+                    paths=[core.PathBinding(paths[0], core.SemanticPathRole.INPUT, "natural_inside_file_read")],
+                    evidence=["natural_inside_file_read"],
+                )
+
         # Phase 8 compatibility: absolute paths are commonly unquoted. Preserve
         # semantic operand roles for those forms rather than textual order.
         if graph.action == core.SemanticAction.ARITHMETIC and graph.arithmetic is not None:
@@ -148,10 +166,28 @@ def install_semantic_adapters() -> None:
     def compat_execute(cls: Any, text: str, *, context: str = "", control: Any = None, workspace: str = "") -> Any:
         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
         if graph.action != core.SemanticAction.UNKNOWN:
+            # Keep cloud metadata endpoints fail-closed before browser execution.
+            if graph.action == core.SemanticAction.BROWSER and graph.browser is not None:
+                url_lower = graph.browser.url.lower()
+                if "169.254.169.254" in url_lower or "metadata.google.internal" in url_lower:
+                    return da.DirectActionResult(
+                        success=False,
+                        output="Access to cloud metadata endpoints is blocked by security policy.",
+                        execution_type="tool",
+                        tool_name="browser_navigate",
+                        provider="browser",
+                        model="",
+                        policy_decision="refused",
+                        telemetry={"reason": "metadata_endpoint_refusal", "url": graph.browser.url},
+                    )
+
             result = core_execute(cls, text, context=context, control=control, workspace=workspace)
-            # Preserve the public compatibility contract for concrete tool-backed
-            # operations while the semantic graph remains visible in telemetry.
-            if result is not None and graph.action in {
+            if result is None:
+                return None
+
+            # Preserve public compatibility contracts while semantic provenance
+            # remains present in telemetry.
+            if graph.action in {
                 core.SemanticAction.FILE_READ,
                 core.SemanticAction.FILE_WRITE,
                 core.SemanticAction.DIRECTORY_LIST,
@@ -159,6 +195,18 @@ def install_semantic_adapters() -> None:
                 core.SemanticAction.SCREENSHOT,
             }:
                 result.execution_type = "tool"
+            if graph.action == core.SemanticAction.BROWSER:
+                result.provider = "browser"
+            if graph.action == core.SemanticAction.POLICY_REFUSAL and "Policy refusal" not in result.output:
+                result.output = f"Policy refusal: {result.output}"
+            if graph.action == core.SemanticAction.FILE_WRITE and not result.success:
+                error_text = str((result.telemetry or {}).get("error", result.output)).lower()
+                target = graph.output_path.lower()
+                sensitive_target = any(marker in target for marker in ("~/.ssh", "~/.aws", "~/.gnupg", "/.ssh/", "/.aws/"))
+                policy_error = any(marker in error_text for marker in ("permission", "sensitive", "blocked", "outside workspace", "escape"))
+                if sensitive_target or policy_error:
+                    result.provider = "security-policy"
+                    result.policy_decision = "refused"
             return result
 
         legacy, output = safe_legacy_workflow(cls, text)
