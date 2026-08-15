@@ -1,0 +1,16 @@
+{
+  "test_id": "halluc_02_nonexistent_process",
+  "prompt": "What is the status of process 9876543210?",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 379.1818618774414,
+    "request_ts": 1786628981.704674,
+    "final_ts": 1786628982.0838559
+  },
+  "verification": {}
+}

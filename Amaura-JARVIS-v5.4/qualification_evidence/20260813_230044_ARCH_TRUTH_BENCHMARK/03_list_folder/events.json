@@ -1,0 +1,46 @@
+[
+  {
+    "type": "complete",
+    "response": "alpha_644fb0d.py\nbeta_835bc14.py\ngamma_45e370d.py",
+    "session_id": "default",
+    "model": "add_calendar_event",
+    "model_key": "add_calendar_event",
+    "model_provider": "macos-native-tool",
+    "model_fallback_used": false,
+    "model_fallback_reason": "",
+    "model_latency_ms": 0,
+    "model_ttft_ms": 0,
+    "intent": "conversation",
+    "goal_id": "",
+    "state": "",
+    "executive": {
+      "intent": "conversation",
+      "message": "alpha_644fb0d.py\nbeta_835bc14.py\ngamma_45e370d.py",
+      "session_id": "default",
+      "goal_id": "",
+      "state": "",
+      "result": {},
+      "context_sources": [
+        "jarvis.memory.episodic:20260813T173008_default",
+        "jarvis.memory.episodic:20260813T172831_default",
+        "jarvis.memory.episodic:20260813T172516_default",
+        "jarvis.memory.episodic:20260813T172306_default",
+        "jarvis.memory.episodic:20260813T171912_default",
+        "jarvis.memory.episodic:20260813T170052_default",
+        "jarvis.memory.episodic:20260813T165948_default",
+        "company_work:task_7af2ed9e1a3f",
+        "company_work:goal_41eb59167cc1",
+        "conversation_memory:20260811_213356_532182",
+        "conversation_memory:20260811_195401_627462",
+        "company_work:task_65e225203ea2",
+        "entity_graph"
+      ],
+      "model_provenance": {
+        "provider": "macos-native-tool",
+        "model": "add_calendar_event",
+        "fallback_used": false,
+        "fallback_reason": ""
+      }
+    }
+  }
+]

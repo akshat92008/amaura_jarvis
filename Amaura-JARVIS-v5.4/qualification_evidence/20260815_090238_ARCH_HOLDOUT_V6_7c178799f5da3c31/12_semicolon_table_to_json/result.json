@@ -1,0 +1,169 @@
+{
+  "test_id": "12_semicolon_table_to_json",
+  "status": "PASS",
+  "reason": "Semicolon-delimited structured transformation.",
+  "verification": {
+    "expected": [
+      {
+        "name": "denim-garden-8060",
+        "units": 15
+      },
+      {
+        "name": "ginger-edge-4591",
+        "units": 12
+      },
+      {
+        "name": "reed-isle-4723",
+        "units": 22
+      },
+      {
+        "name": "flint-edge-7855",
+        "units": 4
+      }
+    ],
+    "actual": [
+      {
+        "name": "denim-garden-8060",
+        "units": 15
+      },
+      {
+        "name": "ginger-edge-4591",
+        "units": 12
+      },
+      {
+        "name": "reed-isle-4723",
+        "units": 22
+      },
+      {
+        "name": "flint-edge-7855",
+        "units": 4
+      }
+    ]
+  },
+  "chat": {
+    "prompt": "Convert the semicolon-delimited table in \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_19129558.tbl\" into a JSON array of objects at \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_out_95658086.json\". Keep units numeric.",
+    "session_id": "s12_61038476",
+    "http_status": 200,
+    "response_text": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_19129558.tbl, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_out_95658086.json.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_19129558.tbl, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_out_95658086.json.",
+        "session_id": "s12_61038476",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_19129558.tbl, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_out_95658086.json.",
+          "session_id": "s12_61038476",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "requested_operation": "delimited_table_to_json",
+              "parsed_plan": {
+                "inputs": [
+                  "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_19129558.tbl"
+                ],
+                "operation": "delimited_table_to_json",
+                "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_out_95658086.json",
+                "parameters": {
+                  "delimiter": ";"
+                }
+              },
+              "input_values": [
+                "name;units\ndenim-garden-8060;15\nginger-edge-4591;12\nreed-isle-4723;22\nflint-edge-7855;4\n"
+              ],
+              "computed_result": [
+                {
+                  "name": "denim-garden-8060",
+                  "units": 15
+                },
+                {
+                  "name": "ginger-edge-4591",
+                  "units": 12
+                },
+                {
+                  "name": "reed-isle-4723",
+                  "units": 22
+                },
+                {
+                  "name": "flint-edge-7855",
+                  "units": 4
+                }
+              ],
+              "expected_output_hash": "5efbe20b94ee8bd1356cb624324855af9c0ea84b63e543fd4ed93df7d9bd9533",
+              "actual_output_hash": "5efbe20b94ee8bd1356cb624324855af9c0ea84b63e543fd4ed93df7d9bd9533",
+              "verification_passed": true,
+              "output_bytes": 227
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "policy_decision": "allowed",
+            "requested_operation": "delimited_table_to_json",
+            "parsed_plan": {
+              "inputs": [
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_19129558.tbl"
+              ],
+              "operation": "delimited_table_to_json",
+              "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/records_out_95658086.json",
+              "parameters": {
+                "delimiter": ";"
+              }
+            },
+            "input_values": [
+              "name;units\ndenim-garden-8060;15\nginger-edge-4591;12\nreed-isle-4723;22\nflint-edge-7855;4\n"
+            ],
+            "computed_result": [
+              {
+                "name": "denim-garden-8060",
+                "units": 15
+              },
+              {
+                "name": "ginger-edge-4591",
+                "units": 12
+              },
+              {
+                "name": "reed-isle-4723",
+                "units": 22
+              },
+              {
+                "name": "flint-edge-7855",
+                "units": 4
+              }
+            ],
+            "expected_output_hash": "5efbe20b94ee8bd1356cb624324855af9c0ea84b63e543fd4ed93df7d9bd9533",
+            "actual_output_hash": "5efbe20b94ee8bd1356cb624324855af9c0ea84b63e543fd4ed93df7d9bd9533",
+            "verification_passed": true,
+            "output_bytes": 227
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

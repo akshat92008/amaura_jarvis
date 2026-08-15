@@ -1,0 +1,32 @@
+{
+  "test": "Media Capabilities",
+  "capability": {
+    "key": "ffmpeg",
+    "name": "FFmpeg",
+    "category": "media",
+    "operations": [
+      "probe",
+      "transcode",
+      "burn_subtitles",
+      "concat",
+      "mux_audio"
+    ],
+    "ram_mb": 650,
+    "heavy": false,
+    "networked": false,
+    "side_effects": false,
+    "always_on": false,
+    "install_hint": "brew install ffmpeg",
+    "licence": "LGPL/GPL depending on build",
+    "installed": true,
+    "configured": true,
+    "healthy": null,
+    "execution_ready": true,
+    "verified_at": null,
+    "version": "",
+    "available": true,
+    "reason": "installed",
+    "verification": "not execution-verified"
+  },
+  "success": true
+}

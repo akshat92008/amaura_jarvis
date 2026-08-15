@@ -1,0 +1,118 @@
+{"type": "token", "content": "I"}
+{"type": "token", "content": "'m"}
+{"type": "token", "content": " not"}
+{"type": "token", "content": " capable"}
+{"type": "token", "content": " of"}
+{"type": "token", "content": " directly"}
+{"type": "token", "content": " accessing"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " controlling"}
+{"type": "token", "content": " your"}
+{"type": "token", "content": " device"}
+{"type": "token", "content": "'s"}
+{"type": "token", "content": " system"}
+{"type": "token", "content": " volume"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " I"}
+{"type": "token", "content": "'m"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " text"}
+{"type": "token", "content": "-based"}
+{"type": "token", "content": " AI"}
+{"type": "token", "content": " assistant"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " do"}
+{"type": "token", "content": " not"}
+{"type": "token", "content": " have"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " ability"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " interact"}
+{"type": "token", "content": " with"}
+{"type": "token", "content": " your"}
+{"type": "token", "content": " device"}
+{"type": "token", "content": "'s"}
+{"type": "token", "content": " audio"}
+{"type": "token", "content": " settings"}
+{"type": "token", "content": ".\n\n"}
+{"type": "token", "content": "However"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " easily"}
+{"type": "token", "content": " adjust"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " system"}
+{"type": "token", "content": " volume"}
+{"type": "token", "content": " on"}
+{"type": "token", "content": " your"}
+{"type": "token", "content": " device"}
+{"type": "token", "content": " by"}
+{"type": "token", "content": " using"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " volume"}
+{"type": "token", "content": " controls"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " settings"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " On"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " Mac"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " click"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " speaker"}
+{"type": "token", "content": " icon"}
+{"type": "token", "content": " in"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " menu"}
+{"type": "token", "content": " bar"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " use"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " keyboard"}
+{"type": "token", "content": " volume"}
+{"type": "token", "content": " controls"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " On"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " Windows"}
+{"type": "token", "content": " device"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " click"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " speaker"}
+{"type": "token", "content": " icon"}
+{"type": "token", "content": " in"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " system"}
+{"type": "token", "content": " tray"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " use"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " keyboard"}
+{"type": "token", "content": " volume"}
+{"type": "token", "content": " controls"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " On"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " mobile"}
+{"type": "token", "content": " device"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " adjust"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " volume"}
+{"type": "token", "content": " in"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " device"}
+{"type": "token", "content": "'s"}
+{"type": "token", "content": " settings"}
+{"type": "token", "content": " app"}
+{"type": "token", "content": "."}
+{"type": "complete", "response": "I'm not capable of directly accessing or controlling your device's system volume. I'm a text-based AI assistant and do not have the ability to interact with your device's audio settings.\n\nHowever, you can easily adjust the system volume on your device by using the volume controls or settings. On a Mac, you can click the speaker icon in the menu bar or use the keyboard volume controls. On a Windows device, you can click the speaker icon in the system tray or use the keyboard volume controls. On a mobile device, you can adjust the volume in the device's settings app.", "session_id": "default", "model": "llama-3.3-70b-versatile", "model_key": "llama-3.3-70b-versatile", "model_provider": "omniroute", "model_fallback_used": false, "model_fallback_reason": "", "model_latency_ms": 2895, "model_ttft_ms": 2688, "intent": "conversation", "goal_id": "", "state": "", "executive": {"intent": "conversation", "message": "I'm not capable of directly accessing or controlling your device's system volume. I'm a text-based AI assistant and do not have the ability to interact with your device's audio settings.\n\nHowever, you can easily adjust the system volume on your device by using the volume controls or settings. On a Mac, you can click the speaker icon in the menu bar or use the keyboard volume controls. On a Windows device, you can click the speaker icon in the system tray or use the keyboard volume controls. On a mobile device, you can adjust the volume in the device's settings app.", "session_id": "default", "goal_id": "", "state": "", "result": {}, "context_sources": [], "model_provenance": {"provider": "omniroute", "model": "llama-3.3-70b-versatile", "fallback_used": false, "fallback_reason": "", "requested_model": "groq/llama-3.3-70b-versatile", "resolved_provider": "omniroute", "resolved_model": "llama-3.3-70b-versatile", "latency_ms": 2895, "ttft_ms": 2688}}}

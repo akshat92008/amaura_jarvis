@@ -1,0 +1,169 @@
+{
+  "test_id": "16_pipe_table_to_json_regression",
+  "status": "PASS",
+  "reason": "Structured workflow regression.",
+  "verification": {
+    "expected": [
+      {
+        "label": "dahlia-valley-5053",
+        "qty": 11
+      },
+      {
+        "label": "ember-basin-5569",
+        "qty": 2
+      },
+      {
+        "label": "lotus-delta-6211",
+        "qty": 1
+      },
+      {
+        "label": "falcon-harbor-2930",
+        "qty": 12
+      }
+    ],
+    "actual": [
+      {
+        "label": "dahlia-valley-5053",
+        "qty": 11
+      },
+      {
+        "label": "ember-basin-5569",
+        "qty": 2
+      },
+      {
+        "label": "lotus-delta-6211",
+        "qty": 1
+      },
+      {
+        "label": "falcon-harbor-2930",
+        "qty": 12
+      }
+    ]
+  },
+  "chat": {
+    "prompt": "Read the pipe-delimited data from \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_97735229.txt\" and create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_out_63796674.json\" as a JSON array of objects, keeping qty numeric.",
+    "session_id": "v7s16_80207792",
+    "http_status": 200,
+    "response_text": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_97735229.txt, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_out_63796674.json.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_97735229.txt, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_out_63796674.json.",
+        "session_id": "v7s16_80207792",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_97735229.txt, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_out_63796674.json.",
+          "session_id": "v7s16_80207792",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "requested_operation": "delimited_table_to_json",
+              "parsed_plan": {
+                "inputs": [
+                  "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_97735229.txt"
+                ],
+                "operation": "delimited_table_to_json",
+                "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_out_63796674.json",
+                "parameters": {
+                  "delimiter": "|"
+                }
+              },
+              "input_values": [
+                "label|qty\ndahlia-valley-5053|11\nember-basin-5569|2\nlotus-delta-6211|1\nfalcon-harbor-2930|12\n"
+              ],
+              "computed_result": [
+                {
+                  "label": "dahlia-valley-5053",
+                  "qty": 11
+                },
+                {
+                  "label": "ember-basin-5569",
+                  "qty": 2
+                },
+                {
+                  "label": "lotus-delta-6211",
+                  "qty": 1
+                },
+                {
+                  "label": "falcon-harbor-2930",
+                  "qty": 12
+                }
+              ],
+              "expected_output_hash": "3f9bd62ee1f48e61dcfdbec348ea8bf67cbcb97a93b932b602d75ceacb4a5cbd",
+              "actual_output_hash": "3f9bd62ee1f48e61dcfdbec348ea8bf67cbcb97a93b932b602d75ceacb4a5cbd",
+              "verification_passed": true,
+              "output_bytes": 228
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "policy_decision": "allowed",
+            "requested_operation": "delimited_table_to_json",
+            "parsed_plan": {
+              "inputs": [
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_97735229.txt"
+              ],
+              "operation": "delimited_table_to_json",
+              "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/pipe_out_63796674.json",
+              "parameters": {
+                "delimiter": "|"
+              }
+            },
+            "input_values": [
+              "label|qty\ndahlia-valley-5053|11\nember-basin-5569|2\nlotus-delta-6211|1\nfalcon-harbor-2930|12\n"
+            ],
+            "computed_result": [
+              {
+                "label": "dahlia-valley-5053",
+                "qty": 11
+              },
+              {
+                "label": "ember-basin-5569",
+                "qty": 2
+              },
+              {
+                "label": "lotus-delta-6211",
+                "qty": 1
+              },
+              {
+                "label": "falcon-harbor-2930",
+                "qty": 12
+              }
+            ],
+            "expected_output_hash": "3f9bd62ee1f48e61dcfdbec348ea8bf67cbcb97a93b932b602d75ceacb4a5cbd",
+            "actual_output_hash": "3f9bd62ee1f48e61dcfdbec348ea8bf67cbcb97a93b932b602d75ceacb4a5cbd",
+            "verification_passed": true,
+            "output_bytes": 228
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

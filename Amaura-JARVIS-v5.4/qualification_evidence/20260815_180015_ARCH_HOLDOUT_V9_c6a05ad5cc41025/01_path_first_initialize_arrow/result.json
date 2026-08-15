@@ -1,0 +1,72 @@
+{
+  "test_id": "01_path_first_initialize_arrow",
+  "status": "FAIL",
+  "reason": "Destination-first creation with arrow-delimited contents.",
+  "verification": {
+    "expected": "nebula-brook-8037::227681",
+    "actual": null,
+    "tools": [
+      "read_file"
+    ]
+  },
+  "chat": {
+    "prompt": "Initialize \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/packet_77303097.txt\"; contents -> nebula-brook-8037::227681",
+    "session_id": "v9w1_71206370",
+    "http_status": 200,
+    "response_text": "File read failed: file not found at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/packet_77303097.txt'",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "File read failed: file not found at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/packet_77303097.txt'",
+        "session_id": "v9w1_71206370",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "failed",
+        "executive": {
+          "intent": "mission",
+          "message": "File read failed: file not found at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/packet_77303097.txt'",
+          "session_id": "v9w1_71206370",
+          "goal_id": "",
+          "state": "failed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "read_file",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "reason": "file_not_found",
+              "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/packet_77303097.txt",
+              "error": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/packet_77303097.txt"
+            },
+            "success": false
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "read_file",
+            "policy_decision": "allowed",
+            "reason": "file_not_found",
+            "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/packet_77303097.txt",
+            "error": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/packet_77303097.txt"
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "failed"
+  }
+}

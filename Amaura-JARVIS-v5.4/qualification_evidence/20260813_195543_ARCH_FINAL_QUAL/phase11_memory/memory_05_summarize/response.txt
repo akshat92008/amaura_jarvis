@@ -1,0 +1,8 @@
+I recall several recent project specifications. 
+
+1. Researching the main new features of Python 3.13 and finding at least 3 key points, then saving the findings to a markdown file.
+2. Creating a CSV file with columns for task name, priority, and status, and adding exactly 5 rows of randomly generated project tasks.
+3. Creating a five-slide PowerPoint presentation explaining what an AI assistant does, with each slide having a title and bullet points.
+4. Creating a markdown file with a brief project description.
+
+These are the project specifications I remember from our recent conversations. If you have any further questions or need more information, feel free to ask.

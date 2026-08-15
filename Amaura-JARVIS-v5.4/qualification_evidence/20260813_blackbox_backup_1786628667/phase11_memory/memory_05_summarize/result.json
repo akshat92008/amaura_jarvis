@@ -1,0 +1,16 @@
+{
+  "test_id": "memory_05_summarize",
+  "prompt": "Summarize what you remember about recent project specifications.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 148.03409576416016,
+    "request_ts": 1786586900.941375,
+    "final_ts": 1786586901.089409
+  },
+  "verification": {}
+}

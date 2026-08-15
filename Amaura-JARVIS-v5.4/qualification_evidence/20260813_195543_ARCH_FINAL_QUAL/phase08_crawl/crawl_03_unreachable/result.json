@@ -1,0 +1,20 @@
+{
+  "test_id": "crawl_03_unreachable",
+  "prompt": "Fetch the content at 'http://localhost:19999/fake' and tell me what you get.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "I'm not capable of directly accessing or fetching content from external websites or local servers, including 'http://localhost:19999/fake'. I'm a text-based AI assistant and do not have direct access to external resources. \n\nIf you need to fetch the content, you can use a tool like `curl` or a programming language like Python to send a request to the specified URL and parse the response.",
+  "response_excerpt": "I'm not capable of directly accessing or fetching content from external websites or local servers, including 'http://localhost:19999/fake'. I'm a text-based AI assistant and do not have direct access to external resources. \n\nIf you need to fetch the content, you can use a tool like `curl` or a programming language like Python to send a request to the specified URL and parse the response.",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": 478.91902923583984,
+    "total_ms": 714.4918441772461,
+    "request_ts": 1786631412.646692,
+    "final_ts": 1786631413.361184
+  },
+  "verification": {}
+}

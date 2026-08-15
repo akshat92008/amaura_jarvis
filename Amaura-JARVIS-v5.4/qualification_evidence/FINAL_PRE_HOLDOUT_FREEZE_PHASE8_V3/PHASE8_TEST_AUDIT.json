@@ -1,0 +1,20 @@
+{
+  "categories": {
+    "browser_selector_extraction": "PROVEN",
+    "browser_value_only": "PROVEN",
+    "concurrency_isolation": "PROVEN",
+    "division_operand_roles": "PROVEN",
+    "exact_literal_deterministic": "PROVEN",
+    "exact_literal_no_mission": "PROVEN",
+    "exact_literal_no_model": "PROVEN",
+    "exact_literal_no_wrong_tool": "PROVEN",
+    "file_exact_raw": "NOT_PROVEN",
+    "memory_value_only": "PROVEN",
+    "path_first_write": "PROVEN",
+    "repo_wrong_helper": "PROVEN",
+    "repo_wrong_return": "PROVEN",
+    "subtraction_operand_roles": "PROVEN",
+    "workflow_number_only": "PROVEN"
+  },
+  "overall_status": "PARTIALLY_PROVEN"
+}

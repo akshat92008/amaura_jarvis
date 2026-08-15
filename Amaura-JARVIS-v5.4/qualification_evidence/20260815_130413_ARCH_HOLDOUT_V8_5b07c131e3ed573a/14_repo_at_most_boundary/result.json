@@ -1,0 +1,119 @@
+{
+  "test_id": "14_repo_at_most_boundary",
+  "status": "PASS",
+  "reason": "At-most contract requires inclusive <= diagnosis.",
+  "verification": {
+    "function": true,
+    "current_operator": true,
+    "expected_operator": true,
+    "read_only": true
+  },
+  "chat": {
+    "prompt": "Review \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273\" read-only. Explain the boundary defect in within_limit, including the current and required comparison operators.",
+    "session_id": "v8repo14_76352213",
+    "http_status": 200,
+    "response_text": "Inspected repository at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273. Analyzed 2 Python file(s) with read-only isolation. Function 'within_limit' has defect: Function 'within_limit' uses strict '<' comparison where '<=' (at most) was required by contract.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Inspected repository at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273. Analyzed 2 Python file(s) with read-only isolation. Function 'within_limit' has defect: Function 'within_limit' uses strict '<' comparison where '<=' (at most) was required by contract.",
+        "session_id": "v8repo14_76352213",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "deterministic-ast",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Inspected repository at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273. Analyzed 2 Python file(s) with read-only isolation. Function 'within_limit' has defect: Function 'within_limit' uses strict '<' comparison where '<=' (at most) was required by contract.",
+          "session_id": "v8repo14_76352213",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "internal_analysis",
+            "tool_name": "internal_ast_inspector",
+            "provider": "deterministic-ast",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "repo_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273",
+              "files_inspected": [
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/rules.py",
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/test_rules.py"
+              ],
+              "pre_hashes": {
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/rules.py": "22385e90ff9b220019fb4a729eb467f0cf2771bae7184ede1dfb74b91fadb4cb",
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/test_rules.py": "588a196ca201a0f9ccc69bd4ce12f8799a955ee094a7cbb916cf632cbf8c018c"
+              },
+              "post_hashes": {
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/rules.py": "22385e90ff9b220019fb4a729eb467f0cf2771bae7184ede1dfb74b91fadb4cb",
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/test_rules.py": "588a196ca201a0f9ccc69bd4ce12f8799a955ee094a7cbb916cf632cbf8c018c"
+              },
+              "read_only_verified": true,
+              "primary_function": "within_limit",
+              "findings_count": 1,
+              "findings": [
+                {
+                  "function": "within_limit",
+                  "category": "comparison_boundary",
+                  "observed_operator": "<",
+                  "expected_operator": "<=",
+                  "description": "Function 'within_limit' uses strict '<' comparison where '<=' (at most) was required by contract",
+                  "confidence": 1.0,
+                  "file": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/rules.py"
+                }
+              ]
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "deterministic-ast",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "internal_analysis",
+            "tool_name": "internal_ast_inspector",
+            "policy_decision": "allowed",
+            "repo_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273",
+            "files_inspected": [
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/rules.py",
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/test_rules.py"
+            ],
+            "pre_hashes": {
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/rules.py": "22385e90ff9b220019fb4a729eb467f0cf2771bae7184ede1dfb74b91fadb4cb",
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/test_rules.py": "588a196ca201a0f9ccc69bd4ce12f8799a955ee094a7cbb916cf632cbf8c018c"
+            },
+            "post_hashes": {
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/rules.py": "22385e90ff9b220019fb4a729eb467f0cf2771bae7184ede1dfb74b91fadb4cb",
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/test_rules.py": "588a196ca201a0f9ccc69bd4ce12f8799a955ee094a7cbb916cf632cbf8c018c"
+            },
+            "read_only_verified": true,
+            "primary_function": "within_limit",
+            "findings_count": 1,
+            "findings": [
+              {
+                "function": "within_limit",
+                "category": "comparison_boundary",
+                "observed_operator": "<",
+                "expected_operator": "<=",
+                "description": "Function 'within_limit' uses strict '<' comparison where '<=' (at most) was required by contract",
+                "confidence": 1.0,
+                "file": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boundary_repo_hemlock_knoll_3273/rules.py"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

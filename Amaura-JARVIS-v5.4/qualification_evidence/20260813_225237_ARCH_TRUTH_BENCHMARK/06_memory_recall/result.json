@@ -1,0 +1,215 @@
+{
+  "test_id": "06_memory_recall",
+  "status": "FAIL",
+  "reason": "PASS requires recall of an unseen runtime value in a separate request; memory-tool telemetry is informational.",
+  "verification": {
+    "project": "PROJECT-49624B90C5",
+    "recalled": false,
+    "store_tools": [],
+    "recall_tools": []
+  },
+  "chat": {
+    "store": {
+      "prompt": "Remember this durable project fact: PROJECT-49624B90C5 has secret value VALUE-9CCFA6EB5BAC. Confirm only after storing it in project memory.",
+      "http_status": 200,
+      "response_text": "Remembered under project memory: this durable project fact: PROJECT-49624B90C5 has secret value VALUE-9CCFA6EB5BAC. Confirm only after storing it in project memory.",
+      "error": null,
+      "tool_calls": [],
+      "goal_id": null,
+      "goal_state": null,
+      "goal_history": [],
+      "latency_ms": 11982.072114944458,
+      "events": [
+        {
+          "type": "complete",
+          "response": "Remembered under project memory: this durable project fact: PROJECT-49624B90C5 has secret value VALUE-9CCFA6EB5BAC. Confirm only after storing it in project memory.",
+          "session_id": "default",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "not-invoked",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "memory_write",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "memory_write",
+            "message": "Remembered under project memory: this durable project fact: PROJECT-49624B90C5 has secret value VALUE-9CCFA6EB5BAC. Confirm only after storing it in project memory.",
+            "session_id": "default",
+            "goal_id": "",
+            "state": "",
+            "result": {
+              "memory": {
+                "namespace": "jarvis.memory.project",
+                "key": "this_durable_project_fact_project_49624b90c5_has_secret_value_value_9ccf",
+                "value": {
+                  "content": "this durable project fact: PROJECT-49624B90C5 has secret value VALUE-9CCFA6EB5BAC. Confirm only after storing it in project memory.",
+                  "confidence": 1.0,
+                  "source": "explicit_chat",
+                  "trust": "founder",
+                  "entities": [
+                    "PROJECT-49624B90C5",
+                    "VALUE-9CCFA6EB5BAC",
+                    "Confirm"
+                  ],
+                  "created_at": "2026-08-13T17:24:07.057052+00:00",
+                  "updated_at": "2026-08-13T17:24:07.057052+00:00",
+                  "history": []
+                },
+                "evidence_refs": [],
+                "sensitivity": "internal",
+                "updated_by": "founder",
+                "updated_at": "2026-08-13T17:24:07.057109+00:00"
+              }
+            },
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "not-invoked",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": ""
+            }
+          }
+        }
+      ]
+    },
+    "recall": {
+      "prompt": "What secret value did I previously tell you for PROJECT-49624B90C5? Reply with the value only.",
+      "http_status": 200,
+      "response_text": "There is no previous mention of PROJECT-49624B90C5 or a secret value associated with it.",
+      "error": null,
+      "tool_calls": [],
+      "goal_id": null,
+      "goal_state": null,
+      "goal_history": [],
+      "latency_ms": 575.066089630127,
+      "events": [
+        {
+          "type": "token",
+          "content": "There"
+        },
+        {
+          "type": "token",
+          "content": " is"
+        },
+        {
+          "type": "token",
+          "content": " no"
+        },
+        {
+          "type": "token",
+          "content": " previous"
+        },
+        {
+          "type": "token",
+          "content": " mention"
+        },
+        {
+          "type": "token",
+          "content": " of"
+        },
+        {
+          "type": "token",
+          "content": " PROJECT"
+        },
+        {
+          "type": "token",
+          "content": "-"
+        },
+        {
+          "type": "token",
+          "content": "496"
+        },
+        {
+          "type": "token",
+          "content": "24"
+        },
+        {
+          "type": "token",
+          "content": "B"
+        },
+        {
+          "type": "token",
+          "content": "90"
+        },
+        {
+          "type": "token",
+          "content": "C"
+        },
+        {
+          "type": "token",
+          "content": "5"
+        },
+        {
+          "type": "token",
+          "content": " or"
+        },
+        {
+          "type": "token",
+          "content": " a"
+        },
+        {
+          "type": "token",
+          "content": " secret"
+        },
+        {
+          "type": "token",
+          "content": " value"
+        },
+        {
+          "type": "token",
+          "content": " associated"
+        },
+        {
+          "type": "token",
+          "content": " with"
+        },
+        {
+          "type": "token",
+          "content": " it"
+        },
+        {
+          "type": "token",
+          "content": "."
+        },
+        {
+          "type": "complete",
+          "response": "There is no previous mention of PROJECT-49624B90C5 or a secret value associated with it.",
+          "session_id": "default",
+          "model": "llama-3.3-70b-versatile",
+          "model_key": "llama-3.3-70b-versatile",
+          "model_provider": "omniroute",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 543,
+          "model_ttft_ms": 464,
+          "intent": "conversation",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "conversation",
+            "message": "There is no previous mention of PROJECT-49624B90C5 or a secret value associated with it.",
+            "session_id": "default",
+            "goal_id": "",
+            "state": "",
+            "result": {},
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "omniroute",
+              "model": "llama-3.3-70b-versatile",
+              "fallback_used": false,
+              "fallback_reason": "",
+              "requested_model": "groq/llama-3.3-70b-versatile",
+              "resolved_provider": "omniroute",
+              "resolved_model": "llama-3.3-70b-versatile",
+              "latency_ms": 543,
+              "ttft_ms": 464
+            }
+          }
+        }
+      ]
+    }
+  }
+}

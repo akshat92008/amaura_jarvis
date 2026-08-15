@@ -1,0 +1,97 @@
+{
+  "all_tests_passed": true,
+  "automated_tests": 451,
+  "collected_tests": 451,
+  "compilation_ok": true,
+  "git": {
+    "available": true,
+    "commit": "37159f7b603e54de0b656f10b770cd61ea214b67",
+    "dirty": false,
+    "status": []
+  },
+  "production_ready": false,
+  "release_name": "Amaura Company OS v5.4.1 \u2014 Free-First Human-Reviewed Integrations",
+  "security_ok": true,
+  "shards": [
+    {
+      "duration_seconds": 3.749,
+      "index": 1,
+      "log_sha256": "ef9d33dfaeab19beac63fa0dc9efd1629a84218848ba2e9c74bded071438a116",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 6.346,
+      "index": 2,
+      "log_sha256": "064ae2fd433745fa1d8d2d1fa29ccc145d6c61f81bb0f2c9cb143f6666ba3d06",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 9.716,
+      "index": 3,
+      "log_sha256": "7988af3887f7c64c33a8f54b93b72b00eb3d40453d63ebff24da1eeaa6f096cd",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 3.596,
+      "index": 4,
+      "log_sha256": "a53188e25df044b643798347d77976a25e9bb000fe36c3e1a22ad821c662189d",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 4.534,
+      "index": 5,
+      "log_sha256": "8bd64e7cbd3ebf53f83e1353fbe6df9d82feb48567acb1f1dd07d45cbb46ca55",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 6.592,
+      "index": 6,
+      "log_sha256": "e4a05b1d4bebb21d7151fb7d650e3af6b1334790b7f65ca8957982b1d285a9ab",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 2.752,
+      "index": 7,
+      "log_sha256": "03576017b9ff43750eb6ec2cc1402d90d69ef338862232da26d39fa778c90d59",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 3.07,
+      "index": 8,
+      "log_sha256": "becd5be21c6b69dd0439f45b4c0e21d5b2da765ac4523402c9f9dc20a68145e9",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 5.494,
+      "index": 9,
+      "log_sha256": "7148d85a340fc5c67cd964c5f9ab2f7550f1df984b46fb126cf22e29a81af72c",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 8.974,
+      "index": 10,
+      "log_sha256": "83d89aacab78ad6b03af258fcc550da233e3ad8a6a03f421fe6b214ee2ed6ec9",
+      "passed": true,
+      "tests": 45
+    },
+    {
+      "duration_seconds": 1.182,
+      "index": 11,
+      "log_sha256": "b08f94b17dfea423a66de7870f390f72faac42e98f795c1f35fa019b63ac3d81",
+      "passed": true,
+      "tests": 1
+    }
+  ],
+  "source_certified": true,
+  "static_gate_ok": true,
+  "version": "5.4.1"
+}

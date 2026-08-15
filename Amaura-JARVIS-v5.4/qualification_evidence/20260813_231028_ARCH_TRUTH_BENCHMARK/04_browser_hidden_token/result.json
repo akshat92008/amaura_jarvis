@@ -1,0 +1,444 @@
+{
+  "test_id": "04_browser_hidden_token",
+  "status": "PASS",
+  "reason": "PASS requires the hidden runtime token from a page whose content was never included in the prompt.",
+  "verification": {
+    "token_found": true,
+    "browser_used": false,
+    "real_tools": []
+  },
+  "chat": {
+    "prompt": "Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+    "http_status": 200,
+    "response_text": "Navigated to http://127.0.0.1:50598/fixture. Found token: ARCH-WEB-797a4ad0-d896-47c1-b542-d9e775f0166e\n\nMission goal_c40abe4359e2 completed. The work passed through Amaura's evidence/review pipeline.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": "goal_c40abe4359e2",
+    "goal_state": "completed",
+    "goal_history": [
+      {
+        "state": "completed",
+        "ts": 1786642839.4521458
+      }
+    ],
+    "latency_ms": 5955.377101898193,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Navigated to http://127.0.0.1:50598/fixture. Found token: ARCH-WEB-797a4ad0-d896-47c1-b542-d9e775f0166e\n\nMission goal_c40abe4359e2 completed. The work passed through Amaura's evidence/review pipeline.",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "not-invoked",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "goal_c40abe4359e2",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Navigated to http://127.0.0.1:50598/fixture. Found token: ARCH-WEB-797a4ad0-d896-47c1-b542-d9e775f0166e\n\nMission goal_c40abe4359e2 completed. The work passed through Amaura's evidence/review pipeline.",
+          "session_id": "default",
+          "goal_id": "goal_c40abe4359e2",
+          "state": "completed",
+          "result": {
+            "goal": {
+              "id": "goal_c40abe4359e2",
+              "parent_id": null,
+              "item_type": "programme",
+              "workflow_id": "goalplan_d4c2a4a608d3",
+              "title": "Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the el",
+              "description": "Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+              "owner_id": "jarvis",
+              "reviewer_id": "founder",
+              "state": "assigned",
+              "priority": 3,
+              "deadline": null,
+              "budget_cents": 0,
+              "spent_cents": 0,
+              "risk": "low",
+              "action_type": "internal_work",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "acceptance_criteria": [],
+              "dependencies": [],
+              "evidence": [],
+              "summary": "",
+              "metadata": {
+                "dynamic_goal": true,
+                "goal_request": {
+                  "objective": "Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                  "success_criteria": [],
+                  "workspace": "",
+                  "constraints": [],
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "priority": 3,
+                  "max_steps": 8,
+                  "max_replans": 2,
+                  "title": "",
+                  "metadata": {
+                    "executive_session_id": "default"
+                  }
+                },
+                "goal_plan": {
+                  "plan_id": "goalplan_d4c2a4a608d3",
+                  "domain": "direct_action",
+                  "objective": "Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                  "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                  "assumptions": [
+                    "Direct action bypasses standard research and planning."
+                  ],
+                  "tasks": [
+                    {
+                      "key": "execute",
+                      "title": "Execute direct action",
+                      "description": "Execute the founder request directly: Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                      "owner_id": "builder",
+                      "reviewer_id": "jarvis",
+                      "acceptance_criteria": [
+                        "Action completed successfully"
+                      ],
+                      "depends_on": [],
+                      "risk": "low",
+                      "budget_cents": 200,
+                      "action_type": "direct_action",
+                      "metadata": {}
+                    }
+                  ],
+                  "planner": "deterministic-direct-action",
+                  "coding_backend": "antigravity",
+                  "workspace": ""
+                },
+                "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                "max_replans": 2,
+                "replans_used": 0,
+                "autonomy": "execute_until_approval",
+                "coding_backend": "antigravity",
+                "mission_runnable": true,
+                "mission_paused": false,
+                "mission_execution": "background",
+                "mission_generation": 1,
+                "antigravity_handoff": false
+              },
+              "created_at": "2026-08-13T17:40:39.405438+00:00",
+              "updated_at": "2026-08-13T17:40:39.405438+00:00"
+            },
+            "project_id": null,
+            "milestone_id": null,
+            "tasks": [
+              {
+                "id": "task_ba97f499ad08",
+                "parent_id": "goal_c40abe4359e2",
+                "item_type": "task",
+                "workflow_id": "goalplan_d4c2a4a608d3",
+                "title": "Execute direct action",
+                "description": "Execute the founder request directly: Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                "owner_id": "builder",
+                "reviewer_id": "jarvis",
+                "state": "assigned",
+                "priority": 3,
+                "deadline": null,
+                "budget_cents": 200,
+                "spent_cents": 0,
+                "risk": "low",
+                "action_type": "direct_action",
+                "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                "acceptance_criteria": [
+                  "Action completed successfully"
+                ],
+                "dependencies": [],
+                "evidence": [],
+                "summary": "",
+                "metadata": {
+                  "dynamic_goal": true,
+                  "goal_request": {
+                    "objective": "Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                    "success_criteria": [],
+                    "workspace": "",
+                    "constraints": [],
+                    "autonomy": "execute_until_approval",
+                    "coding_backend": "antigravity",
+                    "priority": 3,
+                    "max_steps": 8,
+                    "max_replans": 2,
+                    "title": "",
+                    "metadata": {
+                      "executive_session_id": "default"
+                    }
+                  },
+                  "goal_plan": {
+                    "plan_id": "goalplan_d4c2a4a608d3",
+                    "domain": "direct_action",
+                    "objective": "Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "assumptions": [
+                      "Direct action bypasses standard research and planning."
+                    ],
+                    "tasks": [
+                      {
+                        "key": "execute",
+                        "title": "Execute direct action",
+                        "description": "Execute the founder request directly: Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                        "owner_id": "builder",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Action completed successfully"
+                        ],
+                        "depends_on": [],
+                        "risk": "low",
+                        "budget_cents": 200,
+                        "action_type": "direct_action",
+                        "metadata": {}
+                      }
+                    ],
+                    "planner": "deterministic-direct-action",
+                    "coding_backend": "antigravity",
+                    "workspace": ""
+                  },
+                  "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                  "max_replans": 2,
+                  "replans_used": 0,
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "mission_runnable": true,
+                  "mission_paused": false,
+                  "mission_execution": "background",
+                  "mission_generation": 1,
+                  "antigravity_handoff": false,
+                  "step_key": "execute",
+                  "programme_id": "goal_c40abe4359e2",
+                  "sensitivity": "internal"
+                },
+                "created_at": "2026-08-13T17:40:39.405567+00:00",
+                "updated_at": "2026-08-13T17:40:39.405567+00:00"
+              }
+            ],
+            "plan": {
+              "plan_id": "goalplan_d4c2a4a608d3",
+              "domain": "direct_action",
+              "objective": "Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "assumptions": [
+                "Direct action bypasses standard research and planning."
+              ],
+              "tasks": [
+                {
+                  "key": "execute",
+                  "title": "Execute direct action",
+                  "description": "Execute the founder request directly: Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                  "owner_id": "builder",
+                  "reviewer_id": "jarvis",
+                  "acceptance_criteria": [
+                    "Action completed successfully"
+                  ],
+                  "depends_on": [],
+                  "risk": "low",
+                  "budget_cents": 200,
+                  "action_type": "direct_action",
+                  "metadata": {}
+                }
+              ],
+              "planner": "deterministic-direct-action",
+              "coding_backend": "antigravity",
+              "workspace": ""
+            },
+            "execution": {
+              "goal_id": "goal_c40abe4359e2",
+              "state": "completed",
+              "ticks": [
+                {
+                  "status": "executed",
+                  "recovered": [],
+                  "outbox_dispatched": [],
+                  "execution": {
+                    "id": "run_de1b1fcfd069471f",
+                    "task_id": "task_ba97f499ad08",
+                    "worker_id": "Akshats-Laptop-4.local-22839-d73c07",
+                    "attempt": 1,
+                    "state": "succeeded",
+                    "lease_until": "2026-08-13T17:55:39.408631+00:00",
+                    "heartbeat_at": "2026-08-13T17:40:39.420180+00:00",
+                    "started_at": "2026-08-13T17:40:39.408631+00:00",
+                    "finished_at": "2026-08-13T17:40:39.420180+00:00",
+                    "error": "",
+                    "result": {
+                      "employee": "builder",
+                      "evidence": [
+                        {
+                          "byte_length": 284,
+                          "excerpt": "Navigated to http://127.0.0.1:50598/fixture. Found token: ARCH-WEB-797a4ad0-d896-47c1-b542-d9e775f0166e",
+                          "reference": "evidence://manifest/f138df1a06e75cc2480a91a4176e7dacce02e647ff01458b5b40e985980c261b",
+                          "sha256": "3eb907743a142b0b4492e6f487a56c790dfd4e2d1f3b2517eb072a6f9997c796",
+                          "success": true,
+                          "type": "direct_action"
+                        }
+                      ],
+                      "iterations": 1,
+                      "model_execution_receipt": {
+                        "actual_model": "deterministic-direct-action",
+                        "provider": "direct-action",
+                        "requested_route": "deterministic-direct-action"
+                      },
+                      "reviewer": "jarvis",
+                      "status": "awaiting_review",
+                      "summary": "Executed direct action successfully.",
+                      "task_id": "task_ba97f499ad08"
+                    }
+                  },
+                  "result": {
+                    "status": "awaiting_review",
+                    "task_id": "task_ba97f499ad08",
+                    "employee": "builder",
+                    "iterations": 1,
+                    "summary": "Executed direct action successfully.",
+                    "evidence": [
+                      {
+                        "type": "direct_action",
+                        "reference": "evidence://manifest/f138df1a06e75cc2480a91a4176e7dacce02e647ff01458b5b40e985980c261b",
+                        "sha256": "3eb907743a142b0b4492e6f487a56c790dfd4e2d1f3b2517eb072a6f9997c796",
+                        "byte_length": 284,
+                        "success": true,
+                        "excerpt": "Navigated to http://127.0.0.1:50598/fixture. Found token: ARCH-WEB-797a4ad0-d896-47c1-b542-d9e775f0166e"
+                      }
+                    ],
+                    "model_execution_receipt": {
+                      "requested_route": "deterministic-direct-action",
+                      "actual_model": "deterministic-direct-action",
+                      "provider": "direct-action"
+                    },
+                    "reviewer": "jarvis"
+                  }
+                },
+                {
+                  "status": "reviewed",
+                  "recovered": [],
+                  "review": {
+                    "id": "task_ba97f499ad08",
+                    "parent_id": "goal_c40abe4359e2",
+                    "item_type": "task",
+                    "workflow_id": "goalplan_d4c2a4a608d3",
+                    "title": "Execute direct action",
+                    "description": "Execute the founder request directly: Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                    "owner_id": "builder",
+                    "reviewer_id": "jarvis",
+                    "state": "completed",
+                    "priority": 3,
+                    "deadline": null,
+                    "budget_cents": 200,
+                    "spent_cents": 0,
+                    "risk": "low",
+                    "action_type": "direct_action",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "acceptance_criteria": [
+                      "Action completed successfully"
+                    ],
+                    "dependencies": [],
+                    "evidence": [
+                      {
+                        "type": "direct_action",
+                        "reference": "evidence://manifest/f138df1a06e75cc2480a91a4176e7dacce02e647ff01458b5b40e985980c261b",
+                        "sha256": "3eb907743a142b0b4492e6f487a56c790dfd4e2d1f3b2517eb072a6f9997c796",
+                        "byte_length": 284,
+                        "success": true,
+                        "excerpt": "Navigated to http://127.0.0.1:50598/fixture. Found token: ARCH-WEB-797a4ad0-d896-47c1-b542-d9e775f0166e"
+                      }
+                    ],
+                    "summary": "Executed direct action successfully.",
+                    "metadata": {
+                      "dynamic_goal": true,
+                      "goal_request": {
+                        "objective": "Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                        "success_criteria": [],
+                        "workspace": "",
+                        "constraints": [],
+                        "autonomy": "execute_until_approval",
+                        "coding_backend": "antigravity",
+                        "priority": 3,
+                        "max_steps": 8,
+                        "max_replans": 2,
+                        "title": "",
+                        "metadata": {
+                          "executive_session_id": "default"
+                        }
+                      },
+                      "goal_plan": {
+                        "plan_id": "goalplan_d4c2a4a608d3",
+                        "domain": "direct_action",
+                        "objective": "Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                        "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                        "assumptions": [
+                          "Direct action bypasses standard research and planning."
+                        ],
+                        "tasks": [
+                          {
+                            "key": "execute",
+                            "title": "Execute direct action",
+                            "description": "Execute the founder request directly: Using the browser, open 'http://127.0.0.1:50598/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                            "owner_id": "builder",
+                            "reviewer_id": "jarvis",
+                            "acceptance_criteria": [
+                              "Action completed successfully"
+                            ],
+                            "depends_on": [],
+                            "risk": "low",
+                            "budget_cents": 200,
+                            "action_type": "direct_action",
+                            "metadata": {}
+                          }
+                        ],
+                        "planner": "deterministic-direct-action",
+                        "coding_backend": "antigravity",
+                        "workspace": ""
+                      },
+                      "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                      "max_replans": 2,
+                      "replans_used": 0,
+                      "autonomy": "execute_until_approval",
+                      "coding_backend": "antigravity",
+                      "mission_runnable": true,
+                      "mission_paused": false,
+                      "mission_execution": "background",
+                      "mission_generation": 1,
+                      "antigravity_handoff": false,
+                      "step_key": "execute",
+                      "programme_id": "goal_c40abe4359e2",
+                      "sensitivity": "internal"
+                    },
+                    "created_at": "2026-08-13T17:40:39.405567+00:00",
+                    "updated_at": "2026-08-13T17:40:39.423472+00:00"
+                  }
+                }
+              ],
+              "pending_approvals": [],
+              "failed_tasks": []
+            },
+            "state": "completed"
+          },
+          "context_sources": [
+            "company_work:task_409764bf0baf",
+            "company_work:task_b78f16066645",
+            "company_work:task_4f1c002abeaa",
+            "company_work:proj_5ebf1d7dd296",
+            "company_work:goal_fdcd89607d0f",
+            "company_work:task_79dc757892fe",
+            "company_work:task_2727967fc9cd",
+            "company_work:proj_718c89212023",
+            "company_work:goal_088b30072c79",
+            "company_work:task_9bba1fcd3c12",
+            "company_work:task_75f245fb82d2",
+            "company_work:task_98e06026d2b2",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "not-invoked",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": ""
+          }
+        }
+      }
+    ]
+  }
+}

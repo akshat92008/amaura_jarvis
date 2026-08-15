@@ -1,0 +1,16 @@
+{
+  "test_id": "halluc_03_nonexistent_memory",
+  "prompt": "What did I tell you about Project ZETA-XYZZY-NOTREAL-26E15BEC?",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 143.43595504760742,
+    "request_ts": 1786586901.92837,
+    "final_ts": 1786586902.071806
+  },
+  "verification": {}
+}

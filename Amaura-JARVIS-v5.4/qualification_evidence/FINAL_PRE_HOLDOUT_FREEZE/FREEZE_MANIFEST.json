@@ -1,0 +1,31 @@
+{
+  "freeze_id": "ARCH_FREEZE_20260813_190405",
+  "freeze_timestamp": "2026-08-13T19:04:05.413889+00:00",
+  "git_head": "e61da5e7429420ffa5b5f7004d22969da22d4ca1",
+  "git_tree": "b946f1758feb4071965b8eb24322abd85584954b",
+  "source_file_count": 118,
+  "production_source_unchanged": true,
+  "mismatch_count": 0,
+  "test_results": {
+    "total_collected": 478,
+    "passed": 477,
+    "failed": 0,
+    "skipped": 1,
+    "skip_details": "tests/test_amaura_v361_blocker_fixes.py:35: File descriptor accounting requires /proc (Linux only)",
+    "verification_regression_passed": 23,
+    "verification_regression_failed": 0
+  },
+  "security_results": {
+    "path_traversal_blocked": true,
+    "symlink_escape_blocked": true,
+    "sensitive_paths_blocked": true,
+    "cloud_metadata_blocked": true,
+    "destructive_actions_refused": true,
+    "workspace_boundary_enforced": true
+  },
+  "known_failures": [],
+  "known_limitations": [
+    "File descriptor accounting test (/proc) is skipped on macOS darwin environments",
+    "macOS screencapture requires native screen recording permissions for live desktop screenshots"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "test": "Browser Capabilities",
+  "capability": {
+    "key": "browser_use",
+    "name": "Browser Use",
+    "category": "browser_agent",
+    "operations": [
+      "research"
+    ],
+    "ram_mb": 1400,
+    "heavy": true,
+    "networked": true,
+    "side_effects": false,
+    "always_on": false,
+    "install_hint": "pip install browser-use && playwright install chromium",
+    "licence": "MIT",
+    "installed": true,
+    "configured": false,
+    "healthy": null,
+    "execution_ready": false,
+    "verified_at": null,
+    "version": "0.11.13",
+    "available": false,
+    "reason": "Agentic browser research is disabled by default; set AMAURA_BROWSER_USE_AGENT_ENABLED=1 to opt in",
+    "verification": "not execution-verified"
+  },
+  "success": true
+}

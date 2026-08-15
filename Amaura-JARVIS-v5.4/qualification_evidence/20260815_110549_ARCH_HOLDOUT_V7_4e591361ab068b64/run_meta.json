@@ -1,0 +1,17 @@
+{
+  "benchmark": "ARCH Independent Holdout v7",
+  "run_id": "20260815_110549_ARCH_HOLDOUT_V7_4e591361ab068b64",
+  "seed": 5645564918087715684,
+  "private_server": "http://127.0.0.1:52083",
+  "benchmark_sha256": "54f6431c01e072b8703079fea827e7848cba0ba274fa69c6e30a09f6706a0e21",
+  "frozen_source_precheck": {
+    "expected_count": 118,
+    "actual_count": 118,
+    "union_count": 118,
+    "mismatch_count": 0,
+    "mismatches": [],
+    "ok": true
+  },
+  "normal_user_interface": "POST /api/chat/stream",
+  "benchmark_side_tool_rescue": false
+}

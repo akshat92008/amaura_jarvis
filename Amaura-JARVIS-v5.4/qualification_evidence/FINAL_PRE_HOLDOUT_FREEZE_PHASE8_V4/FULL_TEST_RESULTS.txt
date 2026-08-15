@@ -1,0 +1,40 @@
+Freeze run ID: PHASE8_V4_3ab76935eb7f4d6d
+Command: PYTHONPATH=. python3 -m pytest tests/ -q
+Exit code: 0
+Started at: 2026-08-15T12:20:37.620346+00:00
+Finished at: 2026-08-15T12:22:43.560611+00:00
+Duration seconds: 125.94
+
+--- STDOUT ---
+........................................................................ [  8%]
+........................................................................ [ 16%]
+........................................................................ [ 25%]
+........................................................................ [ 33%]
+................s....................................................... [ 42%]
+........................................................................ [ 50%]
+........................................................................ [ 59%]
+........................................................................ [ 67%]
+........................................................................ [ 75%]
+........................................................................ [ 84%]
+........................................................................ [ 92%]
+.............................................................            [100%]
+=============================== warnings summary ===============================
+../../../../../Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/speech_recognition/__init__.py:7
+  /Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/speech_recognition/__init__.py:7: DeprecationWarning: aifc was removed in Python 3.13. Please be aware that you are currently NOT using standard 'aifc', but instead a separately installed 'standard-aifc'.
+    import aifc
+
+tests/test_amaura_v353_security.py: 1 warning
+tests/test_fable_engine.py: 2 warnings
+tests/test_generic_execution_repair.py: 1 warning
+tests/test_phase5_2_grammar_closure.py: 47 warnings
+tests/test_phase7_api_boundary.py: 210 warnings
+tests/test_phase8_api_boundary.py: 5 warnings
+tests/test_voice.py: 1 warning
+  /Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/httpx/_config.py:51: DeprecationWarning: `verify=<str>` is deprecated. Use `verify=ssl.create_default_context(cafile=...)` or `verify=ssl.create_default_context(capath=...)` instead.
+    warnings.warn(message, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+852 passed, 1 skipped, 268 warnings in 124.85s (0:02:04)
+
+--- STDERR ---
+

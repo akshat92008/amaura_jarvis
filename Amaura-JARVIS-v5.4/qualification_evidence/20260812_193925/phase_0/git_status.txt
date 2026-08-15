@@ -1,0 +1,26 @@
+COMMAND: git status
+EXIT_CODE: 0
+
+STDOUT:
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   jarvis/amaura/cognition.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	audit_script.py
+	fix.py
+	release/
+	scripts/qual_harness.py
+	test_direct_exec.py
+	test_jarvis_run.py
+	test_macos_apps_script.py
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+STDERR:
+

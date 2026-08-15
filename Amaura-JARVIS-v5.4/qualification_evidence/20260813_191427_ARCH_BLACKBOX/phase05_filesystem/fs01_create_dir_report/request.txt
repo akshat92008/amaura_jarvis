@@ -1,0 +1,1 @@
+Create a folder called 'jarvis_blackbox_alpha' inside the directory '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_blackbox/workspace', create a markdown file inside it called 'system_report.md' containing today's date and current system information (CPU, memory, disk), and tell me the final full path of the file.

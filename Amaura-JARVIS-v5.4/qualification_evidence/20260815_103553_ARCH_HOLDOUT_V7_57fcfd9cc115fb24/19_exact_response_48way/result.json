@@ -1,0 +1,442 @@
+{
+  "test_id": "19_exact_response_48way",
+  "status": "FAIL",
+  "reason": "48 simultaneous exact responses with unseen grammar.",
+  "verification": {
+    "requests": [
+      {
+        "i": 0,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "cobalt-meadow-9828::986012"
+      },
+      {
+        "i": 1,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "nectar-arch-8742::865461"
+      },
+      {
+        "i": 2,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "this exactly: lotus-arch-4888::762639"
+      },
+      {
+        "i": 3,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "\u2014 iris-wharf-2123::673364"
+      },
+      {
+        "i": 4,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "granite-lane-1347::645639"
+      },
+      {
+        "i": 5,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "banyan-ridge-4747::122631"
+      },
+      {
+        "i": 6,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "cobalt-lane-1286::833560"
+      },
+      {
+        "i": 7,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "dahlia-lane-3735::442188; nothing else"
+      },
+      {
+        "i": 8,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "marble-grove-2919::508240 with zero commentary"
+      },
+      {
+        "i": 9,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "> granite-ridge-8305::586457"
+      },
+      {
+        "i": 10,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "marble-cove-5002::230302"
+      },
+      {
+        "i": 11,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "iris-meadow-4354::920702, and do not add anything"
+      },
+      {
+        "i": 12,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "lotus-meadow-5324::694677"
+      },
+      {
+        "i": 13,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": true,
+        "model_invoked": false,
+        "response": "Mission goal_d079a4a198b1 is queued. I created the governed plan and preserved its execution state."
+      },
+      {
+        "i": 14,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "river-ridge-6891::870967"
+      },
+      {
+        "i": 15,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "cobalt-wharf-2974::961854"
+      },
+      {
+        "i": 16,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "iris-ridge-2211::180170"
+      },
+      {
+        "i": 17,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "aurora-junction-5811::746008"
+      },
+      {
+        "i": 18,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "this exactly: granite-delta-4841::613490"
+      },
+      {
+        "i": 19,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "\u2014 iris-basin-3867::983691"
+      },
+      {
+        "i": 20,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "banyan-wharf-9653::615939"
+      },
+      {
+        "i": 21,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "dahlia-basin-2819::791907"
+      },
+      {
+        "i": 22,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "juniper-harbor-8446::496893"
+      },
+      {
+        "i": 23,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "lotus-lane-8460::314748; nothing else"
+      },
+      {
+        "i": 24,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "lotus-cove-9514::862233 with zero commentary"
+      },
+      {
+        "i": 25,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "> granite-arch-1048::478521"
+      },
+      {
+        "i": 26,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "lotus-trail-6967::707640"
+      },
+      {
+        "i": 27,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "ember-harbor-7459::670127, and do not add anything"
+      },
+      {
+        "i": 28,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "opal-nook-2890::346822"
+      },
+      {
+        "i": 29,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": true,
+        "model_invoked": false,
+        "response": "Mission goal_ff9322e4e7a5 is queued. I created the governed plan and preserved its execution state."
+      },
+      {
+        "i": 30,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "opal-valley-4187::881433"
+      },
+      {
+        "i": 31,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "harbor-grove-2352::961614"
+      },
+      {
+        "i": 32,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "granite-nook-9992::334957"
+      },
+      {
+        "i": 33,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "banyan-meadow-2910::702751"
+      },
+      {
+        "i": 34,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "this exactly: nectar-lane-4877::959702"
+      },
+      {
+        "i": 35,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "\u2014 nectar-meadow-4254::576732"
+      },
+      {
+        "i": 36,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "cobalt-meadow-6185::682163"
+      },
+      {
+        "i": 37,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "juniper-ridge-9122::501906"
+      },
+      {
+        "i": 38,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "river-nook-9413::859346"
+      },
+      {
+        "i": 39,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "iris-lane-4468::866398; nothing else"
+      },
+      {
+        "i": 40,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "aurora-delta-2623::399061 with zero commentary"
+      },
+      {
+        "i": 41,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "> falcon-field-6229::266770"
+      },
+      {
+        "i": 42,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "quartz-wharf-4064::183735"
+      },
+      {
+        "i": 43,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "harbor-delta-5794::822001, and do not add anything"
+      },
+      {
+        "i": 44,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "nectar-harbor-9753::988517"
+      },
+      {
+        "i": 45,
+        "exact": false,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": true,
+        "model_invoked": false,
+        "response": "Mission goal_1757f2f7a1f2 is queued. I created the governed plan and preserved its execution state."
+      },
+      {
+        "i": 46,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": true,
+        "response": "lotus-wharf-1690::109782"
+      },
+      {
+        "i": 47,
+        "exact": true,
+        "crosstalk": false,
+        "service_error": false,
+        "mission_created": false,
+        "model_invoked": false,
+        "response": "cobalt-valley-4829::190421"
+      }
+    ]
+  },
+  "chat": null
+}

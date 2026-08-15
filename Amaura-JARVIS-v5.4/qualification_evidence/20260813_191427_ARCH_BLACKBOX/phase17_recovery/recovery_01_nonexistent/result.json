@@ -1,0 +1,16 @@
+{
+  "test_id": "recovery_01_nonexistent",
+  "prompt": "Read the file '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_blackbox/workspace/absolutely_does_not_exist_xyzabc123.txt' and summarize it.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 20.058155059814453,
+    "request_ts": 1786628981.40416,
+    "final_ts": 1786628981.4242182
+  },
+  "verification": {}
+}

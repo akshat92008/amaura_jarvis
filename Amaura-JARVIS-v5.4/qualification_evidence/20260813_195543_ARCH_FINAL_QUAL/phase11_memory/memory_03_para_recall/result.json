@@ -1,0 +1,20 @@
+{
+  "test_id": "memory_03_para_recall",
+  "prompt": "What's the required item for the project identified as PROJECT-C01D0D80?",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "I\u2019m sorry\u2014I don\u2019t have any information about a required component for **PROJECT\u2011C01D0D80** in the data I\u2019ve been given. If you can point me to a specification document or file that mentions this project, I can look it up for you.",
+  "response_excerpt": "I\u2019m sorry\u2014I don\u2019t have any information about a required component for **PROJECT\u2011C01D0D80** in the data I\u2019ve been given. If you can point me to a specification document or file that mentions this project, I can look it up for you.",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": 30650.8629322052,
+    "total_ms": 31021.390914916992,
+    "request_ts": 1786631462.569524,
+    "final_ts": 1786631493.590915
+  },
+  "verification": {}
+}

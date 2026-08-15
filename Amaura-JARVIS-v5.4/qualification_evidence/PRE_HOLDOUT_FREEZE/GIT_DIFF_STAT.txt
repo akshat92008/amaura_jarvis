@@ -1,0 +1,11 @@
+ .DS_Store                                          | Bin 8196 -> 10244 bytes
+ Amaura-JARVIS-v5.4/jarvis/agent.py                 | 145 ++++++++-------------
+ Amaura-JARVIS-v5.4/jarvis/amaura/brain.py          | 123 +++++++++++------
+ Amaura-JARVIS-v5.4/jarvis/amaura/cognition.py      |  40 +++++-
+ Amaura-JARVIS-v5.4/jarvis/amaura/executor.py       |  72 ++++++++++
+ Amaura-JARVIS-v5.4/jarvis/amaura/mission_runner.py |   4 +-
+ Amaura-JARVIS-v5.4/jarvis/amaura/model_gateway.py  |  54 +++++---
+ Amaura-JARVIS-v5.4/jarvis/amaura/store.py          |  15 ++-
+ Amaura-JARVIS-v5.4/jarvis/amaura/supervisor.py     |  23 +++-
+ Amaura-JARVIS-v5.4/jarvis/tools/security.py        |   8 +-
+ 10 files changed, 319 insertions(+), 165 deletions(-)

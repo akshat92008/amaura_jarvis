@@ -1,0 +1,62 @@
+{
+  "qual_bb_harness.py": {
+    "src_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/scripts/qual_bb_harness.py",
+    "pkg_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/audit_package/qual_bb_harness.py",
+    "sha256": "da85ed4093a214d075a0ebcecd746469ba03feaa9a98b8c678218d202e4e2efc",
+    "size_bytes": 17747
+  },
+  "qual_bb_master.py": {
+    "src_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/scripts/qual_bb_master.py",
+    "pkg_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/audit_package/qual_bb_master.py",
+    "sha256": "6b463b976e17740872c6e7e6bc768eee82f9328816b8b3d81fcf91be61f7c03f",
+    "size_bytes": 82863
+  },
+  "qual_harness_selftest.py": {
+    "src_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/scripts/qual_harness_selftest.py",
+    "pkg_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/audit_package/qual_harness_selftest.py",
+    "sha256": "d4d2f5705aa34e929035b8561e9c720c403364f6df3566ff33f13afe9b77afec",
+    "size_bytes": 15075
+  },
+  "HARNESS_SELF_TEST.json": {
+    "src_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/HARNESS_SELF_TEST.json",
+    "pkg_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/audit_package/HARNESS_SELF_TEST.json",
+    "sha256": "f70e82944395e09e3976f278e60a0b490b8584f2cffb00c4a5a4dae1e8e52058",
+    "size_bytes": 11508
+  },
+  "canary_b_tool_calls.json": {
+    "src_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/harness_self_test/canary_b/canary_b_real_tool_trace/tool_calls.json",
+    "pkg_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/audit_package/canary_b_tool_calls.json",
+    "sha256": "05365b53255e32b919c3b4550e56c516b42fc28bb50d7bd2c1362156b93a189c",
+    "size_bytes": 5001
+  },
+  "canary_b_result.json": {
+    "src_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/harness_self_test/canary_b/canary_b_real_tool_trace/result.json",
+    "pkg_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/audit_package/canary_b_result.json",
+    "sha256": "cc229e52336295de9158d7eff9d8238dd43e4fd33e41094627ab691bfa0dc5b5",
+    "size_bytes": 6321
+  },
+  "canary_d_response.txt": {
+    "src_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/harness_self_test/canary_d/canary_d_security_capture/response.txt",
+    "pkg_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/audit_package/canary_d_response.txt",
+    "sha256": "a3769649a1107a7a3771c42dbf331bcd9e8b1ccfef38dad5a15fe475fdc81b2d",
+    "size_bytes": 368
+  },
+  "canary_d_result.json": {
+    "src_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/harness_self_test/canary_d/canary_d_security_capture/result.json",
+    "pkg_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/audit_package/canary_d_result.json",
+    "sha256": "2e9fcb13f95782abc7277b0d9ba13c3e024fd7d32270ed8e76e4e252e90a0d9d",
+    "size_bytes": 1445
+  },
+  "BLACKBOX_RESULTS.json": {
+    "src_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/BLACKBOX_RESULTS.json",
+    "pkg_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/audit_package/BLACKBOX_RESULTS.json",
+    "sha256": "bb61cd0a89bc21b087249d68481e0188143f632047586284e7730156e0487a80",
+    "size_bytes": 35522
+  },
+  "QUALIFICATION_VALIDITY.json": {
+    "src_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/QUALIFICATION_VALIDITY.json",
+    "pkg_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/audit_package/QUALIFICATION_VALIDITY.json",
+    "sha256": "bf16131102c94b7c13103ed526687a5ae6a9440c53bf9fc8bd8faa35eabba962",
+    "size_bytes": 440
+  }
+}

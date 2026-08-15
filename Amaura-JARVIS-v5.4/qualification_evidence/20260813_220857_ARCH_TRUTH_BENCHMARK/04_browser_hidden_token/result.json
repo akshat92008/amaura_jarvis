@@ -1,0 +1,669 @@
+{
+  "test_id": "04_browser_hidden_token",
+  "status": "FAIL",
+  "reason": "PASS requires the hidden runtime token from a page whose content was never included in the prompt.",
+  "verification": {
+    "token_found": false,
+    "browser_used": false,
+    "real_tools": []
+  },
+  "chat": {
+    "prompt": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+    "http_status": 200,
+    "response_text": "Mission goal_da4a19f7f380 is queued. I created the governed plan and preserved its execution state.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": "goal_da4a19f7f380",
+    "goal_state": "failed",
+    "goal_history": [
+      {
+        "state": "queued",
+        "ts": 1786639182.948895
+      },
+      {
+        "state": "running",
+        "ts": 1786639186.210906
+      },
+      {
+        "state": "failed",
+        "ts": 1786639197.622897
+      }
+    ],
+    "latency_ms": 482.496976852417,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Mission goal_da4a19f7f380 is queued. I created the governed plan and preserved its execution state.",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "not-invoked",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "goal_da4a19f7f380",
+        "state": "queued",
+        "executive": {
+          "intent": "mission",
+          "message": "Mission goal_da4a19f7f380 is queued. I created the governed plan and preserved its execution state.",
+          "session_id": "default",
+          "goal_id": "goal_da4a19f7f380",
+          "state": "queued",
+          "result": {
+            "goal": {
+              "id": "goal_da4a19f7f380",
+              "parent_id": null,
+              "item_type": "programme",
+              "workflow_id": "goalplan_6b9a5276496d",
+              "title": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the el",
+              "description": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+              "owner_id": "jarvis",
+              "reviewer_id": "founder",
+              "state": "assigned",
+              "priority": 3,
+              "deadline": null,
+              "budget_cents": 0,
+              "spent_cents": 0,
+              "risk": "low",
+              "action_type": "internal_work",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "acceptance_criteria": [],
+              "dependencies": [],
+              "evidence": [],
+              "summary": "",
+              "metadata": {
+                "dynamic_goal": true,
+                "goal_request": {
+                  "objective": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                  "success_criteria": [],
+                  "workspace": "",
+                  "constraints": [],
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "priority": 3,
+                  "max_steps": 8,
+                  "max_replans": 2,
+                  "title": "",
+                  "metadata": {
+                    "executive_session_id": "default"
+                  }
+                },
+                "goal_plan": {
+                  "plan_id": "goalplan_6b9a5276496d",
+                  "domain": "general",
+                  "objective": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                  "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                  "assumptions": [
+                    "External commitments remain subject to the existing Amaura approval policies."
+                  ],
+                  "tasks": [
+                    {
+                      "key": "understand",
+                      "title": "Establish objective context",
+                      "description": "Understand the founder objective: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                      "owner_id": "strategy_director",
+                      "reviewer_id": "jarvis",
+                      "acceptance_criteria": [
+                        "Objective and constraints are explicit",
+                        "Unknowns that can materially change execution are identified",
+                        "Evidence needed for completion is defined"
+                      ],
+                      "depends_on": [],
+                      "risk": "low",
+                      "budget_cents": 300,
+                      "action_type": "analysis",
+                      "metadata": {}
+                    },
+                    {
+                      "key": "plan",
+                      "title": "Create the execution plan",
+                      "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                      "owner_id": "strategy_director",
+                      "reviewer_id": "jarvis",
+                      "acceptance_criteria": [
+                        "Plan maps directly to the objective",
+                        "Dependencies and stop conditions are explicit",
+                        "Founder-only actions are not silently executed"
+                      ],
+                      "depends_on": [
+                        "understand"
+                      ],
+                      "risk": "low",
+                      "budget_cents": 300,
+                      "action_type": "planning",
+                      "metadata": {}
+                    },
+                    {
+                      "key": "execute",
+                      "title": "Execute the approved internal work",
+                      "description": "Execute the reversible internal work required for: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                      "owner_id": "operations_manager",
+                      "reviewer_id": "jarvis",
+                      "acceptance_criteria": [
+                        "The requested outcome is materially completed",
+                        "Claims are backed by evidence",
+                        "Open risks and founder decisions are explicit"
+                      ],
+                      "depends_on": [
+                        "plan"
+                      ],
+                      "risk": "low",
+                      "budget_cents": 300,
+                      "action_type": "company_operations",
+                      "metadata": {}
+                    }
+                  ],
+                  "planner": "deterministic-general",
+                  "coding_backend": "antigravity",
+                  "workspace": ""
+                },
+                "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                "max_replans": 2,
+                "replans_used": 0,
+                "autonomy": "execute_until_approval",
+                "coding_backend": "antigravity",
+                "mission_runnable": true,
+                "mission_paused": false,
+                "mission_execution": "background",
+                "mission_generation": 1,
+                "antigravity_handoff": false
+              },
+              "created_at": "2026-08-13T16:39:42.842647+00:00",
+              "updated_at": "2026-08-13T16:39:42.842647+00:00"
+            },
+            "project_id": "proj_f7abb5953df4",
+            "milestone_id": "mile_65be4963d21b",
+            "tasks": [
+              {
+                "id": "task_80f5322bf22d",
+                "parent_id": "mile_65be4963d21b",
+                "item_type": "task",
+                "workflow_id": "goalplan_6b9a5276496d",
+                "title": "Establish objective context",
+                "description": "Understand the founder objective: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                "owner_id": "strategy_director",
+                "reviewer_id": "jarvis",
+                "state": "assigned",
+                "priority": 3,
+                "deadline": null,
+                "budget_cents": 300,
+                "spent_cents": 0,
+                "risk": "low",
+                "action_type": "analysis",
+                "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                "acceptance_criteria": [
+                  "Objective and constraints are explicit",
+                  "Unknowns that can materially change execution are identified",
+                  "Evidence needed for completion is defined"
+                ],
+                "dependencies": [],
+                "evidence": [],
+                "summary": "",
+                "metadata": {
+                  "dynamic_goal": true,
+                  "goal_request": {
+                    "objective": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                    "success_criteria": [],
+                    "workspace": "",
+                    "constraints": [],
+                    "autonomy": "execute_until_approval",
+                    "coding_backend": "antigravity",
+                    "priority": 3,
+                    "max_steps": 8,
+                    "max_replans": 2,
+                    "title": "",
+                    "metadata": {
+                      "executive_session_id": "default"
+                    }
+                  },
+                  "goal_plan": {
+                    "plan_id": "goalplan_6b9a5276496d",
+                    "domain": "general",
+                    "objective": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "assumptions": [
+                      "External commitments remain subject to the existing Amaura approval policies."
+                    ],
+                    "tasks": [
+                      {
+                        "key": "understand",
+                        "title": "Establish objective context",
+                        "description": "Understand the founder objective: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Objective and constraints are explicit",
+                          "Unknowns that can materially change execution are identified",
+                          "Evidence needed for completion is defined"
+                        ],
+                        "depends_on": [],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "analysis",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "plan",
+                        "title": "Create the execution plan",
+                        "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Plan maps directly to the objective",
+                          "Dependencies and stop conditions are explicit",
+                          "Founder-only actions are not silently executed"
+                        ],
+                        "depends_on": [
+                          "understand"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "planning",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "execute",
+                        "title": "Execute the approved internal work",
+                        "description": "Execute the reversible internal work required for: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                        "owner_id": "operations_manager",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "The requested outcome is materially completed",
+                          "Claims are backed by evidence",
+                          "Open risks and founder decisions are explicit"
+                        ],
+                        "depends_on": [
+                          "plan"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "company_operations",
+                        "metadata": {}
+                      }
+                    ],
+                    "planner": "deterministic-general",
+                    "coding_backend": "antigravity",
+                    "workspace": ""
+                  },
+                  "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                  "max_replans": 2,
+                  "replans_used": 0,
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "mission_runnable": true,
+                  "mission_paused": false,
+                  "mission_execution": "background",
+                  "mission_generation": 1,
+                  "antigravity_handoff": false,
+                  "step_key": "understand",
+                  "programme_id": "goal_da4a19f7f380",
+                  "sensitivity": "internal"
+                },
+                "created_at": "2026-08-13T16:39:42.842841+00:00",
+                "updated_at": "2026-08-13T16:39:42.842841+00:00"
+              },
+              {
+                "id": "task_429588cb6bd6",
+                "parent_id": "mile_65be4963d21b",
+                "item_type": "task",
+                "workflow_id": "goalplan_6b9a5276496d",
+                "title": "Create the execution plan",
+                "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                "owner_id": "strategy_director",
+                "reviewer_id": "jarvis",
+                "state": "assigned",
+                "priority": 3,
+                "deadline": null,
+                "budget_cents": 300,
+                "spent_cents": 0,
+                "risk": "low",
+                "action_type": "planning",
+                "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                "acceptance_criteria": [
+                  "Plan maps directly to the objective",
+                  "Dependencies and stop conditions are explicit",
+                  "Founder-only actions are not silently executed"
+                ],
+                "dependencies": [
+                  "task_80f5322bf22d"
+                ],
+                "evidence": [],
+                "summary": "",
+                "metadata": {
+                  "dynamic_goal": true,
+                  "goal_request": {
+                    "objective": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                    "success_criteria": [],
+                    "workspace": "",
+                    "constraints": [],
+                    "autonomy": "execute_until_approval",
+                    "coding_backend": "antigravity",
+                    "priority": 3,
+                    "max_steps": 8,
+                    "max_replans": 2,
+                    "title": "",
+                    "metadata": {
+                      "executive_session_id": "default"
+                    }
+                  },
+                  "goal_plan": {
+                    "plan_id": "goalplan_6b9a5276496d",
+                    "domain": "general",
+                    "objective": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "assumptions": [
+                      "External commitments remain subject to the existing Amaura approval policies."
+                    ],
+                    "tasks": [
+                      {
+                        "key": "understand",
+                        "title": "Establish objective context",
+                        "description": "Understand the founder objective: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Objective and constraints are explicit",
+                          "Unknowns that can materially change execution are identified",
+                          "Evidence needed for completion is defined"
+                        ],
+                        "depends_on": [],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "analysis",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "plan",
+                        "title": "Create the execution plan",
+                        "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Plan maps directly to the objective",
+                          "Dependencies and stop conditions are explicit",
+                          "Founder-only actions are not silently executed"
+                        ],
+                        "depends_on": [
+                          "understand"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "planning",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "execute",
+                        "title": "Execute the approved internal work",
+                        "description": "Execute the reversible internal work required for: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                        "owner_id": "operations_manager",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "The requested outcome is materially completed",
+                          "Claims are backed by evidence",
+                          "Open risks and founder decisions are explicit"
+                        ],
+                        "depends_on": [
+                          "plan"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "company_operations",
+                        "metadata": {}
+                      }
+                    ],
+                    "planner": "deterministic-general",
+                    "coding_backend": "antigravity",
+                    "workspace": ""
+                  },
+                  "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                  "max_replans": 2,
+                  "replans_used": 0,
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "mission_runnable": true,
+                  "mission_paused": false,
+                  "mission_execution": "background",
+                  "mission_generation": 1,
+                  "antigravity_handoff": false,
+                  "step_key": "plan",
+                  "programme_id": "goal_da4a19f7f380",
+                  "sensitivity": "internal"
+                },
+                "created_at": "2026-08-13T16:39:42.842996+00:00",
+                "updated_at": "2026-08-13T16:39:42.842996+00:00"
+              },
+              {
+                "id": "task_d05d17136f47",
+                "parent_id": "mile_65be4963d21b",
+                "item_type": "task",
+                "workflow_id": "goalplan_6b9a5276496d",
+                "title": "Execute the approved internal work",
+                "description": "Execute the reversible internal work required for: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                "owner_id": "operations_manager",
+                "reviewer_id": "jarvis",
+                "state": "assigned",
+                "priority": 3,
+                "deadline": null,
+                "budget_cents": 300,
+                "spent_cents": 0,
+                "risk": "low",
+                "action_type": "company_operations",
+                "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                "acceptance_criteria": [
+                  "The requested outcome is materially completed",
+                  "Claims are backed by evidence",
+                  "Open risks and founder decisions are explicit"
+                ],
+                "dependencies": [
+                  "task_429588cb6bd6"
+                ],
+                "evidence": [],
+                "summary": "",
+                "metadata": {
+                  "dynamic_goal": true,
+                  "goal_request": {
+                    "objective": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                    "success_criteria": [],
+                    "workspace": "",
+                    "constraints": [],
+                    "autonomy": "execute_until_approval",
+                    "coding_backend": "antigravity",
+                    "priority": 3,
+                    "max_steps": 8,
+                    "max_replans": 2,
+                    "title": "",
+                    "metadata": {
+                      "executive_session_id": "default"
+                    }
+                  },
+                  "goal_plan": {
+                    "plan_id": "goalplan_6b9a5276496d",
+                    "domain": "general",
+                    "objective": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "assumptions": [
+                      "External commitments remain subject to the existing Amaura approval policies."
+                    ],
+                    "tasks": [
+                      {
+                        "key": "understand",
+                        "title": "Establish objective context",
+                        "description": "Understand the founder objective: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Objective and constraints are explicit",
+                          "Unknowns that can materially change execution are identified",
+                          "Evidence needed for completion is defined"
+                        ],
+                        "depends_on": [],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "analysis",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "plan",
+                        "title": "Create the execution plan",
+                        "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Plan maps directly to the objective",
+                          "Dependencies and stop conditions are explicit",
+                          "Founder-only actions are not silently executed"
+                        ],
+                        "depends_on": [
+                          "understand"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "planning",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "execute",
+                        "title": "Execute the approved internal work",
+                        "description": "Execute the reversible internal work required for: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                        "owner_id": "operations_manager",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "The requested outcome is materially completed",
+                          "Claims are backed by evidence",
+                          "Open risks and founder decisions are explicit"
+                        ],
+                        "depends_on": [
+                          "plan"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "company_operations",
+                        "metadata": {}
+                      }
+                    ],
+                    "planner": "deterministic-general",
+                    "coding_backend": "antigravity",
+                    "workspace": ""
+                  },
+                  "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                  "max_replans": 2,
+                  "replans_used": 0,
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "mission_runnable": true,
+                  "mission_paused": false,
+                  "mission_execution": "background",
+                  "mission_generation": 1,
+                  "antigravity_handoff": false,
+                  "step_key": "execute",
+                  "programme_id": "goal_da4a19f7f380",
+                  "sensitivity": "internal"
+                },
+                "created_at": "2026-08-13T16:39:42.843044+00:00",
+                "updated_at": "2026-08-13T16:39:42.843044+00:00"
+              }
+            ],
+            "plan": {
+              "plan_id": "goalplan_6b9a5276496d",
+              "domain": "general",
+              "objective": "Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "assumptions": [
+                "External commitments remain subject to the existing Amaura approval policies."
+              ],
+              "tasks": [
+                {
+                  "key": "understand",
+                  "title": "Establish objective context",
+                  "description": "Understand the founder objective: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                  "owner_id": "strategy_director",
+                  "reviewer_id": "jarvis",
+                  "acceptance_criteria": [
+                    "Objective and constraints are explicit",
+                    "Unknowns that can materially change execution are identified",
+                    "Evidence needed for completion is defined"
+                  ],
+                  "depends_on": [],
+                  "risk": "low",
+                  "budget_cents": 300,
+                  "action_type": "analysis",
+                  "metadata": {}
+                },
+                {
+                  "key": "plan",
+                  "title": "Create the execution plan",
+                  "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                  "owner_id": "strategy_director",
+                  "reviewer_id": "jarvis",
+                  "acceptance_criteria": [
+                    "Plan maps directly to the objective",
+                    "Dependencies and stop conditions are explicit",
+                    "Founder-only actions are not silently executed"
+                  ],
+                  "depends_on": [
+                    "understand"
+                  ],
+                  "risk": "low",
+                  "budget_cents": 300,
+                  "action_type": "planning",
+                  "metadata": {}
+                },
+                {
+                  "key": "execute",
+                  "title": "Execute the approved internal work",
+                  "description": "Execute the reversible internal work required for: Using the browser, open 'http://127.0.0.1:62229/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                  "owner_id": "operations_manager",
+                  "reviewer_id": "jarvis",
+                  "acceptance_criteria": [
+                    "The requested outcome is materially completed",
+                    "Claims are backed by evidence",
+                    "Open risks and founder decisions are explicit"
+                  ],
+                  "depends_on": [
+                    "plan"
+                  ],
+                  "risk": "low",
+                  "budget_cents": 300,
+                  "action_type": "company_operations",
+                  "metadata": {}
+                }
+              ],
+              "planner": "deterministic-general",
+              "coding_backend": "antigravity",
+              "workspace": ""
+            },
+            "execution": {
+              "goal_id": "goal_da4a19f7f380",
+              "state": "queued",
+              "background": true
+            },
+            "state": "queued"
+          },
+          "context_sources": [
+            "jarvis.memory.episodic:20260813T160253_default",
+            "conversation_memory:20260811_195401_627462",
+            "jarvis.memory.episodic:20260813T134832_default",
+            "jarvis.memory.episodic:20260813T020759_default",
+            "jarvis.memory.episodic:20260811T142621_ws_20260811_194718_387541",
+            "jarvis.memory.episodic:20260811T140131_ws_20260811_192025_138390",
+            "jarvis.memory.episodic:20260813T143015_default",
+            "jarvis.memory.episodic:20260813T134848_default",
+            "jarvis.memory.episodic:20260813T143019_default",
+            "jarvis.memory.episodic:20260813T143018_default",
+            "jarvis.memory.episodic:20260813T143017_default",
+            "jarvis.memory.episodic:20260813T143016_default",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "not-invoked",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": ""
+          }
+        }
+      }
+    ]
+  }
+}

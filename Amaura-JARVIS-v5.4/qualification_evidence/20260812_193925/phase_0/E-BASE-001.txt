@@ -1,0 +1,4 @@
+EVIDENCE ID: E-BASE-001
+CLAIM: Baseline state frozen and backend evaluated.
+BACKEND COUNT: 1
+PIDS: 65809

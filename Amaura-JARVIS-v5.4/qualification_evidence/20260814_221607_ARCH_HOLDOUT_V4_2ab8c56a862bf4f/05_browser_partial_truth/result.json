@@ -1,0 +1,699 @@
+{
+  "test_id": "05_browser_partial_truth",
+  "status": "FAIL",
+  "reason": "Missing required browser field must be reported, not hidden.",
+  "verification": {
+    "first_found": false,
+    "explicit_missing": false
+  },
+  "chat": {
+    "prompt": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+    "session_id": "s_93328240",
+    "http_status": 200,
+    "response_text": "Mission goal_9479e7648deb is not complete. The bounded replan budget was exhausted or a failure requires escalation.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Mission goal_9479e7648deb is not complete. The bounded replan budget was exhausted or a failure requires escalation.",
+        "session_id": "s_93328240",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "not-invoked",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "goal_9479e7648deb",
+        "state": "failed",
+        "executive": {
+          "intent": "mission",
+          "message": "Mission goal_9479e7648deb is not complete. The bounded replan budget was exhausted or a failure requires escalation.",
+          "session_id": "s_93328240",
+          "goal_id": "goal_9479e7648deb",
+          "state": "failed",
+          "result": {
+            "goal": {
+              "id": "goal_9479e7648deb",
+              "parent_id": null,
+              "item_type": "programme",
+              "workflow_id": "goalplan_80a49c4cbe22",
+              "title": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+              "description": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+              "owner_id": "jarvis",
+              "reviewer_id": "founder",
+              "state": "assigned",
+              "priority": 3,
+              "deadline": null,
+              "budget_cents": 0,
+              "spent_cents": 0,
+              "risk": "low",
+              "action_type": "internal_work",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "acceptance_criteria": [],
+              "dependencies": [],
+              "evidence": [],
+              "summary": "",
+              "metadata": {
+                "dynamic_goal": true,
+                "goal_request": {
+                  "objective": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                  "success_criteria": [],
+                  "workspace": "",
+                  "constraints": [],
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "priority": 3,
+                  "max_steps": 8,
+                  "max_replans": 2,
+                  "title": "",
+                  "metadata": {
+                    "executive_session_id": "s_93328240"
+                  }
+                },
+                "goal_plan": {
+                  "plan_id": "goalplan_80a49c4cbe22",
+                  "domain": "direct_action",
+                  "objective": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                  "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                  "assumptions": [
+                    "Direct action bypasses standard research and planning."
+                  ],
+                  "tasks": [
+                    {
+                      "key": "execute",
+                      "title": "Execute direct action",
+                      "description": "Execute the founder request directly: Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                      "owner_id": "builder",
+                      "reviewer_id": "jarvis",
+                      "acceptance_criteria": [
+                        "Action completed successfully"
+                      ],
+                      "depends_on": [],
+                      "risk": "low",
+                      "budget_cents": 200,
+                      "action_type": "direct_action",
+                      "metadata": {}
+                    }
+                  ],
+                  "planner": "deterministic-direct-action",
+                  "coding_backend": "antigravity",
+                  "workspace": ""
+                },
+                "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                "max_replans": 2,
+                "replans_used": 0,
+                "autonomy": "execute_until_approval",
+                "coding_backend": "antigravity",
+                "mission_runnable": true,
+                "mission_paused": false,
+                "mission_execution": "background",
+                "mission_generation": 1,
+                "antigravity_handoff": false
+              },
+              "created_at": "2026-08-14T16:46:46.292514+00:00",
+              "updated_at": "2026-08-14T16:46:46.292514+00:00"
+            },
+            "project_id": null,
+            "milestone_id": null,
+            "tasks": [
+              {
+                "id": "task_aadd63d97c60",
+                "parent_id": "goal_9479e7648deb",
+                "item_type": "task",
+                "workflow_id": "goalplan_80a49c4cbe22",
+                "title": "Execute direct action",
+                "description": "Execute the founder request directly: Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                "owner_id": "builder",
+                "reviewer_id": "jarvis",
+                "state": "assigned",
+                "priority": 3,
+                "deadline": null,
+                "budget_cents": 200,
+                "spent_cents": 0,
+                "risk": "low",
+                "action_type": "direct_action",
+                "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                "acceptance_criteria": [
+                  "Action completed successfully"
+                ],
+                "dependencies": [],
+                "evidence": [],
+                "summary": "",
+                "metadata": {
+                  "dynamic_goal": true,
+                  "goal_request": {
+                    "objective": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                    "success_criteria": [],
+                    "workspace": "",
+                    "constraints": [],
+                    "autonomy": "execute_until_approval",
+                    "coding_backend": "antigravity",
+                    "priority": 3,
+                    "max_steps": 8,
+                    "max_replans": 2,
+                    "title": "",
+                    "metadata": {
+                      "executive_session_id": "s_93328240"
+                    }
+                  },
+                  "goal_plan": {
+                    "plan_id": "goalplan_80a49c4cbe22",
+                    "domain": "direct_action",
+                    "objective": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "assumptions": [
+                      "Direct action bypasses standard research and planning."
+                    ],
+                    "tasks": [
+                      {
+                        "key": "execute",
+                        "title": "Execute direct action",
+                        "description": "Execute the founder request directly: Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                        "owner_id": "builder",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Action completed successfully"
+                        ],
+                        "depends_on": [],
+                        "risk": "low",
+                        "budget_cents": 200,
+                        "action_type": "direct_action",
+                        "metadata": {}
+                      }
+                    ],
+                    "planner": "deterministic-direct-action",
+                    "coding_backend": "antigravity",
+                    "workspace": ""
+                  },
+                  "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                  "max_replans": 2,
+                  "replans_used": 0,
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "mission_runnable": true,
+                  "mission_paused": false,
+                  "mission_execution": "background",
+                  "mission_generation": 1,
+                  "antigravity_handoff": false,
+                  "step_key": "execute",
+                  "programme_id": "goal_9479e7648deb",
+                  "sensitivity": "internal"
+                },
+                "created_at": "2026-08-14T16:46:46.292600+00:00",
+                "updated_at": "2026-08-14T16:46:46.292600+00:00"
+              }
+            ],
+            "plan": {
+              "plan_id": "goalplan_80a49c4cbe22",
+              "domain": "direct_action",
+              "objective": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "assumptions": [
+                "Direct action bypasses standard research and planning."
+              ],
+              "tasks": [
+                {
+                  "key": "execute",
+                  "title": "Execute direct action",
+                  "description": "Execute the founder request directly: Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                  "owner_id": "builder",
+                  "reviewer_id": "jarvis",
+                  "acceptance_criteria": [
+                    "Action completed successfully"
+                  ],
+                  "depends_on": [],
+                  "risk": "low",
+                  "budget_cents": 200,
+                  "action_type": "direct_action",
+                  "metadata": {}
+                }
+              ],
+              "planner": "deterministic-direct-action",
+              "coding_backend": "antigravity",
+              "workspace": ""
+            },
+            "execution": {
+              "goal_id": "goal_9479e7648deb",
+              "state": "failed",
+              "ticks": [
+                {
+                  "status": "executed",
+                  "recovered": [],
+                  "outbox_dispatched": [],
+                  "execution": {
+                    "id": "run_3154a67b9ffb4bb7",
+                    "task_id": "task_aadd63d97c60",
+                    "worker_id": "Akshats-Laptop-4.local-42221-682fe6",
+                    "attempt": 1,
+                    "state": "succeeded",
+                    "lease_until": "2026-08-14T17:01:46.296227+00:00",
+                    "heartbeat_at": "2026-08-14T16:46:47.846157+00:00",
+                    "started_at": "2026-08-14T16:46:46.296227+00:00",
+                    "finished_at": "2026-08-14T16:46:47.846157+00:00",
+                    "error": "",
+                    "result": {
+                      "employee": "builder",
+                      "evidence": [
+                        {
+                          "byte_length": 466,
+                          "excerpt": "Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match']).",
+                          "reference": "evidence://manifest/0ea1584daa9766e2ec5724e64c603217c3138f6a56565cf65e500e8a4ffa056b",
+                          "sha256": "03494145a634806d3b5f25ae9e5d1ad5399d8ca96238ee85e326c876bf1a71d0",
+                          "success": false,
+                          "type": "direct_action"
+                        }
+                      ],
+                      "iterations": 1,
+                      "model_execution_receipt": {
+                        "actual_model": "browser_extract_content",
+                        "provider": "browser",
+                        "requested_route": "deterministic-direct-action"
+                      },
+                      "reviewer": "jarvis",
+                      "status": "awaiting_review",
+                      "summary": "Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match']).",
+                      "task_id": "task_aadd63d97c60"
+                    }
+                  },
+                  "result": {
+                    "status": "awaiting_review",
+                    "task_id": "task_aadd63d97c60",
+                    "employee": "builder",
+                    "iterations": 1,
+                    "summary": "Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match']).",
+                    "evidence": [
+                      {
+                        "type": "direct_action",
+                        "reference": "evidence://manifest/0ea1584daa9766e2ec5724e64c603217c3138f6a56565cf65e500e8a4ffa056b",
+                        "sha256": "03494145a634806d3b5f25ae9e5d1ad5399d8ca96238ee85e326c876bf1a71d0",
+                        "byte_length": 466,
+                        "success": false,
+                        "excerpt": "Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match'])."
+                      }
+                    ],
+                    "model_execution_receipt": {
+                      "requested_route": "deterministic-direct-action",
+                      "actual_model": "browser_extract_content",
+                      "provider": "browser"
+                    },
+                    "reviewer": "jarvis"
+                  }
+                },
+                {
+                  "status": "reviewed",
+                  "recovered": [],
+                  "review": {
+                    "id": "task_aadd63d97c60",
+                    "parent_id": "goal_9479e7648deb",
+                    "item_type": "task",
+                    "workflow_id": "goalplan_80a49c4cbe22",
+                    "title": "Execute direct action",
+                    "description": "Execute the founder request directly: Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                    "owner_id": "builder",
+                    "reviewer_id": "jarvis",
+                    "state": "assigned",
+                    "priority": 3,
+                    "deadline": null,
+                    "budget_cents": 200,
+                    "spent_cents": 0,
+                    "risk": "low",
+                    "action_type": "direct_action",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "acceptance_criteria": [
+                      "Action completed successfully"
+                    ],
+                    "dependencies": [],
+                    "evidence": [
+                      {
+                        "type": "direct_action",
+                        "reference": "evidence://manifest/0ea1584daa9766e2ec5724e64c603217c3138f6a56565cf65e500e8a4ffa056b",
+                        "sha256": "03494145a634806d3b5f25ae9e5d1ad5399d8ca96238ee85e326c876bf1a71d0",
+                        "byte_length": 466,
+                        "success": false,
+                        "excerpt": "Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match'])."
+                      }
+                    ],
+                    "summary": "REVIEW REJECTED: Direct action verification failed: Evidence 1 records a failed operation\n\nPrevious submission: Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match']).",
+                    "metadata": {
+                      "dynamic_goal": true,
+                      "goal_request": {
+                        "objective": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                        "success_criteria": [],
+                        "workspace": "",
+                        "constraints": [],
+                        "autonomy": "execute_until_approval",
+                        "coding_backend": "antigravity",
+                        "priority": 3,
+                        "max_steps": 8,
+                        "max_replans": 2,
+                        "title": "",
+                        "metadata": {
+                          "executive_session_id": "s_93328240"
+                        }
+                      },
+                      "goal_plan": {
+                        "plan_id": "goalplan_80a49c4cbe22",
+                        "domain": "direct_action",
+                        "objective": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                        "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                        "assumptions": [
+                          "Direct action bypasses standard research and planning."
+                        ],
+                        "tasks": [
+                          {
+                            "key": "execute",
+                            "title": "Execute direct action",
+                            "description": "Execute the founder request directly: Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                            "owner_id": "builder",
+                            "reviewer_id": "jarvis",
+                            "acceptance_criteria": [
+                              "Action completed successfully"
+                            ],
+                            "depends_on": [],
+                            "risk": "low",
+                            "budget_cents": 200,
+                            "action_type": "direct_action",
+                            "metadata": {}
+                          }
+                        ],
+                        "planner": "deterministic-direct-action",
+                        "coding_backend": "antigravity",
+                        "workspace": ""
+                      },
+                      "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                      "max_replans": 2,
+                      "replans_used": 0,
+                      "autonomy": "execute_until_approval",
+                      "coding_backend": "antigravity",
+                      "mission_runnable": true,
+                      "mission_paused": false,
+                      "mission_execution": "background",
+                      "mission_generation": 1,
+                      "antigravity_handoff": false,
+                      "step_key": "execute",
+                      "programme_id": "goal_9479e7648deb",
+                      "sensitivity": "internal"
+                    },
+                    "created_at": "2026-08-14T16:46:46.292600+00:00",
+                    "updated_at": "2026-08-14T16:46:47.849844+00:00"
+                  }
+                },
+                {
+                  "status": "executed",
+                  "recovered": [],
+                  "outbox_dispatched": [],
+                  "execution": {
+                    "id": "run_474a5ca69ae74151",
+                    "task_id": "task_aadd63d97c60",
+                    "worker_id": "Akshats-Laptop-4.local-42221-682fe6",
+                    "attempt": 2,
+                    "state": "succeeded",
+                    "lease_until": "2026-08-14T17:01:47.852658+00:00",
+                    "heartbeat_at": "2026-08-14T16:46:48.181565+00:00",
+                    "started_at": "2026-08-14T16:46:47.852658+00:00",
+                    "finished_at": "2026-08-14T16:46:48.181565+00:00",
+                    "error": "",
+                    "result": {
+                      "employee": "builder",
+                      "evidence": [
+                        {
+                          "byte_length": 466,
+                          "excerpt": "Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match']).",
+                          "reference": "evidence://manifest/d19a844e95e949b7d26968d0051468098a79b8aa351af8768a9137d252cc02ff",
+                          "sha256": "03494145a634806d3b5f25ae9e5d1ad5399d8ca96238ee85e326c876bf1a71d0",
+                          "success": false,
+                          "type": "direct_action"
+                        }
+                      ],
+                      "iterations": 1,
+                      "model_execution_receipt": {
+                        "actual_model": "browser_extract_content",
+                        "provider": "browser",
+                        "requested_route": "deterministic-direct-action"
+                      },
+                      "reviewer": "jarvis",
+                      "status": "awaiting_review",
+                      "summary": "Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match']).",
+                      "task_id": "task_aadd63d97c60"
+                    }
+                  },
+                  "result": {
+                    "status": "awaiting_review",
+                    "task_id": "task_aadd63d97c60",
+                    "employee": "builder",
+                    "iterations": 1,
+                    "summary": "Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match']).",
+                    "evidence": [
+                      {
+                        "type": "direct_action",
+                        "reference": "evidence://manifest/d19a844e95e949b7d26968d0051468098a79b8aa351af8768a9137d252cc02ff",
+                        "sha256": "03494145a634806d3b5f25ae9e5d1ad5399d8ca96238ee85e326c876bf1a71d0",
+                        "byte_length": 466,
+                        "success": false,
+                        "excerpt": "Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match'])."
+                      }
+                    ],
+                    "model_execution_receipt": {
+                      "requested_route": "deterministic-direct-action",
+                      "actual_model": "browser_extract_content",
+                      "provider": "browser"
+                    },
+                    "reviewer": "jarvis"
+                  }
+                },
+                {
+                  "status": "reviewed",
+                  "recovered": [],
+                  "review": {
+                    "id": "task_aadd63d97c60",
+                    "parent_id": "goal_9479e7648deb",
+                    "item_type": "task",
+                    "workflow_id": "goalplan_80a49c4cbe22",
+                    "title": "Execute direct action",
+                    "description": "Execute the founder request directly: Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                    "owner_id": "builder",
+                    "reviewer_id": "jarvis",
+                    "state": "assigned",
+                    "priority": 3,
+                    "deadline": null,
+                    "budget_cents": 200,
+                    "spent_cents": 0,
+                    "risk": "low",
+                    "action_type": "direct_action",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "acceptance_criteria": [
+                      "Action completed successfully"
+                    ],
+                    "dependencies": [],
+                    "evidence": [
+                      {
+                        "type": "direct_action",
+                        "reference": "evidence://manifest/d19a844e95e949b7d26968d0051468098a79b8aa351af8768a9137d252cc02ff",
+                        "sha256": "03494145a634806d3b5f25ae9e5d1ad5399d8ca96238ee85e326c876bf1a71d0",
+                        "byte_length": 466,
+                        "success": false,
+                        "excerpt": "Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match'])."
+                      }
+                    ],
+                    "summary": "REVIEW REJECTED: Direct action verification failed: Evidence 1 records a failed operation\n\nPrevious submission: Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match']).",
+                    "metadata": {
+                      "dynamic_goal": true,
+                      "goal_request": {
+                        "objective": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                        "success_criteria": [],
+                        "workspace": "",
+                        "constraints": [],
+                        "autonomy": "execute_until_approval",
+                        "coding_backend": "antigravity",
+                        "priority": 3,
+                        "max_steps": 8,
+                        "max_replans": 2,
+                        "title": "",
+                        "metadata": {
+                          "executive_session_id": "s_93328240"
+                        }
+                      },
+                      "goal_plan": {
+                        "plan_id": "goalplan_80a49c4cbe22",
+                        "domain": "direct_action",
+                        "objective": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                        "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                        "assumptions": [
+                          "Direct action bypasses standard research and planning."
+                        ],
+                        "tasks": [
+                          {
+                            "key": "execute",
+                            "title": "Execute direct action",
+                            "description": "Execute the founder request directly: Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                            "owner_id": "builder",
+                            "reviewer_id": "jarvis",
+                            "acceptance_criteria": [
+                              "Action completed successfully"
+                            ],
+                            "depends_on": [],
+                            "risk": "low",
+                            "budget_cents": 200,
+                            "action_type": "direct_action",
+                            "metadata": {}
+                          }
+                        ],
+                        "planner": "deterministic-direct-action",
+                        "coding_backend": "antigravity",
+                        "workspace": ""
+                      },
+                      "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                      "max_replans": 2,
+                      "replans_used": 0,
+                      "autonomy": "execute_until_approval",
+                      "coding_backend": "antigravity",
+                      "mission_runnable": true,
+                      "mission_paused": false,
+                      "mission_execution": "background",
+                      "mission_generation": 1,
+                      "antigravity_handoff": false,
+                      "step_key": "execute",
+                      "programme_id": "goal_9479e7648deb",
+                      "sensitivity": "internal"
+                    },
+                    "created_at": "2026-08-14T16:46:46.292600+00:00",
+                    "updated_at": "2026-08-14T16:46:48.184117+00:00"
+                  }
+                },
+                {
+                  "status": "idle",
+                  "recovered": [],
+                  "outbox_dispatched": []
+                }
+              ],
+              "pending_approvals": [],
+              "failed_tasks": [
+                {
+                  "id": "task_aadd63d97c60",
+                  "parent_id": "goal_9479e7648deb",
+                  "item_type": "task",
+                  "workflow_id": "goalplan_80a49c4cbe22",
+                  "title": "Execute direct action",
+                  "description": "Execute the founder request directly: Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                  "owner_id": "builder",
+                  "reviewer_id": "jarvis",
+                  "state": "failed",
+                  "priority": 3,
+                  "deadline": null,
+                  "budget_cents": 200,
+                  "spent_cents": 0,
+                  "risk": "low",
+                  "action_type": "direct_action",
+                  "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                  "acceptance_criteria": [
+                    "Action completed successfully"
+                  ],
+                  "dependencies": [],
+                  "evidence": [
+                    {
+                      "type": "direct_action",
+                      "reference": "evidence://manifest/d19a844e95e949b7d26968d0051468098a79b8aa351af8768a9137d252cc02ff",
+                      "sha256": "03494145a634806d3b5f25ae9e5d1ad5399d8ca96238ee85e326c876bf1a71d0",
+                      "byte_length": 466,
+                      "success": false,
+                      "excerpt": "Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match'])."
+                    }
+                  ],
+                  "summary": "REVIEW REJECTED: Direct action verification failed: Evidence 1 records a failed operation\n\nPrevious submission: Browser extraction partially failed on http://127.0.0.1:60353/panel: 1 field(s) could not be retrieved (['no_match']).",
+                  "metadata": {
+                    "dynamic_goal": true,
+                    "goal_request": {
+                      "objective": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                      "success_criteria": [],
+                      "workspace": "",
+                      "constraints": [],
+                      "autonomy": "execute_until_approval",
+                      "coding_backend": "antigravity",
+                      "priority": 3,
+                      "max_steps": 8,
+                      "max_replans": 2,
+                      "title": "",
+                      "metadata": {
+                        "executive_session_id": "s_93328240"
+                      }
+                    },
+                    "goal_plan": {
+                      "plan_id": "goalplan_80a49c4cbe22",
+                      "domain": "direct_action",
+                      "objective": "Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                      "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                      "assumptions": [
+                        "Direct action bypasses standard research and planning."
+                      ],
+                      "tasks": [
+                        {
+                          "key": "execute",
+                          "title": "Execute direct action",
+                          "description": "Execute the founder request directly: Open http://127.0.0.1:60353/panel and return both \".one-36768549\" and \".missing-38516549\". Both are required.",
+                          "owner_id": "builder",
+                          "reviewer_id": "jarvis",
+                          "acceptance_criteria": [
+                            "Action completed successfully"
+                          ],
+                          "depends_on": [],
+                          "risk": "low",
+                          "budget_cents": 200,
+                          "action_type": "direct_action",
+                          "metadata": {}
+                        }
+                      ],
+                      "planner": "deterministic-direct-action",
+                      "coding_backend": "antigravity",
+                      "workspace": ""
+                    },
+                    "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                    "max_replans": 2,
+                    "replans_used": 0,
+                    "autonomy": "execute_until_approval",
+                    "coding_backend": "antigravity",
+                    "mission_runnable": true,
+                    "mission_paused": false,
+                    "mission_execution": "background",
+                    "mission_generation": 1,
+                    "antigravity_handoff": false,
+                    "step_key": "execute",
+                    "programme_id": "goal_9479e7648deb",
+                    "sensitivity": "internal"
+                  },
+                  "created_at": "2026-08-14T16:46:46.292600+00:00",
+                  "updated_at": "2026-08-14T16:46:48.187583+00:00"
+                }
+              ]
+            },
+            "state": "failed"
+          },
+          "context_sources": [
+            "company_work:task_65e225203ea2",
+            "company_work:task_98e06026d2b2",
+            "company_work:task_a17c75448aa8",
+            "company_work:task_f09a206dc1fa",
+            "company_work:task_2727967fc9cd",
+            "company_work:task_409764bf0baf",
+            "company_work:task_9bba1fcd3c12",
+            "company_work:task_1e25009036dd",
+            "company_work:task_69ad704bb2c8",
+            "company_work:task_5c5c7949b6ef",
+            "company_work:task_f309dbc4a33d",
+            "company_work:task_600f0d77de8e",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "not-invoked",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": ""
+          }
+        }
+      }
+    ],
+    "goal_id": "goal_9479e7648deb",
+    "goal_state": "failed"
+  }
+}

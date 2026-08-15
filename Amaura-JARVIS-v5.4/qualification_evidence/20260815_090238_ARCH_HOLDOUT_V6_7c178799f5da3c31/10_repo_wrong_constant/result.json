@@ -1,0 +1,113 @@
+{
+  "test_id": "10_repo_wrong_constant",
+  "status": "PASS",
+  "reason": "Read-only diagnosis of wrong numeric constant.",
+  "verification": {
+    "function_named": true,
+    "semantic_constant_diagnosis": true,
+    "tree_unchanged": true,
+    "new_entries": []
+  },
+  "chat": {
+    "prompt": "Inspect Python repository \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563\" read-only. Diagnose why the test fails in function adjust_86261355; explain the implementation defect.",
+    "session_id": "s10_11065081",
+    "http_status": 200,
+    "response_text": "Inspected repository at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563. Analyzed 2 Python file(s) with read-only isolation. Function 'adjust_86261355' has defect: Defect in function 'adjust_86261355': AssertionError triggered on test 'test_service_credit' (Assertion: assert adjust_86261355(100)).",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Inspected repository at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563. Analyzed 2 Python file(s) with read-only isolation. Function 'adjust_86261355' has defect: Defect in function 'adjust_86261355': AssertionError triggered on test 'test_service_credit' (Assertion: assert adjust_86261355(100)).",
+        "session_id": "s10_11065081",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "deterministic-ast",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Inspected repository at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563. Analyzed 2 Python file(s) with read-only isolation. Function 'adjust_86261355' has defect: Defect in function 'adjust_86261355': AssertionError triggered on test 'test_service_credit' (Assertion: assert adjust_86261355(100)).",
+          "session_id": "s10_11065081",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "internal_analysis",
+            "tool_name": "internal_ast_inspector",
+            "provider": "deterministic-ast",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "repo_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563",
+              "files_inspected": [
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/pricing.py",
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/test_pricing.py"
+              ],
+              "pre_hashes": {
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/pricing.py": "14b7fc26183c19c4ecef63e21b12b021fed7f058e8c219e1dc5ee53a8d273482",
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/test_pricing.py": "9abcef53cb37ac79039ef54126e77555c81840f153618d92a2eadfa4d5a32af8"
+              },
+              "post_hashes": {
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/pricing.py": "14b7fc26183c19c4ecef63e21b12b021fed7f058e8c219e1dc5ee53a8d273482",
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/test_pricing.py": "9abcef53cb37ac79039ef54126e77555c81840f153618d92a2eadfa4d5a32af8"
+              },
+              "read_only_verified": true,
+              "primary_function": "adjust_86261355",
+              "findings_count": 1,
+              "findings": [
+                {
+                  "function": "adjust_86261355",
+                  "category": "assertionerror",
+                  "description": "Defect in function 'adjust_86261355': AssertionError triggered on test 'test_service_credit' (Assertion: assert adjust_86261355(100))",
+                  "file": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/test_pricing.py"
+                }
+              ]
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "deterministic-ast",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "internal_analysis",
+            "tool_name": "internal_ast_inspector",
+            "policy_decision": "allowed",
+            "repo_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563",
+            "files_inspected": [
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/pricing.py",
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/test_pricing.py"
+            ],
+            "pre_hashes": {
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/pricing.py": "14b7fc26183c19c4ecef63e21b12b021fed7f058e8c219e1dc5ee53a8d273482",
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/test_pricing.py": "9abcef53cb37ac79039ef54126e77555c81840f153618d92a2eadfa4d5a32af8"
+            },
+            "post_hashes": {
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/pricing.py": "14b7fc26183c19c4ecef63e21b12b021fed7f058e8c219e1dc5ee53a8d273482",
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/test_pricing.py": "9abcef53cb37ac79039ef54126e77555c81840f153618d92a2eadfa4d5a32af8"
+            },
+            "read_only_verified": true,
+            "primary_function": "adjust_86261355",
+            "findings_count": 1,
+            "findings": [
+              {
+                "function": "adjust_86261355",
+                "category": "assertionerror",
+                "description": "Defect in function 'adjust_86261355': AssertionError triggered on test 'test_service_credit' (Assertion: assert adjust_86261355(100))",
+                "file": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/repo_constant_72246563/test_pricing.py"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "test": "Approvals Subsystem",
+  "response": {
+    "approvals": [
+      {
+        "id": "approval_168eec2eef6b",
+        "task_id": "task_824ae450dd2d",
+        "action_type": "repository_write",
+        "risk": "medium",
+        "status": "pending",
+        "requested_by": "jarvis",
+        "decided_by": null,
+        "reason": "",
+        "payload": {
+          "action_type": "repository_write",
+          "budget_cents": 1200,
+          "evidence": [
+            {
+              "byte_length": 61896,
+              "excerpt": "Updated hello.py to return 'jarvis' and added test_hello.py with unit test coverage.",
+              "reference": "evidence://manifest/c383179a27def31b31778097ee8eb9f8dc75a99356e9f50a8073158e5560d63b",
+              "sha256": "a3ff893f3dd3a9c005f21862ed1cc03f9c461be901f943f91c22e6d8ee81bdcb",
+              "success": true,
+              "type": "antigravity_execution"
+            },
+            {
+              "byte_length": 37778,
+              "excerpt": "diff=b8111657b88e files=2 independent_tests=1",
+              "reference": "evidence://manifest/9c958a18506ddfb9fd4d7470944eef9f626f7d6df8237641ed3c6882c7c76bd6",
+              "sha256": "841485e6d65637bf7f9f55d6e9bcfd84adf3f6a1b395ac13efd2371d6c2d918b",
+              "success": true,
+              "type": "antigravity_verification"
+            },
+            {
+              "byte_length": 344,
+              "excerpt": "Amaura verifier exit=0 command=python3 -m unittest test_hello.py",
+              "reference": "evidence://manifest/f5f459c0deb5130e19b2ce0aae0c6ddf093549f5402a6c1c828049c04d948172",
+              "sha256": "fecbe4b4c56a10dfc2802d349f40b1c9a5dfbf2c5b9ef14d3db12fa3f5799536",
+              "success": true,
+              "type": "independent_test"
+            },
+            {
+              "byte_length": 288,
+              "excerpt": "backend=antigravity cli=1.1.12 models=Gemini 3.6 Flash (High)",
+              "reference": "evidence://manifest/d6eede20935dcdd091194c17b08fb9609c8c6a7372e83bf77c75dad14ba483f4",
+              "sha256": "a680a6e010820fab4a843a91618da4be7dec256b698e6f6c9e4b323f8cf72670",
+              "success": true,
+              "type": "external_executor_receipt"
+            },
+            {
+              "byte_length": 743,
+              "excerpt": "commit=28a1cdfe39c6 files=2 backend=antigravity",
+              "reference": "evidence://manifest/b401beb46daf5f1110acbd718b5a8cdbabc6c5141ca1255d6267193009f65ec4",
+              "sha256": "00f89d933b1a9c7b84c897c3849d2427cbf274b98d697de595678c9eac838a06",
+              "success": true,
+              "type": "git_commit"
+            }
+          ],
+          "git_snapshot": {
+            "git_base_branch": "master",
+            "git_base_commit": "67ea76c61ea504e34b0c0286179a6bf1eb614616",
+            "git_branch": "amaura-task_824ae450dd2d",
+            "git_changed_files": [
+              "hello.py",
+              "test_hello.py"
+            ],
+            "git_commit": "28a1cdfe39c647d6d30c0bc398acc73290b2b401",
+            "git_repository_root": "/Users/ashishsingh/Desktop/temp_repo",
+            "post_merge_validation": "python3 -m unittest test_hello.py"
+          },
+          "risk": "medium",
+          "spent_cents": 0,
+          "summary": "Updated hello.py to return 'jarvis' and added test_hello.py with unit test coverage.",
+          "title": "Implement the objective"
+        },
+        "created_at": "2026-08-12T06:28:49.014497+00:00",
+        "resolved_at": null,
+        "payload_hash": "886f1162ba92c3dd2dd59d244d498bd2d7d83a26dc58c24d91df3929afe8b57e",
+        "expires_at": "2026-08-14T06:28:49.014499+00:00"
+      }
+    ]
+  },
+  "success": true
+}

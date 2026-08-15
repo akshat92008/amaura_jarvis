@@ -1,0 +1,75 @@
+{
+  "test_id": "09_three_step_workflow",
+  "status": "FAIL",
+  "reason": "PASS requires an exact runtime read\u2192reason\u2192write output and no failed/cancelled mission state.",
+  "verification": {
+    "exists": false,
+    "parsed": null,
+    "expected": {
+      "project": "HELIOS-765CE8DC",
+      "budget": 5932,
+      "coolant": "NX-A46AFE"
+    },
+    "exact": false,
+    "read_tool": false,
+    "write_tool": false,
+    "goal_state": null
+  },
+  "chat": {
+    "prompt": "Read '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_221112_ARCH_TRUTH_BENCHMARK/workspace/09_source.md', extract project, budget, and coolant, then create JSON at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_221112_ARCH_TRUTH_BENCHMARK/workspace/09_output.json' with exactly those three keys: project, budget, coolant. Budget must be a number.",
+    "http_status": 200,
+    "response_text": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": null,
+    "goal_history": [],
+    "latency_ms": 325.3350257873535,
+    "events": [
+      {
+        "type": "complete",
+        "response": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "unavailable",
+        "model_fallback_used": true,
+        "model_fallback_reason": "[CIRCUIT_OPEN] Provider circuit breaker is open",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "",
+        "executive": {
+          "intent": "conversation",
+          "message": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "",
+          "result": {},
+          "context_sources": [
+            "conversation_memory:20260811_195401_627462",
+            "company_work:task_1fea86f7ff42",
+            "company_work:task_af40eab7f11b",
+            "company_work:task_20841f1af95a",
+            "company_work:task_5fdfc109a588",
+            "company_work:task_d5316d870974",
+            "company_work:task_164e914be86c",
+            "company_work:task_7f69380a9077",
+            "company_work:task_fb66bedd7690",
+            "company_work:proj_b6a611beb3cf",
+            "company_work:goal_9b1a1c316552",
+            "company_work:task_90594c7dacce",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "unavailable",
+            "model": "",
+            "fallback_used": true,
+            "fallback_reason": "[CIRCUIT_OPEN] Provider circuit breaker is open"
+          }
+        }
+      }
+    ]
+  }
+}

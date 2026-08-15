@@ -1,0 +1,13 @@
+{
+  "n_concurrent": 5,
+  "all_http_200": true,
+  "response_contamination": true,
+  "total_ms": 141.52097702026367,
+  "responses": [
+    "The interactive cognition service is temporarily u",
+    "The interactive cognition service is temporarily u",
+    "The interactive cognition service is temporarily u",
+    "The interactive cognition service is temporarily u",
+    "The interactive cognition service is temporarily u"
+  ]
+}

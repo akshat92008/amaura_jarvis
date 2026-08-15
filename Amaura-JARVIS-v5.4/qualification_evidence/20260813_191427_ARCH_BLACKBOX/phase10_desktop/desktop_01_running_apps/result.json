@@ -1,0 +1,16 @@
+{
+  "test_id": "desktop_01_running_apps",
+  "prompt": "Tell me which applications are currently running on my Mac.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": 9031.715154647827,
+    "total_ms": 9047.108173370361,
+    "request_ts": 1786628928.518472,
+    "final_ts": 1786628937.5655801
+  },
+  "verification": {}
+}

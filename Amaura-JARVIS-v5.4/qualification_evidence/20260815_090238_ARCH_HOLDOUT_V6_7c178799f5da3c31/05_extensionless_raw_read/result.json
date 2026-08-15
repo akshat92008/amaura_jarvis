@@ -1,0 +1,70 @@
+{
+  "test_id": "05_extensionless_raw_read",
+  "status": "PASS",
+  "reason": "Extensionless raw-read regression.",
+  "verification": {
+    "exact": true
+  },
+  "chat": {
+    "prompt": "Read \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/memo_41729775\" and make your entire reply the file text itself, unchanged.",
+    "session_id": "s5_73738842",
+    "http_status": 200,
+    "response_text": "eagle-drift-2124\n376296\nflint-brook-4063",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "eagle-drift-2124\n376296\nflint-brook-4063",
+        "session_id": "s5_73738842",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "eagle-drift-2124\n376296\nflint-brook-4063",
+          "session_id": "s5_73738842",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "read_file",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/memo_41729775",
+              "size_bytes": 40,
+              "read_mode": "raw",
+              "verification_passed": true
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "read_file",
+            "policy_decision": "allowed",
+            "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/memo_41729775",
+            "size_bytes": 40,
+            "read_mode": "raw",
+            "verification_passed": true
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

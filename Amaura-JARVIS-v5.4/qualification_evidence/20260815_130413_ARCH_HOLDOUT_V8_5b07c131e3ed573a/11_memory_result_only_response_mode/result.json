@@ -1,0 +1,344 @@
+{
+  "test_id": "11_memory_result_only_response_mode",
+  "status": "FAIL",
+  "reason": "Result-only constraint must apply after memory retrieval.",
+  "verification": {
+    "expected": "cinder-shoal-9589",
+    "actual": "the deployment marker you remember for North Estuary Project, with no explanation",
+    "distractor_absent": true
+  },
+  "chat": {
+    "store1": {
+      "prompt": "Remember that the deployment marker for North Estuary Project is cinder-shoal-9589.",
+      "session_id": "v8memory_51811273",
+      "http_status": 200,
+      "response_text": "Remembered under project memory: the deployment marker for North Estuary Project is cinder-shoal-9589.",
+      "error": null,
+      "events": [
+        {
+          "type": "complete",
+          "response": "Remembered under project memory: the deployment marker for North Estuary Project is cinder-shoal-9589.",
+          "session_id": "v8memory_51811273",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "not-invoked",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "memory_write",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "memory_write",
+            "message": "Remembered under project memory: the deployment marker for North Estuary Project is cinder-shoal-9589.",
+            "session_id": "v8memory_51811273",
+            "goal_id": "",
+            "state": "",
+            "result": {
+              "memory": {
+                "namespace": "jarvis.memory.project",
+                "key": "the_deployment_marker_for_north_estuary_project_is_cinder_shoal_9589",
+                "value": {
+                  "content": "the deployment marker for North Estuary Project is cinder-shoal-9589.",
+                  "confidence": 1.0,
+                  "source": "explicit_chat",
+                  "trust": "founder",
+                  "entities": [
+                    "North Estuary Project"
+                  ],
+                  "created_at": "2026-08-15T07:34:27.157367+00:00",
+                  "updated_at": "2026-08-15T07:34:27.157367+00:00",
+                  "history": []
+                },
+                "evidence_refs": [],
+                "sensitivity": "internal",
+                "updated_by": "founder",
+                "updated_at": "2026-08-15T07:34:27.157401+00:00"
+              }
+            },
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "not-invoked",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": ""
+            }
+          }
+        }
+      ],
+      "goal_id": null,
+      "goal_state": null
+    },
+    "store2": {
+      "prompt": "Also remember that the unrelated archive marker is indigo-jetty-2218.",
+      "session_id": "v8memory_51811273",
+      "http_status": 200,
+      "response_text": "I've taken note of the unrelated archive marker \"indigo-jetty-2218\". I'll keep this in mind as we proceed with our conversation. How can I assist you today?",
+      "error": null,
+      "events": [
+        {
+          "type": "token",
+          "content": "I"
+        },
+        {
+          "type": "token",
+          "content": "'ve"
+        },
+        {
+          "type": "token",
+          "content": " taken"
+        },
+        {
+          "type": "token",
+          "content": " note"
+        },
+        {
+          "type": "token",
+          "content": " of"
+        },
+        {
+          "type": "token",
+          "content": " the"
+        },
+        {
+          "type": "token",
+          "content": " unrelated"
+        },
+        {
+          "type": "token",
+          "content": " archive"
+        },
+        {
+          "type": "token",
+          "content": " marker"
+        },
+        {
+          "type": "token",
+          "content": " \""
+        },
+        {
+          "type": "token",
+          "content": "ind"
+        },
+        {
+          "type": "token",
+          "content": "igo"
+        },
+        {
+          "type": "token",
+          "content": "-j"
+        },
+        {
+          "type": "token",
+          "content": "etty"
+        },
+        {
+          "type": "token",
+          "content": "-"
+        },
+        {
+          "type": "token",
+          "content": "221"
+        },
+        {
+          "type": "token",
+          "content": "8"
+        },
+        {
+          "type": "token",
+          "content": "\"."
+        },
+        {
+          "type": "token",
+          "content": " I"
+        },
+        {
+          "type": "token",
+          "content": "'ll"
+        },
+        {
+          "type": "token",
+          "content": " keep"
+        },
+        {
+          "type": "token",
+          "content": " this"
+        },
+        {
+          "type": "token",
+          "content": " in"
+        },
+        {
+          "type": "token",
+          "content": " mind"
+        },
+        {
+          "type": "token",
+          "content": " as"
+        },
+        {
+          "type": "token",
+          "content": " we"
+        },
+        {
+          "type": "token",
+          "content": " proceed"
+        },
+        {
+          "type": "token",
+          "content": " with"
+        },
+        {
+          "type": "token",
+          "content": " our"
+        },
+        {
+          "type": "token",
+          "content": " conversation"
+        },
+        {
+          "type": "token",
+          "content": "."
+        },
+        {
+          "type": "token",
+          "content": " How"
+        },
+        {
+          "type": "token",
+          "content": " can"
+        },
+        {
+          "type": "token",
+          "content": " I"
+        },
+        {
+          "type": "token",
+          "content": " assist"
+        },
+        {
+          "type": "token",
+          "content": " you"
+        },
+        {
+          "type": "token",
+          "content": " today"
+        },
+        {
+          "type": "token",
+          "content": "?"
+        },
+        {
+          "type": "complete",
+          "response": "I've taken note of the unrelated archive marker \"indigo-jetty-2218\". I'll keep this in mind as we proceed with our conversation. How can I assist you today?",
+          "session_id": "v8memory_51811273",
+          "model": "llama-3.3-70b-versatile",
+          "model_key": "llama-3.3-70b-versatile",
+          "model_provider": "omniroute",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 658,
+          "model_ttft_ms": 500,
+          "intent": "conversation",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "conversation",
+            "message": "I've taken note of the unrelated archive marker \"indigo-jetty-2218\". I'll keep this in mind as we proceed with our conversation. How can I assist you today?",
+            "session_id": "v8memory_51811273",
+            "goal_id": "",
+            "state": "",
+            "result": {},
+            "context_sources": [
+              "conversation_memory:20260811_195401_627462",
+              "company_work:task_98e06026d2b2",
+              "company_work:task_65e225203ea2",
+              "company_work:task_b7edad901a97",
+              "conversation_memory:20260812_200926_162384",
+              "vector_memory:hybrid_recall",
+              "company_work:task_46eb15e09d09",
+              "company_work:task_260cdaba0dbd",
+              "company_work:task_8caafcc47c13",
+              "company_work:task_32781db7cb88",
+              "company_work:task_8dadb149a65b",
+              "company_work:task_f2e6042f2b0b",
+              "entity_graph"
+            ],
+            "model_provenance": {
+              "provider": "omniroute",
+              "model": "llama-3.3-70b-versatile",
+              "fallback_used": false,
+              "fallback_reason": "",
+              "requested_model": "groq/llama-3.3-70b-versatile",
+              "resolved_provider": "omniroute",
+              "resolved_model": "llama-3.3-70b-versatile",
+              "latency_ms": 658,
+              "ttft_ms": 500
+            }
+          }
+        }
+      ],
+      "goal_id": null,
+      "goal_state": null
+    },
+    "recall": {
+      "prompt": "Return only the deployment marker you remember for North Estuary Project, with no explanation.",
+      "session_id": "v8memory_51811273",
+      "http_status": 200,
+      "response_text": "the deployment marker you remember for North Estuary Project, with no explanation",
+      "error": null,
+      "events": [
+        {
+          "type": "complete",
+          "response": "the deployment marker you remember for North Estuary Project, with no explanation",
+          "session_id": "v8memory_51811273",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "system",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "conversation",
+          "goal_id": "",
+          "state": "completed",
+          "executive": {
+            "intent": "conversation",
+            "message": "the deployment marker you remember for North Estuary Project, with no explanation",
+            "session_id": "v8memory_51811273",
+            "goal_id": "",
+            "state": "completed",
+            "result": {
+              "execution_type": "exact_response",
+              "tool_name": "echo",
+              "provider": "system",
+              "model": "",
+              "policy_decision": "allowed",
+              "evidence": [],
+              "telemetry": {
+                "exact_response": true,
+                "length": 81
+              },
+              "success": true
+            },
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "system",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": "",
+              "execution_type": "exact_response",
+              "tool_name": "echo",
+              "policy_decision": "allowed",
+              "exact_response": true,
+              "length": 81
+            }
+          }
+        }
+      ],
+      "goal_id": null,
+      "goal_state": "completed"
+    }
+  }
+}

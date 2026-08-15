@@ -1,0 +1,55 @@
+{
+  "test": "Reference Resolution",
+  "ref_key": "project_falcon_code",
+  "ref_val": "FALCON-9982-SECRET",
+  "query": "What is the project falcon code from my memory?",
+  "chat_response": {
+    "response": "I've searched through your memory and found a few mentions of \"Project Falcon.\" However, I couldn't find any specific code related to it. It's possible that the code is not stored in your memory or that it's not accessible at the moment.\n\nIf you could provide more context or information about Project Falcon, I may be able to help you better. Alternatively, you can also try searching through your files or code repositories to see if you can find any relevant code.",
+    "session_id": "qual_phase10",
+    "model": "llama-3.3-70b-versatile",
+    "model_key": "llama-3.3-70b-versatile",
+    "model_provider": "omniroute",
+    "model_fallback_used": false,
+    "model_fallback_reason": "",
+    "model_latency_ms": 1274,
+    "model_ttft_ms": 0,
+    "intent": "conversation",
+    "goal_id": "",
+    "state": "",
+    "executive": {
+      "intent": "conversation",
+      "message": "I've searched through your memory and found a few mentions of \"Project Falcon.\" However, I couldn't find any specific code related to it. It's possible that the code is not stored in your memory or that it's not accessible at the moment.\n\nIf you could provide more context or information about Project Falcon, I may be able to help you better. Alternatively, you can also try searching through your files or code repositories to see if you can find any relevant code.",
+      "session_id": "qual_phase10",
+      "goal_id": "",
+      "state": "",
+      "result": {},
+      "context_sources": [
+        "jarvis.memory.episodic:20260812T143958_qual_phase10",
+        "jarvis.memory.episodic:20260812T143917_qual_phase10",
+        "jarvis.memory.episodic:20260812T143903_qual_phase10",
+        "jarvis.memory.episodic:20260812T143744_qual_phase10",
+        "conversation_memory:20260812_200926_162384",
+        "conversation_memory:20260812_200800_390239",
+        "conversation_memory:20260811_195401_627462",
+        "conversation_memory:20260810_225322_246153",
+        "conversation_memory:20260810_225245_100125",
+        "jarvis.memory.episodic:20260811T142621_ws_20260811_194718_387541",
+        "jarvis.memory.episodic:20260811T140131_ws_20260811_192025_138390",
+        "conversation_memory:20260810_225052_112228",
+        "entity_graph"
+      ],
+      "model_provenance": {
+        "provider": "omniroute",
+        "model": "llama-3.3-70b-versatile",
+        "fallback_used": false,
+        "fallback_reason": "",
+        "requested_model": "groq/llama-3.3-70b-versatile",
+        "resolved_provider": "groq",
+        "resolved_model": "llama-3.3-70b-versatile",
+        "latency_ms": 1274,
+        "ttft_ms": 0
+      }
+    }
+  },
+  "success": true
+}

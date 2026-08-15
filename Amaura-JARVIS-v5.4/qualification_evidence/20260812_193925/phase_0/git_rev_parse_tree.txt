@@ -1,0 +1,8 @@
+COMMAND: git rev-parse HEAD^{tree}
+EXIT_CODE: 0
+
+STDOUT:
+0307070073df0d0f65fec770a288e062a5f187d0
+
+STDERR:
+

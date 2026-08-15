@@ -1,0 +1,34 @@
+ANTI-OVERFIT SCAN REPORT
+Status: CLEAN
+Verified: True
+Total Occurrences: 27
+Execution Violations: 0
+
+MATCHES:
+  jarvis/amaura/brain.py:249 [benchmark] (GENERIC_PRODUCT_BENCHMARK) -> "research", "paper", "papers", "benchmark", "compare", "investigate", "study",
+  jarvis/amaura/brain.py:509 [arch_eval] (OTHER) -> executor, reviewer = "research_evaluation", "qa"
+  jarvis/amaura/intelligence_benchmark.py:1 [benchmark] (COMMENT_OR_DOC) -> """Private-pack benchmark harness for JARVIS cognition and Noryx engineering.
+  jarvis/amaura/intelligence_benchmark.py:6 [benchmark] (OTHER) -> so the shipped source does not contain the answers to its own benchmark.
+  jarvis/amaura/intelligence_benchmark.py:59 [benchmark] (OTHER) -> class BenchmarkPack(BaseModel):
+  jarvis/amaura/intelligence_benchmark.py:77 [benchmark] (OTHER) -> class BenchmarkResult:
+  jarvis/amaura/intelligence_benchmark.py:99 [benchmark] (OTHER) -> def load_pack(path: str | Path) -> tuple[BenchmarkPack, str]:
+  jarvis/amaura/intelligence_benchmark.py:104 [benchmark] (OTHER) -> pack = BenchmarkPack.model_validate(parsed)
+  jarvis/amaura/intelligence_benchmark.py:106 [benchmark] (GENERIC_PRODUCT_BENCHMARK) -> raise GovernanceError(f"Invalid JARVIS benchmark pack: {exc}") from exc
+  jarvis/amaura/intelligence_benchmark.py:108 [benchmark] (GENERIC_PRODUCT_BENCHMARK) -> raise GovernanceError("Benchmark pack contains no cases")
+  jarvis/amaura/intelligence_benchmark.py:131 [benchmark] (OTHER) -> def run_benchmark(
+  jarvis/amaura/intelligence_benchmark.py:136 [benchmark] (OTHER) -> ) -> BenchmarkResult:
+  jarvis/amaura/intelligence_benchmark.py:145 [benchmark] (OTHER) -> kernel = ExecutiveKernel(control, conversation_handler=lambda text, context: "benchmark conversation")
+  jarvis/amaura/intelligence_benchmark.py:173 [benchmark] (GENERIC_PRODUCT_BENCHMARK) -> raise GovernanceError("Engineering benchmark requested but Noryx is not configured")
+  jarvis/amaura/intelligence_benchmark.py:192 [benchmark] (OTHER) -> idempotency_key=f"benchmark:{case.id}",
+  jarvis/amaura/intelligence_benchmark.py:216 [benchmark] (OTHER) -> return BenchmarkResult(source_hash, len(results), passed, len(results) - passed, results)
+  jarvis/amaura/intelligence_benchmark.py:220 [benchmark] (OTHER) -> "BenchmarkPack",
+  jarvis/amaura/intelligence_benchmark.py:221 [benchmark] (OTHER) -> "BenchmarkResult",
+  jarvis/amaura/intelligence_benchmark.py:226 [benchmark] (OTHER) -> "run_benchmark",
+  jarvis/amaura/policies.py:36 [benchmark] (GENERIC_PRODUCT_BENCHMARK) -> "rules": ["Every number, achievement, benchmark, date, and attribution must link to evidence.", "Preserve limitations an
+  jarvis/amaura/registry.py:246 [arch_eval] (OTHER) -> "research_evaluation",
+  jarvis/amaura/registry.py:257 [arch_eval] (OTHER) -> prompt_profile="research_evaluation",
+  jarvis/amaura/workflows.py:92 [arch_eval] (OTHER) -> WorkflowStep("hypothesis", "Define measurable hypothesis", "Record prior work, baseline, expected change, regression thr
+  jarvis/amaura/workflows.py:93 [arch_eval] (OTHER) -> WorkflowStep("experiment", "Run reproducible experiment", "Version data and config, run the sandboxed experiment, and pr
+  jarvis/amaura/workflows.py:281 [benchmark] (GENERIC_PRODUCT_BENCHMARK) -> "Collect primary papers, model releases, benchmarks, policy changes and credible technical discussions relevant to the r
+  jarvis/amaura/workflows.py:283 [arch_eval] (OTHER) -> "research_evaluation",
+  jarvis/amaura/workflows.py:291 [arch_eval] (OTHER) -> "research_evaluation",

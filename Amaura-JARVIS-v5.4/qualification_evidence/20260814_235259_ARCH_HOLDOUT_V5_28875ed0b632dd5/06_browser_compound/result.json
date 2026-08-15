@@ -1,0 +1,91 @@
+{
+  "test_id": "06_browser_compound",
+  "status": "PASS",
+  "reason": "Compound browser result.",
+  "verification": {
+    "title": true,
+    "value": true
+  },
+  "chat": {
+    "prompt": "Visit http://127.0.0.1:62434/card and give me the page title plus the text matched by \".metric-30626818\".",
+    "session_id": "s_12312925",
+    "http_status": 200,
+    "response_text": "title: quartz-avenue-3458 console\n.metric-30626818: \ud83c\udf10 **Extracted 1 element(s) matching '.metric-30626818':**\n\ndune-nexus-1821",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "title: quartz-avenue-3458 console\n.metric-30626818: \ud83c\udf10 **Extracted 1 element(s) matching '.metric-30626818':**\n\ndune-nexus-1821",
+        "session_id": "s_12312925",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "browser",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "title: quartz-avenue-3458 console\n.metric-30626818: \ud83c\udf10 **Extracted 1 element(s) matching '.metric-30626818':**\n\ndune-nexus-1821",
+          "session_id": "s_12312925",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "browser_extract_content",
+            "provider": "browser",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "url": "http://127.0.0.1:62434/card",
+              "status": "completed",
+              "completed_fields": [
+                {
+                  "type": "title",
+                  "value": "quartz-avenue-3458 console"
+                },
+                {
+                  "type": "selector",
+                  "selector": ".metric-30626818",
+                  "value": "\ud83c\udf10 **Extracted 1 element(s) matching '.metric-30626818':**\n\ndune-nexus-1821"
+                }
+              ],
+              "verification_passed": true
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "browser",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "browser_extract_content",
+            "policy_decision": "allowed",
+            "url": "http://127.0.0.1:62434/card",
+            "status": "completed",
+            "completed_fields": [
+              {
+                "type": "title",
+                "value": "quartz-avenue-3458 console"
+              },
+              {
+                "type": "selector",
+                "selector": ".metric-30626818",
+                "value": "\ud83c\udf10 **Extracted 1 element(s) matching '.metric-30626818':**\n\ndune-nexus-1821"
+              }
+            ],
+            "verification_passed": true
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

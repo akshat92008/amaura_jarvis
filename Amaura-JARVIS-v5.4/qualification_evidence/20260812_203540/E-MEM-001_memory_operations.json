@@ -1,0 +1,13 @@
+{
+  "test": "Memory Process Restart Persistence & Natural Language Recall",
+  "token": "AMAURA_RESTART_MEMORY_2fc5022e-5377-40ff-a682-e49e6051552d",
+  "pid_a": 73232,
+  "pid_b": 73240,
+  "pids_distinct": true,
+  "storage_persistence_pass": true,
+  "conversational_recall_pass": true,
+  "fresh_session_id": "fresh_session_5d76e20a-6873-4eda-92dd-5c08bc76114e",
+  "recall_question": "What qualification memory token did I ask you to remember?",
+  "chat_reply": "The qualification memory token you asked me to remember is AMAURA_RESTART_MEMORY_2fc5022e-5377-40ff-a682-e49e6051552d.",
+  "passed": true
+}

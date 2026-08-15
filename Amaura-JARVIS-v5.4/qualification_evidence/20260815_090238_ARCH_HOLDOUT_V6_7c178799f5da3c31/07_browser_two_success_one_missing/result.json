@@ -1,0 +1,108 @@
+{
+  "test_id": "07_browser_two_success_one_missing",
+  "status": "PASS",
+  "reason": "Browser partial result must retain two successes and identify the missing field.",
+  "verification": {
+    "first_success": true,
+    "second_success": true,
+    "explicit_missing": true
+  },
+  "chat": {
+    "prompt": "Open http://127.0.0.1:49170/status. I require \".left-14441016\", \".right-37834860\", and \".absent-32455479\". Keep any successful values but explicitly report any missing field.",
+    "session_id": "s7_12442728",
+    "http_status": 200,
+    "response_text": "Browser extraction partially completed for http://127.0.0.1:49170/status.. Succeeded: .left-14441016: \ud83c\udf10 **Extracted 1 element(s) matching '.left-14441016':**\n\nreed-heights-1223; .right-37834860: \ud83c\udf10 **Extracted 1 element(s) matching '.right-37834860':**\n\nginger-terrace-2391. Failed/Missing: .absent-32455479: no_matching_element_found.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Browser extraction partially completed for http://127.0.0.1:49170/status.. Succeeded: .left-14441016: \ud83c\udf10 **Extracted 1 element(s) matching '.left-14441016':**\n\nreed-heights-1223; .right-37834860: \ud83c\udf10 **Extracted 1 element(s) matching '.right-37834860':**\n\nginger-terrace-2391. Failed/Missing: .absent-32455479: no_matching_element_found.",
+        "session_id": "s7_12442728",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "browser",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "failed",
+        "executive": {
+          "intent": "mission",
+          "message": "Browser extraction partially completed for http://127.0.0.1:49170/status.. Succeeded: .left-14441016: \ud83c\udf10 **Extracted 1 element(s) matching '.left-14441016':**\n\nreed-heights-1223; .right-37834860: \ud83c\udf10 **Extracted 1 element(s) matching '.right-37834860':**\n\nginger-terrace-2391. Failed/Missing: .absent-32455479: no_matching_element_found.",
+          "session_id": "s7_12442728",
+          "goal_id": "",
+          "state": "failed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "browser_extract_content",
+            "provider": "browser",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "url": "http://127.0.0.1:49170/status.",
+              "status": "partial_failure",
+              "requested_fields": [
+                ".left-14441016",
+                ".right-37834860",
+                ".absent-32455479"
+              ],
+              "successful_fields": {
+                ".left-14441016": "\ud83c\udf10 **Extracted 1 element(s) matching '.left-14441016':**\n\nreed-heights-1223",
+                ".right-37834860": "\ud83c\udf10 **Extracted 1 element(s) matching '.right-37834860':**\n\nginger-terrace-2391"
+              },
+              "failed_fields": [
+                {
+                  "type": "selector",
+                  "selector": ".absent-32455479",
+                  "reason": "no_matching_element_found"
+                }
+              ],
+              "missing_fields": [
+                ".absent-32455479"
+              ],
+              "verification_passed": false
+            },
+            "success": false
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "browser",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "browser_extract_content",
+            "policy_decision": "allowed",
+            "url": "http://127.0.0.1:49170/status.",
+            "status": "partial_failure",
+            "requested_fields": [
+              ".left-14441016",
+              ".right-37834860",
+              ".absent-32455479"
+            ],
+            "successful_fields": {
+              ".left-14441016": "\ud83c\udf10 **Extracted 1 element(s) matching '.left-14441016':**\n\nreed-heights-1223",
+              ".right-37834860": "\ud83c\udf10 **Extracted 1 element(s) matching '.right-37834860':**\n\nginger-terrace-2391"
+            },
+            "failed_fields": [
+              {
+                "type": "selector",
+                "selector": ".absent-32455479",
+                "reason": "no_matching_element_found"
+              }
+            ],
+            "missing_fields": [
+              ".absent-32455479"
+            ],
+            "verification_passed": false
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "failed"
+  }
+}

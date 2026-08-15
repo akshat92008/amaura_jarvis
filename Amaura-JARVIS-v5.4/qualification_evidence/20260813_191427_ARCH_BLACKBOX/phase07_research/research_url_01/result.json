@@ -1,0 +1,16 @@
+{
+  "test_id": "research_url_01",
+  "prompt": "Summarize the content at 'https://httpbin.org/get' and tell me the value of the 'Host' field in the response.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 13.59105110168457,
+    "request_ts": 1786628892.736747,
+    "final_ts": 1786628892.750338
+  },
+  "verification": {}
+}

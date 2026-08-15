@@ -1,0 +1,162 @@
+[
+  {
+    "type": "token",
+    "content": "I"
+  },
+  {
+    "type": "token",
+    "content": "'m"
+  },
+  {
+    "type": "token",
+    "content": " not"
+  },
+  {
+    "type": "token",
+    "content": " capable"
+  },
+  {
+    "type": "token",
+    "content": " of"
+  },
+  {
+    "type": "token",
+    "content": " directly"
+  },
+  {
+    "type": "token",
+    "content": " accessing"
+  },
+  {
+    "type": "token",
+    "content": " or"
+  },
+  {
+    "type": "token",
+    "content": " reading"
+  },
+  {
+    "type": "token",
+    "content": " files"
+  },
+  {
+    "type": "token",
+    "content": " from"
+  },
+  {
+    "type": "token",
+    "content": " your"
+  },
+  {
+    "type": "token",
+    "content": " local"
+  },
+  {
+    "type": "token",
+    "content": " system"
+  },
+  {
+    "type": "token",
+    "content": "."
+  },
+  {
+    "type": "token",
+    "content": " However"
+  },
+  {
+    "type": "token",
+    "content": ","
+  },
+  {
+    "type": "token",
+    "content": " I"
+  },
+  {
+    "type": "token",
+    "content": " can"
+  },
+  {
+    "type": "token",
+    "content": " guide"
+  },
+  {
+    "type": "token",
+    "content": " you"
+  },
+  {
+    "type": "token",
+    "content": " on"
+  },
+  {
+    "type": "token",
+    "content": " how"
+  },
+  {
+    "type": "token",
+    "content": " to"
+  },
+  {
+    "type": "token",
+    "content": " share"
+  },
+  {
+    "type": "token",
+    "content": " the"
+  },
+  {
+    "type": "token",
+    "content": " contents"
+  },
+  {
+    "type": "token",
+    "content": " of"
+  },
+  {
+    "type": "token",
+    "content": " the"
+  },
+  {
+    "type": "token",
+    "content": " file"
+  },
+  {
+    "type": "token",
+    "content": " if"
+  },
+  {
+    "type": "token",
+    "content": " you"
+  },
+  {
+    "type": "token",
+    "content": "'d"
+  },
+  {
+    "type": "token",
+    "content": " like"
+  },
+  {
+    "type": "token",
+    "content": " to"
+  },
+  {
+    "type": "token",
+    "content": " paste"
+  },
+  {
+    "type": "token",
+    "content": " it"
+  },
+  {
+    "type": "token",
+    "content": " here"
+  },
+  {
+    "type": "token",
+    "content": "."
+  },
+  {
+    "type": "error",
+    "error": "Audit history integrity failure at sequence 1: signature_missing"
+  }
+]

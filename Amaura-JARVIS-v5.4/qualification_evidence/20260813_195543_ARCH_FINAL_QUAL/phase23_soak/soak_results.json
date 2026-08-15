@@ -1,0 +1,330 @@
+{
+  "tasks_total": 30,
+  "tasks_passed": 28,
+  "tasks_failed": 2,
+  "rss_start_mb": 89.234375,
+  "rss_end_mb": 89.234375,
+  "rss_max_mb": 89.234375,
+  "results": [
+    {
+      "index": 1,
+      "task": "What time is it right now?",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 13.65804672241211,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 2,
+      "task": "Tell me the current CPU usage.",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 33.23483467102051,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 3,
+      "task": "Create a file '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/quali",
+      "success": false,
+      "http_status": 400,
+      "duration_ms": 382.10463523864746,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 4,
+      "task": "List running applications.",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 17.295122146606445,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 5,
+      "task": "Write 'hello world' to '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 41.27001762390137,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 6,
+      "task": "What is 15 multiplied by 17?",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 43.179988861083984,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 7,
+      "task": "Tell me the current memory usage.",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 81.86793327331543,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 8,
+      "task": "Read the file '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/quali",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 36.46492958068848,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 9,
+      "task": "What is today's date in ISO format?",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 42.20890998840332,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 10,
+      "task": "Append 'line 2' to '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 25.082111358642578,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 11,
+      "task": "List all files in the current directory.",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 33.392906188964844,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 12,
+      "task": "What operating system am I running?",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 39.03388977050781,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 13,
+      "task": "Create directory '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qu",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 27390.855073928833,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": [
+        "task:analysis:strategy_director",
+        "task:planning:strategy_director",
+        "task:company_operations:operations_manager",
+        "task:analysis:technical_architect",
+        "task:analysis:strategy_director",
+        "task:analysis:technical_architect",
+        "task:analysis:technical_architect"
+      ]
+    },
+    {
+      "index": 14,
+      "task": "What Python version is installed?",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 495.32532691955566,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 15,
+      "task": "Delete the file '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qua",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 699.4338035583496,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 16,
+      "task": "Tell me a brief fact about Python programming.",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 1481.706142425537,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 17,
+      "task": "Create a CSV with 3 rows at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JAR",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 38630.08999824524,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": [
+        "task:analysis:strategy_director",
+        "task:planning:strategy_director",
+        "task:company_operations:operations_manager"
+      ]
+    },
+    {
+      "index": 18,
+      "task": "What is the disk usage of the root filesystem?",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 46.74196243286133,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 19,
+      "task": "Read '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 44.484853744506836,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 20,
+      "task": "Take a screenshot and tell me if there is a window open.",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 38.488149642944336,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 21,
+      "task": "What is 100 divided by 4?",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 34.15703773498535,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 22,
+      "task": "Create a markdown file at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVI",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 23285.842180252075,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": [
+        "task:analysis:strategy_director",
+        "task:planning:strategy_director",
+        "task:company_operations:operations_manager",
+        "task:analysis:technical_architect",
+        "task:analysis:strategy_director",
+        "task:analysis:technical_architect",
+        "task:analysis:technical_architect"
+      ]
+    },
+    {
+      "index": 23,
+      "task": "List the top 5 running processes by name.",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 550.433874130249,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 24,
+      "task": "Read '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 448.26698303222656,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 25,
+      "task": "What is the system's battery level?",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 580.5099010467529,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 26,
+      "task": "Move '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 691.3530826568604,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 27,
+      "task": "How many CPU cores does this machine have?",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 523.6821174621582,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 28,
+      "task": "Create a file '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/quali",
+      "success": false,
+      "http_status": 400,
+      "duration_ms": 28486.611127853394,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 29,
+      "task": "What is the hostname of this machine?",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 50.81820487976074,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    },
+    {
+      "index": 30,
+      "task": "Tell me the JARVIS version or build ID.",
+      "success": true,
+      "http_status": 200,
+      "duration_ms": 39.251089096069336,
+      "rss_before_mb": 89.234375,
+      "rss_after_mb": 89.234375,
+      "tool_calls": []
+    }
+  ]
+}

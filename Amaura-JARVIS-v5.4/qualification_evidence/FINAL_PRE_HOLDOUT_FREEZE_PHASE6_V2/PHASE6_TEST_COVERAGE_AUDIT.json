@@ -1,0 +1,16 @@
+{
+  "screenshot_precedence_asserted": true,
+  "exact_response_zero_model_asserted": true,
+  "exact_response_zero_mission_asserted": true,
+  "exact_response_exact_payload_asserted": true,
+  "exact_response_concurrency_sizes": [
+    20,
+    40,
+    60,
+    80
+  ],
+  "write_semantic_expected_asserted": true,
+  "write_generated_case_count": 2300,
+  "wrong_helper_semantic_asserted": true,
+  "wrong_constant_semantic_asserted": true
+}

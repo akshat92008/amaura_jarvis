@@ -1,0 +1,20 @@
+{
+  "test_id": "canary_a_response_capture",
+  "prompt": "Echo this exact string and nothing else: ARCH-CANARY-1712edd8-93d1-4dee-82f0-007afb95f1ee",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "ARCH-CANARY-1712edd8-93d1-4dee-82f0-007afb95f1ee",
+  "response_excerpt": "ARCH-CANARY-1712edd8-93d1-4dee-82f0-007afb95f1ee",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": 534.2168807983398,
+    "total_ms": 773.3328342437744,
+    "request_ts": 1786639070.836169,
+    "final_ts": 1786639071.6095018
+  },
+  "verification": {}
+}

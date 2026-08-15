@@ -13,12 +13,15 @@ _WORKSPACE: contextvars.ContextVar[Path | None] = contextvars.ContextVar("jarvis
 
 _SENSITIVE_PARTS = frozenset({
     ".ssh", ".aws", ".azure", ".gnupg", ".kube", "keychains", "secrets",
+    ".audit_keys", "authority_keys", ".config/gcloud", ".docker",
 })
 _SENSITIVE_NAMES = frozenset({
-    "credentials", "credentials.json", "id_rsa", "id_ed25519", "known_hosts",
+    "credentials", "credentials.json", "id_rsa", "id_ed25519", "id_ecdsa", "id_dsa", "known_hosts",
     ".netrc", ".npmrc", ".pypirc", "dockerconfigjson", "service-account.json",
+    "audit_hmac_key", "authority.key", "audit.key", "master.key",
 })
 _SAFE_ENV_SUFFIXES = (".example", ".sample", ".template", ".dist")
+_SYSTEM_ROOTS = ("/etc", "/System", "/private/etc", "/var/root")
 
 
 def _configured_workspace() -> Path:
@@ -44,6 +47,9 @@ def workspace_root() -> Path:
 
 
 def _is_sensitive(path: Path) -> bool:
+    resolved_str = str(path.resolve(strict=False))
+    if any(resolved_str == root or resolved_str.startswith(f"{root}/") for root in _SYSTEM_ROOTS):
+        return True
     lowered_parts = tuple(part.lower() for part in path.parts)
     if any(part in _SENSITIVE_PARTS for part in lowered_parts):
         return True

@@ -1,0 +1,74 @@
+{
+  "test_id": "03_dotted_directory",
+  "status": "PASS",
+  "reason": "Actual directory type must beat extension heuristics.",
+  "verification": {
+    "found": {
+      "a_47887101": true,
+      "b_78667916.xyz": true,
+      "c_58773234.md": true,
+      "d_41824661.blob": true,
+      "e_72388846": true
+    }
+  },
+  "chat": {
+    "prompt": "List every entry directly inside the directory \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/folder_59112792.data\".",
+    "session_id": "s_35552304",
+    "http_status": 200,
+    "response_text": "Directory: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/folder_59112792.data\n\ud83d\udcc4 a_47887101 (15 B)\n\ud83d\udcc4 b_78667916.xyz (14 B)\n\ud83d\udcc4 c_58773234.md (15 B)\n\ud83d\udcc4 d_41824661.blob (15 B)\n\ud83d\udcc4 e_72388846 (19 B)",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Directory: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/folder_59112792.data\n\ud83d\udcc4 a_47887101 (15 B)\n\ud83d\udcc4 b_78667916.xyz (14 B)\n\ud83d\udcc4 c_58773234.md (15 B)\n\ud83d\udcc4 d_41824661.blob (15 B)\n\ud83d\udcc4 e_72388846 (19 B)",
+        "session_id": "s_35552304",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Directory: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/folder_59112792.data\n\ud83d\udcc4 a_47887101 (15 B)\n\ud83d\udcc4 b_78667916.xyz (14 B)\n\ud83d\udcc4 c_58773234.md (15 B)\n\ud83d\udcc4 d_41824661.blob (15 B)\n\ud83d\udcc4 e_72388846 (19 B)",
+          "session_id": "s_35552304",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "list_directory",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/folder_59112792.data",
+              "count": 0,
+              "verification_passed": true
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "list_directory",
+            "policy_decision": "allowed",
+            "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/folder_59112792.data",
+            "count": 0,
+            "verification_passed": true
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "test_id": "hitl_A_readonly",
+  "prompt": "Read the file '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/SuperMario.py' and tell me its contents.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 16.21079444885254,
+    "request_ts": 1786586901.1500611,
+    "final_ts": 1786586901.166272
+  },
+  "verification": {}
+}

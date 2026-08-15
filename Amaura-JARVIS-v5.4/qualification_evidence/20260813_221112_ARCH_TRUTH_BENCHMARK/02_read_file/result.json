@@ -1,0 +1,53 @@
+{
+  "test_id": "02_read_file",
+  "status": "FAIL",
+  "reason": "PASS requires the exact hidden runtime token; tool telemetry is recorded but not required.",
+  "verification": {
+    "exact_response": false,
+    "real_tools": [],
+    "tool_ok": false
+  },
+  "chat": {
+    "prompt": "Read the file at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_221112_ARCH_TRUTH_BENCHMARK/workspace/02_source.txt' and reply with its exact contents only.",
+    "http_status": 200,
+    "response_text": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": null,
+    "goal_history": [],
+    "latency_ms": 60.48417091369629,
+    "events": [
+      {
+        "type": "complete",
+        "response": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "unavailable",
+        "model_fallback_used": true,
+        "model_fallback_reason": "[CIRCUIT_OPEN] Provider circuit breaker is open",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "",
+        "executive": {
+          "intent": "conversation",
+          "message": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "",
+          "result": {},
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "unavailable",
+            "model": "",
+            "fallback_used": true,
+            "fallback_reason": "[CIRCUIT_OPEN] Provider circuit breaker is open"
+          }
+        }
+      }
+    ]
+  }
+}

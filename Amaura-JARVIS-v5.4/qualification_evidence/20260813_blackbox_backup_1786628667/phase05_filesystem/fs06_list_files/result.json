@@ -1,0 +1,16 @@
+{
+  "test_id": "fs06_list_files",
+  "prompt": "List all Python files in '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/jarvis/tools/' and their approximate sizes in bytes.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": 224.42078590393066,
+    "total_ms": 394.3748474121094,
+    "request_ts": 1786586819.542617,
+    "final_ts": 1786586819.936992
+  },
+  "verification": {}
+}

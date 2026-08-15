@@ -1,0 +1,51 @@
+{
+  "test": "open Safari",
+  "is_running_before": false,
+  "jarvis_response": {
+    "response": "\u2705 Successfully opened Safari.",
+    "session_id": "qual_phase2",
+    "model": "Llama 3.3 70B",
+    "model_key": "llama-3.3-70b",
+    "model_provider": "not-invoked",
+    "model_fallback_used": false,
+    "model_fallback_reason": "",
+    "model_latency_ms": 0,
+    "model_ttft_ms": 0,
+    "intent": "macos_app",
+    "goal_id": "",
+    "state": "completed",
+    "executive": {
+      "intent": "macos_app",
+      "message": "\u2705 Successfully opened Safari.",
+      "session_id": "qual_phase2",
+      "goal_id": "",
+      "state": "completed",
+      "result": {
+        "app_control": "\u2705 Successfully opened Safari."
+      },
+      "context_sources": [
+        "jarvis.memory.episodic:20260812T122600_default",
+        "jarvis.memory.episodic:20260812T122526_default",
+        "jarvis.memory.episodic:20260812T122233_default",
+        "jarvis.memory.episodic:20260812T121026_desktop-1786536620896",
+        "jarvis.memory.episodic:20260812T115234_desktop-1786535516138",
+        "company_work:task_9b82b9a266d4",
+        "conversation_memory:20260810_234027_410502",
+        "conversation_memory:20260810_225322_246153",
+        "conversation_memory:20260810_225245_100125",
+        "conversation_memory:20260810_225052_112228",
+        "conversation_memory:20260810_224633_153283",
+        "jarvis.memory.episodic:20260812T122640_default",
+        "entity_graph"
+      ],
+      "model_provenance": {
+        "provider": "not-invoked",
+        "model": "",
+        "fallback_used": false,
+        "fallback_reason": ""
+      }
+    }
+  },
+  "is_running_after": true,
+  "success": false
+}

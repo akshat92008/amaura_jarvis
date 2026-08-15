@@ -1,0 +1,345 @@
+[
+  {
+    "test": "launch Safari",
+    "jarvis_response": {
+      "response": "\u2705 Successfully opened Safari.",
+      "session_id": "qual_phase2",
+      "model": "Llama 3.3 70B",
+      "model_key": "llama-3.3-70b",
+      "model_provider": "not-invoked",
+      "model_fallback_used": false,
+      "model_fallback_reason": "",
+      "model_latency_ms": 0,
+      "model_ttft_ms": 0,
+      "intent": "macos_app",
+      "goal_id": "",
+      "state": "completed",
+      "executive": {
+        "intent": "macos_app",
+        "message": "\u2705 Successfully opened Safari.",
+        "session_id": "qual_phase2",
+        "goal_id": "",
+        "state": "completed",
+        "result": {
+          "app_control": "\u2705 Successfully opened Safari."
+        },
+        "context_sources": [
+          "jarvis.memory.episodic:20260812T142524_qual_phase2",
+          "jarvis.memory.episodic:20260812T122640_default",
+          "jarvis.memory.episodic:20260812T122600_default",
+          "jarvis.memory.episodic:20260812T122526_default",
+          "jarvis.memory.episodic:20260812T122233_default",
+          "jarvis.memory.episodic:20260812T121026_desktop-1786536620896",
+          "jarvis.memory.episodic:20260812T115234_desktop-1786535516138",
+          "jarvis.memory.episodic:20260812T115222_desktop-1786535516138",
+          "jarvis.memory.entity:safari",
+          "jarvis.memory.relation:memory:episodic:20260812T142524_qual_phase2:mentions:safari",
+          "jarvis.memory.relation:memory:episodic:20260812T122640_default:mentions:safari",
+          "jarvis.memory.relation:memory:episodic:20260812T122600_default:mentions:safari",
+          "entity_graph"
+        ],
+        "model_provenance": {
+          "provider": "not-invoked",
+          "model": "",
+          "fallback_used": false,
+          "fallback_reason": ""
+        }
+      }
+    },
+    "is_running_after": true
+  },
+  {
+    "test": "activate Safari",
+    "jarvis_response": {
+      "response": "\u2705 Successfully opened Safari.",
+      "session_id": "qual_phase2",
+      "model": "Llama 3.3 70B",
+      "model_key": "llama-3.3-70b",
+      "model_provider": "not-invoked",
+      "model_fallback_used": false,
+      "model_fallback_reason": "",
+      "model_latency_ms": 0,
+      "model_ttft_ms": 0,
+      "intent": "macos_app",
+      "goal_id": "",
+      "state": "completed",
+      "executive": {
+        "intent": "macos_app",
+        "message": "\u2705 Successfully opened Safari.",
+        "session_id": "qual_phase2",
+        "goal_id": "",
+        "state": "completed",
+        "result": {
+          "app_control": "\u2705 Successfully opened Safari."
+        },
+        "context_sources": [
+          "conversation_memory:20260810_224633_153283",
+          "jarvis.memory.episodic:20260812T142531_qual_phase2",
+          "jarvis.memory.episodic:20260812T142524_qual_phase2",
+          "jarvis.memory.episodic:20260812T122640_default",
+          "jarvis.memory.episodic:20260812T122600_default",
+          "jarvis.memory.episodic:20260812T122526_default",
+          "jarvis.memory.episodic:20260812T122233_default",
+          "jarvis.memory.episodic:20260812T121026_desktop-1786536620896",
+          "jarvis.memory.episodic:20260812T115234_desktop-1786535516138",
+          "jarvis.memory.episodic:20260812T115222_desktop-1786535516138",
+          "jarvis.memory.entity:safari",
+          "jarvis.memory.relation:memory:episodic:20260812T142531_qual_phase2:mentions:safari",
+          "entity_graph"
+        ],
+        "model_provenance": {
+          "provider": "not-invoked",
+          "model": "",
+          "fallback_used": false,
+          "fallback_reason": ""
+        }
+      }
+    },
+    "is_running_after": true
+  },
+  {
+    "test": "focus Safari",
+    "jarvis_response": {
+      "response": "\u2705 Successfully opened Safari.",
+      "session_id": "qual_phase2",
+      "model": "Llama 3.3 70B",
+      "model_key": "llama-3.3-70b",
+      "model_provider": "not-invoked",
+      "model_fallback_used": false,
+      "model_fallback_reason": "",
+      "model_latency_ms": 0,
+      "model_ttft_ms": 0,
+      "intent": "macos_app",
+      "goal_id": "",
+      "state": "completed",
+      "executive": {
+        "intent": "macos_app",
+        "message": "\u2705 Successfully opened Safari.",
+        "session_id": "qual_phase2",
+        "goal_id": "",
+        "state": "completed",
+        "result": {
+          "app_control": "\u2705 Successfully opened Safari."
+        },
+        "context_sources": [
+          "jarvis.memory.episodic:20260812T142533_qual_phase2",
+          "jarvis.memory.episodic:20260812T142531_qual_phase2",
+          "jarvis.memory.episodic:20260812T142524_qual_phase2",
+          "jarvis.memory.episodic:20260812T122640_default",
+          "jarvis.memory.episodic:20260812T122600_default",
+          "jarvis.memory.episodic:20260812T122526_default",
+          "jarvis.memory.episodic:20260812T122233_default",
+          "jarvis.memory.episodic:20260812T121026_desktop-1786536620896",
+          "jarvis.memory.episodic:20260812T115234_desktop-1786535516138",
+          "jarvis.memory.episodic:20260812T115222_desktop-1786535516138",
+          "jarvis.memory.entity:safari",
+          "jarvis.memory.relation:memory:episodic:20260812T142533_qual_phase2:mentions:safari",
+          "entity_graph"
+        ],
+        "model_provenance": {
+          "provider": "not-invoked",
+          "model": "",
+          "fallback_used": false,
+          "fallback_reason": ""
+        }
+      }
+    },
+    "is_running_after": true
+  },
+  {
+    "test": "show Safari",
+    "jarvis_response": {
+      "response": "\u2705 Successfully opened Safari.",
+      "session_id": "qual_phase2",
+      "model": "Llama 3.3 70B",
+      "model_key": "llama-3.3-70b",
+      "model_provider": "not-invoked",
+      "model_fallback_used": false,
+      "model_fallback_reason": "",
+      "model_latency_ms": 0,
+      "model_ttft_ms": 0,
+      "intent": "macos_app",
+      "goal_id": "",
+      "state": "completed",
+      "executive": {
+        "intent": "macos_app",
+        "message": "\u2705 Successfully opened Safari.",
+        "session_id": "qual_phase2",
+        "goal_id": "",
+        "state": "completed",
+        "result": {
+          "app_control": "\u2705 Successfully opened Safari."
+        },
+        "context_sources": [
+          "jarvis.memory.episodic:20260812T142536_qual_phase2",
+          "jarvis.memory.episodic:20260812T142533_qual_phase2",
+          "jarvis.memory.episodic:20260812T142531_qual_phase2",
+          "jarvis.memory.episodic:20260812T142524_qual_phase2",
+          "jarvis.memory.episodic:20260812T122640_default",
+          "jarvis.memory.episodic:20260812T122600_default",
+          "jarvis.memory.episodic:20260812T122526_default",
+          "jarvis.memory.episodic:20260812T122233_default",
+          "jarvis.memory.episodic:20260812T121026_desktop-1786536620896",
+          "jarvis.memory.episodic:20260812T115234_desktop-1786535516138",
+          "jarvis.memory.episodic:20260812T115222_desktop-1786535516138",
+          "jarvis.memory.episodic:20260810T195329_ws_20260811_012159_104034",
+          "entity_graph"
+        ],
+        "model_provenance": {
+          "provider": "not-invoked",
+          "model": "",
+          "fallback_used": false,
+          "fallback_reason": ""
+        }
+      }
+    },
+    "is_running_after": true
+  },
+  {
+    "test": "open Notes",
+    "jarvis_response": {
+      "response": "\u2705 Successfully opened Notes.",
+      "session_id": "qual_phase2",
+      "model": "Llama 3.3 70B",
+      "model_key": "llama-3.3-70b",
+      "model_provider": "not-invoked",
+      "model_fallback_used": false,
+      "model_fallback_reason": "",
+      "model_latency_ms": 0,
+      "model_ttft_ms": 0,
+      "intent": "macos_app",
+      "goal_id": "",
+      "state": "completed",
+      "executive": {
+        "intent": "macos_app",
+        "message": "\u2705 Successfully opened Notes.",
+        "session_id": "qual_phase2",
+        "goal_id": "",
+        "state": "completed",
+        "result": {
+          "app_control": "\u2705 Successfully opened Notes."
+        },
+        "context_sources": [
+          "company_work:task_a9044b199458",
+          "company_work:task_9b82b9a266d4",
+          "conversation_memory:20260810_234027_410502",
+          "conversation_memory:20260810_225322_246153",
+          "conversation_memory:20260810_225245_100125",
+          "conversation_memory:20260810_225052_112228",
+          "conversation_memory:20260810_224633_153283",
+          "jarvis.memory.episodic:20260812T142524_qual_phase2",
+          "jarvis.memory.episodic:20260812T122600_default",
+          "jarvis.memory.episodic:20260812T122526_default",
+          "jarvis.memory.episodic:20260812T122233_default",
+          "jarvis.memory.episodic:20260812T121026_desktop-1786536620896",
+          "entity_graph"
+        ],
+        "model_provenance": {
+          "provider": "not-invoked",
+          "model": "",
+          "fallback_used": false,
+          "fallback_reason": ""
+        }
+      }
+    },
+    "is_running_after": true
+  },
+  {
+    "test": "close Notes",
+    "jarvis_response": {
+      "response": "\u2705 Successfully closed Notes.",
+      "session_id": "qual_phase2",
+      "model": "Llama 3.3 70B",
+      "model_key": "llama-3.3-70b",
+      "model_provider": "not-invoked",
+      "model_fallback_used": false,
+      "model_fallback_reason": "",
+      "model_latency_ms": 0,
+      "model_ttft_ms": 0,
+      "intent": "macos_app",
+      "goal_id": "",
+      "state": "completed",
+      "executive": {
+        "intent": "macos_app",
+        "message": "\u2705 Successfully closed Notes.",
+        "session_id": "qual_phase2",
+        "goal_id": "",
+        "state": "completed",
+        "result": {
+          "app_control": "\u2705 Successfully closed Notes."
+        },
+        "context_sources": [
+          "company_work:task_a9044b199458",
+          "jarvis.memory.episodic:20260812T142541_qual_phase2",
+          "jarvis.memory.episodic:20260812T111842_test-session-123",
+          "jarvis.memory.entity:notes",
+          "jarvis.memory.relation:memory:episodic:20260812T142541_qual_phase2:mentions:notes",
+          "company_work:task_aeb1e9608681",
+          "company_work:task_489eabc8cb5d",
+          "vector_memory:hybrid_recall",
+          "conversation_memory:20260811_195401_627462",
+          "conversation_memory:20260811_012129_221153",
+          "company_work:goal_9cfeb8dc2273",
+          "company_work:task_824b54ca6057",
+          "entity_graph"
+        ],
+        "model_provenance": {
+          "provider": "not-invoked",
+          "model": "",
+          "fallback_used": false,
+          "fallback_reason": ""
+        }
+      }
+    },
+    "is_running_after": false
+  },
+  {
+    "test": "quit Notes",
+    "jarvis_response": {
+      "response": "\u2705 Successfully closed Notes.",
+      "session_id": "qual_phase2",
+      "model": "Llama 3.3 70B",
+      "model_key": "llama-3.3-70b",
+      "model_provider": "not-invoked",
+      "model_fallback_used": false,
+      "model_fallback_reason": "",
+      "model_latency_ms": 0,
+      "model_ttft_ms": 0,
+      "intent": "macos_app",
+      "goal_id": "",
+      "state": "completed",
+      "executive": {
+        "intent": "macos_app",
+        "message": "\u2705 Successfully closed Notes.",
+        "session_id": "qual_phase2",
+        "goal_id": "",
+        "state": "completed",
+        "result": {
+          "app_control": "\u2705 Successfully closed Notes."
+        },
+        "context_sources": [
+          "company_work:task_a9044b199458",
+          "jarvis.memory.episodic:20260812T142547_qual_phase2",
+          "jarvis.memory.episodic:20260812T142541_qual_phase2",
+          "jarvis.memory.episodic:20260812T111842_test-session-123",
+          "jarvis.memory.entity:notes",
+          "jarvis.memory.relation:memory:episodic:20260812T142547_qual_phase2:mentions:notes",
+          "jarvis.memory.relation:memory:episodic:20260812T142541_qual_phase2:mentions:notes",
+          "company_work:task_aeb1e9608681",
+          "company_work:task_489eabc8cb5d",
+          "vector_memory:hybrid_recall",
+          "company_work:goal_9cfeb8dc2273",
+          "company_work:task_824b54ca6057",
+          "entity_graph"
+        ],
+        "model_provenance": {
+          "provider": "not-invoked",
+          "model": "",
+          "fallback_used": false,
+          "fallback_reason": ""
+        }
+      }
+    },
+    "is_running_after": false
+  }
+]

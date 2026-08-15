@@ -1,0 +1,16 @@
+{
+  "test_id": "crawl_04_redirect",
+  "prompt": "Fetch 'https://httpbin.org/redirect/2' and tell me what final URL you reached.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": 488.847017288208,
+    "total_ms": 996.6950416564941,
+    "request_ts": 1786628910.89155,
+    "final_ts": 1786628911.888245
+  },
+  "verification": {}
+}

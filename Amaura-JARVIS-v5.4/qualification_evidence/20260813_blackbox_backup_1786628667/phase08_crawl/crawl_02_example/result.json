@@ -1,0 +1,16 @@
+{
+  "test_id": "crawl_02_example",
+  "prompt": "Go to 'https://example.com' and tell me the main heading on the page.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": 427.3810386657715,
+    "total_ms": 447.6909637451172,
+    "request_ts": 1786586874.441281,
+    "final_ts": 1786586874.888972
+  },
+  "verification": {}
+}

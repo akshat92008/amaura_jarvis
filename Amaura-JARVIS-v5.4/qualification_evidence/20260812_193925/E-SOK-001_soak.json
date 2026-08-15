@@ -1,0 +1,6 @@
+{
+  "test": "Bounded Soak Testing",
+  "duration_seconds": 10,
+  "memory_leaks_detected": false,
+  "success": true
+}

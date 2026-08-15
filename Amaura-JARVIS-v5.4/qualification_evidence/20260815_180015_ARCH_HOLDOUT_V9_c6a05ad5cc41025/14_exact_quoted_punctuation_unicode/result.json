@@ -1,0 +1,53 @@
+{
+  "test_id": "14_exact_quoted_punctuation_unicode",
+  "status": "FAIL",
+  "reason": "Quoted exact-literal extraction must preserve punctuation and Unicode locally.",
+  "verification": {
+    "expected": "falcon-orbit-2807::58377?!#;[]{}_()\u03a9",
+    "actual": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+    "model_invoked": false,
+    "tools": [],
+    "repo_root_unchanged": true
+  },
+  "chat": {
+    "prompt": "Copy only the characters between the quotation marks into your reply: \"falcon-orbit-2807::58377?!#;[]{}_()\u03a9\". Do not include the quotation marks.",
+    "session_id": "v9exact14_20354023",
+    "http_status": 200,
+    "response_text": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+        "session_id": "v9exact14_20354023",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "unavailable",
+        "model_fallback_used": true,
+        "model_fallback_reason": "[EXECUTIVE_INTERNAL_ERROR] No configured cognition model is available for general",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "",
+        "executive": {
+          "intent": "conversation",
+          "message": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+          "session_id": "v9exact14_20354023",
+          "goal_id": "",
+          "state": "",
+          "result": {},
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "unavailable",
+            "model": "",
+            "fallback_used": true,
+            "fallback_reason": "[EXECUTIVE_INTERNAL_ERROR] No configured cognition model is available for general"
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": null
+  }
+}

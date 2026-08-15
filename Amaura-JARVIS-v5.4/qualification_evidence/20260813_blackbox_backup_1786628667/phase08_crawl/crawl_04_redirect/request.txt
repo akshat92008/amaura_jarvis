@@ -1,0 +1,1 @@
+Fetch 'https://httpbin.org/redirect/2' and tell me what final URL you reached.

@@ -677,6 +677,57 @@ class GovernedTaskRunner:
                     raise GovernanceError("Noryx was explicitly requested but is not configured")
                 return self._run_noryx_delivery(task_id, task, packet_dict)
 
+        if task.get("action_type") == "direct_action":
+            from jarvis.amaura.direct_action import DirectActionRouter
+            desc = task.get("description", "")
+            workspace = packet_dict.pop("_workspace", "")
+            approved_names = set(packet_dict.pop("_approved_tools", []))
+            evidence = []
+
+            direct_result = DirectActionRouter.execute(
+                desc, context="", control=self.control, workspace=workspace
+            )
+
+            if direct_result:
+                record = self.control.evidence.put_json(
+                    {
+                        "success": direct_result.success,
+                        "output": direct_result.output,
+                        "execution_type": direct_result.execution_type,
+                        "tool_name": direct_result.tool_name,
+                        "provider": direct_result.provider,
+                        "policy_decision": direct_result.policy_decision,
+                        "telemetry": direct_result.telemetry,
+                        **direct_result.telemetry,
+                    },
+                    source=f"task:{task_id}:direct_action",
+                )
+                evidence.append({
+                    "type": "direct_action",
+                    "reference": record.reference,
+                    "sha256": record.sha256,
+                    "byte_length": record.byte_length,
+                    "success": direct_result.success,
+                    "excerpt": direct_result.output[:500],
+                })
+                metadata = dict(task.get("metadata") or {})
+                self.control.store.update_work_item(task_id, metadata=metadata)
+                submitted = self.control.submit_task(task_id, "builder", direct_result.output, evidence)
+                return {
+                    "status": submitted["state"],
+                    "task_id": task_id,
+                    "employee": "builder",
+                    "iterations": 1,
+                    "summary": direct_result.output,
+                    "evidence": evidence,
+                    "model_execution_receipt": {
+                        "requested_route": "deterministic-direct-action",
+                        "actual_model": direct_result.model or direct_result.tool_name,
+                        "provider": direct_result.provider,
+                    },
+                    "reviewer": submitted["reviewer_id"],
+                }
+
         route = packet_dict.pop("_model_route")
         workspace = packet_dict.pop("_workspace")
         approved_names = set(packet_dict.pop("_approved_tools"))
@@ -1004,6 +1055,29 @@ class GovernedReviewRunner:
             raise GovernanceError("No agent may certify its own work")
         self.control._ensure_agent_enabled(reviewer_id)
         reviewer = get_agent(reviewer_id)
+
+        if task.get("action_type") == "direct_action" or (task.get("metadata") or {}).get("goal_plan", {}).get("domain") == "direct_action":
+            deterministic = deterministic_evidence_review(task, self.control.evidence)
+            approve = bool(deterministic.get("approve"))
+            findings = "Direct action verified via deterministic evidence." if approve else ("Direct action verification failed: " + "; ".join(deterministic.get("findings") or ["evidence check failed"]))
+            evidence_refs = [ref["reference"] for ref in (task.get("evidence") or []) if ref.get("reference")]
+            decision = {
+                "approve": approve,
+                "findings": findings,
+                "criteria": [{"criterion_index": 1, "criterion": "Action completed successfully", "passed": approve, "evidence_refs": evidence_refs if approve else [], "notes": "Verified" if approve else "Verification failed"}],
+            }
+            attestation = create_review_attestation(
+                task_id=task_id,
+                reviewer_id=reviewer_id,
+                reviewer_model="deterministic-fast-path",
+                reviewer_provider="internal",
+                requested_reviewer_model="deterministic-fast-path",
+                decision=decision,
+                deterministic_review=deterministic,
+            )
+            updated = self.control.review_task(task_id, actor=reviewer_id, approve=approve, findings=findings, attestation=attestation)
+            self.control.store.record_review_attestation(attestation)
+            return updated
 
         review_mode = os.environ.get("AMAURA_REVIEW_MODE", "auto").strip().lower()
         if review_mode == "auto":

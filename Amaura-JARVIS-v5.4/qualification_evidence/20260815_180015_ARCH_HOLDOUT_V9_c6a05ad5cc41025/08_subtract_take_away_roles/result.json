@@ -1,0 +1,105 @@
+{
+  "test_id": "08_subtract_take_away_roles",
+  "status": "FAIL",
+  "reason": "Take-B-away-from-A must preserve minuend/subtrahend roles.",
+  "verification": {
+    "expected": "559",
+    "actual": "-559\n",
+    "inputs_intact": true,
+    "tools": [
+      "multi_step_workflow"
+    ]
+  },
+  "chat": {
+    "prompt": "Take the value in \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/screen_deduction_71814988.num\" away from the value in \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/display_total_40153046.num\" and save only the result to \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/answer_76622569.txt\".",
+    "session_id": "v9arith8_57582487",
+    "http_status": 200,
+    "response_text": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/screen_deduction_71814988.num, /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/display_total_40153046.num, applied subtract, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/answer_76622569.txt.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/screen_deduction_71814988.num, /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/display_total_40153046.num, applied subtract, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/answer_76622569.txt.",
+        "session_id": "v9arith8_57582487",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/screen_deduction_71814988.num, /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/display_total_40153046.num, applied subtract, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/answer_76622569.txt.",
+          "session_id": "v9arith8_57582487",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "requested_operation": "subtract",
+              "parsed_plan": {
+                "inputs": [
+                  "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/screen_deduction_71814988.num",
+                  "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/display_total_40153046.num"
+                ],
+                "operation": "subtract",
+                "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/answer_76622569.txt",
+                "parameters": {}
+              },
+              "input_values": [
+                "160",
+                "719"
+              ],
+              "computed_result": -559,
+              "expected_output_hash": "f194ec3e139a0156583f3c34648cbffbd7f3eba0171b1a38cc197353b58e6528",
+              "actual_output_hash": "f194ec3e139a0156583f3c34648cbffbd7f3eba0171b1a38cc197353b58e6528",
+              "verification_passed": true,
+              "output_bytes": 5
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "policy_decision": "allowed",
+            "requested_operation": "subtract",
+            "parsed_plan": {
+              "inputs": [
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/screen_deduction_71814988.num",
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/display_total_40153046.num"
+              ],
+              "operation": "subtract",
+              "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/answer_76622569.txt",
+              "parameters": {}
+            },
+            "input_values": [
+              "160",
+              "719"
+            ],
+            "computed_result": -559,
+            "expected_output_hash": "f194ec3e139a0156583f3c34648cbffbd7f3eba0171b1a38cc197353b58e6528",
+            "actual_output_hash": "f194ec3e139a0156583f3c34648cbffbd7f3eba0171b1a38cc197353b58e6528",
+            "verification_passed": true,
+            "output_bytes": 5
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

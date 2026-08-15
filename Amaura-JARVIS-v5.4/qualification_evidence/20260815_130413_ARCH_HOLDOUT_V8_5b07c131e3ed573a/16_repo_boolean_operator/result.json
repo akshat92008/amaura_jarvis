@@ -1,0 +1,119 @@
+{
+  "test_id": "16_repo_boolean_operator",
+  "status": "PASS",
+  "reason": "Semantic diagnosis for OR-vs-AND defect.",
+  "verification": {
+    "function": true,
+    "or_named": true,
+    "and_named": true,
+    "read_only": true
+  },
+  "chat": {
+    "prompt": "Analyze repository \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476\" without edits. Diagnose the boolean-operator defect in can_publish; state the operator used and the operator required by the contract.",
+    "session_id": "v8repo16_27354552",
+    "http_status": 200,
+    "response_text": "Inspected repository at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476. Analyzed 2 Python file(s) with read-only isolation. Function 'can_publish' has defect: Function 'can_publish' uses 'or' logic where 'and' is required according to contract.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Inspected repository at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476. Analyzed 2 Python file(s) with read-only isolation. Function 'can_publish' has defect: Function 'can_publish' uses 'or' logic where 'and' is required according to contract.",
+        "session_id": "v8repo16_27354552",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "deterministic-ast",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Inspected repository at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476. Analyzed 2 Python file(s) with read-only isolation. Function 'can_publish' has defect: Function 'can_publish' uses 'or' logic where 'and' is required according to contract.",
+          "session_id": "v8repo16_27354552",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "internal_analysis",
+            "tool_name": "internal_ast_inspector",
+            "provider": "deterministic-ast",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "repo_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476",
+              "files_inspected": [
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/policy.py",
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/test_policy.py"
+              ],
+              "pre_hashes": {
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/policy.py": "1c27d5947872caec9c03f44628a86130dd735ed1cb6ce82bc63c5ef048572c38",
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/test_policy.py": "65e5a29b9673eb98be2a26dbe6b2ff222cfb6c1ca2337951dc83195e4097d5e0"
+              },
+              "post_hashes": {
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/policy.py": "1c27d5947872caec9c03f44628a86130dd735ed1cb6ce82bc63c5ef048572c38",
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/test_policy.py": "65e5a29b9673eb98be2a26dbe6b2ff222cfb6c1ca2337951dc83195e4097d5e0"
+              },
+              "read_only_verified": true,
+              "primary_function": "can_publish",
+              "findings_count": 1,
+              "findings": [
+                {
+                  "function": "can_publish",
+                  "category": "boolean_operator_mismatch",
+                  "observed_operator": "or",
+                  "expected_operator": "and",
+                  "description": "Function 'can_publish' uses 'or' logic where 'and' is required according to contract",
+                  "confidence": 1.0,
+                  "file": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/policy.py"
+                }
+              ]
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "deterministic-ast",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "internal_analysis",
+            "tool_name": "internal_ast_inspector",
+            "policy_decision": "allowed",
+            "repo_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476",
+            "files_inspected": [
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/policy.py",
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/test_policy.py"
+            ],
+            "pre_hashes": {
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/policy.py": "1c27d5947872caec9c03f44628a86130dd735ed1cb6ce82bc63c5ef048572c38",
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/test_policy.py": "65e5a29b9673eb98be2a26dbe6b2ff222cfb6c1ca2337951dc83195e4097d5e0"
+            },
+            "post_hashes": {
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/policy.py": "1c27d5947872caec9c03f44628a86130dd735ed1cb6ce82bc63c5ef048572c38",
+              "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/test_policy.py": "65e5a29b9673eb98be2a26dbe6b2ff222cfb6c1ca2337951dc83195e4097d5e0"
+            },
+            "read_only_verified": true,
+            "primary_function": "can_publish",
+            "findings_count": 1,
+            "findings": [
+              {
+                "function": "can_publish",
+                "category": "boolean_operator_mismatch",
+                "observed_operator": "or",
+                "expected_operator": "and",
+                "description": "Function 'can_publish' uses 'or' logic where 'and' is required according to contract",
+                "confidence": 1.0,
+                "file": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/boolean_repo_north_shoal_8476/policy.py"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

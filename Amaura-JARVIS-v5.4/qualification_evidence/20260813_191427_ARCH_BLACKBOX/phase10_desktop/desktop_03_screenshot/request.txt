@@ -1,0 +1,1 @@
+Take a screenshot and save it to '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_blackbox/workspace/jarvis_blackbox_alpha/desktop_screenshot.png', then tell me what you see on screen.

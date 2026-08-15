@@ -1,0 +1,14 @@
+{
+  "test": "Live OmniRoute Stream Qualification",
+  "request_timestamp": "2026-08-12T14:58:22.607117+00:00",
+  "requested_model": "groq/llama-3.3-70b-versatile",
+  "resolved_model": "llama-3.3-70b-versatile",
+  "provider": "omniroute",
+  "http_result": 200,
+  "first_token_timestamp": "2026-08-12T14:58:23.285226+00:00",
+  "completion_timestamp": "2026-08-12T14:58:23.351208+00:00",
+  "fallback_used": false,
+  "total_duration_seconds": 0.7438,
+  "response_sample": "Hello World",
+  "passed": true
+}

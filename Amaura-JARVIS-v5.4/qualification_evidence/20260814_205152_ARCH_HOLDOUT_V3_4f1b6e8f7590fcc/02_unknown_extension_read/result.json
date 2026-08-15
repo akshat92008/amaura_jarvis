@@ -1,0 +1,83 @@
+{
+  "test_id": "02_unknown_extension_read",
+  "status": "FAIL",
+  "reason": "Requires exact reading of a runtime file with a non-standard extension.",
+  "verification": {
+    "exact": false,
+    "capability_observed": true,
+    "provenance": {
+      "provider": "local-filesystem",
+      "model": "",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "execution_type": "tool",
+      "tool_name": "read_file",
+      "policy_decision": "allowed",
+      "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/artifact_58737697.note",
+      "size_bytes": 61,
+      "verification": "passed"
+    }
+  },
+  "chat": {
+    "prompt": "Tell me verbatim what is stored in the file \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/artifact_58737697.note\". Do not summarize it.",
+    "http_status": 200,
+    "response_text": "File: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/artifact_58737697.note (3 lines)\nShowing lines 1-3:\n1: alpha=juniper-kestrel-1185\n2: beta=152312\n3: gamma=pine-zephyr-6160",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": "completed",
+    "goal_history": [],
+    "latency_ms": 17.967939376831055,
+    "events": [
+      {
+        "type": "complete",
+        "response": "File: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/artifact_58737697.note (3 lines)\nShowing lines 1-3:\n1: alpha=juniper-kestrel-1185\n2: beta=152312\n3: gamma=pine-zephyr-6160",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "File: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/artifact_58737697.note (3 lines)\nShowing lines 1-3:\n1: alpha=juniper-kestrel-1185\n2: beta=152312\n3: gamma=pine-zephyr-6160",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "read_file",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/artifact_58737697.note",
+              "size_bytes": 61,
+              "verification": "passed"
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "read_file",
+            "policy_decision": "allowed",
+            "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/artifact_58737697.note",
+            "size_bytes": 61,
+            "verification": "passed"
+          }
+        }
+      }
+    ]
+  }
+}

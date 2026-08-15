@@ -1,0 +1,69 @@
+{
+  "test_id": "04_browser_hidden_token",
+  "status": "FAIL",
+  "reason": "PASS requires the hidden runtime token from a page whose content was never included in the prompt.",
+  "verification": {
+    "token_found": false,
+    "browser_used": false,
+    "real_tools": []
+  },
+  "chat": {
+    "prompt": "Using the browser, open 'http://127.0.0.1:63313/fixture', read the page, and tell me the exact value shown inside the element with id 'secret'.",
+    "http_status": 200,
+    "response_text": "This request requires governed execution. Authenticate this session with the Amaura operator key before I create or run the mission.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": "authorization_required",
+    "goal_history": [],
+    "latency_ms": 52.49309539794922,
+    "events": [
+      {
+        "type": "complete",
+        "response": "This request requires governed execution. Authenticate this session with the Amaura operator key before I create or run the mission.",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "not-invoked",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "authorization_required",
+        "executive": {
+          "intent": "mission",
+          "message": "This request requires governed execution. Authenticate this session with the Amaura operator key before I create or run the mission.",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "authorization_required",
+          "result": {
+            "authorization_required": true
+          },
+          "context_sources": [
+            "conversation_memory:20260811_195401_627462",
+            "vector_memory:hybrid_recall",
+            "conversation_memory:20260812_200926_162384",
+            "conversation_memory:20260812_200800_390239",
+            "conversation_memory:20260810_225322_246153",
+            "conversation_memory:20260810_225245_100125",
+            "conversation_memory:20260810_225052_112228",
+            "conversation_memory:20260811_012129_221153",
+            "conversation_memory:20260810_234027_410502",
+            "jarvis.memory.episodic:20260813T165848_default",
+            "conversation_memory:20260810_233536_656202",
+            "conversation_memory:20260810_231820_983730",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "not-invoked",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": ""
+          }
+        }
+      }
+    ]
+  }
+}

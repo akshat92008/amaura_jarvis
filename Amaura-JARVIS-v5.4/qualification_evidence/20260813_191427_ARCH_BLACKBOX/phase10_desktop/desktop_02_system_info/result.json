@@ -1,0 +1,16 @@
+{
+  "test_id": "desktop_02_system_info",
+  "prompt": "Tell me the current system information: CPU usage percentage, available memory in GB, and disk space.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": 2758.6607933044434,
+    "total_ms": 3247.84779548645,
+    "request_ts": 1786628937.566626,
+    "final_ts": 1786628940.8144739
+  },
+  "verification": {}
+}

@@ -1,0 +1,5 @@
+E-AGY-INTEGRITY-001
+MANUAL_SQL_MUTATION = false
+DELETE FROM execution_runs = 0
+UPDATE work_items = 0 (No direct SQL updates performed; all transitions via AmauraControlPlane API)
+UPDATE tasks = 0

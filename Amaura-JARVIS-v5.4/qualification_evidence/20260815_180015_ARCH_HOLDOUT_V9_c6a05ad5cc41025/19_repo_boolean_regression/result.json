@@ -1,0 +1,70 @@
+{
+  "test_id": "19_repo_boolean_regression",
+  "status": "FAIL",
+  "reason": "Boolean semantic diagnosis regression.",
+  "verification": {
+    "or_found": false,
+    "and_found": false,
+    "read_only": true
+  },
+  "chat": {
+    "prompt": "Inspect \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/boolean_prairie_ridge_1024\" without edits. Explain the boolean operator defect in may_release_2772_delta, including the operator present and the operator required.",
+    "session_id": "v9repo19_86426902",
+    "http_status": 200,
+    "response_text": "Directory: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/boolean_prairie_ridge_1024\n\ud83d\udcc4 policy.py (147 B)\n\ud83d\udcc4 test_policy.py (116 B)",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Directory: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/boolean_prairie_ridge_1024\n\ud83d\udcc4 policy.py (147 B)\n\ud83d\udcc4 test_policy.py (116 B)",
+        "session_id": "v9repo19_86426902",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Directory: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/boolean_prairie_ridge_1024\n\ud83d\udcc4 policy.py (147 B)\n\ud83d\udcc4 test_policy.py (116 B)",
+          "session_id": "v9repo19_86426902",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "list_directory",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/boolean_prairie_ridge_1024",
+              "count": 0,
+              "verification_passed": true
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "list_directory",
+            "policy_decision": "allowed",
+            "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/boolean_prairie_ridge_1024",
+            "count": 0,
+            "verification_passed": true
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

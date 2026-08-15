@@ -1,0 +1,106 @@
+{
+  "test_id": "05_browser_single_value_only",
+  "status": "FAIL",
+  "reason": "Browser extraction must execute before VALUE_ONLY formatting.",
+  "verification": {
+    "expected": "prairie-pier-3538",
+    "actual": "{\n  \"element_datum_z_23505135\": \"\\ud83c\\udf10 **Extracted 1 element(s) matching '.datum-z_23505135':**\\n\\nprairie-pier-3538\"\n}",
+    "tools": [
+      "browser_extract_content"
+    ]
+  },
+  "chat": {
+    "prompt": "Go to http://127.0.0.1:59320/panel. Return only the text from CSS selector \".datum-z_23505135\".",
+    "session_id": "v9web5_42832582",
+    "http_status": 200,
+    "response_text": "{\n  \"element_datum_z_23505135\": \"\\ud83c\\udf10 **Extracted 1 element(s) matching '.datum-z_23505135':**\\n\\nprairie-pier-3538\"\n}",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "{\n  \"element_datum_z_23505135\": \"\\ud83c\\udf10 **Extracted 1 element(s) matching '.datum-z_23505135':**\\n\\nprairie-pier-3538\"\n}",
+        "session_id": "v9web5_42832582",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "browser",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "{\n  \"element_datum_z_23505135\": \"\\ud83c\\udf10 **Extracted 1 element(s) matching '.datum-z_23505135':**\\n\\nprairie-pier-3538\"\n}",
+          "session_id": "v9web5_42832582",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "browser_extract_content",
+            "provider": "browser",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "status": "completed",
+              "url": "http://127.0.0.1:59320/panel.",
+              "extracted_fields": [
+                "element_datum_z_23505135"
+              ],
+              "successful_fields": {
+                "element_datum_z_23505135": "\ud83c\udf10 **Extracted 1 element(s) matching '.datum-z_23505135':**\n\nprairie-pier-3538"
+              },
+              "failed_fields": [],
+              "field_results": [
+                {
+                  "field": "element_datum_z_23505135",
+                  "selector": ".datum-z_23505135",
+                  "type": "selector",
+                  "success": true,
+                  "error": ""
+                }
+              ],
+              "partial_failure": false,
+              "verification_passed": true
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "browser",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "browser_extract_content",
+            "policy_decision": "allowed",
+            "status": "completed",
+            "url": "http://127.0.0.1:59320/panel.",
+            "extracted_fields": [
+              "element_datum_z_23505135"
+            ],
+            "successful_fields": {
+              "element_datum_z_23505135": "\ud83c\udf10 **Extracted 1 element(s) matching '.datum-z_23505135':**\n\nprairie-pier-3538"
+            },
+            "failed_fields": [],
+            "field_results": [
+              {
+                "field": "element_datum_z_23505135",
+                "selector": ".datum-z_23505135",
+                "type": "selector",
+                "success": true,
+                "error": ""
+              }
+            ],
+            "partial_failure": false,
+            "verification_passed": true
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

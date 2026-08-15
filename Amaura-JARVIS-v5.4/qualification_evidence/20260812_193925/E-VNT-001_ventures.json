@@ -1,0 +1,45 @@
+{
+  "test": "Amaura Ventures Validation",
+  "response": {
+    "branch": "Amaura Ventures",
+    "mission": "Fund Amaura Labs through focused products and low-capital cash-flow experiments without turning the lab into an agency",
+    "cashflow": {
+      "streams": [],
+      "economics": [],
+      "totals_by_currency": {},
+      "live_streams": 0,
+      "founder_minutes_per_week": 0,
+      "ranked_opportunities": []
+    },
+    "rules": {
+      "max_validation_days": 14,
+      "max_active_builds": 1,
+      "minimum_opportunity_score": 70,
+      "founder_review_minutes_per_decision": 20,
+      "external_actions_require_approval": true
+    },
+    "opportunity_counts": {
+      "qualified": 0,
+      "rejected": 0,
+      "selected": 0,
+      "review_required": 0,
+      "experimenting": 0,
+      "discovered": 0,
+      "archived": 0
+    },
+    "experiment_counts": {
+      "completed": 0,
+      "killed": 0,
+      "measuring": 0,
+      "validating": 0,
+      "paused": 0,
+      "planned": 0,
+      "building": 0,
+      "launching": 0,
+      "scaling": 0
+    },
+    "top_opportunities": [],
+    "active_experiments": []
+  },
+  "success": true
+}

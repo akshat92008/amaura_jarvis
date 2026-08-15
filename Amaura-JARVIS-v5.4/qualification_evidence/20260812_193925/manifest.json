@@ -1,0 +1,18 @@
+{
+  "run_id": "20260812_193925",
+  "start_time": "2026-08-12T14:11:06.648880Z",
+  "machine": "MacBook Air M3, 8 GB RAM",
+  "macOS version": "ProductName:\t\tmacOS ProductVersion:\t\t26.5.2 BuildVersion:\t\t25F84",
+  "Python version": "",
+  "Amaura version": "5.4.1",
+  "Git commit": "f8130816084ba0342664b1680bdd0764cfdf5151",
+  "Git tree hash": "0307070073df0d0f65fec770a288e062a5f187d0",
+  "initial git status": "On branch main\nYour branch is up to date with 'origin/main'.\n\nChanges not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n  (use \"git restore <file>...\" to discard changes in working directory)\n\tmodified:   jarvis/amaura/cognition.py\n\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\taudit_script.py\n\tfix.py\n\trelease/\n\tscripts/qual_harness.py\n\ttest_direct_exec.py\n\ttest_jarvis_run.py\n\ttest_macos_apps_script.py\n\nno changes added to commit (use \"git add\" and/or \"git commit -a\")",
+  "backend PIDs": [
+    "65809"
+  ],
+  "backend count": 1,
+  "backend start time": "N/A - extract manually or from ps",
+  "backend build ID": "N/A - fixing in Phase 1",
+  "agy version": "1.1.12"
+}

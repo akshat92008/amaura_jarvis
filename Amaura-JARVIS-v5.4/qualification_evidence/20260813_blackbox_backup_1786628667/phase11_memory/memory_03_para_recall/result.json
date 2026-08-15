@@ -1,0 +1,16 @@
+{
+  "test_id": "memory_03_para_recall",
+  "prompt": "What's the required item for the project identified as PROJECT-9F6DDEB1?",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 141.40725135803223,
+    "request_ts": 1786586900.7858188,
+    "final_ts": 1786586900.927226
+  },
+  "verification": {}
+}

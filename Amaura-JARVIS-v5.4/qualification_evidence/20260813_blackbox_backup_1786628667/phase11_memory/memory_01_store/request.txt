@@ -1,0 +1,6 @@
+Please remember the following project specifications:
+PROJECT-9F6DDEB1 requires component ITEM-3A04A0 with specification VALUE-CA87AA.
+PROJECT-4BE7C9BE requires component ITEM-03F007 with specification VALUE-ADC712.
+PROJECT-D8BC467E requires component ITEM-C35E3F with specification VALUE-9537A2.
+PROJECT-61E9E7D9 requires component ITEM-C39005 with specification VALUE-55ACF9.
+PROJECT-E95D6F37 requires component ITEM-BB27AE with specification VALUE-E822E5.

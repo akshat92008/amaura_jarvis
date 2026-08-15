@@ -1,0 +1,106 @@
+{
+  "test_id": "16_concurrency_12way",
+  "status": "FAIL",
+  "reason": "Requires 12 simultaneous exact responses with zero cross-talk and zero service failures.",
+  "verification": {
+    "requests": [
+      {
+        "index": 0,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "falcon::opal::885942"
+      },
+      {
+        "index": 1,
+        "own_exact": false,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "this value and nothing else: juniper::kestrel::451290"
+      },
+      {
+        "index": 2,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "north::atlas::558721"
+      },
+      {
+        "index": 3,
+        "own_exact": false,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "just this token: pine::sparrow::617348"
+      },
+      {
+        "index": 4,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "river::iris::418175"
+      },
+      {
+        "index": 5,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "quartz::ridge::227525"
+      },
+      {
+        "index": 6,
+        "own_exact": false,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "this value and nothing else: lumen::sparrow::260635"
+      },
+      {
+        "index": 7,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "saffron::drift::297543"
+      },
+      {
+        "index": 8,
+        "own_exact": false,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "just this token: harbor::meadow::920974"
+      },
+      {
+        "index": 9,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "north::meadow::364546"
+      },
+      {
+        "index": 10,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "river::sparrow::326633"
+      },
+      {
+        "index": 11,
+        "own_exact": false,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "this value and nothing else: marble::finch::863887"
+      }
+    ]
+  },
+  "chat": null
+}

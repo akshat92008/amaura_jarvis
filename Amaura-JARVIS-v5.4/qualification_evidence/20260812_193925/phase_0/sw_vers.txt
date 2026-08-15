@@ -1,0 +1,10 @@
+COMMAND: sw_vers
+EXIT_CODE: 0
+
+STDOUT:
+ProductName:		macOS
+ProductVersion:		26.5.2
+BuildVersion:		25F84
+
+STDERR:
+

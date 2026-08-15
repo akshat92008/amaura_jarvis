@@ -1,0 +1,79 @@
+{
+  "test_id": "12_browser_result_only_response_mode",
+  "status": "FAIL",
+  "reason": "Exact-format constraint must apply to browser result, not echo instructions.",
+  "verification": {
+    "expected": "atlas-quay-6781",
+    "actual": "Navigated to http://127.0.0.1:54868/panel"
+  },
+  "chat": {
+    "prompt": "Open http://127.0.0.1:54868/panel and reply with only the value at \".beta-c_16969305\".",
+    "session_id": "v8web12_80105971",
+    "http_status": 200,
+    "response_text": "Navigated to http://127.0.0.1:54868/panel",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Navigated to http://127.0.0.1:54868/panel",
+        "session_id": "v8web12_80105971",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "browser",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Navigated to http://127.0.0.1:54868/panel",
+          "session_id": "v8web12_80105971",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "browser_navigate",
+            "provider": "browser",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "status": "completed",
+              "url": "http://127.0.0.1:54868/panel",
+              "extracted_fields": [],
+              "successful_fields": {},
+              "failed_fields": [],
+              "field_results": [],
+              "partial_failure": [],
+              "verification_passed": true
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "browser",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "browser_navigate",
+            "policy_decision": "allowed",
+            "status": "completed",
+            "url": "http://127.0.0.1:54868/panel",
+            "extracted_fields": [],
+            "successful_fields": {},
+            "failed_fields": [],
+            "field_results": [],
+            "partial_failure": [],
+            "verification_passed": true
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

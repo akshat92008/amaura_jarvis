@@ -1,0 +1,16 @@
+{
+  "test_id": "desktop_04_active_window",
+  "prompt": "What is the title and name of the currently active application window?",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 33.45203399658203,
+    "request_ts": 1786586899.179378,
+    "final_ts": 1786586899.21283
+  },
+  "verification": {}
+}

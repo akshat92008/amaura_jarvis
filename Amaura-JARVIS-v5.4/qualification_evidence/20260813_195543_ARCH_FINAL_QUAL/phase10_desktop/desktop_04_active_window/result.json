@@ -1,0 +1,20 @@
+{
+  "test_id": "desktop_04_active_window",
+  "prompt": "What is the title and name of the currently active application window?",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "I don\u2019t have the ability to see your screen, so I can\u2019t tell you the title or name of the window that\u2019s currently active.  \n\n**If you\u2019d like to check it yourself:**\n\n- **macOS:** Look at the left side of the menu bar (the app\u2019s icon) or the title bar of the window itself. You can also press **\u2318\u202fTab** to see the list of open apps and which one is active.  \n- **Windows:** The active window\u2019s title appears in the center of the taskbar, and the app\u2019s icon is highlighted on the taskbar. Press **Alt\u202f+\u202fTab** to cycle through open windows and see their titles.  \n- **Linux (most desktop environments):** The title bar of the active window shows its name, and the panel/taskbar usually highlights the active application. You can also use **Alt\u202f+\u202fTab** to view the list.\n\nIf you need help extracting that information programmatically (e.g., via a script), just let me know which operating system you\u2019re on and I can suggest a quick command or snippet.",
+  "response_excerpt": "I don\u2019t have the ability to see your screen, so I can\u2019t tell you the title or name of the window that\u2019s currently active.  \n\n**If you\u2019d like to check it yourself:**\n\n- **macOS:** Look at the left side of the menu bar (the app\u2019s icon) or the title bar of the window itself. You can also press **\u2318\u202fTab** to see the list of open apps and which one is active.  \n- **Windows:** The active window\u2019s title appears in the center of the taskbar, and the app\u2019s icon is highlighted on the taskbar. Press **Alt\u202f+\u202fTab** to cycle through open windows and see their titles.  \n- **Linux (most desktop environments):** The title bar of the active window shows its name, and the panel/taskbar usually highlights the active application. You can also use **Alt\u202f+\u202fTab** to view the list.\n\nIf you need help extracting that information programmatically (e.g., via a script), just let me know which operating system you\u2019re on and I can suggest a quick command or snippet.",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": 6680.855989456177,
+    "total_ms": 8394.377946853638,
+    "request_ts": 1786631435.568928,
+    "final_ts": 1786631443.963306
+  },
+  "verification": {}
+}

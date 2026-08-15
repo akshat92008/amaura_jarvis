@@ -1,0 +1,11 @@
+{
+  "freeze_name": "FINAL_PRE_HOLDOUT_FREEZE_PHASE3",
+  "timestamp_utc": "2026-08-14T14:06:49Z",
+  "git_head": "e61da5e7429420ffa5b5f7004d22969da22d4ca1",
+  "git_tree": "b946f1758feb4071965b8eb24322abd85584954b",
+  "total_source_files": 118,
+  "full_test_passed": true,
+  "routing_tests_passed": true,
+  "source_immutable": true,
+  "anti_overfit_clean": true
+}

@@ -1,0 +1,28 @@
+........................................................................ [  8%]
+........................................................................ [ 17%]
+........................................................................ [ 26%]
+........................................................................ [ 35%]
+................s....................................................... [ 44%]
+........................................................................ [ 53%]
+........................................................................ [ 61%]
+........................................................................ [ 70%]
+........................................................................ [ 79%]
+........................................................................ [ 88%]
+........................................................................ [ 97%]
+.....................                                                    [100%]
+=============================== warnings summary ===============================
+../../../../../Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/speech_recognition/__init__.py:7
+  /Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/speech_recognition/__init__.py:7: DeprecationWarning: aifc was removed in Python 3.13. Please be aware that you are currently NOT using standard 'aifc', but instead a separately installed 'standard-aifc'.
+    import aifc
+
+tests/test_amaura_v353_security.py: 1 warning
+tests/test_fable_engine.py: 2 warnings
+tests/test_generic_execution_repair.py: 1 warning
+tests/test_phase5_2_grammar_closure.py: 47 warnings
+tests/test_phase7_api_boundary.py: 210 warnings
+tests/test_voice.py: 1 warning
+  /Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/httpx/_config.py:51: DeprecationWarning: `verify=<str>` is deprecated. Use `verify=ssl.create_default_context(cafile=...)` or `verify=ssl.create_default_context(capath=...)` instead.
+    warnings.warn(message, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+812 passed, 1 skipped, 263 warnings in 110.01s (0:01:50)

@@ -1,0 +1,115 @@
+{
+  "test_id": "09_browser_title_plus_three_selectors",
+  "status": "PASS",
+  "reason": "Four-field browser composition.",
+  "verification": {
+    "title": true,
+    "selectors": [
+      true,
+      true,
+      true
+    ]
+  },
+  "chat": {
+    "prompt": "Open http://127.0.0.1:51502/panel. Return its title and the values for \".cell-11689210\", \".cell-84634375\", and \".cell-14532119\".",
+    "session_id": "v7s9_74410164",
+    "http_status": 200,
+    "response_text": "title: river-spring-8044 console\n.cell-11689210: \ud83c\udf10 **Extracted 1 element(s) matching '.cell-11689210':**\n\niris-harbor-1112\n.cell-84634375: \ud83c\udf10 **Extracted 1 element(s) matching '.cell-84634375':**\n\nriver-spring-4237\n.cell-14532119: \ud83c\udf10 **Extracted 1 element(s) matching '.cell-14532119':**\n\nfalcon-meadow-7962",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "title: river-spring-8044 console\n.cell-11689210: \ud83c\udf10 **Extracted 1 element(s) matching '.cell-11689210':**\n\niris-harbor-1112\n.cell-84634375: \ud83c\udf10 **Extracted 1 element(s) matching '.cell-84634375':**\n\nriver-spring-4237\n.cell-14532119: \ud83c\udf10 **Extracted 1 element(s) matching '.cell-14532119':**\n\nfalcon-meadow-7962",
+        "session_id": "v7s9_74410164",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "browser",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "title: river-spring-8044 console\n.cell-11689210: \ud83c\udf10 **Extracted 1 element(s) matching '.cell-11689210':**\n\niris-harbor-1112\n.cell-84634375: \ud83c\udf10 **Extracted 1 element(s) matching '.cell-84634375':**\n\nriver-spring-4237\n.cell-14532119: \ud83c\udf10 **Extracted 1 element(s) matching '.cell-14532119':**\n\nfalcon-meadow-7962",
+          "session_id": "v7s9_74410164",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "browser_extract_content",
+            "provider": "browser",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "url": "http://127.0.0.1:51502/panel.",
+              "status": "completed",
+              "completed_fields": [
+                {
+                  "type": "title",
+                  "value": "river-spring-8044 console"
+                },
+                {
+                  "type": "selector",
+                  "selector": ".cell-11689210",
+                  "value": "\ud83c\udf10 **Extracted 1 element(s) matching '.cell-11689210':**\n\niris-harbor-1112"
+                },
+                {
+                  "type": "selector",
+                  "selector": ".cell-84634375",
+                  "value": "\ud83c\udf10 **Extracted 1 element(s) matching '.cell-84634375':**\n\nriver-spring-4237"
+                },
+                {
+                  "type": "selector",
+                  "selector": ".cell-14532119",
+                  "value": "\ud83c\udf10 **Extracted 1 element(s) matching '.cell-14532119':**\n\nfalcon-meadow-7962"
+                }
+              ],
+              "verification_passed": true
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "browser",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "browser_extract_content",
+            "policy_decision": "allowed",
+            "url": "http://127.0.0.1:51502/panel.",
+            "status": "completed",
+            "completed_fields": [
+              {
+                "type": "title",
+                "value": "river-spring-8044 console"
+              },
+              {
+                "type": "selector",
+                "selector": ".cell-11689210",
+                "value": "\ud83c\udf10 **Extracted 1 element(s) matching '.cell-11689210':**\n\niris-harbor-1112"
+              },
+              {
+                "type": "selector",
+                "selector": ".cell-84634375",
+                "value": "\ud83c\udf10 **Extracted 1 element(s) matching '.cell-84634375':**\n\nriver-spring-4237"
+              },
+              {
+                "type": "selector",
+                "selector": ".cell-14532119",
+                "value": "\ud83c\udf10 **Extracted 1 element(s) matching '.cell-14532119':**\n\nfalcon-meadow-7962"
+              }
+            ],
+            "verification_passed": true
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

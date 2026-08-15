@@ -1,0 +1,53 @@
+{
+  "test_id": "02_read_file",
+  "status": "PASS",
+  "reason": "PASS requires the exact hidden runtime token; tool telemetry is recorded but not required.",
+  "verification": {
+    "exact_response": true,
+    "real_tools": [],
+    "tool_ok": false
+  },
+  "chat": {
+    "prompt": "Read the file at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_225237_ARCH_TRUTH_BENCHMARK/workspace/02_source.txt' and reply with its exact contents only.",
+    "http_status": 200,
+    "response_text": "ARCH-READ-417d0615-8593-440c-be48-1eabf64f7aca",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": null,
+    "goal_history": [],
+    "latency_ms": 28.63001823425293,
+    "events": [
+      {
+        "type": "complete",
+        "response": "ARCH-READ-417d0615-8593-440c-be48-1eabf64f7aca",
+        "session_id": "default",
+        "model": "add_calendar_event",
+        "model_key": "add_calendar_event",
+        "model_provider": "macos-native-tool",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "",
+        "executive": {
+          "intent": "conversation",
+          "message": "ARCH-READ-417d0615-8593-440c-be48-1eabf64f7aca",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "",
+          "result": {},
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "macos-native-tool",
+            "model": "add_calendar_event",
+            "fallback_used": false,
+            "fallback_reason": ""
+          }
+        }
+      }
+    ]
+  }
+}

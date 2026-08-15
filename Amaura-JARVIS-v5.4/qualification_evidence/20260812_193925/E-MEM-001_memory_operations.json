@@ -1,0 +1,175 @@
+{
+  "test": "Memory Operations",
+  "fact_request": {
+    "fact": "My favorite color is qualification_blue_1786545103"
+  },
+  "kv_request": {
+    "key": "qual_test_key_1786545103",
+    "value": "qual_test_val"
+  },
+  "fact_response": {
+    "status": "added",
+    "fact": "My favorite color is qualification_blue_1786545103",
+    "memory": {
+      "namespace": "jarvis.memory.personal",
+      "key": "fact_e266d7db2cbb6d48f6e5",
+      "value": {
+        "content": "My favorite color is qualification_blue_1786545103",
+        "confidence": 1.0,
+        "source": "legacy_api",
+        "trust": "founder",
+        "entities": [],
+        "created_at": "2026-08-12T14:31:43.013756+00:00",
+        "updated_at": "2026-08-12T14:31:43.013756+00:00",
+        "history": []
+      },
+      "evidence_refs": [],
+      "sensitivity": "internal",
+      "updated_by": "founder",
+      "updated_at": "2026-08-12T14:31:43.015648+00:00"
+    }
+  },
+  "kv_response": {
+    "status": "updated",
+    "key": "qual_test_key_1786545103",
+    "value": "qual_test_val",
+    "memory": {
+      "namespace": "jarvis.memory.personal",
+      "key": "qual_test_key_1786545103",
+      "value": {
+        "content": "qual_test_val",
+        "confidence": 1.0,
+        "source": "legacy_api",
+        "trust": "founder",
+        "entities": [],
+        "created_at": "2026-08-12T14:31:43.023827+00:00",
+        "updated_at": "2026-08-12T14:31:43.023827+00:00",
+        "history": []
+      },
+      "evidence_refs": [],
+      "sensitivity": "internal",
+      "updated_by": "founder",
+      "updated_at": "2026-08-12T14:31:43.023855+00:00"
+    }
+  },
+  "memory_state": {
+    "summary": "4 personal memory item(s)",
+    "items": [
+      {
+        "namespace": "jarvis.memory.personal",
+        "key": "qual_test_key_1786545103",
+        "value": {
+          "content": "qual_test_val",
+          "confidence": 1.0,
+          "source": "legacy_api",
+          "trust": "founder",
+          "entities": [],
+          "created_at": "2026-08-12T14:31:43.023827+00:00",
+          "updated_at": "2026-08-12T14:31:43.023827+00:00",
+          "history": []
+        },
+        "evidence_refs": [],
+        "sensitivity": "internal",
+        "updated_by": "founder",
+        "updated_at": "2026-08-12T14:31:43.023855+00:00"
+      },
+      {
+        "namespace": "jarvis.memory.personal",
+        "key": "fact_e266d7db2cbb6d48f6e5",
+        "value": {
+          "content": "My favorite color is qualification_blue_1786545103",
+          "confidence": 1.0,
+          "source": "legacy_api",
+          "trust": "founder",
+          "entities": [],
+          "created_at": "2026-08-12T14:31:43.013756+00:00",
+          "updated_at": "2026-08-12T14:31:43.013756+00:00",
+          "history": []
+        },
+        "evidence_refs": [],
+        "sensitivity": "internal",
+        "updated_by": "founder",
+        "updated_at": "2026-08-12T14:31:43.015648+00:00"
+      },
+      {
+        "namespace": "jarvis.memory.personal",
+        "key": "qual_test_key_1786545058",
+        "value": {
+          "content": "qual_test_val",
+          "confidence": 1.0,
+          "source": "legacy_api",
+          "trust": "founder",
+          "entities": [],
+          "created_at": "2026-08-12T14:30:58.398507+00:00",
+          "updated_at": "2026-08-12T14:30:58.398507+00:00",
+          "history": []
+        },
+        "evidence_refs": [],
+        "sensitivity": "internal",
+        "updated_by": "founder",
+        "updated_at": "2026-08-12T14:30:58.398546+00:00"
+      },
+      {
+        "namespace": "jarvis.memory.personal",
+        "key": "fact_5604f8c9807dcb00f8b0",
+        "value": {
+          "content": "My favorite color is qualification_blue_1786545058",
+          "confidence": 1.0,
+          "source": "legacy_api",
+          "trust": "founder",
+          "entities": [],
+          "created_at": "2026-08-12T14:30:58.390652+00:00",
+          "updated_at": "2026-08-12T14:30:58.390652+00:00",
+          "history": []
+        },
+        "evidence_refs": [],
+        "sensitivity": "internal",
+        "updated_by": "founder",
+        "updated_at": "2026-08-12T14:30:58.392383+00:00"
+      }
+    ],
+    "facts": [
+      {
+        "content": "qual_test_val",
+        "confidence": 1.0,
+        "source": "legacy_api",
+        "trust": "founder",
+        "entities": [],
+        "created_at": "2026-08-12T14:31:43.023827+00:00",
+        "updated_at": "2026-08-12T14:31:43.023827+00:00",
+        "history": []
+      },
+      {
+        "content": "My favorite color is qualification_blue_1786545103",
+        "confidence": 1.0,
+        "source": "legacy_api",
+        "trust": "founder",
+        "entities": [],
+        "created_at": "2026-08-12T14:31:43.013756+00:00",
+        "updated_at": "2026-08-12T14:31:43.013756+00:00",
+        "history": []
+      },
+      {
+        "content": "qual_test_val",
+        "confidence": 1.0,
+        "source": "legacy_api",
+        "trust": "founder",
+        "entities": [],
+        "created_at": "2026-08-12T14:30:58.398507+00:00",
+        "updated_at": "2026-08-12T14:30:58.398507+00:00",
+        "history": []
+      },
+      {
+        "content": "My favorite color is qualification_blue_1786545058",
+        "confidence": 1.0,
+        "source": "legacy_api",
+        "trust": "founder",
+        "entities": [],
+        "created_at": "2026-08-12T14:30:58.390652+00:00",
+        "updated_at": "2026-08-12T14:30:58.390652+00:00",
+        "history": []
+      }
+    ]
+  },
+  "success": true
+}

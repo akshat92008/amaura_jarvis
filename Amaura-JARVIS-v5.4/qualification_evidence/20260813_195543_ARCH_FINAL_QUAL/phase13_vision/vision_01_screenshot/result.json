@@ -1,0 +1,20 @@
+{
+  "test_id": "vision_01_screenshot",
+  "prompt": "Take a screenshot and describe what you see on screen. Save the screenshot to '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_blackbox/workspace/jarvis_blackbox_alpha/vision_test_screenshot.png'.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "I'm not capable of taking screenshots or directly interacting with your device's display. I'm a text-based AI assistant and do not have the ability to access or manipulate your device's visual output. I can only provide text-based responses and do not have the capability to save files to your device. If you need to capture a screenshot, you can use your device's built-in screenshot functionality or a third-party screenshot tool.",
+  "response_excerpt": "I'm not capable of taking screenshots or directly interacting with your device's display. I'm a text-based AI assistant and do not have the ability to access or manipulate your device's visual output. I can only provide text-based responses and do not have the capability to save files to your device. If you need to capture a screenshot, you can use your device's built-in screenshot functionality or a third-party screenshot tool.",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": 5047.76668548584,
+    "total_ms": 5514.7199630737305,
+    "request_ts": 1786631511.2598982,
+    "final_ts": 1786631516.7746181
+  },
+  "verification": {}
+}

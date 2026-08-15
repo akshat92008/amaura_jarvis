@@ -1,0 +1,136 @@
+{
+  "test_id": "06_memory_recall",
+  "status": "PASS",
+  "reason": "PASS requires recall of an unseen runtime value in a separate request; memory-tool telemetry is informational.",
+  "verification": {
+    "project": "PROJECT-CBF969514C",
+    "recalled": true,
+    "store_tools": [],
+    "recall_tools": []
+  },
+  "chat": {
+    "store": {
+      "prompt": "Remember this durable project fact: PROJECT-CBF969514C has secret value VALUE-1D745DE73885. Confirm only after storing it in project memory.",
+      "http_status": 200,
+      "response_text": "Remembered under project memory: this durable project fact: PROJECT-CBF969514C has secret value VALUE-1D745DE73885. Confirm only after storing it in project memory.",
+      "error": null,
+      "tool_calls": [],
+      "goal_id": null,
+      "goal_state": null,
+      "goal_history": [],
+      "latency_ms": 10563.790082931519,
+      "events": [
+        {
+          "type": "complete",
+          "response": "Remembered under project memory: this durable project fact: PROJECT-CBF969514C has secret value VALUE-1D745DE73885. Confirm only after storing it in project memory.",
+          "session_id": "default",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "not-invoked",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "memory_write",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "memory_write",
+            "message": "Remembered under project memory: this durable project fact: PROJECT-CBF969514C has secret value VALUE-1D745DE73885. Confirm only after storing it in project memory.",
+            "session_id": "default",
+            "goal_id": "",
+            "state": "",
+            "result": {
+              "memory": {
+                "namespace": "jarvis.memory.project",
+                "key": "this_durable_project_fact_project_cbf969514c_has_secret_value_value_1d74",
+                "value": {
+                  "content": "this durable project fact: PROJECT-CBF969514C has secret value VALUE-1D745DE73885. Confirm only after storing it in project memory.",
+                  "confidence": 1.0,
+                  "source": "explicit_chat",
+                  "trust": "founder",
+                  "entities": [
+                    "PROJECT-CBF969514C",
+                    "VALUE-1D745DE73885",
+                    "Confirm"
+                  ],
+                  "created_at": "2026-08-13T17:37:22.583644+00:00",
+                  "updated_at": "2026-08-13T17:37:22.583644+00:00",
+                  "history": []
+                },
+                "evidence_refs": [],
+                "sensitivity": "internal",
+                "updated_by": "founder",
+                "updated_at": "2026-08-13T17:37:22.583698+00:00"
+              }
+            },
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "not-invoked",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": ""
+            }
+          }
+        }
+      ]
+    },
+    "recall": {
+      "prompt": "What secret value did I previously tell you for PROJECT-CBF969514C? Reply with the value only.",
+      "http_status": 200,
+      "response_text": "VALUE-1D745DE73885",
+      "error": null,
+      "tool_calls": [],
+      "goal_id": null,
+      "goal_state": null,
+      "goal_history": [],
+      "latency_ms": 3540.8501625061035,
+      "events": [
+        {
+          "type": "complete",
+          "response": "VALUE-1D745DE73885",
+          "session_id": "default",
+          "model": "add_calendar_event",
+          "model_key": "add_calendar_event",
+          "model_provider": "macos-native-tool",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "conversation",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "conversation",
+            "message": "VALUE-1D745DE73885",
+            "session_id": "default",
+            "goal_id": "",
+            "state": "",
+            "result": {},
+            "context_sources": [
+              "jarvis.memory.episodic:20260813T172657_default",
+              "jarvis.memory.episodic:20260813T172408_default",
+              "jarvis.memory.episodic:20260813T165951_default",
+              "conversation_memory:20260811_195401_627462",
+              "company_work:task_df61759d6349",
+              "company_work:task_98e06026d2b2",
+              "company_work:task_65e225203ea2",
+              "company_work:task_409764bf0baf",
+              "company_work:task_2727967fc9cd",
+              "company_work:task_9bba1fcd3c12",
+              "company_work:task_a17c75448aa8",
+              "company_work:task_1e25009036dd",
+              "entity_graph"
+            ],
+            "model_provenance": {
+              "provider": "macos-native-tool",
+              "model": "add_calendar_event",
+              "fallback_used": false,
+              "fallback_reason": ""
+            }
+          }
+        }
+      ]
+    }
+  }
+}

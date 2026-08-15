@@ -1,0 +1,16 @@
+{
+  "test_id": "desktop_08_volume_set",
+  "prompt": "Set the system volume to 40.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": 447.13592529296875,
+    "total_ms": 8738.226890563965,
+    "request_ts": 1786628957.89418,
+    "final_ts": 1786628966.632407
+  },
+  "verification": {}
+}

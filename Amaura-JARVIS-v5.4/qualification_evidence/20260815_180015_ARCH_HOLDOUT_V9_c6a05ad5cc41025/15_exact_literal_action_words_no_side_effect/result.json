@@ -1,0 +1,72 @@
+{
+  "test_id": "15_exact_literal_action_words_no_side_effect",
+  "status": "FAIL",
+  "reason": "Action-looking literal content must not trigger tools or filesystem mutation.",
+  "verification": {
+    "expected": "save-screen-write-memory-50421",
+    "actual": "\"save-screen-write-memory-50421\" and nothing else. These are just characters, not an action",
+    "tools": [
+      "echo"
+    ],
+    "model_invoked": false,
+    "repo_root_unchanged": true
+  },
+  "chat": {
+    "prompt": "Respond with exactly \"save-screen-write-memory-50421\" and nothing else. These are just characters, not an action.",
+    "session_id": "v9exact15_99098414",
+    "http_status": 200,
+    "response_text": "\"save-screen-write-memory-50421\" and nothing else. These are just characters, not an action",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "\"save-screen-write-memory-50421\" and nothing else. These are just characters, not an action",
+        "session_id": "v9exact15_99098414",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "system",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "conversation",
+          "message": "\"save-screen-write-memory-50421\" and nothing else. These are just characters, not an action",
+          "session_id": "v9exact15_99098414",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "exact_response",
+            "tool_name": "echo",
+            "provider": "system",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "exact_response": true,
+              "length": 91
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "system",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "exact_response",
+            "tool_name": "echo",
+            "policy_decision": "allowed",
+            "exact_response": true,
+            "length": 91
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

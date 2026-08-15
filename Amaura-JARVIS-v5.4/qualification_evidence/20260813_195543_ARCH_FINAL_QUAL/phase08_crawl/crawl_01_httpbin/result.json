@@ -1,0 +1,20 @@
+{
+  "test_id": "crawl_01_httpbin",
+  "prompt": "Fetch the content of 'https://httpbin.org/get' and tell me what 'url' field contains.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "I'm not capable of directly accessing or fetching content from external websites. However, I can guide you on how to fetch the content and extract the 'url' field.\n\nYou can use a tool like `curl` or a programming language like Python to send a GET request to 'https://httpbin.org/get' and parse the response.\n\nHere's an example using Python:\n```python\nimport requests\n\nresponse = requests.get('https://httpbin.org/get')\ndata = response.json()\nprint(data['url'])\n```\nThis code sends a GET request to 'https://httpbin.org/get', parses the response as JSON, and prints the value of the 'url' field.\n\nPlease note that you need to run this code on your local machine to fetch the content and extract the 'url' field. I'm a text-based AI assistant and do not have direct access to external websites.",
+  "response_excerpt": "I'm not capable of directly accessing or fetching content from external websites. However, I can guide you on how to fetch the content and extract the 'url' field.\n\nYou can use a tool like `curl` or a programming language like Python to send a GET request to 'https://httpbin.org/get' and parse the response.\n\nHere's an example using Python:\n```python\nimport requests\n\nresponse = requests.get('https://httpbin.org/get')\ndata = response.json()\nprint(data['url'])\n```\nThis code sends a GET request to 'https://httpbin.org/get', parses the response as JSON, and prints the value of the 'url' field.\n\nPlease note that you need to run this code on your local machine to fetch the content and extract the 'url' field. I'm a text-based AI assistant and do not have direct access to external websites.",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": 537.7161502838135,
+    "total_ms": 943.0420398712158,
+    "request_ts": 1786631410.587381,
+    "final_ts": 1786631411.530423
+  },
+  "verification": {}
+}

@@ -1,0 +1,826 @@
+{
+  "test": "Company OS Lifecycle",
+  "response": {
+    "bootstrapped": true,
+    "autopilot_enabled": true,
+    "repository_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+    "department_autonomy": {
+      "ai_research": "enabled",
+      "community": "enabled",
+      "customer_success": "enabled",
+      "finance": "enabled",
+      "growth_media": "enabled",
+      "operations": "enabled",
+      "product": "enabled",
+      "product_engineering": "enabled",
+      "revenue": "enabled",
+      "security_legal": "enabled",
+      "ventures": "enabled"
+    },
+    "signals": {
+      "pending": 3,
+      "claimed": 0,
+      "resolved": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "recent_runs": [
+      {
+        "id": "auto_f967a4837fef4381",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "running",
+        "result": {},
+        "started_at": "2026-08-12T02:57:42.365696+00:00",
+        "finished_at": null
+      },
+      {
+        "id": "auto_29147df04cf5465e",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_29147df04cf5465e",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T19:34:57.307905+00:00",
+        "finished_at": "2026-08-11T19:37:26.738853+00:00"
+      },
+      {
+        "id": "auto_428083ac129c43cb",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "running",
+        "result": {},
+        "started_at": "2026-08-11T19:29:29.998647+00:00",
+        "finished_at": null
+      },
+      {
+        "id": "auto_f6faca6c2e39498a",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "completed",
+        "result": {
+          "run_id": "auto_f6faca6c2e39498a",
+          "worker_id": "jarvis-desktop-autopilot",
+          "mode": "company_tick",
+          "status": "completed",
+          "_amaura_truncated": true,
+          "_amaura_original_bytes": 998146720,
+          "_amaura_compaction": "legacy autonomy run payload compacted for local performance"
+        },
+        "started_at": "2026-08-11T15:30:13.479792+00:00",
+        "finished_at": "2026-08-11T15:30:31.929118+00:00"
+      },
+      {
+        "id": "auto_fb05d6bc14d24085",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "completed",
+        "result": {
+          "run_id": "auto_fb05d6bc14d24085",
+          "worker_id": "jarvis-desktop-autopilot",
+          "mode": "company_tick",
+          "status": "completed",
+          "_amaura_truncated": true,
+          "_amaura_original_bytes": 998107355,
+          "_amaura_compaction": "legacy autonomy run payload compacted for local performance"
+        },
+        "started_at": "2026-08-11T15:27:12.598327+00:00",
+        "finished_at": "2026-08-11T15:27:34.765456+00:00"
+      },
+      {
+        "id": "auto_4c4f5b8e461e495b",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_4c4f5b8e461e495b",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T15:25:36.791361+00:00",
+        "finished_at": "2026-08-11T15:26:12.556242+00:00"
+      },
+      {
+        "id": "auto_627f07545dfd46c4",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_627f07545dfd46c4",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T15:23:31.246752+00:00",
+        "finished_at": "2026-08-11T15:24:36.758748+00:00"
+      },
+      {
+        "id": "auto_bdf19a87c34e42f4",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_bdf19a87c34e42f4",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T15:20:37.238118+00:00",
+        "finished_at": "2026-08-11T15:22:31.131747+00:00"
+      },
+      {
+        "id": "auto_80b390d149aa4045",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_80b390d149aa4045",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T15:17:06.700586+00:00",
+        "finished_at": "2026-08-11T15:19:37.147469+00:00"
+      },
+      {
+        "id": "auto_c500b249b6f14f5f",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_c500b249b6f14f5f",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T15:14:40.143727+00:00",
+        "finished_at": "2026-08-11T15:16:06.639375+00:00"
+      },
+      {
+        "id": "auto_75514e79aa3647cb",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_75514e79aa3647cb",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T15:11:32.533731+00:00",
+        "finished_at": "2026-08-11T15:13:40.060059+00:00"
+      },
+      {
+        "id": "auto_6b23bace306e4e60",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_6b23bace306e4e60",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T15:09:01.239014+00:00",
+        "finished_at": "2026-08-11T15:10:32.494495+00:00"
+      },
+      {
+        "id": "auto_07fb00e6e6074a3a",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_07fb00e6e6074a3a",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T15:01:22.136700+00:00",
+        "finished_at": "2026-08-11T15:08:01.179432+00:00"
+      },
+      {
+        "id": "auto_302819c1541f409c",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_302819c1541f409c",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T14:57:21.783445+00:00",
+        "finished_at": "2026-08-11T15:00:22.033131+00:00"
+      },
+      {
+        "id": "auto_326319b0e995408f",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_326319b0e995408f",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T14:53:29.123404+00:00",
+        "finished_at": "2026-08-11T14:56:21.734858+00:00"
+      },
+      {
+        "id": "auto_514b6413afe64383",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_514b6413afe64383",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T14:47:37.127084+00:00",
+        "finished_at": "2026-08-11T14:52:29.064758+00:00"
+      },
+      {
+        "id": "auto_efc479de03264869",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_efc479de03264869",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T14:41:58.314681+00:00",
+        "finished_at": "2026-08-11T14:46:37.032278+00:00"
+      },
+      {
+        "id": "auto_168ac294f89046c9",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_168ac294f89046c9",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T14:34:28.885024+00:00",
+        "finished_at": "2026-08-11T14:40:58.199758+00:00"
+      },
+      {
+        "id": "auto_9b7f8d72a5254cdf",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_9b7f8d72a5254cdf",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T14:28:58.952673+00:00",
+        "finished_at": "2026-08-11T14:33:28.768659+00:00"
+      },
+      {
+        "id": "auto_74b4e2ff07e64477",
+        "worker_id": "jarvis-desktop-autopilot",
+        "mode": "company_tick",
+        "status": "failed",
+        "result": {
+          "status": "failed",
+          "run_id": "auto_74b4e2ff07e64477",
+          "error": "string or blob too big"
+        },
+        "started_at": "2026-08-11T14:21:42.643535+00:00",
+        "finished_at": "2026-08-11T14:27:58.880237+00:00"
+      }
+    ],
+    "portfolio": {
+      "autopilot_enabled": true,
+      "objectives": [
+        {
+          "id": "obj_66fb50bbda3a",
+          "title": "Amaura operating review",
+          "objective": "Run the Amaura company operating review for {week}",
+          "department": "operations",
+          "workflow_key": "company_operating_review",
+          "status": "active",
+          "priority": 1,
+          "success_metric": "Founder receives evidenced priorities, stop decisions, risks and budget implications",
+          "target_value": 52.0,
+          "current_value": 0.0,
+          "unit": "company operating reviews",
+          "cadence": "weekly",
+          "inputs": {
+            "review_window": "{week}"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.350196+00:00",
+          "updated_at": "2026-08-12T05:59:48.350196+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_f01c70485023",
+          "title": "Amaura security and compliance watch",
+          "objective": "Review security, licences, privacy and public claims for {cadence_key}",
+          "department": "security_legal",
+          "workflow_key": "security_watch_cycle",
+          "status": "active",
+          "priority": 1,
+          "success_metric": "All critical risks are classified and owned remediation is recorded",
+          "target_value": 52.0,
+          "current_value": 0.0,
+          "unit": "security reviews",
+          "cadence": "weekly",
+          "inputs": {
+            "review_window": "{cadence_key}"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.349170+00:00",
+          "updated_at": "2026-08-12T05:59:48.349170+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_cb10dea2b4aa",
+          "title": "Amaura Ventures cash-flow engine",
+          "objective": "Reconcile, rank and advance the highest-leverage low-capital revenue stream for {cadence_key}",
+          "department": "ventures",
+          "workflow_key": "venture_cashflow_cycle",
+          "status": "active",
+          "priority": 1,
+          "success_metric": "One source-backed cash-flow action reaches completion or an exact founder approval decision",
+          "target_value": 52.0,
+          "current_value": 0.0,
+          "unit": "cash-flow portfolio cycles",
+          "cadence": "weekly",
+          "inputs": {
+            "review_window": "{cadence_key}"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.347768+00:00",
+          "updated_at": "2026-08-12T05:59:48.347768+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_b68a560bf19b",
+          "title": "Amaura distribution learning",
+          "objective": "Run one measured distribution experiment for {cadence_key}",
+          "department": "growth_media",
+          "workflow_key": "distribution_optimization_cycle",
+          "status": "active",
+          "priority": 1,
+          "success_metric": "A channel bottleneck is diagnosed and one exact experiment reaches founder approval",
+          "target_value": 52.0,
+          "current_value": 0.0,
+          "unit": "measured distribution experiments",
+          "cadence": "weekly",
+          "inputs": {
+            "channel": "YouTube, Shorts, GitHub, X and LinkedIn",
+            "audience": "AI builders, students, developers, researchers and founders"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.345459+00:00",
+          "updated_at": "2026-08-12T05:59:48.345459+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_65a3e1805144",
+          "title": "Amaura owned content engine",
+          "objective": "Produce the Amaura build-in-public content package for {cadence_key}",
+          "department": "growth_media",
+          "workflow_key": "content_factory",
+          "status": "active",
+          "priority": 1,
+          "success_metric": "One evidence-backed long-form asset and reusable short-form package reaches founder approval",
+          "target_value": 52.0,
+          "current_value": 0.0,
+          "unit": "approved content packages",
+          "cadence": "weekly",
+          "inputs": {
+            "campaign_id": "amaura-owned-distribution",
+            "audience": "AI builders, students, developers, researchers and founders",
+            "business_objective": "Grow an owned audience for Amaura Labs and its products",
+            "content_theme": "Build Amaura Labs in public \u2014 {cadence_key}"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.344995+00:00",
+          "updated_at": "2026-08-12T05:59:48.344995+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_7dd395e1fa9a",
+          "title": "Amaura engineering reliability",
+          "objective": "Complete one bounded reliability improvement for {cadence_key}",
+          "department": "product_engineering",
+          "workflow_key": "engineering_reliability_cycle",
+          "status": "active",
+          "priority": 1,
+          "success_metric": "Independent verification passes and a release decision is ready",
+          "target_value": 52.0,
+          "current_value": 0.0,
+          "unit": "verified reliability improvements",
+          "cadence": "weekly",
+          "inputs": {
+            "repository_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.344457+00:00",
+          "updated_at": "2026-08-12T05:59:48.344457+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_d298f857fe15",
+          "title": "Amaura finance and runway control",
+          "objective": "Reconcile cost, runway and free-first resource allocation for {month}",
+          "department": "finance",
+          "workflow_key": "financial_control_cycle",
+          "status": "active",
+          "priority": 2,
+          "success_metric": "Founder receives a reconciled runway and resource-allocation decision",
+          "target_value": 12.0,
+          "current_value": 0.0,
+          "unit": "financial control reviews",
+          "cadence": "monthly",
+          "inputs": {
+            "review_window": "{month}"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.348693+00:00",
+          "updated_at": "2026-08-12T05:59:48.348693+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_2f6cdbe245aa",
+          "title": "Amaura Ventures portfolio discipline",
+          "objective": "Review every active venture and enforce kill, iterate or double-down discipline for {month}",
+          "department": "ventures",
+          "workflow_key": "venture_portfolio_review",
+          "status": "active",
+          "priority": 2,
+          "success_metric": "Every active venture has sourced metrics, a current recommendation and a founder decision where required",
+          "target_value": 12.0,
+          "current_value": 0.0,
+          "unit": "venture portfolio reviews",
+          "cadence": "monthly",
+          "inputs": {
+            "review_window": "{month}"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.348227+00:00",
+          "updated_at": "2026-08-12T05:59:48.348227+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_9247ca6c5233",
+          "title": "Amaura Ventures opportunity pipeline",
+          "objective": "Find and score one focused revenue-product opportunity for {cadence_key}",
+          "department": "ventures",
+          "workflow_key": "venture_opportunity_cycle",
+          "status": "active",
+          "priority": 2,
+          "success_metric": "One evidence-backed opportunity is rejected or reaches founder validation approval",
+          "target_value": 52.0,
+          "current_value": 0.0,
+          "unit": "venture opportunity decisions",
+          "cadence": "weekly",
+          "inputs": {
+            "venture_theme": "Small products that can fund Amaura Labs without becoming client services",
+            "founder_time_budget_minutes": "20"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.347293+00:00",
+          "updated_at": "2026-08-12T05:59:48.347293+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_991970338495",
+          "title": "Amaura customer learning",
+          "objective": "Convert user feedback into one measured product response for {cadence_key}",
+          "department": "customer_success",
+          "workflow_key": "customer_feedback_cycle",
+          "status": "active",
+          "priority": 2,
+          "success_metric": "A sourced user-problem cluster and bounded response decision is ready",
+          "target_value": 52.0,
+          "current_value": 0.0,
+          "unit": "customer learning cycles",
+          "cadence": "weekly",
+          "inputs": {
+            "product_name": "Amaura Labs"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.345925+00:00",
+          "updated_at": "2026-08-12T05:59:48.345925+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_ad104594bc98",
+          "title": "Amaura product opportunity validation",
+          "objective": "Validate one high-leverage AI product problem for {month}",
+          "department": "product",
+          "workflow_key": "product_discovery",
+          "status": "active",
+          "priority": 2,
+          "success_metric": "An evidence-backed build, test or kill decision is ready",
+          "target_value": 12.0,
+          "current_value": 0.0,
+          "unit": "validated product decisions",
+          "cadence": "monthly",
+          "inputs": {
+            "problem_space": "Affordable AI, developer productivity and AI-native company workflows",
+            "target_user": "Indian developers, students, researchers and resource-constrained teams"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.343941+00:00",
+          "updated_at": "2026-08-12T05:59:48.343941+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_43cf847eedbd",
+          "title": "Amaura research intelligence",
+          "objective": "Map the most important affordable-AI and agentic-system developments for {cadence_key}",
+          "department": "ai_research",
+          "workflow_key": "research_intelligence_cycle",
+          "status": "active",
+          "priority": 2,
+          "success_metric": "Founder receives an evidence-backed research direction decision",
+          "target_value": 52.0,
+          "current_value": 0.0,
+          "unit": "research direction decisions",
+          "cadence": "weekly",
+          "inputs": {
+            "research_theme": "Affordable AI, efficient models, autonomous agents and India-first AI infrastructure"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.343236+00:00",
+          "updated_at": "2026-08-12T05:59:48.343236+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_4c3c63c26feb",
+          "title": "Amaura open-source release readiness",
+          "objective": "Prepare one verified open-source release decision for {month}",
+          "department": "product_engineering",
+          "workflow_key": "open_source_release_cycle",
+          "status": "active",
+          "priority": 3,
+          "success_metric": "A clean release candidate with exact artefact hashes reaches founder approval",
+          "target_value": 12.0,
+          "current_value": 0.0,
+          "unit": "verified open-source release decisions",
+          "cadence": "monthly",
+          "inputs": {
+            "repository_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+            "project_name": "Amaura Labs"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.349597+00:00",
+          "updated_at": "2026-08-12T05:59:48.349597+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_60e273bfb7ed",
+          "title": "Amaura product-led revenue",
+          "objective": "Run one evidence-led monetisation review for {month}",
+          "department": "revenue",
+          "workflow_key": "product_revenue_cycle",
+          "status": "active",
+          "priority": 3,
+          "success_metric": "One bounded pricing, packaging or activation decision is ready",
+          "target_value": 12.0,
+          "current_value": 0.0,
+          "unit": "monetisation decisions",
+          "cadence": "monthly",
+          "inputs": {
+            "product_name": "Amaura Labs",
+            "target_user": "Indian developers, students, researchers and resource-constrained teams"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.346849+00:00",
+          "updated_at": "2026-08-12T05:59:48.346849+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        },
+        {
+          "id": "obj_d386859cbce5",
+          "title": "Amaura community flywheel",
+          "objective": "Deliver one useful community intervention for {cadence_key}",
+          "department": "community",
+          "workflow_key": "community_growth_cycle",
+          "status": "active",
+          "priority": 3,
+          "success_metric": "One sourced community need is converted into an approved response or contributor package",
+          "target_value": 52.0,
+          "current_value": 0.0,
+          "unit": "community value interventions",
+          "cadence": "weekly",
+          "inputs": {
+            "community_name": "Amaura AI Community",
+            "audience": "AI builders, students, developers, researchers and founders"
+          },
+          "max_active_programmes": 1,
+          "budget_cents": 0,
+          "deadline": null,
+          "last_planned_key": "",
+          "last_planned_at": null,
+          "created_by": "founder",
+          "created_at": "2026-08-12T05:59:48.346388+00:00",
+          "updated_at": "2026-08-12T05:59:48.346388+00:00",
+          "progress_percent": 0.0,
+          "programme_count": 0,
+          "active_programmes": 0
+        }
+      ],
+      "counts": {
+        "active": 15,
+        "cancelled": 0,
+        "completed": 0,
+        "paused": 0
+      }
+    },
+    "dashboard": {
+      "control_plane": "jarvis",
+      "active_programmes": 6,
+      "task_states": {
+        "assigned": 1,
+        "awaiting_approval": 1,
+        "blocked": 16,
+        "cancelled": 52,
+        "completed": 16,
+        "failed": 11
+      },
+      "pending_approvals": 1,
+      "total_cost_cents": 19,
+      "policy_violations": 13,
+      "open_alerts": 44,
+      "objectives": {
+        "active": 15,
+        "completed": 0
+      },
+      "ventures": {
+        "qualified_opportunities": 0,
+        "active_experiments": 0
+      },
+      "agents": {
+        "total": 57,
+        "departments": {
+          "ai_research": 1,
+          "community": 1,
+          "control_plane": 2,
+          "customer_success": 1,
+          "delivery": 1,
+          "finance": 1,
+          "growth_media": 15,
+          "operations": 1,
+          "product": 1,
+          "product_engineering": 6,
+          "revenue": 19,
+          "security_legal": 2,
+          "strategy": 1,
+          "ventures": 5
+        }
+      },
+      "acquisition": {
+        "kill_switch": false,
+        "campaigns": 1,
+        "leads": 1,
+        "qualified": 0,
+        "active_pipeline_value_cents": 0,
+        "awaiting_approval": 0,
+        "sent": 0,
+        "opted_out": 0,
+        "stages": {
+          "discovered": 1,
+          "researching": 0,
+          "researched": 0,
+          "qualified": 0,
+          "outreach_drafted": 0,
+          "awaiting_approval": 0,
+          "sent": 0,
+          "followup_due": 0,
+          "replied": 0,
+          "discovery": 0,
+          "proposal_drafted": 0,
+          "proposal_sent": 0,
+          "negotiation": 0,
+          "won": 0,
+          "delivery": 0,
+          "completed": 0,
+          "testimonial_requested": 0,
+          "rejected": 0,
+          "lost": 0,
+          "opted_out": 0,
+          "invalid_contact": 0,
+          "duplicate": 0
+        }
+      },
+      "distribution": {
+        "publications": 0,
+        "by_status": {},
+        "awaiting_founder": 0,
+        "reconciliation_required": 0,
+        "published": 0
+      },
+      "founder": "Ashish",
+      "telemetry": {
+        "metrics": 5,
+        "open_alerts": 44
+      },
+      "doctrine": {
+        "master": "JARVIS",
+        "independent_review": true,
+        "evidence_required": true,
+        "external_commitments_require_approval": true
+      }
+    }
+  },
+  "success": true
+}

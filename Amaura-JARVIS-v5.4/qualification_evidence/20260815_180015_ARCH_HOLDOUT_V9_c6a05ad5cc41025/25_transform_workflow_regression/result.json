@@ -1,0 +1,170 @@
+{
+  "test_id": "25_transform_workflow_regression",
+  "status": "PASS",
+  "reason": "Deterministic table transformation regression.",
+  "verification": {
+    "expected": [
+      {
+        "key": "onyx-nook-7545",
+        "amount": 36
+      },
+      {
+        "key": "granite-arch-1789",
+        "amount": 64
+      },
+      {
+        "key": "harbor-pier-2006",
+        "amount": 26
+      },
+      {
+        "key": "falcon-brook-1983",
+        "amount": 31
+      }
+    ],
+    "actual": [
+      {
+        "key": "onyx-nook-7545",
+        "amount": 36
+      },
+      {
+        "key": "granite-arch-1789",
+        "amount": 64
+      },
+      {
+        "key": "harbor-pier-2006",
+        "amount": 26
+      },
+      {
+        "key": "falcon-brook-1983",
+        "amount": 31
+      }
+    ],
+    "input_intact": true
+  },
+  "chat": {
+    "prompt": "Convert the pipe-delimited table in \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/source_table_92329507.tbl\" to a JSON array in \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/output_records_69412574.json\" and keep amount numeric.",
+    "session_id": "v9flow25_57624654",
+    "http_status": 200,
+    "response_text": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/source_table_92329507.tbl, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/output_records_69412574.json.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/source_table_92329507.tbl, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/output_records_69412574.json.",
+        "session_id": "v9flow25_57624654",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/source_table_92329507.tbl, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/output_records_69412574.json.",
+          "session_id": "v9flow25_57624654",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "requested_operation": "delimited_table_to_json",
+              "parsed_plan": {
+                "inputs": [
+                  "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/source_table_92329507.tbl"
+                ],
+                "operation": "delimited_table_to_json",
+                "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/output_records_69412574.json",
+                "parameters": {
+                  "delimiter": "|"
+                }
+              },
+              "input_values": [
+                "key|amount\nonyx-nook-7545|36\ngranite-arch-1789|64\nharbor-pier-2006|26\nfalcon-brook-1983|31\n"
+              ],
+              "computed_result": [
+                {
+                  "key": "onyx-nook-7545",
+                  "amount": 36
+                },
+                {
+                  "key": "granite-arch-1789",
+                  "amount": 64
+                },
+                {
+                  "key": "harbor-pier-2006",
+                  "amount": 26
+                },
+                {
+                  "key": "falcon-brook-1983",
+                  "amount": 31
+                }
+              ],
+              "expected_output_hash": "6e392b663f12af311bce45062d90f240cbdc4186069d9bf6f9375ab5cd4ccbdc",
+              "actual_output_hash": "6e392b663f12af311bce45062d90f240cbdc4186069d9bf6f9375ab5cd4ccbdc",
+              "verification_passed": true,
+              "output_bytes": 230
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "policy_decision": "allowed",
+            "requested_operation": "delimited_table_to_json",
+            "parsed_plan": {
+              "inputs": [
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/source_table_92329507.tbl"
+              ],
+              "operation": "delimited_table_to_json",
+              "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_180015_ARCH_HOLDOUT_V9_c6a05ad5cc41025/workspace/output_records_69412574.json",
+              "parameters": {
+                "delimiter": "|"
+              }
+            },
+            "input_values": [
+              "key|amount\nonyx-nook-7545|36\ngranite-arch-1789|64\nharbor-pier-2006|26\nfalcon-brook-1983|31\n"
+            ],
+            "computed_result": [
+              {
+                "key": "onyx-nook-7545",
+                "amount": 36
+              },
+              {
+                "key": "granite-arch-1789",
+                "amount": 64
+              },
+              {
+                "key": "harbor-pier-2006",
+                "amount": 26
+              },
+              {
+                "key": "falcon-brook-1983",
+                "amount": 31
+              }
+            ],
+            "expected_output_hash": "6e392b663f12af311bce45062d90f240cbdc4186069d9bf6f9375ab5cd4ccbdc",
+            "actual_output_hash": "6e392b663f12af311bce45062d90f240cbdc4186069d9bf6f9375ab5cd4ccbdc",
+            "verification_passed": true,
+            "output_bytes": 230
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

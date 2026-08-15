@@ -1,0 +1,67 @@
+{
+  "test_id": "02_exact_file_read",
+  "status": "FAIL",
+  "reason": "Requires exact recovery of a multi-line fixture that was never included in the prompt.",
+  "verification": {
+    "exact_response": false
+  },
+  "chat": {
+    "prompt": "Open file \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_005327_ARCH_HOLDOUT_V2_78b9ec7a01da2e8f/workspace/ledger_42641746.txt\" and return its contents exactly as written, with no explanation.",
+    "http_status": 200,
+    "response_text": "\u274c Error: Application 'file \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_005327_ARCH_HOLDOUT_V2_78b9ec7a01da2e8f/workspace/ledger_42641746.txt\" and return its contents exactly as written, with no explanation.' is not in the strict allowlist.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": "failed",
+    "goal_history": [],
+    "latency_ms": 223.79207611083984,
+    "events": [
+      {
+        "type": "complete",
+        "response": "\u274c Error: Application 'file \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_005327_ARCH_HOLDOUT_V2_78b9ec7a01da2e8f/workspace/ledger_42641746.txt\" and return its contents exactly as written, with no explanation.' is not in the strict allowlist.",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "not-invoked",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "macos_app",
+        "goal_id": "",
+        "state": "failed",
+        "executive": {
+          "intent": "macos_app",
+          "message": "\u274c Error: Application 'file \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_005327_ARCH_HOLDOUT_V2_78b9ec7a01da2e8f/workspace/ledger_42641746.txt\" and return its contents exactly as written, with no explanation.' is not in the strict allowlist.",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "failed",
+          "result": {
+            "app_control": "\u274c Error: Application 'file \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_005327_ARCH_HOLDOUT_V2_78b9ec7a01da2e8f/workspace/ledger_42641746.txt\" and return its contents exactly as written, with no explanation.' is not in the strict allowlist."
+          },
+          "context_sources": [
+            "company_work:task_b7edad901a97",
+            "conversation_memory:20260811_213356_532182",
+            "company_work:task_65e225203ea2",
+            "conversation_memory:20260811_195401_627462",
+            "company_work:goal_41eb59167cc1",
+            "company_work:task_7af2ed9e1a3f",
+            "company_work:goal_3ecb30076d5f",
+            "company_work:task_c714a4ed529b",
+            "company_work:goal_0e7d5d1e1ca2",
+            "company_work:goal_972e624b3605",
+            "company_work:task_46a0c94ca570",
+            "company_work:goal_62b0f243082a",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "not-invoked",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": ""
+          }
+        }
+      }
+    ]
+  }
+}

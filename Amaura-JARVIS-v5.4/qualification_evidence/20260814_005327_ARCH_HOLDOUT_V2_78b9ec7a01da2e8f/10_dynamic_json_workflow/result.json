@@ -1,0 +1,341 @@
+{
+  "test_id": "10_dynamic_json_workflow",
+  "status": "FAIL",
+  "reason": "Requires read \u2192 generic transformation \u2192 write with randomized field names and exact semantic verification.",
+  "verification": {
+    "exists": false,
+    "expected": {
+      "orchard_60656546": "tiger-meadow-6900",
+      "units_99461365": 75,
+      "region_28152722": "harbor-kestrel-8892"
+    },
+    "actual": null,
+    "exact": false
+  },
+  "chat": {
+    "prompt": "Read \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_005327_ARCH_HOLDOUT_V2_78b9ec7a01da2e8f/workspace/source_56138938.txt\" and turn its key/value lines into JSON at \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_005327_ARCH_HOLDOUT_V2_78b9ec7a01da2e8f/workspace/structured_77068178.json\". Preserve every key and infer numbers as numbers.",
+    "http_status": 200,
+    "response_text": "I\u2019m not able to read files from your computer or write new files directly. If you paste the contents of **`source_56138938.txt`** here, I can transform the key\u2011value lines into proper JSON for you, and you can then save that JSON to `structured_77068178.json` yourself.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": null,
+    "goal_history": [],
+    "latency_ms": 8197.346925735474,
+    "events": [
+      {
+        "type": "token",
+        "content": "I"
+      },
+      {
+        "type": "token",
+        "content": "\u2019m"
+      },
+      {
+        "type": "token",
+        "content": " not"
+      },
+      {
+        "type": "token",
+        "content": " able"
+      },
+      {
+        "type": "token",
+        "content": " to"
+      },
+      {
+        "type": "token",
+        "content": " read"
+      },
+      {
+        "type": "token",
+        "content": " files"
+      },
+      {
+        "type": "token",
+        "content": " from"
+      },
+      {
+        "type": "token",
+        "content": " your"
+      },
+      {
+        "type": "token",
+        "content": " computer"
+      },
+      {
+        "type": "token",
+        "content": " or"
+      },
+      {
+        "type": "token",
+        "content": " write"
+      },
+      {
+        "type": "token",
+        "content": " new"
+      },
+      {
+        "type": "token",
+        "content": " files"
+      },
+      {
+        "type": "token",
+        "content": " directly"
+      },
+      {
+        "type": "token",
+        "content": "."
+      },
+      {
+        "type": "token",
+        "content": " If"
+      },
+      {
+        "type": "token",
+        "content": " you"
+      },
+      {
+        "type": "token",
+        "content": " paste"
+      },
+      {
+        "type": "token",
+        "content": " the"
+      },
+      {
+        "type": "token",
+        "content": " contents"
+      },
+      {
+        "type": "token",
+        "content": " of"
+      },
+      {
+        "type": "token",
+        "content": " **"
+      },
+      {
+        "type": "token",
+        "content": "`"
+      },
+      {
+        "type": "token",
+        "content": "source"
+      },
+      {
+        "type": "token",
+        "content": "_"
+      },
+      {
+        "type": "token",
+        "content": "561"
+      },
+      {
+        "type": "token",
+        "content": "389"
+      },
+      {
+        "type": "token",
+        "content": "38"
+      },
+      {
+        "type": "token",
+        "content": ".txt"
+      },
+      {
+        "type": "token",
+        "content": "`"
+      },
+      {
+        "type": "token",
+        "content": "**"
+      },
+      {
+        "type": "token",
+        "content": " here"
+      },
+      {
+        "type": "token",
+        "content": ","
+      },
+      {
+        "type": "token",
+        "content": " I"
+      },
+      {
+        "type": "token",
+        "content": " can"
+      },
+      {
+        "type": "token",
+        "content": " transform"
+      },
+      {
+        "type": "token",
+        "content": " the"
+      },
+      {
+        "type": "token",
+        "content": " key"
+      },
+      {
+        "type": "token",
+        "content": "\u2011"
+      },
+      {
+        "type": "token",
+        "content": "value"
+      },
+      {
+        "type": "token",
+        "content": " lines"
+      },
+      {
+        "type": "token",
+        "content": " into"
+      },
+      {
+        "type": "token",
+        "content": " proper"
+      },
+      {
+        "type": "token",
+        "content": " JSON"
+      },
+      {
+        "type": "token",
+        "content": " for"
+      },
+      {
+        "type": "token",
+        "content": " you"
+      },
+      {
+        "type": "token",
+        "content": ","
+      },
+      {
+        "type": "token",
+        "content": " and"
+      },
+      {
+        "type": "token",
+        "content": " you"
+      },
+      {
+        "type": "token",
+        "content": " can"
+      },
+      {
+        "type": "token",
+        "content": " then"
+      },
+      {
+        "type": "token",
+        "content": " save"
+      },
+      {
+        "type": "token",
+        "content": " that"
+      },
+      {
+        "type": "token",
+        "content": " JSON"
+      },
+      {
+        "type": "token",
+        "content": " to"
+      },
+      {
+        "type": "token",
+        "content": " `"
+      },
+      {
+        "type": "token",
+        "content": "structured"
+      },
+      {
+        "type": "token",
+        "content": "_"
+      },
+      {
+        "type": "token",
+        "content": "770"
+      },
+      {
+        "type": "token",
+        "content": "681"
+      },
+      {
+        "type": "token",
+        "content": "78"
+      },
+      {
+        "type": "token",
+        "content": ".json"
+      },
+      {
+        "type": "token",
+        "content": "`"
+      },
+      {
+        "type": "token",
+        "content": " yourself"
+      },
+      {
+        "type": "token",
+        "content": "."
+      },
+      {
+        "type": "complete",
+        "response": "I\u2019m not able to read files from your computer or write new files directly. If you paste the contents of **`source_56138938.txt`** here, I can transform the key\u2011value lines into proper JSON for you, and you can then save that JSON to `structured_77068178.json` yourself.",
+        "session_id": "default",
+        "model": "openai/gpt-oss-120b",
+        "model_key": "openai/gpt-oss-120b",
+        "model_provider": "omniroute",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 8020,
+        "model_ttft_ms": 7552,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "",
+        "executive": {
+          "intent": "conversation",
+          "message": "I\u2019m not able to read files from your computer or write new files directly. If you paste the contents of **`source_56138938.txt`** here, I can transform the key\u2011value lines into proper JSON for you, and you can then save that JSON to `structured_77068178.json` yourself.",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "",
+          "result": {},
+          "context_sources": [
+            "conversation_memory:20260811_213356_532182",
+            "jarvis.memory.episodic:20260813T192400_default",
+            "company_work:task_b7edad901a97",
+            "company_work:goal_41eb59167cc1",
+            "company_work:task_7af2ed9e1a3f",
+            "company_work:goal_3ecb30076d5f",
+            "company_work:task_c714a4ed529b",
+            "company_work:task_65e225203ea2",
+            "company_work:goal_0e7d5d1e1ca2",
+            "company_work:goal_972e624b3605",
+            "company_work:task_46a0c94ca570",
+            "company_work:goal_62b0f243082a",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "omniroute",
+            "model": "openai/gpt-oss-120b",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "requested_model": "groq/llama-3.3-70b-versatile",
+            "resolved_provider": "omniroute",
+            "resolved_model": "openai/gpt-oss-120b",
+            "latency_ms": 8020,
+            "ttft_ms": 7552
+          }
+        }
+      }
+    ]
+  }
+}

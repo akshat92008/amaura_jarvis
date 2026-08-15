@@ -1,0 +1,17 @@
+{
+  "healthy_primary": {
+    "status": 200,
+    "response": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+    "latency_ms": 28.775930404663086,
+    "classification": "PASS_REAL_TOOL_E2E"
+  },
+  "latency_5_requests": [
+    20.294904708862305,
+    15.352725982666016,
+    16.410112380981445,
+    16.70384407043457,
+    17.564773559570312
+  ],
+  "median_ms": 16.70384407043457,
+  "max_ms": 20.294904708862305
+}

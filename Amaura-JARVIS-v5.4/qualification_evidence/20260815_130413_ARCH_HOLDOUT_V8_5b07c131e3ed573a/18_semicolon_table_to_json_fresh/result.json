@@ -1,0 +1,153 @@
+{
+  "test_id": "18_semicolon_table_to_json_fresh",
+  "status": "PASS",
+  "reason": "Fresh structured transformation regression.",
+  "verification": {
+    "expected": [
+      {
+        "code": "indigo-crest-6555",
+        "score": 13
+      },
+      {
+        "code": "kestrel-bay-2001",
+        "score": 24
+      },
+      {
+        "code": "elm-rise-6489",
+        "score": 16
+      }
+    ],
+    "actual": [
+      {
+        "code": "indigo-crest-6555",
+        "score": 13
+      },
+      {
+        "code": "kestrel-bay-2001",
+        "score": 24
+      },
+      {
+        "code": "elm-rise-6489",
+        "score": 16
+      }
+    ]
+  },
+  "chat": {
+    "prompt": "Convert the semicolon-delimited table in \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/table_70532934.dat\" into a JSON array in \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/records_11717973.json\"; keep score numeric.",
+    "session_id": "v8flow18_88236306",
+    "http_status": 200,
+    "response_text": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/table_70532934.dat, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/records_11717973.json.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/table_70532934.dat, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/records_11717973.json.",
+        "session_id": "v8flow18_88236306",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/table_70532934.dat, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/records_11717973.json.",
+          "session_id": "v8flow18_88236306",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "requested_operation": "delimited_table_to_json",
+              "parsed_plan": {
+                "inputs": [
+                  "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/table_70532934.dat"
+                ],
+                "operation": "delimited_table_to_json",
+                "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/records_11717973.json",
+                "parameters": {
+                  "delimiter": ";"
+                }
+              },
+              "input_values": [
+                "code;score\nindigo-crest-6555;13\nkestrel-bay-2001;24\nelm-rise-6489;16\n"
+              ],
+              "computed_result": [
+                {
+                  "code": "indigo-crest-6555",
+                  "score": 13
+                },
+                {
+                  "code": "kestrel-bay-2001",
+                  "score": 24
+                },
+                {
+                  "code": "elm-rise-6489",
+                  "score": 16
+                }
+              ],
+              "expected_output_hash": "d574d7dd8c897bd89e2dfb0a2df5fc95de7720b05eff08c6243ee83273502442",
+              "actual_output_hash": "d574d7dd8c897bd89e2dfb0a2df5fc95de7720b05eff08c6243ee83273502442",
+              "verification_passed": true,
+              "output_bytes": 171
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "policy_decision": "allowed",
+            "requested_operation": "delimited_table_to_json",
+            "parsed_plan": {
+              "inputs": [
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/table_70532934.dat"
+              ],
+              "operation": "delimited_table_to_json",
+              "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/records_11717973.json",
+              "parameters": {
+                "delimiter": ";"
+              }
+            },
+            "input_values": [
+              "code;score\nindigo-crest-6555;13\nkestrel-bay-2001;24\nelm-rise-6489;16\n"
+            ],
+            "computed_result": [
+              {
+                "code": "indigo-crest-6555",
+                "score": 13
+              },
+              {
+                "code": "kestrel-bay-2001",
+                "score": 24
+              },
+              {
+                "code": "elm-rise-6489",
+                "score": 16
+              }
+            ],
+            "expected_output_hash": "d574d7dd8c897bd89e2dfb0a2df5fc95de7720b05eff08c6243ee83273502442",
+            "actual_output_hash": "d574d7dd8c897bd89e2dfb0a2df5fc95de7720b05eff08c6243ee83273502442",
+            "verification_passed": true,
+            "output_bytes": 171
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

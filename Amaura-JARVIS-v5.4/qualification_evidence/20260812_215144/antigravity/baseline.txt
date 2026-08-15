@@ -1,0 +1,48 @@
+E-AGY-BASE-001
+JARVIS version: 5.4.2
+Git commit: 759e051e75e16b900472d76e21e077c5af1a13be
+Git tree: 643ccf86031ae0ae063dfb0a954013c7b296d2c5
+agy executable: /Users/ashishsingh/.local/bin/agy
+agy version: 1.1.12
+Sandbox status: forced-in-sandbox (toolPermission=proceed-in-sandbox)
+Permission status: safe (allowNonWorkspaceAccess=false, no risky global allows)
+Authentication status: valid non-interactive CLI session authenticated
+
+Git status --porcelain:
+M Amaura-JARVIS-v5.4/desktop-app/main.js
+ M Amaura-JARVIS-v5.4/desktop-app/package.json
+ M Amaura-JARVIS-v5.4/jarvis/__init__.py
+ M Amaura-JARVIS-v5.4/jarvis/amaura/antigravity_bridge.py
+ M Amaura-JARVIS-v5.4/jarvis/amaura/model_gateway.py
+ M Amaura-JARVIS-v5.4/jarvis/amaura/readiness.py
+ M Amaura-JARVIS-v5.4/jarvis/amaura/verification.py
+ M Amaura-JARVIS-v5.4/jarvis/server.py
+ M Amaura-JARVIS-v5.4/tests/test_amaura_launch_hardening.py
+ M Amaura-JARVIS-v5.4/tests/test_amaura_v351_remediation.py
+?? AUDIT_PACKAGE_FILELIST.txt
+?? AUDIT_PACKAGE_SHA256SUMS.txt
+?? Amaura-JARVIS-v5.4/WORKING_TREE_SHA256SUMS.txt
+?? Amaura-JARVIS-v5.4/audit_script.py
+?? Amaura-JARVIS-v5.4/fix.py
+?? Amaura-JARVIS-v5.4/qualification_evidence/
+?? Amaura-JARVIS-v5.4/release/
+?? Amaura-JARVIS-v5.4/scripts/debug_helpers/
+?? Amaura-JARVIS-v5.4/scripts/qual_antigravity_final.py
+?? Amaura-JARVIS-v5.4/scripts/qual_harness.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase1.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase10.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase11.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase12_13_14.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase15_16_17.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase18_21.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase2.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase22_25.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase26_34.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase3.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase5.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase7.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase8.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase9.py
+?? qual_antigravity_disposable_repo/
+?? qual_antigravity_e2e_20260812_215144/
+?? qual_antigravity_fail_20260812_215144/

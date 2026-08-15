@@ -1,0 +1,16 @@
+{
+  "test_id": "browser_02_navigate",
+  "prompt": "Open 'https://example.com' in the browser, then click on the 'More information...' link, and tell me the URL of the page you ended up on.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 221.51565551757812,
+    "request_ts": 1786586876.1408691,
+    "final_ts": 1786586876.3623848
+  },
+  "verification": {}
+}

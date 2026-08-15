@@ -18,7 +18,7 @@ from jarvis.amaura.brain import JarvisBrain
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.models import GovernanceError, TaskState
 
-TERMINAL_STATES = {TaskState.COMPLETED.value, TaskState.CANCELLED.value}
+TERMINAL_STATES = {TaskState.COMPLETED.value, TaskState.CANCELLED.value, TaskState.FAILED.value}
 
 
 @dataclass(slots=True)
@@ -153,7 +153,7 @@ class MissionRunner:
                     goal_id = str(goal["id"])
                     try:
                         before = JarvisBrain(self.control).status(goal_id)
-                        if before["state"] in {"completed", "awaiting_approval", "cancelled", "held"}:
+                        if before["state"] in {"completed", "awaiting_approval", "cancelled", "held", "failed"}:
                             results.append(MissionRunnerResult(goal_id, before["state"], False, {}).to_dict())
                             continue
                         execution = JarvisBrain(self.control).run_goal(goal_id, max_ticks=1, auto_replan=True)

@@ -1,0 +1,79 @@
+{
+  "test_id": "06_real_screenshot_with_misleading_filename",
+  "status": "PASS",
+  "reason": "Genuine capture command must still use screenshot tool.",
+  "verification": {
+    "exists": true,
+    "valid_png": true,
+    "width": 2940,
+    "height": 1912,
+    "fresh": true,
+    "tools": [
+      "take_screenshot"
+    ]
+  },
+  "chat": {
+    "prompt": "Capture the screen now and save the resulting image to \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/write_read_capture_91031515.png\".",
+    "session_id": "v8r6_77663549",
+    "http_status": 200,
+    "response_text": "Screenshot saved to /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/write_read_capture_91031515.png (1538412 bytes, 2940x1912).",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Screenshot saved to /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/write_read_capture_91031515.png (1538412 bytes, 2940x1912).",
+        "session_id": "v8r6_77663549",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "macos-native-tool",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Screenshot saved to /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/write_read_capture_91031515.png (1538412 bytes, 2940x1912).",
+          "session_id": "v8r6_77663549",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "take_screenshot",
+            "provider": "macos-native-tool",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/write_read_capture_91031515.png",
+              "size_bytes": 1538412,
+              "dimensions": "2940x1912",
+              "verification_passed": true,
+              "verification": "passed"
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "macos-native-tool",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "take_screenshot",
+            "policy_decision": "allowed",
+            "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/write_read_capture_91031515.png",
+            "size_bytes": 1538412,
+            "dimensions": "2940x1912",
+            "verification_passed": true,
+            "verification": "passed"
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

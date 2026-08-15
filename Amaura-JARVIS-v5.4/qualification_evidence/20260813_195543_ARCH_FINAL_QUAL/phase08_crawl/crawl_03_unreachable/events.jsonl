@@ -1,0 +1,83 @@
+{"type": "token", "content": "I"}
+{"type": "token", "content": "'m"}
+{"type": "token", "content": " not"}
+{"type": "token", "content": " capable"}
+{"type": "token", "content": " of"}
+{"type": "token", "content": " directly"}
+{"type": "token", "content": " accessing"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " fetching"}
+{"type": "token", "content": " content"}
+{"type": "token", "content": " from"}
+{"type": "token", "content": " external"}
+{"type": "token", "content": " websites"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " local"}
+{"type": "token", "content": " servers"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " including"}
+{"type": "token", "content": " '"}
+{"type": "token", "content": "http"}
+{"type": "token", "content": "://"}
+{"type": "token", "content": "localhost"}
+{"type": "token", "content": ":"}
+{"type": "token", "content": "199"}
+{"type": "token", "content": "99"}
+{"type": "token", "content": "/f"}
+{"type": "token", "content": "ake"}
+{"type": "token", "content": "'."}
+{"type": "token", "content": " I"}
+{"type": "token", "content": "'m"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " text"}
+{"type": "token", "content": "-based"}
+{"type": "token", "content": " AI"}
+{"type": "token", "content": " assistant"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " do"}
+{"type": "token", "content": " not"}
+{"type": "token", "content": " have"}
+{"type": "token", "content": " direct"}
+{"type": "token", "content": " access"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " external"}
+{"type": "token", "content": " resources"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " \n\n"}
+{"type": "token", "content": "If"}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " need"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " fetch"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " content"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " use"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " tool"}
+{"type": "token", "content": " like"}
+{"type": "token", "content": " `"}
+{"type": "token", "content": "curl"}
+{"type": "token", "content": "`"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " programming"}
+{"type": "token", "content": " language"}
+{"type": "token", "content": " like"}
+{"type": "token", "content": " Python"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " send"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " request"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " specified"}
+{"type": "token", "content": " URL"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " parse"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " response"}
+{"type": "token", "content": "."}
+{"type": "complete", "response": "I'm not capable of directly accessing or fetching content from external websites or local servers, including 'http://localhost:19999/fake'. I'm a text-based AI assistant and do not have direct access to external resources. \n\nIf you need to fetch the content, you can use a tool like `curl` or a programming language like Python to send a request to the specified URL and parse the response.", "session_id": "default", "model": "llama-3.3-70b-versatile", "model_key": "llama-3.3-70b-versatile", "model_provider": "omniroute", "model_fallback_used": false, "model_fallback_reason": "", "model_latency_ms": 689, "model_ttft_ms": 465, "intent": "conversation", "goal_id": "", "state": "", "executive": {"intent": "conversation", "message": "I'm not capable of directly accessing or fetching content from external websites or local servers, including 'http://localhost:19999/fake'. I'm a text-based AI assistant and do not have direct access to external resources. \n\nIf you need to fetch the content, you can use a tool like `curl` or a programming language like Python to send a request to the specified URL and parse the response.", "session_id": "default", "goal_id": "", "state": "", "result": {}, "context_sources": [], "model_provenance": {"provider": "omniroute", "model": "llama-3.3-70b-versatile", "fallback_used": false, "fallback_reason": "", "requested_model": "groq/llama-3.3-70b-versatile", "resolved_provider": "omniroute", "resolved_model": "llama-3.3-70b-versatile", "latency_ms": 689, "ttft_ms": 465}}}

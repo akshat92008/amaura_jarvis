@@ -1,0 +1,16 @@
+{
+  "test_id": "crawl_01_httpbin",
+  "prompt": "Fetch the content of 'https://httpbin.org/get' and tell me what 'url' field contains.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": 268.81980895996094,
+    "total_ms": 463.0239009857178,
+    "request_ts": 1786586873.9761112,
+    "final_ts": 1786586874.439135
+  },
+  "verification": {}
+}

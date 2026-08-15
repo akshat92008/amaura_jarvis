@@ -1,0 +1,20 @@
+{
+  "test_id": "desktop_01_running_apps",
+  "prompt": "Tell me which applications are currently running on my Mac.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "I'm not capable of directly accessing or monitoring your Mac or any other external devices. I'm a text-based AI assistant and do not have the ability to retrieve information about your system or running applications.\n\nHowever, you can easily find this information on your Mac by using the Activity Monitor application, which can be found in the Applications/Utilities folder, or by using the Command + Tab keys to cycle through your open applications, or by using the Command + Option + Esc keys to open the Force Quit Applications window.",
+  "response_excerpt": "I'm not capable of directly accessing or monitoring your Mac or any other external devices. I'm a text-based AI assistant and do not have the ability to retrieve information about your system or running applications.\n\nHowever, you can easily find this information on your Mac by using the Activity Monitor application, which can be found in the Applications/Utilities folder, or by using the Command + Tab keys to cycle through your open applications, or by using the Command + Option + Esc keys to open the Force Quit Applications window.",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": 574.937105178833,
+    "total_ms": 988.1501197814941,
+    "request_ts": 1786631419.8573718,
+    "final_ts": 1786631420.845522
+  },
+  "verification": {}
+}

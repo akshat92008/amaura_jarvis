@@ -1,0 +1,9 @@
+{
+  "coding_backend_used": "antigravity",
+  "antigravity_external_id": "agy-90059edec78aaadb4725",
+  "antigravity_cli_version": "1.1.12",
+  "antigravity_diff_hash": "cdb740a3af0e20618e19d92049e66dc78b7f0d5c62de6b438e86e5ff54f75f24",
+  "antigravity_changed_files": [
+    "math_utils.py"
+  ]
+}

@@ -62,9 +62,10 @@ def parse_tool_result(value: Any) -> ToolResult:
     if isinstance(payload, dict):
         if "ok" in payload:
             evidence = payload.get("evidence_ids") or ()
+            data_dict = payload.get("data") if isinstance(payload.get("data"), dict) else {k: v for k, v in payload.items() if k not in {"ok", "error", "code", "external_id", "retryable", "evidence_ids"}}
             return ToolResult(
                 ok=bool(payload.get("ok")),
-                data=payload.get("data") if isinstance(payload.get("data"), dict) else {},
+                data=data_dict,
                 error=None if payload.get("error") in {None, ""} else str(payload.get("error")),
                 code=str(payload.get("code") or ("OK" if payload.get("ok") else "TOOL_ERROR")),
                 external_id=str(payload.get("external_id") or ""),

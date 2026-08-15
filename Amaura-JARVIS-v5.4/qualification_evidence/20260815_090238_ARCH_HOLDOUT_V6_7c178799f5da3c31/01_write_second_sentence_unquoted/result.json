@@ -1,0 +1,71 @@
+{
+  "test_id": "01_write_second_sentence_unquoted",
+  "status": "FAIL",
+  "reason": "Second-sentence unquoted payload write.",
+  "verification": {
+    "exists": false,
+    "expected": "flint-stream-4687::409898::amber-plaza-5540",
+    "actual": null,
+    "exact": false
+  },
+  "chat": {
+    "prompt": "Make the file \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/nest_55339657/ledger_15261082\". Use this as its complete body: flint-stream-4687::409898::amber-plaza-5540",
+    "session_id": "s1_10170458",
+    "http_status": 200,
+    "response_text": "Write action rejected: Write precondition failed: semantic content requested but parsed content is empty",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Write action rejected: Write precondition failed: semantic content requested but parsed content is empty",
+        "session_id": "s1_10170458",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "failed",
+        "executive": {
+          "intent": "mission",
+          "message": "Write action rejected: Write precondition failed: semantic content requested but parsed content is empty",
+          "session_id": "s1_10170458",
+          "goal_id": "",
+          "state": "failed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "reason": "write_precondition_failed",
+              "detail": "Write precondition failed: semantic content requested but parsed content is empty",
+              "verification_passed": false
+            },
+            "success": false
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "policy_decision": "allowed",
+            "reason": "write_precondition_failed",
+            "detail": "Write precondition failed: semantic content requested but parsed content is empty",
+            "verification_passed": false
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "failed"
+  }
+}

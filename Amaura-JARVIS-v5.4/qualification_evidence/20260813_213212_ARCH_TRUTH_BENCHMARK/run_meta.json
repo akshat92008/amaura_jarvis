@@ -1,0 +1,43 @@
+{
+  "run_id": "20260813_213212_ARCH_TRUTH_BENCHMARK",
+  "repo_root": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+  "base_url": "http://127.0.0.1:8000",
+  "server_health": {
+    "status": "online",
+    "version": "5.4.3",
+    "build_id": "b946f1758feb4071965b8eb24322abd85584954b",
+    "timestamp": "2026-08-13T21:32:15.425256",
+    "sessions": 1,
+    "tools": {
+      "coding": 14,
+      "advanced_coding": 18,
+      "agent_factory": 8,
+      "desktop": 12,
+      "research": 4,
+      "documents": 3,
+      "communication": 5,
+      "app_builder": 1,
+      "tdd_loop": 1,
+      "ast_indexer": 3,
+      "vision": 7,
+      "vector_memory": 6,
+      "fleet": 4,
+      "browser": 9,
+      "hud": 1,
+      "duplex_voice": 5,
+      "amaura_company_os": 38,
+      "total": 137
+    },
+    "pid": 10984,
+    "bootstrap_proof": "",
+    "service_proof": ""
+  },
+  "git_tree_before": "b946f1758feb4071965b8eb24322abd85584954b",
+  "benchmark_file_sha256": "413e6345ed595cf2b1c2ac3618da47c6a507a2d34478a4b59197d7cb5b885f6a",
+  "rules": [
+    "No execute_tool calls from benchmark",
+    "No goal/run calls from benchmark",
+    "No benchmark-created output on ARCH's behalf",
+    "PASS requires deterministic acceptance criteria"
+  ]
+}

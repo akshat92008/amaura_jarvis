@@ -1,0 +1,16 @@
+{
+  "test_id": "desktop_07_volume_read",
+  "prompt": "What is the current system volume level?",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 14.168739318847656,
+    "request_ts": 1786586899.5295942,
+    "final_ts": 1786586899.543763
+  },
+  "verification": {}
+}

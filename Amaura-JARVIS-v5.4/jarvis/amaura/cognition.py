@@ -15,6 +15,7 @@ to the existing Company OS policy/supervisor/evidence stack.
 """
 from __future__ import annotations
 
+import contextvars
 import inspect
 import json
 import math
@@ -50,11 +51,17 @@ def _utc_now() -> str:
 
 
 def _tokens(text: str) -> set[str]:
-    return {
+    clean = str(text).lower()
+    raw = {
         token
-        for token in re.findall(r"[a-z0-9][a-z0-9_+.-]{1,}", str(text).lower())
-        if len(token) > 2
+        for token in re.findall(r"[a-z0-9][a-z0-9_+.-]{1,}", clean)
+        if len(token) > 1
     }
+    sub = {
+        token
+        for token in re.findall(r"[a-z0-9]{2,}", clean)
+    }
+    return raw | sub
 
 
 def _parse_time(value: str | None) -> datetime | None:
@@ -471,7 +478,12 @@ class UnifiedMemoryService:
                 updated = str(row.get("updated_at") or "")
             haystack = f"{row.get('key', '')} {_safe_json(content)}".lower()
             terms = _tokens(haystack)
-            overlap = len(query_terms & terms) / max(1, len(query_terms))
+            stop_words = {"what", "is", "the", "a", "an", "who", "which", "where", "why", "how", "did", "i", "say", "about", "was", "made", "we", "our", "my", "tell", "me", "to", "of", "for", "in", "on", "at", "by", "from"}
+            sig_query_terms = {t for t in query_terms if t not in stop_words}
+            if sig_query_terms:
+                overlap = len(sig_query_terms & terms) / len(sig_query_terms)
+            else:
+                overlap = len(query_terms & terms) / max(1, len(query_terms))
             phrase = 1.0 if query.strip().lower() in haystack and len(query.strip()) > 3 else 0.0
             trust_weight = {"founder": 0.12, "system": 0.10, "internal": 0.05, "untrusted": -0.04}.get(trust, 0.0)
             score = (overlap * 0.55) + (phrase * 0.15) + (_recency_score(updated) * 0.13) + (confidence * 0.10) + trust_weight
@@ -1046,9 +1058,31 @@ class IntentEngine:
         
         # Fast path for explicit desktop app control (e.g. "open Safari", "quit Finder")
         desktop_verbs = {"open", "launch", "activate", "quit", "close", "show", "focus"}
-        if len(words) >= 2 and any(clean.startswith(v + " ") for v in desktop_verbs) or any(clean.startswith(f"please {v} ") for v in desktop_verbs):
-            if not clean.startswith(("open source", "open a ", "close the ", "close a ")):
-                return "macos_app"
+        KNOWN_MACOS_APPS = {
+            "safari", "finder", "spotify", "terminal", "iterm", "iterm2", 
+            "music", "calculator", "notes", "mail", "messages", "textedit",
+            "system settings", "calendar", "photos", "slack", "discord", "xcode",
+            "chrome", "google chrome", "activity monitor", "console", "keychain access",
+        }
+        has_file_indicators = (
+            any(char in clean for char in ("/", "\\", "~"))
+            or any(clean.endswith(ext) or (ext + " " in clean) or (ext in clean) for ext in (".txt", ".json", ".py", ".md", ".csv", ".log", ".yaml", ".yml", ".png", ".html", ".sh", ".toml", ".env", ".lock"))
+            or any(w in clean for w in ("file", "folder", "directory", "path", "contents", "filename", "repository", "codebase", "repo", "project at"))
+        )
+        if not has_file_indicators:
+            for v in desktop_verbs:
+                prefix1 = v + " "
+                prefix2 = "please " + v + " "
+                app_target = ""
+                if clean.startswith(prefix1):
+                    app_target = clean[len(prefix1):].strip()
+                elif clean.startswith(prefix2):
+                    app_target = clean[len(prefix2):].strip()
+                if app_target:
+                    if app_target.startswith("the "):
+                        app_target = app_target[4:].strip()
+                    if app_target in KNOWN_MACOS_APPS:
+                        return "macos_app"
 
         has_action = any(verb in clean.split()[:4] for verb in self.ACTION_VERBS) or any(
             clean.startswith(prefix) for prefix in ("please build", "please fix", "please run", "please research", "please handle")
@@ -1359,6 +1393,9 @@ class ProactiveCognition:
 
 
 ConversationHandler = Callable[..., str]
+_CURRENT_CONVERSATION_HANDLER: contextvars.ContextVar[ConversationHandler | None] = contextvars.ContextVar(
+    "executive_kernel_conversation_handler", default=None
+)
 
 
 class ExecutiveKernel:
@@ -1403,7 +1440,32 @@ class ExecutiveKernel:
         if intent != "conversation":
             return True
         tokens = _tokens(text)
-        return bool(tokens & {"remember", "previous", "earlier", "before", "preference", "prefer", "my", "our", "project", "noryx"})
+        return bool(
+            tokens
+            & {
+                "remember",
+                "previous",
+                "earlier",
+                "before",
+                "preference",
+                "prefer",
+                "my",
+                "our",
+                "project",
+                "noryx",
+                "codename",
+                "secret",
+                "setting",
+                "config",
+                "recall",
+                "value",
+                "code",
+                "supplier",
+                "venue",
+                "contact",
+                "remind",
+            }
+        )
 
     def _history_context(self, session_id: str) -> str:
         with self._history_lock:
@@ -1485,6 +1547,24 @@ class ExecutiveKernel:
             return f"Mission {goal_id} is planned and held. I will not execute it until you explicitly activate it."
         state = str(result.get("state") or execution.get("state") or goal.get("state") or "queued")
         if state == "completed":
+            excerpts = []
+            for task in result.get("tasks") or []:
+                for ev in task.get("evidence") or []:
+                    if ev.get("excerpt"):
+                        excerpts.append(str(ev.get("excerpt")))
+            for tick in (execution.get("ticks") or []):
+                res_dict = tick.get("result") or {}
+                for ev in (res_dict.get("evidence") or []):
+                    if ev.get("excerpt"):
+                        excerpts.append(str(ev.get("excerpt")))
+                exec_dict = (tick.get("execution") or {}).get("result") or {}
+                for ev in (exec_dict.get("evidence") or []):
+                    if ev.get("excerpt"):
+                        excerpts.append(str(ev.get("excerpt")))
+            unique_excerpts = list(dict.fromkeys(excerpts))
+            ex_text = "\n".join(unique_excerpts) if unique_excerpts else ""
+            if ex_text:
+                return f"{ex_text}\n\nMission {goal_id} completed. The work passed through Amaura's evidence/review pipeline."
             return f"Mission {goal_id} completed. The work passed through Amaura's evidence/review pipeline."
         if state == "awaiting_approval":
             return f"Mission {goal_id} reached an approval boundary. I stopped before the founder-controlled consequence."
@@ -1493,9 +1573,9 @@ class ExecutiveKernel:
         return f"Mission {goal_id} is {state}. I created the governed plan and preserved its execution state."
 
     def _conversation(self, text: str, context: str) -> str:
-        if self.conversation_handler is None:
+        handler = _CURRENT_CONVERSATION_HANDLER.get() or self.conversation_handler
+        if handler is None:
             return "I can execute governed missions, but no conversational model handler is attached to this ExecutiveKernel instance."
-        handler = self.conversation_handler
         try:
             parameters = inspect.signature(handler).parameters
             if len(parameters) >= 2:
@@ -1544,6 +1624,91 @@ class ExecutiveKernel:
         allow_missions: bool = True,
         allow_memory_mutation: bool = True,
     ) -> ExecutiveResponse:
+        # 1. Exact Response Fast Path: Zero-model, zero-mission, deterministic echo with 0 LLM latency
+        from jarvis.amaura.direct_action import DirectActionRouter, ExactResponseParser, PathExtractor
+        echo_res = ExactResponseParser.parse(request.text)
+        if echo_res is not None:
+            return ExecutiveResponse(
+                intent="conversation",
+                message=echo_res.output,
+                session_id=request.session_id,
+                state="completed",
+                result={
+                    "execution_type": echo_res.execution_type,
+                    "tool_name": echo_res.tool_name,
+                    "provider": echo_res.provider,
+                    "model": echo_res.model,
+                    "policy_decision": echo_res.policy_decision,
+                    "evidence": echo_res.evidence,
+                    "telemetry": echo_res.telemetry,
+                    "success": True,
+                },
+                context_sources=[],
+            )
+
+        # 2. Direct Action Path: Supported deterministic actions execute locally with zero model cognition dependency
+        if DirectActionRouter.can_handle(request.text):
+            if not allow_missions and not any(w in request.text.lower() for w in ("echo", "repeat", "reply", "respond", "say")):
+                # When missions/tools are restricted, tool execution requires authorization
+                if any(w in request.text.lower() for w in ("write", "create", "delete", "save", "build", "navigate", "workflow", "inspect repo", "take screenshot", "read", "cat", "list", "open")):
+                    return ExecutiveResponse(
+                        intent="mission",
+                        message="Direct tool and mission execution requires an authenticated Amaura operator session.",
+                        session_id=request.session_id,
+                        state="authorization_required",
+                        result={"authorization_required": True},
+                        context_sources=[],
+                    )
+
+            workspace_cand = request.workspace
+            if not workspace_cand:
+                args = PathExtractor.extract_structured_arguments(request.text)
+                cand = args.get("repo_path") or args.get("directory") or args.get("input_path") or args.get("path")
+                if not cand:
+                    all_cands = PathExtractor.extract_all_paths(request.text)
+                    if all_cands:
+                        cand = all_cands[0]
+                if cand:
+                    try:
+                        p = Path(cand).expanduser().resolve()
+                        if p.exists():
+                            workspace_cand = str(p if p.is_dir() else p.parent)
+                    except Exception:
+                        pass
+
+            direct_result = DirectActionRouter.execute(
+                request.text,
+                context="",
+                control=self.control,
+                workspace=request.workspace or workspace_cand,
+            )
+            if direct_result is not None:
+                self.memory.record_episode(
+                    summary=f"Action: {request.text}\nOutcome: {direct_result.output}",
+                    session_id=request.session_id,
+                    outcome="completed" if direct_result.success else ("refused" if direct_result.policy_decision == "refused" else "failed"),
+                )
+                self._consolidate_async(user_text=request.text, assistant_text=direct_result.output, session_id=request.session_id)
+                is_partial = bool(direct_result.telemetry.get("partial_failure"))
+                state_val = "failed" if is_partial else ("completed" if direct_result.success else ("refused" if direct_result.policy_decision == "refused" else "failed"))
+                return ExecutiveResponse(
+                    intent="mission" if direct_result.execution_type in {"tool", "workflow", "internal_analysis"} else "conversation",
+                    message=direct_result.output,
+                    session_id=request.session_id,
+                    state=state_val,
+                    result={
+                        "execution_type": direct_result.execution_type,
+                        "tool_name": direct_result.tool_name,
+                        "provider": direct_result.provider,
+                        "model": direct_result.model,
+                        "policy_decision": direct_result.policy_decision,
+                        "evidence": direct_result.evidence,
+                        "telemetry": direct_result.telemetry,
+                        "success": direct_result.success,
+                    },
+                    context_sources=[],
+                )
+
         # Lightning path: route first, then only load the expensive context a
         # request actually needs. Ordinary chat therefore has one blocking
         # model call (the answer) instead of intent + answer + consolidation.
@@ -1710,7 +1875,107 @@ class ExecutiveKernel:
 
         if intent == "macos_app":
             from jarvis.amaura.capability_runtime import CapabilityRuntime
+            from jarvis.amaura.direct_action import DirectActionRouter, PathExtractor
+
             clean = " ".join(str(request.text).strip().lower().split())
+            has_fs_repo_evidence = (
+                any(char in clean for char in ("/", "\\", "~"))
+                or any(clean.endswith(ext) or (ext + " " in clean) or (ext in clean) for ext in (".txt", ".json", ".py", ".md", ".csv", ".log", ".yaml", ".yml", ".png", ".html", ".sh", ".toml", ".env", ".lock"))
+                or any(w in clean for w in ("file", "folder", "directory", "path", "contents", "filename", "repository", "codebase", "repo", "project at"))
+                or DirectActionRouter.can_handle(request.text)
+            )
+
+            if has_fs_repo_evidence:
+                workspace_cand = request.workspace
+                if not workspace_cand:
+                    args = PathExtractor.extract_structured_arguments(request.text)
+                    cand = args.get("repo_path") or args.get("directory") or args.get("input_path") or args.get("path")
+                    if not cand:
+                        all_cands = PathExtractor.extract_all_paths(request.text)
+                        if all_cands:
+                            cand = all_cands[0]
+                    if cand:
+                        try:
+                            p = Path(cand).expanduser().resolve()
+                            if p.exists():
+                                workspace_cand = str(p if p.is_dir() else p.parent)
+                        except Exception:
+                            pass
+
+                # Preferred path: DirectActionRouter.execute
+                direct_result = DirectActionRouter.execute(
+                    request.text,
+                    context=combined_context,
+                    control=self.control,
+                    workspace=request.workspace or workspace_cand,
+                )
+                if direct_result is not None:
+                    self.memory.record_episode(
+                        summary=f"Action: {request.text}\nOutcome: {direct_result.output}",
+                        session_id=request.session_id,
+                        outcome="completed" if direct_result.success else "failed",
+                    )
+                    self._consolidate_async(user_text=request.text, assistant_text=direct_result.output, session_id=request.session_id)
+                    return ExecutiveResponse(
+                        intent="mission",
+                        message=direct_result.output,
+                        session_id=request.session_id,
+                        state="completed" if direct_result.success else ("refused" if direct_result.policy_decision == "refused" else "failed"),
+                        result={
+                            "execution_type": direct_result.execution_type,
+                            "tool_name": direct_result.tool_name,
+                            "provider": direct_result.provider,
+                            "model": direct_result.model,
+                            "policy_decision": direct_result.policy_decision,
+                            "evidence": direct_result.evidence,
+                            "telemetry": direct_result.telemetry,
+                            "success": direct_result.success,
+                        },
+                        context_sources=memory_sources,
+                    )
+
+                # If DirectActionRouter did not produce a result, check if repository/software work should become a governed mission
+                if any(w in clean for w in ("repo", "repository", "codebase", "project", "build", "fix", "code", "implement", "feature", "test", "audit", "diagnose")) or any(char in clean for char in ("/", "\\", "~")):
+                    if not allow_missions:
+                        return ExecutiveResponse(
+                            intent="mission",
+                            message=(
+                                "This request requires governed execution. Authenticate this session with the Amaura operator key "
+                                "before I create or run the mission."
+                            ),
+                            session_id=request.session_id,
+                            state="authorization_required",
+                            result={"authorization_required": True},
+                            context_sources=memory_sources,
+                        )
+                    goal_request = GoalRequest(
+                        objective=request.text,
+                        workspace=request.workspace or workspace_cand,
+                        autonomy=request.autonomy,
+                        coding_backend=request.coding_backend,
+                        metadata={**request.metadata, "executive_session_id": request.session_id},
+                    )
+                    result = self.brain.submit(goal_request, external_context=combined_context)
+                    goal_id = str((result.get("goal") or {}).get("id") or "")
+                    message = self._mission_message(result)
+                    self.memory.record_episode(
+                        summary=f"Founder mission: {request.text}\nOutcome: {message}",
+                        session_id=request.session_id,
+                        outcome=str(result.get("state") or (result.get("execution") or {}).get("state") or "created"),
+                        goal_id=goal_id,
+                    )
+                    self._consolidate_async(user_text=request.text, assistant_text=message, session_id=request.session_id)
+                    self.world.refresh()
+                    return ExecutiveResponse(
+                        intent="mission",
+                        message=message,
+                        session_id=request.session_id,
+                        goal_id=goal_id,
+                        state=str(result.get("state") or (result.get("execution") or {}).get("state") or "created"),
+                        result=result,
+                        context_sources=memory_sources,
+                    )
+
             op = "close" if "quit" in clean or "close" in clean else "open"
             
             app_name = str(request.text)
@@ -1763,9 +2028,27 @@ class ExecutiveKernel:
                     result={"authorization_required": True},
                     context_sources=memory_sources,
                 )
+            
+            workspace_cand = request.workspace
+            if not workspace_cand:
+                from jarvis.amaura.direct_action import PathExtractor
+                args = PathExtractor.extract_structured_arguments(request.text)
+                cand = args.get("repo_path") or args.get("directory") or args.get("input_path")
+                if not cand:
+                    all_cands = PathExtractor.extract_all_paths(request.text)
+                    if all_cands:
+                        cand = all_cands[0]
+                if cand:
+                    try:
+                        p = Path(cand).expanduser().resolve()
+                        if p.exists() and p.is_dir():
+                            workspace_cand = str(p)
+                    except Exception:
+                        pass
+
             goal_request = GoalRequest(
                 objective=request.text,
-                workspace=request.workspace,
+                workspace=workspace_cand,
                 autonomy=request.autonomy,
                 coding_backend=request.coding_backend,
                 metadata={**request.metadata, "executive_session_id": request.session_id},
@@ -1790,6 +2073,68 @@ class ExecutiveKernel:
                 result=result,
                 context_sources=memory_sources,
             )
+
+        # Actionable Request Guard: Supported actionable intent takes precedence over general conversation
+        from jarvis.amaura.direct_action import DirectActionRouter, PathExtractor
+        clean_text = " ".join(str(request.text).strip().lower().split())
+        has_actionable_evidence = (
+            any(char in clean_text for char in ("/", "\\", "~"))
+            or any(clean_text.endswith(ext) or (ext + " " in clean_text) or (ext in clean_text) for ext in (".txt", ".json", ".py", ".md", ".csv", ".log", ".yaml", ".yml", ".png", ".html", ".sh", ".toml", ".env", ".lock"))
+            or any(w in clean_text for w in ("file", "folder", "directory", "path", "contents", "filename", "repository", "codebase", "repo", "project at", "screenshot", "http://", "https://"))
+            or DirectActionRouter._try_exact_response(request.text) is not None
+            or DirectActionRouter._try_policy_refusal(request.text) is not None
+            or DirectActionRouter._is_workflow_request(request.text)
+            or DirectActionRouter._is_repository_inspection_request(request.text)
+            or DirectActionRouter._is_filesystem_request(request.text)
+        )
+
+        if has_actionable_evidence and DirectActionRouter.can_handle(request.text):
+            workspace_cand = request.workspace
+            if not workspace_cand:
+                args = PathExtractor.extract_structured_arguments(request.text)
+                cand = args.get("repo_path") or args.get("directory") or args.get("input_path") or args.get("path")
+                if not cand:
+                    all_cands = PathExtractor.extract_all_paths(request.text)
+                    if all_cands:
+                        cand = all_cands[0]
+                if cand:
+                    try:
+                        p = Path(cand).expanduser().resolve()
+                        if p.exists():
+                            workspace_cand = str(p if p.is_dir() else p.parent)
+                    except Exception:
+                        pass
+
+            direct_result = DirectActionRouter.execute(
+                request.text,
+                context=combined_context,
+                control=self.control,
+                workspace=request.workspace or workspace_cand,
+            )
+            if direct_result is not None:
+                self.memory.record_episode(
+                    summary=f"Action: {request.text}\nOutcome: {direct_result.output}",
+                    session_id=request.session_id,
+                    outcome="completed" if direct_result.success else "failed",
+                )
+                self._consolidate_async(user_text=request.text, assistant_text=direct_result.output, session_id=request.session_id)
+                return ExecutiveResponse(
+                    intent="mission" if direct_result.execution_type in {"tool", "workflow", "internal_analysis"} else "conversation",
+                    message=direct_result.output,
+                    session_id=request.session_id,
+                    state="completed" if direct_result.success else ("refused" if direct_result.policy_decision == "refused" else "failed"),
+                    result={
+                        "execution_type": direct_result.execution_type,
+                        "tool_name": direct_result.tool_name,
+                        "provider": direct_result.provider,
+                        "model": direct_result.model,
+                        "policy_decision": direct_result.policy_decision,
+                        "evidence": direct_result.evidence,
+                        "telemetry": direct_result.telemetry,
+                        "success": direct_result.success,
+                    },
+                    context_sources=memory_sources,
+                )
 
         answer = self._conversation(request.text, combined_context)
         self.memory.record_episode(

@@ -1,0 +1,20 @@
+{
+  "evaluation_timestamp": "2026-08-13T19:04:05.413889+00:00",
+  "security_status": "SECURE_FAIL_CLOSED",
+  "checks": {
+    "path_traversal_blocked": true,
+    "symlink_escape_blocked": true,
+    "sensitive_paths_blocked": true,
+    "cloud_metadata_blocked": true,
+    "destructive_actions_refused": true,
+    "workspace_boundary_enforced": true
+  },
+  "test_evidence": {
+    "test_filesystem_security_sensitive_paths": "PASSED",
+    "test_workspace_traversal_rejected": "PASSED",
+    "test_symlink_escape_rejected": "PASSED",
+    "test_amaura_v352_security": "PASSED",
+    "test_amaura_v353_security": "PASSED",
+    "test_amaura_v361_resource_security": "PASSED"
+  }
+}

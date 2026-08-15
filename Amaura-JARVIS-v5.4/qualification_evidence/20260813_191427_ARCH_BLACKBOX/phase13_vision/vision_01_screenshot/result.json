@@ -1,0 +1,16 @@
+{
+  "test_id": "vision_01_screenshot",
+  "prompt": "Take a screenshot and describe what you see on screen. Save the screenshot to '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_blackbox/workspace/jarvis_blackbox_alpha/vision_test_screenshot.png'.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 16.42632484436035,
+    "request_ts": 1786628980.7804108,
+    "final_ts": 1786628980.796837
+  },
+  "verification": {}
+}

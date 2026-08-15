@@ -1,0 +1,35 @@
+COMMAND: lsof -i -P -n | grep LISTEN
+EXIT_CODE: 0
+
+STDOUT:
+rapportd    632 ashishsingh   10u  IPv4 0x23fab4e45e9021ed      0t0  TCP *:49742 (LISTEN)
+rapportd    632 ashishsingh   11u  IPv6 0x8b888ad113724373      0t0  TCP *:49742 (LISTEN)
+ControlCe   672 ashishsingh    9u  IPv4 0x6b836675cc2d3ddf      0t0  TCP *:7000 (LISTEN)
+ControlCe   672 ashishsingh   10u  IPv6 0x8f9bdaac42672a8c      0t0  TCP *:7000 (LISTEN)
+ControlCe   672 ashishsingh   11u  IPv4 0x19d1e56ad6ce46a5      0t0  TCP *:5000 (LISTEN)
+ControlCe   672 ashishsingh   12u  IPv6 0xb3e07fc90528f561      0t0  TCP *:5000 (LISTEN)
+node       1052 ashishsingh   18u  IPv4 0x1c5d4b053d05cfbc      0t0  TCP 127.0.0.1:18789 (LISTEN)
+node       1052 ashishsingh   19u  IPv6 0x3104db93c7c687e0      0t0  TCP [::1]:18789 (LISTEN)
+redis-ser  1054 ashishsingh    6u  IPv4 0x68bcae3ba5d1a2d7      0t0  TCP 127.0.0.1:6379 (LISTEN)
+redis-ser  1054 ashishsingh    7u  IPv6 0xb3a8903ee0b1cadc      0t0  TCP [::1]:6379 (LISTEN)
+Ollama     1400 ashishsingh    4u  IPv4 0xd7694abb311f3c0d      0t0  TCP 127.0.0.1:49503 (LISTEN)
+ollama     1426 ashishsingh    3u  IPv4 0xddf2ba1b3b868f23      0t0  TCP 127.0.0.1:11434 (LISTEN)
+node      28519 ashishsingh   12u  IPv4 0x74a2b18e965de871      0t0  TCP *:20128 (LISTEN)
+node      28519 ashishsingh   30u  IPv4 0xe0c7f0d1b7a2a335      0t0  TCP 127.0.0.1:20131 (LISTEN)
+node      28519 ashishsingh   32u  IPv4 0x7b006f7d2043b42d      0t0  TCP 127.0.0.1:20132 (LISTEN)
+Electron  48125 ashishsingh   51u  IPv4 0x8c1aa1d0ae24c85a      0t0  TCP 127.0.0.1:60756 (LISTEN)
+Electron  48125 ashishsingh   52u  IPv4 0xb25b7eacf39948c0      0t0  TCP 127.0.0.1:60757 (LISTEN)
+language_ 48152 ashishsingh    6u  IPv4 0xf51accaa210f7ba9      0t0  TCP 127.0.0.1:60762 (LISTEN)
+language_ 48152 ashishsingh    7u  IPv4 0x62cea3007b490924      0t0  TCP 127.0.0.1:60763 (LISTEN)
+Antigravi 54459 ashishsingh   39u  IPv4 0x863332410849ad06      0t0  TCP 127.0.0.1:63579 (LISTEN)
+Antigravi 54459 ashishsingh   65u  IPv4 0xe0682fbfdece17c8      0t0  TCP 127.0.0.1:18799 (LISTEN)
+language_ 54927 ashishsingh    6u  IPv4 0x168e924687f51a85      0t0  TCP 127.0.0.1:63580 (LISTEN)
+language_ 54927 ashishsingh    7u  IPv4 0xbf26cb6a9cc253f3      0t0  TCP 127.0.0.1:63697 (LISTEN)
+language_ 54927 ashishsingh   27u  IPv4 0xd97294c9d61f6551      0t0  TCP 127.0.0.1:63604 (LISTEN)
+Python    65809 ashishsingh   15u  IPv4 0x9fd3d5f166d10a18      0t0  TCP 127.0.0.1:8000 (LISTEN)
+Spotify   66639 ashishsingh   80u  IPv4 0xe6010bb7853ef989      0t0  TCP 127.0.0.1:7768 (LISTEN)
+Spotify   66639 ashishsingh   95u  IPv4 0x7c0de7adec293a84      0t0  TCP *:57621 (LISTEN)
+Spotify   66639 ashishsingh   99u  IPv4 0x4c96f8ff333ceffe      0t0  TCP *:53484 (LISTEN)
+
+STDERR:
+

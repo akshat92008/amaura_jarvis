@@ -1,0 +1,401 @@
+{
+  "test_id": "11_prefix_workflow",
+  "status": "FAIL",
+  "reason": "Requires a second unseen read-transform-write pattern using a runtime prefix.",
+  "verification": {
+    "exists": false,
+    "exact": false
+  },
+  "chat": {
+    "prompt": "Read \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_005327_ARCH_HOLDOUT_V2_78b9ec7a01da2e8f/workspace/raw_12334430.txt\", prefix its content with \"MARBLE::831::\", and save the result to \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_005327_ARCH_HOLDOUT_V2_78b9ec7a01da2e8f/workspace/prefixed_60951921.txt\".",
+    "http_status": 200,
+    "response_text": "I\u2019m not able to read files from your computer or write new files directly. If you paste the contents of **`raw_12334430.txt`** here, I can prepend the string\u202f`MARBLE::831::` to it and give you the exact text you should save to **`prefixed_60951921.txt`**. You can then create or overwrite that file with the result on your system.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": null,
+    "goal_history": [],
+    "latency_ms": 5934.1881275177,
+    "events": [
+      {
+        "type": "token",
+        "content": "I"
+      },
+      {
+        "type": "token",
+        "content": "\u2019m"
+      },
+      {
+        "type": "token",
+        "content": " not"
+      },
+      {
+        "type": "token",
+        "content": " able"
+      },
+      {
+        "type": "token",
+        "content": " to"
+      },
+      {
+        "type": "token",
+        "content": " read"
+      },
+      {
+        "type": "token",
+        "content": " files"
+      },
+      {
+        "type": "token",
+        "content": " from"
+      },
+      {
+        "type": "token",
+        "content": " your"
+      },
+      {
+        "type": "token",
+        "content": " computer"
+      },
+      {
+        "type": "token",
+        "content": " or"
+      },
+      {
+        "type": "token",
+        "content": " write"
+      },
+      {
+        "type": "token",
+        "content": " new"
+      },
+      {
+        "type": "token",
+        "content": " files"
+      },
+      {
+        "type": "token",
+        "content": " directly"
+      },
+      {
+        "type": "token",
+        "content": "."
+      },
+      {
+        "type": "token",
+        "content": " If"
+      },
+      {
+        "type": "token",
+        "content": " you"
+      },
+      {
+        "type": "token",
+        "content": " paste"
+      },
+      {
+        "type": "token",
+        "content": " the"
+      },
+      {
+        "type": "token",
+        "content": " contents"
+      },
+      {
+        "type": "token",
+        "content": " of"
+      },
+      {
+        "type": "token",
+        "content": " **"
+      },
+      {
+        "type": "token",
+        "content": "`"
+      },
+      {
+        "type": "token",
+        "content": "raw"
+      },
+      {
+        "type": "token",
+        "content": "_"
+      },
+      {
+        "type": "token",
+        "content": "123"
+      },
+      {
+        "type": "token",
+        "content": "344"
+      },
+      {
+        "type": "token",
+        "content": "30"
+      },
+      {
+        "type": "token",
+        "content": ".txt"
+      },
+      {
+        "type": "token",
+        "content": "`"
+      },
+      {
+        "type": "token",
+        "content": "**"
+      },
+      {
+        "type": "token",
+        "content": " here"
+      },
+      {
+        "type": "token",
+        "content": ","
+      },
+      {
+        "type": "token",
+        "content": " I"
+      },
+      {
+        "type": "token",
+        "content": " can"
+      },
+      {
+        "type": "token",
+        "content": " prepend"
+      },
+      {
+        "type": "token",
+        "content": " the"
+      },
+      {
+        "type": "token",
+        "content": " string"
+      },
+      {
+        "type": "token",
+        "content": "\u202f"
+      },
+      {
+        "type": "token",
+        "content": "`"
+      },
+      {
+        "type": "token",
+        "content": "MAR"
+      },
+      {
+        "type": "token",
+        "content": "BLE"
+      },
+      {
+        "type": "token",
+        "content": "::"
+      },
+      {
+        "type": "token",
+        "content": "831"
+      },
+      {
+        "type": "token",
+        "content": "::"
+      },
+      {
+        "type": "token",
+        "content": "`"
+      },
+      {
+        "type": "token",
+        "content": " to"
+      },
+      {
+        "type": "token",
+        "content": " it"
+      },
+      {
+        "type": "token",
+        "content": " and"
+      },
+      {
+        "type": "token",
+        "content": " give"
+      },
+      {
+        "type": "token",
+        "content": " you"
+      },
+      {
+        "type": "token",
+        "content": " the"
+      },
+      {
+        "type": "token",
+        "content": " exact"
+      },
+      {
+        "type": "token",
+        "content": " text"
+      },
+      {
+        "type": "token",
+        "content": " you"
+      },
+      {
+        "type": "token",
+        "content": " should"
+      },
+      {
+        "type": "token",
+        "content": " save"
+      },
+      {
+        "type": "token",
+        "content": " to"
+      },
+      {
+        "type": "token",
+        "content": " **"
+      },
+      {
+        "type": "token",
+        "content": "`"
+      },
+      {
+        "type": "token",
+        "content": "pref"
+      },
+      {
+        "type": "token",
+        "content": "ixed"
+      },
+      {
+        "type": "token",
+        "content": "_"
+      },
+      {
+        "type": "token",
+        "content": "609"
+      },
+      {
+        "type": "token",
+        "content": "519"
+      },
+      {
+        "type": "token",
+        "content": "21"
+      },
+      {
+        "type": "token",
+        "content": ".txt"
+      },
+      {
+        "type": "token",
+        "content": "`"
+      },
+      {
+        "type": "token",
+        "content": "**"
+      },
+      {
+        "type": "token",
+        "content": "."
+      },
+      {
+        "type": "token",
+        "content": " You"
+      },
+      {
+        "type": "token",
+        "content": " can"
+      },
+      {
+        "type": "token",
+        "content": " then"
+      },
+      {
+        "type": "token",
+        "content": " create"
+      },
+      {
+        "type": "token",
+        "content": " or"
+      },
+      {
+        "type": "token",
+        "content": " overwrite"
+      },
+      {
+        "type": "token",
+        "content": " that"
+      },
+      {
+        "type": "token",
+        "content": " file"
+      },
+      {
+        "type": "token",
+        "content": " with"
+      },
+      {
+        "type": "token",
+        "content": " the"
+      },
+      {
+        "type": "token",
+        "content": " result"
+      },
+      {
+        "type": "token",
+        "content": " on"
+      },
+      {
+        "type": "token",
+        "content": " your"
+      },
+      {
+        "type": "token",
+        "content": " system"
+      },
+      {
+        "type": "token",
+        "content": "."
+      },
+      {
+        "type": "complete",
+        "response": "I\u2019m not able to read files from your computer or write new files directly. If you paste the contents of **`raw_12334430.txt`** here, I can prepend the string\u202f`MARBLE::831::` to it and give you the exact text you should save to **`prefixed_60951921.txt`**. You can then create or overwrite that file with the result on your system.",
+        "session_id": "default",
+        "model": "openai/gpt-oss-120b",
+        "model_key": "openai/gpt-oss-120b",
+        "model_provider": "omniroute",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 5899,
+        "model_ttft_ms": 5400,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "",
+        "executive": {
+          "intent": "conversation",
+          "message": "I\u2019m not able to read files from your computer or write new files directly. If you paste the contents of **`raw_12334430.txt`** here, I can prepend the string\u202f`MARBLE::831::` to it and give you the exact text you should save to **`prefixed_60951921.txt`**. You can then create or overwrite that file with the result on your system.",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "",
+          "result": {},
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "omniroute",
+            "model": "openai/gpt-oss-120b",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "requested_model": "groq/llama-3.3-70b-versatile",
+            "resolved_provider": "omniroute",
+            "resolved_model": "openai/gpt-oss-120b",
+            "latency_ms": 5899,
+            "ttft_ms": 5400
+          }
+        }
+      }
+    ]
+  }
+}

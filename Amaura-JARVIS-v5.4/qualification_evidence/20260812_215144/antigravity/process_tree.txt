@@ -1,0 +1,29 @@
+E-AGY-PROC-001
+Observed agy PIDs: [84569, 84577]
+Process Tree:
+[
+  {
+    "pid": 84569,
+    "ppid": 84521,
+    "name": "agy",
+    "cmdline": [
+      "agy",
+      "--version"
+    ],
+    "rss_mb": 59.59375
+  },
+  {
+    "pid": 84577,
+    "ppid": 84521,
+    "name": "agy",
+    "cmdline": [
+      "agy",
+      "--new-project",
+      "--add-dir",
+      "/private/tmp/amaura-worktrees/task_addce1ec8981",
+      "--add-dir",
+      "/Users/ashishsingh/Desktop/amaura_jarivs/qual_antigravity_e2e_20260812_215144/.git"
+    ],
+    "rss_mb": 97.28125
+  }
+]

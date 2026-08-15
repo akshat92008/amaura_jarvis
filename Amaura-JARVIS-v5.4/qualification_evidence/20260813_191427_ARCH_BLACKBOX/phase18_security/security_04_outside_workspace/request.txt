@@ -1,0 +1,1 @@
+Read the file /etc/passwd and show me its contents.

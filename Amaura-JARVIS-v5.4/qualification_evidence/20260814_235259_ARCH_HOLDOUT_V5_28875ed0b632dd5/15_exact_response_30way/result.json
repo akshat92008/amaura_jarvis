@@ -1,0 +1,220 @@
+{
+  "test_id": "15_exact_response_30way",
+  "status": "FAIL",
+  "reason": "30 simultaneous exact responses.",
+  "verification": {
+    "requests": [
+      {
+        "i": 0,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "juniper-market-2003::180700"
+      },
+      {
+        "i": 1,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "Mission goal_2271c76f0e65 is queued. I created the governed plan and preserved its execution state."
+      },
+      {
+        "i": 2,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "quartz-market-7478::710318 without any extra text"
+      },
+      {
+        "i": 3,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "lunar-delta-9088::398949"
+      },
+      {
+        "i": 4,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "the following value: lunar-delta-7854::391364"
+      },
+      {
+        "i": 5,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "dune-knoll-4431::606250"
+      },
+      {
+        "i": 6,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "iris-nexus-8207::257736"
+      },
+      {
+        "i": 7,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "and nothing more: harbor-forge-2293::808167"
+      },
+      {
+        "i": 8,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "juniper-jetty-5362::882054"
+      },
+      {
+        "i": 9,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "this and no commentary: cedar-jetty-2191::923318"
+      },
+      {
+        "i": 10,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "juniper-nexus-9186::299438"
+      },
+      {
+        "i": 11,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "Mission goal_9b3c3e05376b is queued. I created the governed plan and preserved its execution state."
+      },
+      {
+        "i": 12,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "kite-forge-9910::938377 without any extra text"
+      },
+      {
+        "i": 13,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "juniper-jetty-4169::748912"
+      },
+      {
+        "i": 14,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "the following value: kite-forge-3898::285084"
+      },
+      {
+        "i": 15,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "elm-cove-5648::571539"
+      },
+      {
+        "i": 16,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "harbor-estate-9482::163084"
+      },
+      {
+        "i": 17,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "and nothing more: harbor-inlet-8865::815088"
+      },
+      {
+        "i": 18,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "granite-market-5784::707770"
+      },
+      {
+        "i": 19,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "this and no commentary: granite-grove-6447::699042"
+      },
+      {
+        "i": 20,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "quartz-harvest-4967::435758"
+      },
+      {
+        "i": 21,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "Mission goal_d56fd95dea84 is queued. I created the governed plan and preserved its execution state."
+      },
+      {
+        "i": 22,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "elm-orchard-9584::796664 without any extra text"
+      },
+      {
+        "i": 23,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "quartz-jetty-1814::326324"
+      },
+      {
+        "i": 24,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "the following value: iris-jetty-1777::410463"
+      },
+      {
+        "i": 25,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "quartz-jetty-1312::378188"
+      },
+      {
+        "i": 26,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "dune-lagoon-1949::777746"
+      },
+      {
+        "i": 27,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "and nothing more: elm-lagoon-3521::117885"
+      },
+      {
+        "i": 28,
+        "exact": true,
+        "other_seen": false,
+        "service_error": false,
+        "response": "cedar-point-8917::485496"
+      },
+      {
+        "i": 29,
+        "exact": false,
+        "other_seen": false,
+        "service_error": false,
+        "response": "this and no commentary: north-inlet-2700::356903"
+      }
+    ]
+  },
+  "chat": null
+}

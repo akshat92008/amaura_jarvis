@@ -1,0 +1,90 @@
+{
+  "test_id": "04_write_exact_json_literal",
+  "status": "FAIL",
+  "reason": "Exact JSON literal write.",
+  "verification": {
+    "expected": "{\"id\":\"dahlia-meadow-5848\",\"count\":2,\"enabled\":true}",
+    "actual": "id",
+    "exact": false
+  },
+  "chat": {
+    "prompt": "In \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/cfg_85920362.json\", store verbatim this JSON text: {\"id\":\"dahlia-meadow-5848\",\"count\":2,\"enabled\":true}",
+    "session_id": "v7s4_74973135",
+    "http_status": 200,
+    "response_text": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/cfg_85920362.json (2 chars).",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/cfg_85920362.json (2 chars).",
+        "session_id": "v7s4_74973135",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/cfg_85920362.json (2 chars).",
+          "session_id": "v7s4_74973135",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/cfg_85920362.json",
+              "raw_content_clause": "id",
+              "payload_span": [
+                80,
+                82
+              ],
+              "payload": "id",
+              "exactness_mode": true,
+              "expected_size": 2,
+              "actual_size": 2,
+              "content_match": true,
+              "bytes": 2,
+              "verification_passed": true
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "policy_decision": "allowed",
+            "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_103553_ARCH_HOLDOUT_V7_57fcfd9cc115fb24/workspace/cfg_85920362.json",
+            "raw_content_clause": "id",
+            "payload_span": [
+              80,
+              82
+            ],
+            "payload": "id",
+            "exactness_mode": true,
+            "expected_size": 2,
+            "actual_size": 2,
+            "content_match": true,
+            "bytes": 2,
+            "verification_passed": true
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

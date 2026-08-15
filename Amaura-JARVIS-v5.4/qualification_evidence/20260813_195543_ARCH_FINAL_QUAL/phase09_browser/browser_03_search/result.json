@@ -1,0 +1,20 @@
+{
+  "test_id": "browser_03_search",
+  "prompt": "Use the browser to go to 'https://duckduckgo.com', search for 'Python programming language', and tell me the title of the first search result you see.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "I'm not capable of directly accessing or browsing external websites, including using a browser to visit 'https://duckduckgo.com' and perform a search. However, I can guide you on how to do it.\n\nYou can visit 'https://duckduckgo.com' in your web browser, enter 'Python programming language' in the search bar, and press Enter. The search results will be displayed, and you can look for the title of the first search result.\n\nIf you need help with searching or finding information about the Python programming language, I can provide general guidance or answer questions to the best of my abilities.",
+  "response_excerpt": "I'm not capable of directly accessing or browsing external websites, including using a browser to visit 'https://duckduckgo.com' and perform a search. However, I can guide you on how to do it.\n\nYou can visit 'https://duckduckgo.com' in your web browser, enter 'Python programming language' in the search bar, and press Enter. The search results will be displayed, and you can look for the title of the first search result.\n\nIf you need help with searching or finding information about the Python programming language, I can provide general guidance or answer questions to the best of my abilities.",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": 530.0071239471436,
+    "total_ms": 912.7790927886963,
+    "request_ts": 1786631416.2648919,
+    "final_ts": 1786631417.177671
+  },
+  "verification": {}
+}

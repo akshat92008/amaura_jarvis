@@ -1,0 +1,20 @@
+{
+  "test_id": "desktop_06_open_url",
+  "prompt": "Open the URL 'https://example.com' in the default web browser.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "\u274c Error: Application 'the URL 'https://example.com' in the default web browser.' is not in the strict allowlist.",
+  "response_excerpt": "\u274c Error: Application 'the URL 'https://example.com' in the default web browser.' is not in the strict allowlist.",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 137.51888275146484,
+    "request_ts": 1786631444.374223,
+    "final_ts": 1786631444.5117419
+  },
+  "verification": {}
+}

@@ -1,0 +1,16 @@
+{
+  "test_id": "voice_01_tts",
+  "prompt": "Use text-to-speech to say the phrase 'Qualification test complete' out loud.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 18.5549259185791,
+    "request_ts": 1786628980.760952,
+    "final_ts": 1786628980.779507
+  },
+  "verification": {}
+}

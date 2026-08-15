@@ -1,0 +1,89 @@
+[
+  {
+    "type": "token",
+    "content": "The"
+  },
+  {
+    "type": "token",
+    "content": " interactive"
+  },
+  {
+    "type": "token",
+    "content": " cognition"
+  },
+  {
+    "type": "token",
+    "content": " service"
+  },
+  {
+    "type": "token",
+    "content": " is"
+  },
+  {
+    "type": "token",
+    "content": " temporarily"
+  },
+  {
+    "type": "token",
+    "content": " unavailable"
+  },
+  {
+    "type": "token",
+    "content": "."
+  },
+  {
+    "type": "token",
+    "content": " Please"
+  },
+  {
+    "type": "token",
+    "content": " try"
+  },
+  {
+    "type": "token",
+    "content": " again"
+  },
+  {
+    "type": "token",
+    "content": " shortly"
+  },
+  {
+    "type": "token",
+    "content": "."
+  },
+  {
+    "type": "complete",
+    "response": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+    "session_id": "default",
+    "model": "llama-3.3-70b-versatile",
+    "model_key": "llama-3.3-70b-versatile",
+    "model_provider": "omniroute",
+    "model_fallback_used": false,
+    "model_fallback_reason": "",
+    "model_latency_ms": 2438,
+    "model_ttft_ms": 2391,
+    "intent": "conversation",
+    "goal_id": "",
+    "state": "",
+    "executive": {
+      "intent": "conversation",
+      "message": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+      "session_id": "default",
+      "goal_id": "",
+      "state": "",
+      "result": {},
+      "context_sources": [],
+      "model_provenance": {
+        "provider": "omniroute",
+        "model": "llama-3.3-70b-versatile",
+        "fallback_used": false,
+        "fallback_reason": "",
+        "requested_model": "groq/llama-3.3-70b-versatile",
+        "resolved_provider": "omniroute",
+        "resolved_model": "llama-3.3-70b-versatile",
+        "latency_ms": 2438,
+        "ttft_ms": 2391
+      }
+    }
+  }
+]

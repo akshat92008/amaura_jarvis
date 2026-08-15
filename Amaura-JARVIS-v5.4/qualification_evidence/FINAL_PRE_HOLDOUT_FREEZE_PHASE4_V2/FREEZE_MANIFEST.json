@@ -1,0 +1,17 @@
+{
+  "freeze_id": "PHASE4_FREEZE_V2",
+  "timestamp_utc": "2026-08-14T16:01:55Z",
+  "git_head": "e61da5e7429420ffa5b5f7004d22969da22d4ca1",
+  "git_tree": "b946f1758feb4071965b8eb24322abd85584954b",
+  "git_status": "M ../.DS_Store\n M jarvis/agent.py\n M jarvis/amaura/brain.py\n M jarvis/amaura/cognition.py\n M jarvis/amaura/executor.py\n M jarvis/amaura/mission_runner.py\n M jarvis/amaura/model_gateway.py\n M jarvis/amaura/store.py\n M jarvis/amaura/supervisor.py\n M jarvis/tools/result.py\n M jarvis/tools/security.py\n?? ../AUDIT_PACKAGE_FILELIST.txt\n?? ../AUDIT_PACKAGE_SHA256SUMS.txt\n?? ../Amaura-JARVIS-v5.4-FROZEN-ARCH_FREEZE_20260813_190405/\n?? BLACKBOX_RESULTS.json\n?? Dockerfile\n?? FAILURES.md\n?? FALSE_SUCCESSES.md\n?? HARNESS_SELF_TEST.json\n?? HARNESS_SELF_TEST.md\n?? INDEPENDENT_ARCH_QUALIFICATION.md\n?? LATENCY_REPORT.md\n?? QUALIFICATION_VALIDITY.json\n?? RESOURCE_REPORT.md\n?? SECURITY_REPORT.md\n?? TOOL_CAPABILITY_MATRIX.json\n?? WORKING_TREE_SHA256SUMS.txt\n?? audit_package/\n?? audit_script.py\n?? docker-compose.yml\n?? docs/REAL_CAPABILITY_MATRIX.md\n?? fixture/\n?? founder_objective_analysis.md\n?? jarvis/amaura/direct_action.py\n?? qualification_evidence/\n?? release/\n?? scripts/arch_holdout_v2.py\n?? scripts/arch_holdout_v3.py\n?? scripts/arch_truth_benchmark.py\n?? scripts/capability_audit_correction.py\n?? scripts/debug_helpers/\n?? scripts/full_capability_audit.py\n?? scripts/qual_bb_harness.py\n?? scripts/qual_bb_master.py\n?? scripts/qual_bb_phase00.py\n?? scripts/qual_bb_server.py\n?? scripts/qual_harness.py\n?? scripts/qual_harness_selftest.py\n?? scripts/qual_phase1.py\n?? scripts/qual_phase10.py\n?? scripts/qual_phase11.py\n?? scripts/qual_phase12_13_14.py\n?? scripts/qual_phase15_16_17.py\n?? scripts/qual_phase18_21.py\n?? scripts/qual_phase2.py\n?? scripts/qual_phase22_25.py\n?? scripts/qual_phase26_34.py\n?? scripts/qual_phase3.py\n?? scripts/qual_phase5.py\n?? scripts/qual_phase7.py\n?? scripts/qual_phase8.py\n?? scripts/qual_phase9.py\n?? scripts/validate_pre_holdout.py\n?? test_master_script.py\n?? tests/test_generic_execution_repair.py\n?? tests/test_intent_routing.py\n?? tests/test_phase4_execution_semantics.py\n?? ../qual_antigravity_disposable_repo/\n?? ../qual_antigravity_e2e_20260812_215144/\n?? ../qual_antigravity_fail_20260812_215144/",
+  "production_file_count_pre": 118,
+  "production_file_count_post": 118,
+  "source_mismatch_count": 0,
+  "source_immutable": true,
+  "targeted_test_exit_code": 0,
+  "full_test_exit_code": 0,
+  "targeted_pass_summary": "150 passed (10 Phase 4 + 23 Generic + 117 Intent Routing)",
+  "full_suite_pass_summary": "604 passed, 1 skipped (100%)",
+  "anti_overfit_status": "CLEAN (0 execution logic violations)",
+  "freeze_status": "FROZEN_AND_VERIFIED"
+}

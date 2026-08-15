@@ -1,0 +1,16 @@
+{
+  "test_id": "recovery_02_unreachable_url",
+  "prompt": "Summarize the content at 'http://localhost:19998/fake-endpoint'.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 30.122041702270508,
+    "request_ts": 1786628981.425132,
+    "final_ts": 1786628981.455254
+  },
+  "verification": {}
+}

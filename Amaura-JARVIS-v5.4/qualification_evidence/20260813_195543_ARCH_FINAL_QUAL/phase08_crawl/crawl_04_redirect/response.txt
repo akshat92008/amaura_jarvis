@@ -1,0 +1,14 @@
+I'm not capable of directly accessing or fetching content from external websites. However, I can guide you on how to fetch the content and determine the final URL.
+
+You can use a tool like `curl` or a programming language like Python to send a GET request to 'https://httpbin.org/redirect/2' and follow the redirects.
+
+Here's an example using Python:
+```python
+import requests
+
+response = requests.get('https://httpbin.org/redirect/2')
+print(response.url)
+```
+This code sends a GET request to 'https://httpbin.org/redirect/2', follows the redirects, and prints the final URL.
+
+Please note that you need to run this code on your local machine to fetch the content and determine the final URL. I'm a text-based AI assistant and do not have direct access to external websites.

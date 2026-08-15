@@ -1,0 +1,123 @@
+{
+  "test": "Financial Trust",
+  "response": {
+    "branch": "Amaura Ventures Cashflow",
+    "mission": "Build a small evidence-backed portfolio of owned, low-capital revenue streams while protecting founder study time.",
+    "lanes": [
+      {
+        "lane": "kdp_book",
+        "product_type": "kdp_book",
+        "time_to_cash": 58,
+        "automation": 68,
+        "capital": 96,
+        "margin": 72
+      },
+      {
+        "lane": "digital_download",
+        "product_type": "digital_download",
+        "time_to_cash": 88,
+        "automation": 92,
+        "capital": 98,
+        "margin": 94
+      },
+      {
+        "lane": "template_pack",
+        "product_type": "template_pack",
+        "time_to_cash": 90,
+        "automation": 94,
+        "capital": 99,
+        "margin": 96
+      },
+      {
+        "lane": "content_asset",
+        "product_type": "content_asset",
+        "time_to_cash": 62,
+        "automation": 82,
+        "capital": 98,
+        "margin": 86
+      },
+      {
+        "lane": "affiliate_content",
+        "product_type": "affiliate_content",
+        "time_to_cash": 48,
+        "automation": 76,
+        "capital": 99,
+        "margin": 82
+      },
+      {
+        "lane": "newsletter",
+        "product_type": "newsletter",
+        "time_to_cash": 42,
+        "automation": 77,
+        "capital": 96,
+        "margin": 90
+      },
+      {
+        "lane": "micro_saas",
+        "product_type": "micro_saas",
+        "time_to_cash": 64,
+        "automation": 88,
+        "capital": 88,
+        "margin": 92
+      },
+      {
+        "lane": "web_app",
+        "product_type": "web_app",
+        "time_to_cash": 60,
+        "automation": 86,
+        "capital": 88,
+        "margin": 90
+      },
+      {
+        "lane": "browser_extension",
+        "product_type": "browser_extension",
+        "time_to_cash": 68,
+        "automation": 91,
+        "capital": 92,
+        "margin": 92
+      },
+      {
+        "lane": "developer_tool",
+        "product_type": "developer_tool",
+        "time_to_cash": 66,
+        "automation": 92,
+        "capital": 94,
+        "margin": 94
+      },
+      {
+        "lane": "ai_utility",
+        "product_type": "ai_utility",
+        "time_to_cash": 63,
+        "automation": 90,
+        "capital": 84,
+        "margin": 88
+      },
+      {
+        "lane": "mobile_app",
+        "product_type": "mobile_app",
+        "time_to_cash": 52,
+        "automation": 82,
+        "capital": 78,
+        "margin": 84
+      }
+    ],
+    "rules": {
+      "income_not_guaranteed": true,
+      "founder_approval_for_publish_spend_accounts_pricing": true,
+      "original_work_only": true,
+      "no_fake_reviews_or_spam": true,
+      "max_live_streams": 4,
+      "max_founder_minutes_weekly": 180
+    },
+    "portfolio": {
+      "streams": [],
+      "economics": [],
+      "totals_by_currency": {},
+      "live_streams": 0,
+      "founder_minutes_per_week": 0,
+      "ranked_opportunities": []
+    },
+    "action_queue": []
+  },
+  "success": true
+}

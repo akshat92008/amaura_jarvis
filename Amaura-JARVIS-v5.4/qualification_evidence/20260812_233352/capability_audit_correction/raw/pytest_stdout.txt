@@ -1,0 +1,1036 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4
+configfile: pyproject.toml
+plugins: langsmith-0.10.13, anyio-4.14.2, Faker-40.36.0
+collected 453 items
+
+tests/test_amaura_assets.py ..                                           [  0%]
+tests/test_amaura_autopilot.py ..                                        [  0%]
+tests/test_amaura_commands.py .                                          [  1%]
+tests/test_amaura_company_api.py ...F                                    [  1%]
+tests/test_amaura_company_system.py ..........                           [  4%]
+tests/test_amaura_contract.py ..                                         [  4%]
+tests/test_amaura_distribution.py .......                                [  6%]
+tests/test_amaura_e2e.py .                                               [  6%]
+tests/test_amaura_full_company_autonomy.py ..............                [  9%]
+tests/test_amaura_growth.py .F.......                                    [ 11%]
+tests/test_amaura_jarvis_v4.py .......                                   [ 13%]
+tests/test_amaura_jarvis_v41.py ..............                           [ 16%]
+tests/test_amaura_jarvis_v5.py .....F....                                [ 18%]
+tests/test_amaura_jarvis_v51.py .......F....                             [ 20%]
+tests/test_amaura_jarvis_v52.py .............                            [ 23%]
+tests/test_amaura_launch_hardening.py ................                   [ 27%]
+tests/test_amaura_macos_service.py ..                                    [ 27%]
+tests/test_amaura_mission_control.py ..........F                         [ 30%]
+tests/test_amaura_os.py ...F..F.F.F..                                    [ 33%]
+tests/test_amaura_oss_capabilities.py ...F................               [ 37%]
+tests/test_amaura_p0_fixes.py ............................               [ 43%]
+tests/test_amaura_p0_remediation.py .......                              [ 45%]
+tests/test_amaura_production.py ..........F.FF.                          [ 48%]
+tests/test_amaura_providers.py ...                                       [ 49%]
+tests/test_amaura_release_builder.py ..                                  [ 49%]
+tests/test_amaura_store.py .                                             [ 49%]
+tests/test_amaura_supervisor.py FF.F.F...                                [ 51%]
+tests/test_amaura_trust_foundation.py F......                            [ 53%]
+tests/test_amaura_v350_hardening.py .........F....                       [ 56%]
+tests/test_amaura_v351_remediation.py ...............                    [ 59%]
+tests/test_amaura_v352_security.py ........                              [ 61%]
+tests/test_amaura_v353_security.py .......                               [ 63%]
+tests/test_amaura_v360_integrations.py ...............                   [ 66%]
+tests/test_amaura_v361_blocker_fixes.py .s......                         [ 68%]
+tests/test_amaura_v361_resource_security.py ...........                  [ 70%]
+tests/test_amaura_ventures.py ......                                     [ 71%]
+tests/test_amaura_ventures_cashflow.py ............................      [ 78%]
+tests/test_antigravity_contract.py .............................         [ 84%]
+tests/test_app_builder.py .                                              [ 84%]
+tests/test_ast_indexer.py .                                              [ 84%]
+tests/test_browser.py ....                                               [ 85%]
+tests/test_fable_engine.py ..........                                    [ 88%]
+tests/test_fleet.py ..                                                   [ 88%]
+tests/test_macos_app_control.py .....                                    [ 89%]
+tests/test_omniroute_integration.py ...F.......F...............          [ 95%]
+tests/test_registry.py ..                                                [ 96%]
+tests/test_router.py ..                                                  [ 96%]
+tests/test_tdd_loop.py .                                                 [ 96%]
+tests/test_vector_memory.py ......                                       [ 98%]
+tests/test_vision.py .....                                               [ 99%]
+tests/test_voice.py ....                                                 [100%]
+
+=================================== FAILURES ===================================
+_____________ test_cashflow_api_dashboard_tick_and_founder_stream ______________
+
+company_api = (<starlette.testclient.TestClient object at 0x10dc70d60>, PosixPath('/private/var/folders/3t/t_zmxljd573839_bvb_mkc180000gn/T/pytest-of-ashishsingh/pytest-56/test_cashflow_api_dashboard_ti0'))
+
+    def test_cashflow_api_dashboard_tick_and_founder_stream(company_api):
+        client, repository = company_api
+        bootstrap = client.post(
+            "/api/amaura/company/bootstrap",
+            headers={"X-Amaura-Approval-Key": "approval-secret"},
+            json={"repository_path": str(repository)},
+        )
+        assert bootstrap.status_code == 200
+        opportunity = client.post(
+            "/api/amaura/ventures/opportunities",
+            headers={"X-Amaura-Operator-Key": "operator-secret"},
+            json={
+                "title": "Cashflow template pack",
+                "problem": "Students need focused revision assets",
+                "target_user": "NEET students",
+                "product_type": "template_pack",
+                "source": "public research",
+                "evidence": [
+                    {"source": "https://one.example/thread", "claim": "Repeated errors are common", "excerpt": "Repeated errors are common"},
+                    {"source": "https://two.example/reviews", "claim": "Students seek focused revision", "excerpt": "Students actively seek focused revision support"},
+                ],
+                "score_components": {},
+                "estimated_build_days": 4,
+                "monetization": "One-time download",
+                "distribution_channel": "Organic content",
+                "strategic_fit": "Low founder attention",
+            },
+        )
+        assert opportunity.status_code == 200, opportunity.text
+        opp_id = opportunity.json()["id"]
+        denied = client.post(
+            "/api/amaura/ventures/cashflow/founder/streams",
+            headers={"X-Amaura-Operator-Key": "operator-secret"},
+            json={
+                "opportunity_id": opp_id, "name": "Revision Pack", "lane": "template_pack",
+                "platform": "owned storefront", "offer": "Original revision templates", "target_user": "NEET students",
+                "distribution_channel": "organic content", "price_cents": 19900,
+            },
+        )
+        assert denied.status_code == 403
+        created = client.post(
+            "/api/amaura/ventures/cashflow/founder/streams",
+            headers={"X-Amaura-Approval-Key": "approval-secret"},
+            json={
+                "opportunity_id": opp_id, "name": "Revision Pack", "lane": "template_pack",
+                "platform": "owned storefront", "offer": "Original revision templates", "target_user": "NEET students",
+                "distribution_channel": "organic content", "price_cents": 19900,
+            },
+        )
+        assert created.status_code == 200, created.text
+        stream_id = created.json()["id"]
+        tick = client.post("/api/amaura/ventures/cashflow/tick", headers={"X-Amaura-Operator-Key": "operator-secret"}, json={})
+        assert tick.status_code == 200, tick.text
+        assert tick.json()["proposals_created"]
+        insecure = client.post(
+            "/api/amaura/ventures/cashflow/financial-events",
+            headers={"X-Amaura-Operator-Key": "operator-secret"},
+            json={"stream_id": stream_id, "event_type": "revenue", "amount_cents": 19900, "source": "receipt", "evidence": [{"receipt": "sale-1"}]},
+        )
+        assert insecure.status_code == 400
+        revenue = client.post(
+            "/api/amaura/ventures/cashflow/founder/financial-events",
+            headers={"X-Amaura-Approval-Key": "approval-secret"},
+            json={
+                "stream_id": stream_id,
+                "event_type": "revenue",
+                "amount_cents": 19900,
+                "source": "founder_manual",
+                "evidence": [{"founder_attestation": True, "manual_event_id": "manual-api-sale-1", "note": "Manual sale entry"}],
+            },
+        )
+        assert revenue.status_code == 200, revenue.text
+        assert revenue.json()["event"]["trust_level"] == "founder_manual"
+        dashboard = client.get("/api/amaura/ventures/cashflow", headers={"X-Amaura-Operator-Key": "operator-secret"})
+        assert dashboard.status_code == 200
+        assert dashboard.json()["portfolio"]["totals_by_currency"]["INR"]["net_cashflow_cents"] == 19900
+        runtime = client.get("/api/amaura/runtime/status", headers={"X-Amaura-Operator-Key": "operator-secret"})
+        assert runtime.status_code == 200, runtime.text
+>       assert runtime.json()["company_autopilot_state"] in {"stopped", "starting", "online", "standby", "degraded"}
+E       AssertionError: assert 'disabled' in {'degraded', 'online', 'standby', 'starting', 'stopped'}
+
+/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/tests/test_amaura_company_api.py:242: AssertionError
+__ TestAmauraGrowthSystem.test_concurrent_domain_deduplication_and_integrity ___
+
+self = <test_amaura_growth.TestAmauraGrowthSystem testMethod=test_concurrent_domain_deduplication_and_integrity>
+
+    def test_concurrent_domain_deduplication_and_integrity(self):
+        def discover(_: int):
+            return self.pipeline.discover_lead(
+                campaign_id="agency14", company_name="Concurrent Agency", domain="www.concurrent.example.com",
+                source_url="https://concurrent.example.com/services",
+            )["id"]
+    
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            ids = list(pool.map(discover, range(80)))
+        self.assertEqual(len(set(ids)), 1)
+        self.assertEqual(len(self.control.store.list_leads()), 1)
+>       self.assertTrue(self.control.store.integrity_check()["ok"])
+E       AssertionError: False is not true
+
+tests/test_amaura_growth.py:251: AssertionError
+___ test_cognitive_model_gateway_provider_detection_matches_execution_route ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x112f4ed60>
+
+    def test_cognitive_model_gateway_provider_detection_matches_execution_route(monkeypatch: pytest.MonkeyPatch):
+        for key in ("NVIDIA_API_KEY", "GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
+            monkeypatch.delenv(key, raising=False)
+        monkeypatch.setenv("OPENROUTER_API_KEY", "fixture-key")
+        monkeypatch.setenv("AMAURA_OPENROUTER_MODEL", "openai/gpt-fixture")
+        monkeypatch.setenv("AMAURA_JARVIS_PROVIDER", "openrouter")
+        selected = CognitiveModelGateway.select(purpose="planner")
+>       assert selected.provider == "openrouter"
+E       AssertionError: assert 'omniroute' == 'openrouter'
+E         
+E         - openrouter
+E         + omniroute
+
+tests/test_amaura_jarvis_v5.py:117: AssertionError
+________________ test_ollama_executive_uses_company_local_model ________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1130673f0>
+
+    def test_ollama_executive_uses_company_local_model(monkeypatch: pytest.MonkeyPatch):
+        for key in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "NVIDIA_API_KEY", "GROQ_API_KEY"):
+            monkeypatch.delenv(key, raising=False)
+        monkeypatch.setenv("AMAURA_JARVIS_PROVIDER", "ollama")
+        monkeypatch.setenv("AMAURA_JARVIS_OLLAMA_PROBE", "0")
+        monkeypatch.setenv("AMAURA_LOCAL_MODEL", "nova:3b")
+        monkeypatch.delenv("AMAURA_JARVIS_MODEL", raising=False)
+        monkeypatch.delenv("AMAURA_OLLAMA_MODEL", raising=False)
+        selected = CognitiveModelGateway.select(purpose="planner")
+        assert selected is not None
+>       assert selected.provider == "ollama"
+E       AssertionError: assert 'omniroute' == 'ollama'
+E         
+E         - ollama
+E         + omniroute
+
+tests/test_amaura_jarvis_v51.py:181: AssertionError
+_ test_autonomous_mission_runs_to_founder_boundary_then_credits_after_approval _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10d8fa2e0>
+
+    def test_autonomous_mission_runs_to_founder_boundary_then_credits_after_approval(monkeypatch):
+        from jarvis.amaura.evidence import deterministic_evidence_review
+        from jarvis.amaura.supervisor import AmauraSupervisor
+    
+        class SuccessfulRunner:
+            def __init__(self, control):
+                self.control = control
+    
+            def run(self, task_id):
+                task = self.control.store.get_work_item(task_id)
+                submitted = self.control.submit_task(
+                    task_id,
+                    actor=task["owner_id"],
+                    summary="Completed with bounded test evidence.",
+                    evidence=[{
+                        "type": "test_report",
+                        "reference": f"artifact://{task_id}/report",
+                        "success": True,
+                    }],
+                )
+                return {"status": submitted["state"], "task_id": task_id}
+    
+        class SafeReviewer:
+            def __init__(self, control):
+                self.control = control
+    
+            def run(self, task_id):
+                task = self.control.store.get_work_item(task_id)
+                if task["reviewer_id"] == "founder":
+                    raise GovernanceError("Founder approval cannot be automated")
+                deterministic = deterministic_evidence_review(task, self.control.evidence)
+                updated = self.control.review_task(
+                    task_id,
+                    actor=task["reviewer_id"],
+                    approve=True,
+                    findings="Submitted evidence supports the bounded internal result.",
+                    attestation={
+                        "signature": "test",
+                        "decision": {"approve": True, "criteria": []},
+                        "deterministic_review": deterministic,
+                        "task_id": task_id,
+                        "reviewer_id": task["reviewer_id"],
+                    },
+                )
+                return {"task_id": task_id, "state": updated["state"]}
+    
+        with TemporaryDirectory() as temp:
+            control = _control(monkeypatch, temp)
+            monkeypatch.setattr(
+                "jarvis.amaura.evidence.verify_review_attestation", lambda attestation: True
+            )
+            try:
+                mission = MissionControl(control)
+                objective = mission.create_objective(
+                    title="Validate one product direction",
+                    objective="Validate opportunity for {date}",
+                    success_metric="Founder records one build or kill decision",
+                    workflow_key="product_discovery",
+                    cadence="daily",
+                    inputs={"problem_space": "Affordable AI", "target_user": "Developers"},
+                    target_value=1,
+                    unit="decisions",
+                    priority=1,
+                )
+                runtime = AutonomousCompanyRuntime(control)
+                runtime.ensure_operating_cadence = lambda now=None: []
+                runtime.supervisor = AmauraSupervisor(
+                    control,
+                    runner_factory=SuccessfulRunner,
+                    reviewer_factory=SafeReviewer,
+                    automatic_reviews=True,
+                )
+                result = runtime.tick(
+                    now=datetime(2026, 8, 5, tzinfo=UTC),
+                    max_work_units=20,
+                    max_new_programmes=1,
+                )
+>               assert result["execution"]["status"] == "idle"
+E               AssertionError: assert 'review_deferred' == 'idle'
+E                 
+E                 - idle
+E                 + review_deferred
+
+tests/test_amaura_mission_control.py:361: AssertionError
+_ TestAmauraCompanyOS.test_governed_runner_dispatches_specialist_then_stops_for_review _
+
+self = <test_amaura_os.TestAmauraCompanyOS testMethod=test_governed_runner_dispatches_specialist_then_stops_for_review>
+
+    def test_governed_runner_dispatches_specialist_then_stops_for_review(self):
+        result = self.control.create_program(
+            objective="Define a bounded product feature",
+            success_metric="Requirements contain measurable acceptance criteria",
+            workflow_key="software_delivery",
+        )
+        task = result["tasks"][0]
+    
+        fake_response_1 = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(
+                content="Checking project structure.",
+                tool_calls=[SimpleNamespace(
+                    id="call_123",
+                    function=SimpleNamespace(name="get_project_structure", arguments='{"path": "."}')
+                )],
+            ))]
+        )
+        fake_response_2 = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(
+                content="Requirements, explicit exclusions, and measurable criteria are complete.",
+                tool_calls=[],
+            ))]
+        )
+    
+        class FakeClient:
+            def __init__(self):
+                self.calls = 0
+            def chat_sync(self, **kwargs):
+                self.calls += 1
+                return fake_response_1 if self.calls == 1 else fake_response_2
+    
+        execution = GovernedTaskRunner(
+            self.control,
+            client_factory=lambda route, employee: FakeClient(),
+        ).run(task["id"])
+    
+        self.assertEqual(execution["employee"], "Product Manager")
+        self.assertEqual(execution["status"], TaskState.AWAITING_REVIEW.value)
+        stored = self.control.store.get_work_item(task["id"])
+>       self.assertEqual(stored["spent_cents"], 0)
+E       AssertionError: 1 != 0
+
+tests/test_amaura_os.py:278: AssertionError
+_ TestAmauraCompanyOS.test_medium_and_high_risk_work_requires_founder_approval _
+
+self = <test_amaura_os.TestAmauraCompanyOS testMethod=test_medium_and_high_risk_work_requires_founder_approval>
+
+    def test_medium_and_high_risk_work_requires_founder_approval(self):
+        result = self.control.create_program(
+            objective="Publish a verified product update",
+            success_metric="One approved campaign with every claim linked to evidence",
+            workflow_key="content_campaign",
+        )
+        evidence_task, content_task, publication_task = result["tasks"]
+>       self._complete_low_risk_task(evidence_task)
+
+tests/test_amaura_os.py:155: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_amaura_os.py:39: in _complete_low_risk_task
+    return self.control.review_task(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <jarvis.amaura.control_plane.AmauraControlPlane object at 0x1130e6170>
+task_id = 'task_1b7db20cc998', actor = 'jarvis', approve = True
+findings = 'Evidence independently verified.'
+attestation = {'signature': 'mock', 'decision': {'approve': True, 'criteria': []}, 'deterministic_review': {'approve': False, 'findi...nt-addressed evidence vault'], 'verified_evidence': [], 'criteria_count': 3, ...}, 'task_id': 'task_1b7db20cc998', ...}
+
+    def review_task(self, task_id: str, actor: str, approve: bool, findings: str, attestation: dict[str, Any] | None = None) -> dict[str, Any]:
+        task = self._task(task_id)
+        if actor != task["reviewer_id"]:
+            self.store.audit(actor, "review", "task", task_id, "denied", {"expected": task["reviewer_id"]})
+            raise GovernanceError(f"Independent review must be performed by '{task['reviewer_id']}'")
+        if actor == task["owner_id"]:
+            raise GovernanceError("No agent may certify its own work")
+        if actor != self.founder_id:
+            from jarvis.amaura.evidence import (
+                deterministic_evidence_review,
+                strict_review_enabled,
+                validate_criterion_review,
+                verify_review_attestation,
+            )
+            if not attestation:
+                raise GovernanceError("Review attestation is required for non-founder reviewers")
+            if not verify_review_attestation(attestation):
+                raise GovernanceError("Invalid review attestation signature")
+            if attestation.get("reviewer_id") != actor or attestation.get("task_id") != task_id:
+                raise GovernanceError("Attestation does not match task and reviewer")
+            attestation_decision = self._attestation_approves(attestation)
+            if attestation_decision != approve:
+                raise GovernanceError("Attestation decision does not match review approval")
+            if strict_review_enabled(task):
+                current_deterministic = deterministic_evidence_review(task, self.evidence)
+                signed_deterministic = attestation.get("deterministic_review")
+                if not isinstance(signed_deterministic, dict):
+                    raise GovernanceError("Review attestation is missing deterministic evidence verification")
+                if signed_deterministic.get("submission_sha256") != current_deterministic["submission_sha256"]:
+                    raise GovernanceError("Review attestation was signed for a different task submission")
+                if bool(signed_deterministic.get("approve")) != bool(current_deterministic["approve"]):
+                    raise GovernanceError("Review attestation deterministic result is stale or inconsistent")
+                criterion_review = validate_criterion_review(
+                    task,
+                    dict(attestation.get("decision") or {}),
+                    self.evidence,
+                )
+                if approve and not criterion_review["ok"]:
+>                   raise GovernanceError(
+                        "Review attestation does not prove every acceptance criterion: "
+                        + "; ".join(criterion_review["findings"])
+                    )
+E                   jarvis.amaura.models.GovernanceError: Review attestation does not prove every acceptance criterion: Reviewer covered 0 of 3 acceptance criteria; Acceptance criteria missing reviewer coverage: [1, 2, 3]
+
+jarvis/amaura/control_plane.py:355: GovernanceError
+__________ TestAmauraCompanyOS.test_no_employee_can_certify_own_work ___________
+
+self = <test_amaura_os.TestAmauraCompanyOS testMethod=test_no_employee_can_certify_own_work>
+
+    def test_no_employee_can_certify_own_work(self):
+        result = self.control.create_program(
+            objective="Deliver a verified feature", success_metric="All acceptance tests pass",
+            workflow_key="software_delivery",
+        )
+        first = result["tasks"][0]
+        self.control.start_task(first["id"])
+        self.control.submit_task(
+            first["id"], first["owner_id"], "Requirements and tests are defined.",
+            [{"type": "requirements", "reference": "artifact://requirements/1"}],
+        )
+        with self.assertRaisesRegex(GovernanceError, "Independent review"):
+            self.control.review_task(first["id"], first["owner_id"], True, "Looks good to me")
+>       approved = self.control.review_task(
+            first["id"], first["reviewer_id"], True, "Criteria are measurable and scope is bounded.",
+            attestation=self._attestation(first["id"], first["reviewer_id"]),
+        )
+
+tests/test_amaura_os.py:142: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <jarvis.amaura.control_plane.AmauraControlPlane object at 0x1131fc370>
+task_id = 'task_3f316091aaed', actor = 'technical_architect', approve = True
+findings = 'Criteria are measurable and scope is bounded.'
+attestation = {'signature': 'mock', 'decision': {'approve': True, 'criteria': []}, 'deterministic_review': {'approve': False, 'findi...nt-addressed evidence vault'], 'verified_evidence': [], 'criteria_count': 3, ...}, 'task_id': 'task_3f316091aaed', ...}
+
+    def review_task(self, task_id: str, actor: str, approve: bool, findings: str, attestation: dict[str, Any] | None = None) -> dict[str, Any]:
+        task = self._task(task_id)
+        if actor != task["reviewer_id"]:
+            self.store.audit(actor, "review", "task", task_id, "denied", {"expected": task["reviewer_id"]})
+            raise GovernanceError(f"Independent review must be performed by '{task['reviewer_id']}'")
+        if actor == task["owner_id"]:
+            raise GovernanceError("No agent may certify its own work")
+        if actor != self.founder_id:
+            from jarvis.amaura.evidence import (
+                deterministic_evidence_review,
+                strict_review_enabled,
+                validate_criterion_review,
+                verify_review_attestation,
+            )
+            if not attestation:
+                raise GovernanceError("Review attestation is required for non-founder reviewers")
+            if not verify_review_attestation(attestation):
+                raise GovernanceError("Invalid review attestation signature")
+            if attestation.get("reviewer_id") != actor or attestation.get("task_id") != task_id:
+                raise GovernanceError("Attestation does not match task and reviewer")
+            attestation_decision = self._attestation_approves(attestation)
+            if attestation_decision != approve:
+                raise GovernanceError("Attestation decision does not match review approval")
+            if strict_review_enabled(task):
+                current_deterministic = deterministic_evidence_review(task, self.evidence)
+                signed_deterministic = attestation.get("deterministic_review")
+                if not isinstance(signed_deterministic, dict):
+                    raise GovernanceError("Review attestation is missing deterministic evidence verification")
+                if signed_deterministic.get("submission_sha256") != current_deterministic["submission_sha256"]:
+                    raise GovernanceError("Review attestation was signed for a different task submission")
+                if bool(signed_deterministic.get("approve")) != bool(current_deterministic["approve"]):
+                    raise GovernanceError("Review attestation deterministic result is stale or inconsistent")
+                criterion_review = validate_criterion_review(
+                    task,
+                    dict(attestation.get("decision") or {}),
+                    self.evidence,
+                )
+                if approve and not criterion_review["ok"]:
+>                   raise GovernanceError(
+                        "Review attestation does not prove every acceptance criterion: "
+                        + "; ".join(criterion_review["findings"])
+                    )
+E                   jarvis.amaura.models.GovernanceError: Review attestation does not prove every acceptance criterion: Reviewer covered 0 of 3 acceptance criteria; Acceptance criteria missing reviewer coverage: [1, 2, 3]
+
+jarvis/amaura/control_plane.py:355: GovernanceError
+_________ TestAmauraCompanyOS.test_private_data_never_routes_to_cloud __________
+
+self = <test_amaura_os.TestAmauraCompanyOS testMethod=test_private_data_never_routes_to_cloud>
+
+    def test_private_data_never_routes_to_cloud(self):
+        route = self.control.models.route(
+            "client_communication", sensitivity="client_confidential",
+            remaining_budget_cents=100, estimated_tokens=20_000,
+        )
+>       self.assertEqual(route.provider, "local")
+E       AssertionError: 'omniroute' != 'local'
+E       - omniroute
+E       + local
+
+tests/test_amaura_os.py:235: AssertionError
+___________________ test_scheduler_serializes_heavy_workers ____________________
+
+    def test_scheduler_serializes_heavy_workers():
+        scheduler = CapabilityScheduler(budget_mb=5600)
+        descriptor = next(adapter.descriptor for adapter in ADAPTER_TYPES if adapter.descriptor.key == "docling")
+>       with scheduler.reserve(descriptor):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_amaura_oss_capabilities.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <jarvis.amaura.capability_runtime.CapabilityScheduler object at 0x10ba0c410>
+descriptor = CapabilityDescriptor(key='docling', name='Docling', category='documents', operations=('convert',), ram_mb=1800, heavy=True, networked=False, side_effects=False, always_on=False, install_hint='pip install docling', licence='MIT')
+timeout = 5.0
+
+    @contextlib.contextmanager
+    def reserve(self, descriptor: CapabilityDescriptor, timeout: float = 5.0):
+        deadline = time.monotonic() + max(0.1, timeout)
+        reservation_id: str | None = None
+        last_reason = "resource admission unavailable"
+        last_state: dict[str, Any] = {}
+        while time.monotonic() < deadline:
+            reservation_id, last_reason, last_state = self.ledger.try_reserve(
+                capability=descriptor.key, ram_mb=descriptor.ram_mb, heavy=descriptor.heavy
+            )
+            if reservation_id:
+                break
+            time.sleep(min(0.15, max(0.01, deadline - time.monotonic())))
+        if not reservation_id:
+>           raise CapabilityExecutionError(
+                f"Resource scheduler refused {descriptor.key}: {last_reason}; state={json.dumps(last_state, sort_keys=True, default=str)}"
+            )
+E           jarvis.amaura.capability_runtime.CapabilityExecutionError: Resource scheduler refused docling: projected reservation 1800 MB exceeds 1536 MB limit; state={"active_heavy_jobs": 0, "active_jobs": 0, "effective_limit_mb": 1536, "host": {"available_mb": 1722, "mac_free_percent": 43.0, "pressure": "green", "sampled_at": 1786557918.3770711, "swap_percent": 75.7, "swap_total_mb": 5120, "swap_used_mb": 3874, "total_mb": 8192, "used_percent": 79.0}, "process_tree_rss_mb": 113, "reservations": [], "reserved_mb": 0}
+
+jarvis/amaura/capability_runtime.py:2195: CapabilityExecutionError
+_ TestAmauraProductionControls.test_readiness_separates_source_from_unavailable_live_infrastructure _
+
+self = <test_amaura_production.TestAmauraProductionControls testMethod=test_readiness_separates_source_from_unavailable_live_infrastructure>
+
+    def test_readiness_separates_source_from_unavailable_live_infrastructure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.dict(
+                os.environ,
+                {
+                    "AMAURA_MODEL_MODE": "local",
+                    "AMAURA_LOCAL_MODEL": "worker-model",
+                    "AMAURA_LOCAL_REVIEW_MODEL": "reviewer-model",
+                    "AMAURA_SANDBOX_MODE": "docker",
+                },
+            ):
+                control = AmauraControlPlane(Path(directory) / "amaura.db")
+                report = production_readiness(control, live=False)
+                control.close()
+>       self.assertTrue(report["source_certified"])
+E       AssertionError: False is not true
+
+tests/test_amaura_production.py:332: AssertionError
+_ TestAmauraProductionControls.test_review_models_must_be_distinct_for_production _
+
+self = <test_amaura_production.TestAmauraProductionControls testMethod=test_review_models_must_be_distinct_for_production>
+
+    def test_review_models_must_be_distinct_for_production(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.dict(
+                os.environ,
+                {
+                    "AMAURA_MODEL_MODE": "local",
+                    "AMAURA_LOCAL_MODEL": "same-model",
+                    "AMAURA_LOCAL_REVIEW_MODEL": "same-model",
+                },
+            ):
+                control = AmauraControlPlane(Path(directory) / "amaura.db")
+                report = production_readiness(control, live=False)
+                control.close()
+>       self.assertFalse(report["checks"]["distinct_reviewer_model"])
+E       AssertionError: True is not false
+
+tests/test_amaura_production.py:367: AssertionError
+_ TestAmauraProductionControls.test_review_task_accepts_real_object_decision_attestation _
+
+self = <test_amaura_production.TestAmauraProductionControls testMethod=test_review_task_accepts_real_object_decision_attestation>
+
+    def test_review_task_accepts_real_object_decision_attestation(self):
+        with patch.dict(os.environ, {"AMAURA_REVIEW_ATTESTATION_KEY": ATTESTATION_KEY}):
+            control = AmauraControlPlane(Path(tempfile.mkdtemp()) / "amaura.db")
+            try:
+                created = control.create_program(
+                    objective="Verify review contract",
+                    success_metric="Object decision attestations approve tasks",
+                    workflow_key="software_delivery",
+                )
+                task = created["tasks"][0]
+                control.start_task(task["id"], actor="jarvis")
+                control.submit_task(
+                    task["id"],
+                    actor=task["owner_id"],
+                    summary="All criteria are met.",
+                    evidence=[{"type": "test_report", "reference": "artifact://review-contract"}],
+                )
+                decision = {
+                    "approve": True,
+                    "findings": "Evidence independently verified.",
+                    "criteria": [],
+                }
+                deterministic = deterministic_evidence_review(task, control.evidence)
+                attestation = create_review_attestation(
+                    task_id=task["id"],
+                    reviewer_id=task["reviewer_id"],
+                    reviewer_model="reviewer-model",
+                    decision=decision,
+                    deterministic_review=deterministic,
+                )
+>               updated = control.review_task(
+                    task["id"],
+                    actor=task["reviewer_id"],
+                    approve=True,
+                    findings=decision["findings"],
+                    attestation=attestation,
+                )
+
+tests/test_amaura_production.py:148: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <jarvis.amaura.control_plane.AmauraControlPlane object at 0x113548550>
+task_id = 'task_d28b71d6a64d', actor = 'technical_architect', approve = True
+findings = 'Evidence independently verified.'
+attestation = {'task_id': 'task_d28b71d6a64d', 'reviewer_id': 'technical_architect', 'reviewer_model': 'reviewer-model', 'reviewer_provider': '', ...}
+
+    def review_task(self, task_id: str, actor: str, approve: bool, findings: str, attestation: dict[str, Any] | None = None) -> dict[str, Any]:
+        task = self._task(task_id)
+        if actor != task["reviewer_id"]:
+            self.store.audit(actor, "review", "task", task_id, "denied", {"expected": task["reviewer_id"]})
+            raise GovernanceError(f"Independent review must be performed by '{task['reviewer_id']}'")
+        if actor == task["owner_id"]:
+            raise GovernanceError("No agent may certify its own work")
+        if actor != self.founder_id:
+            from jarvis.amaura.evidence import (
+                deterministic_evidence_review,
+                strict_review_enabled,
+                validate_criterion_review,
+                verify_review_attestation,
+            )
+            if not attestation:
+                raise GovernanceError("Review attestation is required for non-founder reviewers")
+            if not verify_review_attestation(attestation):
+                raise GovernanceError("Invalid review attestation signature")
+            if attestation.get("reviewer_id") != actor or attestation.get("task_id") != task_id:
+                raise GovernanceError("Attestation does not match task and reviewer")
+            attestation_decision = self._attestation_approves(attestation)
+            if attestation_decision != approve:
+                raise GovernanceError("Attestation decision does not match review approval")
+            if strict_review_enabled(task):
+                current_deterministic = deterministic_evidence_review(task, self.evidence)
+                signed_deterministic = attestation.get("deterministic_review")
+                if not isinstance(signed_deterministic, dict):
+                    raise GovernanceError("Review attestation is missing deterministic evidence verification")
+                if signed_deterministic.get("submission_sha256") != current_deterministic["submission_sha256"]:
+>                   raise GovernanceError("Review attestation was signed for a different task submission")
+E                   jarvis.amaura.models.GovernanceError: Review attestation was signed for a different task submission
+
+jarvis/amaura/control_plane.py:346: GovernanceError
+_________ TestAmauraSupervisor.test_approval_is_bound_to_exact_payload _________
+
+self = <test_amaura_supervisor.TestAmauraSupervisor testMethod=test_approval_is_bound_to_exact_payload>
+
+    def test_approval_is_bound_to_exact_payload(self):
+        programme = self.control.create_program(
+            objective="Publish a verified update",
+            success_metric="Every public claim is independently evidenced",
+            workflow_key="content_campaign",
+        )
+        evidence_task, content_task, _ = programme["tasks"]
+        for task in (evidence_task,):
+            self.control.start_task(task["id"])
+            self.control.submit_task(
+                task["id"],
+                task["owner_id"],
+                "Evidence register is complete.",
+                [{"type": "evidence", "reference": "artifact://evidence/v1"}],
+            )
+>           self.control.review_task(
+                task["id"],
+                task["reviewer_id"],
+                True,
+                "Evidence sources verified.",
+                attestation=self._attestation(task["id"], task["reviewer_id"]),
+            )
+
+tests/test_amaura_supervisor.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <jarvis.amaura.control_plane.AmauraControlPlane object at 0x11354b890>
+task_id = 'task_62e0d575aebd', actor = 'jarvis', approve = True
+findings = 'Evidence sources verified.'
+attestation = {'signature': 'mock', 'decision': {'approve': True, 'criteria': []}, 'deterministic_review': {'approve': False, 'findi...nt-addressed evidence vault'], 'verified_evidence': [], 'criteria_count': 3, ...}, 'task_id': 'task_62e0d575aebd', ...}
+
+    def review_task(self, task_id: str, actor: str, approve: bool, findings: str, attestation: dict[str, Any] | None = None) -> dict[str, Any]:
+        task = self._task(task_id)
+        if actor != task["reviewer_id"]:
+            self.store.audit(actor, "review", "task", task_id, "denied", {"expected": task["reviewer_id"]})
+            raise GovernanceError(f"Independent review must be performed by '{task['reviewer_id']}'")
+        if actor == task["owner_id"]:
+            raise GovernanceError("No agent may certify its own work")
+        if actor != self.founder_id:
+            from jarvis.amaura.evidence import (
+                deterministic_evidence_review,
+                strict_review_enabled,
+                validate_criterion_review,
+                verify_review_attestation,
+            )
+            if not attestation:
+                raise GovernanceError("Review attestation is required for non-founder reviewers")
+            if not verify_review_attestation(attestation):
+                raise GovernanceError("Invalid review attestation signature")
+            if attestation.get("reviewer_id") != actor or attestation.get("task_id") != task_id:
+                raise GovernanceError("Attestation does not match task and reviewer")
+            attestation_decision = self._attestation_approves(attestation)
+            if attestation_decision != approve:
+                raise GovernanceError("Attestation decision does not match review approval")
+            if strict_review_enabled(task):
+                current_deterministic = deterministic_evidence_review(task, self.evidence)
+                signed_deterministic = attestation.get("deterministic_review")
+                if not isinstance(signed_deterministic, dict):
+                    raise GovernanceError("Review attestation is missing deterministic evidence verification")
+                if signed_deterministic.get("submission_sha256") != current_deterministic["submission_sha256"]:
+                    raise GovernanceError("Review attestation was signed for a different task submission")
+                if bool(signed_deterministic.get("approve")) != bool(current_deterministic["approve"]):
+                    raise GovernanceError("Review attestation deterministic result is stale or inconsistent")
+                criterion_review = validate_criterion_review(
+                    task,
+                    dict(attestation.get("decision") or {}),
+                    self.evidence,
+                )
+                if approve and not criterion_review["ok"]:
+>                   raise GovernanceError(
+                        "Review attestation does not prove every acceptance criterion: "
+                        + "; ".join(criterion_review["findings"])
+                    )
+E                   jarvis.amaura.models.GovernanceError: Review attestation does not prove every acceptance criterion: Reviewer covered 0 of 3 acceptance criteria; Acceptance criteria missing reviewer coverage: [1, 2, 3]
+
+jarvis/amaura/control_plane.py:355: GovernanceError
+_______ TestAmauraSupervisor.test_audit_chain_detects_database_tampering _______
+
+self = <test_amaura_supervisor.TestAmauraSupervisor testMethod=test_audit_chain_detects_database_tampering>
+
+    def test_audit_chain_detects_database_tampering(self):
+        self._programme()
+>       self.assertTrue(self.control.store.audit_chain_check()["ok"])
+E       AssertionError: False is not true
+
+tests/test_amaura_supervisor.py:231: AssertionError
+_ TestAmauraSupervisor.test_explicit_local_mode_is_zero_cost_and_has_no_cloud_fallback _
+
+self = <test_amaura_supervisor.TestAmauraSupervisor testMethod=test_explicit_local_mode_is_zero_cost_and_has_no_cloud_fallback>
+
+    def test_explicit_local_mode_is_zero_cost_and_has_no_cloud_fallback(self):
+        with patch.dict(
+            "os.environ",
+            {"AMAURA_MODEL_MODE": "local", "AMAURA_LOCAL_MODEL": "nova:3b"},
+            clear=False,
+        ):
+>           route = self.control.models.route(
+                "builder",
+                remaining_budget_cents=0,
+                estimated_tokens=50_000,
+            )
+
+tests/test_amaura_supervisor.py:286: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <jarvis.amaura.model_gateway.ModelGateway object at 0x113557c50>
+agent_id = 'builder', risk = 'low', sensitivity = 'internal'
+estimated_tokens = 50000, remaining_budget_cents = 0, needs_vision = False
+
+    def route(
+        self,
+        agent_id: str,
+        *,
+        risk: str = "low",
+        sensitivity: str = "internal",
+        estimated_tokens: int = 4000,
+        remaining_budget_cents: int,
+        needs_vision: bool = False,
+    ) -> ModelRoute:
+        agent = get_agent(agent_id)
+        estimated_tokens = max(1, int(estimated_tokens))
+        mode = os.environ.get("AMAURA_MODEL_MODE", "local").strip().lower()
+        provider_env = os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower()
+        if mode not in {"local", "balanced", "cloud", "omniroute"} and provider_env != "omniroute":
+            raise GovernanceError("AMAURA_MODEL_MODE must be local, balanced, cloud, or omniroute")
+    
+        if provider_env == "omniroute" or mode == "omniroute":
+            omni_model = os.environ.get("AMAURA_OMNIROUTE_MODEL", "").strip() or os.environ.get("OMNIROUTE_MODEL", "").strip() or os.environ.get("AMAURA_CLOUD_WORKER_MODEL", "").strip()
+            if not omni_model:
+                raise GovernanceError("AMAURA_OMNIROUTE_MODEL is required when provider is omniroute")
+            route = ModelRoute(
+                model_key=omni_model,
+                provider="omniroute",
+                privacy="cloud_approved",
+                estimated_cost_cents=max(1, estimated_tokens // 4000),
+                fallback_model_key=os.environ.get("AMAURA_OMNIROUTE_FALLBACK_MODEL", "").strip() or None,
+                reason="Governed task is routed through the OmniRoute cognition gateway.",
+            )
+            if route.estimated_cost_cents > remaining_budget_cents:
+>               raise GovernanceError(
+                    f"Estimated model cost {route.estimated_cost_cents}c exceeds remaining task budget {remaining_budget_cents}c"
+                )
+E               jarvis.amaura.models.GovernanceError: Estimated model cost 12c exceeds remaining task budget 0c
+
+jarvis/amaura/model_gateway.py:58: GovernanceError
+_ TestAmauraSupervisor.test_supervisor_leases_executes_and_reviews_independently _
+
+self = <test_amaura_supervisor.TestAmauraSupervisor testMethod=test_supervisor_leases_executes_and_reviews_independently>
+
+    def test_supervisor_leases_executes_and_reviews_independently(self):
+        programme = self._programme()
+        first = programme["tasks"][0]
+        supervisor = AmauraSupervisor(
+            self.control,
+            worker_id="test-worker",
+            runner_factory=_SuccessfulRunner,
+            reviewer_factory=_SuccessfulReviewer,
+        )
+    
+        executed = supervisor.tick()
+        self.assertEqual(executed["status"], "executed")
+        self.assertEqual(executed["execution"]["state"], "succeeded")
+        self.assertEqual(
+            self.control.store.get_work_item(first["id"])["state"],
+            TaskState.AWAITING_REVIEW.value,
+        )
+    
+        reviewed = supervisor.tick()
+>       self.assertEqual(reviewed["status"], "reviewed")
+E       AssertionError: 'review_deferred' != 'reviewed'
+E       - review_deferred
+E       + reviewed
+
+tests/test_amaura_supervisor.py:121: AssertionError
+_________________ test_audit_chain_is_atomic_across_processes __________________
+
+tmp_path = PosixPath('/private/var/folders/3t/t_zmxljd573839_bvb_mkc180000gn/T/pytest-of-ashishsingh/pytest-56/test_audit_chain_is_atomic_acr0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x113b7a970>
+
+    def test_audit_chain_is_atomic_across_processes(tmp_path, monkeypatch):
+        db = tmp_path / "company.db"
+        checkpoint = tmp_path / "audit-head.json"
+        key = "audit-key-" + "a" * 64
+        monkeypatch.setenv("AMAURA_AUDIT_HMAC_KEY", key)
+        monkeypatch.setenv("AMAURA_AUDIT_CHECKPOINT_PATH", str(checkpoint))
+        CompanyStore(db).close()
+        ctx = mp.get_context("spawn")
+        processes = [ctx.Process(target=_audit_writer, args=(str(db), str(checkpoint), key, worker, 25)) for worker in range(16)]
+        for process in processes:
+            process.start()
+        for process in processes:
+            process.join(30)
+            exitcode = process.exitcode
+            process.close()
+>           assert exitcode == 0
+E           assert 1 == 0
+
+tests/test_amaura_trust_foundation.py:75: AssertionError
+----------------------------- Captured stderr call -----------------------------
+Process SpawnProcess-10:
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/tests/test_amaura_trust_foundation.py", line 27, in _audit_writer
+    store.audit(f"worker-{worker}", "append", "stress", str(index), "allowed", {"index": index})
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/jarvis/amaura/store.py", line 1839, in audit
+    raise RuntimeError(self._audit_integrity_fault)
+RuntimeError: Audit history integrity failure at sequence 1: external_checkpoint_mismatch
+Process SpawnProcess-8:
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/tests/test_amaura_trust_foundation.py", line 27, in _audit_writer
+    store.audit(f"worker-{worker}", "append", "stress", str(index), "allowed", {"index": index})
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/jarvis/amaura/store.py", line 1839, in audit
+    raise RuntimeError(self._audit_integrity_fault)
+RuntimeError: Audit history integrity failure at sequence 13: external_checkpoint_mismatch
+Process SpawnProcess-7:
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/tests/test_amaura_trust_foundation.py", line 27, in _audit_writer
+    store.audit(f"worker-{worker}", "append", "stress", str(index), "allowed", {"index": index})
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/jarvis/amaura/store.py", line 1839, in audit
+    raise RuntimeError(self._audit_integrity_fault)
+RuntimeError: Audit history integrity failure at sequence 19: external_checkpoint_mismatch
+Process SpawnProcess-4:
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/tests/test_amaura_trust_foundation.py", line 27, in _audit_writer
+    store.audit(f"worker-{worker}", "append", "stress", str(index), "allowed", {"index": index})
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/jarvis/amaura/store.py", line 1839, in audit
+    raise RuntimeError(self._audit_integrity_fault)
+RuntimeError: Audit history integrity failure at sequence 34: external_checkpoint_mismatch
+Process SpawnProcess-2:
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/tests/test_amaura_trust_foundation.py", line 27, in _audit_writer
+    store.audit(f"worker-{worker}", "append", "stress", str(index), "allowed", {"index": index})
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/jarvis/amaura/store.py", line 1839, in audit
+    raise RuntimeError(self._audit_integrity_fault)
+RuntimeError: Audit history integrity failure at sequence 45: external_checkpoint_mismatch
+Process SpawnProcess-6:
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/tests/test_amaura_trust_foundation.py", line 27, in _audit_writer
+    store.audit(f"worker-{worker}", "append", "stress", str(index), "allowed", {"index": index})
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/jarvis/amaura/store.py", line 1839, in audit
+    raise RuntimeError(self._audit_integrity_fault)
+RuntimeError: Audit history integrity failure at sequence 65: external_checkpoint_mismatch
+_______ test_model_gateway_uses_explicit_cloud_model_and_local_fallback ________
+
+    def test_model_gateway_uses_explicit_cloud_model_and_local_fallback():
+        from jarvis.amaura.model_gateway import ModelGateway
+        with patch.dict(os.environ, {
+            "AMAURA_MODEL_MODE": "balanced",
+            "AMAURA_LOCAL_MODEL": "local-worker",
+            "AMAURA_CLOUD_WORKER_MODEL": "cloud-worker",
+        }, clear=False):
+            route = ModelGateway().route("builder", remaining_budget_cents=100)
+>       assert route.model_key == "cloud-worker"
+E       AssertionError: assert 'auto/best-coding' == 'cloud-worker'
+E         
+E         - cloud-worker
+E         + auto/best-coding
+
+tests/test_amaura_v350_hardening.py:144: AssertionError
+___________________ test_omniroute_selected_when_configured ____________________
+
+omniroute_env = None
+
+    def test_omniroute_selected_when_configured(omniroute_env):
+        sel = CognitiveModelGateway.select(purpose="general")
+        assert sel is not None
+        assert sel.provider == "omniroute"
+>       assert sel.model == "gpt-4o-mini"
+E       AssertionError: assert 'groq/llama-3.3-70b-versatile' == 'gpt-4o-mini'
+E         
+E         - gpt-4o-mini
+E         + groq/llama-3.3-70b-versatile
+
+tests/test_omniroute_integration.py:104: AssertionError
+__________________ test_omniroute_not_available_without_model __________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10db755c0>
+
+    def test_omniroute_not_available_without_model(monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("AMAURA_MODEL_PROVIDER", "omniroute")
+        monkeypatch.setenv("AMAURA_OMNIROUTE_API_KEY", "sk-test-" + "x" * 32)
+        monkeypatch.setenv("AMAURA_OMNIROUTE_BASE_URL", "http://127.0.0.1:19999")
+        monkeypatch.delenv("AMAURA_OMNIROUTE_MODEL", raising=False)
+        monkeypatch.delenv("OMNIROUTE_MODEL", raising=False)
+        monkeypatch.delenv("AMAURA_JARVIS_MODEL", raising=False)
+>       assert CognitiveModelGateway.select(purpose="general") is None
+E       AssertionError: assert CognitiveModelSelection(provider='omniroute', model='groq/llama-3.3-70b-versatile') is None
+E        +  where CognitiveModelSelection(provider='omniroute', model='groq/llama-3.3-70b-versatile') = select(purpose='general')
+E        +    where select = CognitiveModelGateway.select
+
+tests/test_omniroute_integration.py:200: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/speech_recognition/__init__.py:7
+  /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/.venv/lib/python3.13/site-packages/speech_recognition/__init__.py:7: DeprecationWarning: aifc was removed in Python 3.13. Please be aware that you are currently NOT using standard 'aifc', but instead a separately installed 'standard-aifc'.
+    import aifc
+
+tests/test_amaura_v353_security.py::test_websocket_always_requires_key
+tests/test_fable_engine.py::TestFableEngineIntegration::test_agent_does_not_mutate_process_working_directory
+tests/test_fable_engine.py::TestFableEngineIntegration::test_agent_run_fable_reasoning
+tests/test_voice.py::TestStreamingVoice::test_tool_dispatches
+  /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/.venv/lib/python3.13/site-packages/httpx/_config.py:51: DeprecationWarning: `verify=<str>` is deprecated. Use `verify=ssl.create_default_context(cafile=...)` or `verify=ssl.create_default_context(capath=...)` instead.
+    warnings.warn(message, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_233352/capability_audit_correction/pytest.xml -
+=========================== short test summary info ============================
+FAILED tests/test_amaura_company_api.py::test_cashflow_api_dashboard_tick_and_founder_stream
+FAILED tests/test_amaura_growth.py::TestAmauraGrowthSystem::test_concurrent_domain_deduplication_and_integrity
+FAILED tests/test_amaura_jarvis_v5.py::test_cognitive_model_gateway_provider_detection_matches_execution_route
+FAILED tests/test_amaura_jarvis_v51.py::test_ollama_executive_uses_company_local_model
+FAILED tests/test_amaura_mission_control.py::test_autonomous_mission_runs_to_founder_boundary_then_credits_after_approval
+FAILED tests/test_amaura_os.py::TestAmauraCompanyOS::test_governed_runner_dispatches_specialist_then_stops_for_review
+FAILED tests/test_amaura_os.py::TestAmauraCompanyOS::test_medium_and_high_risk_work_requires_founder_approval
+FAILED tests/test_amaura_os.py::TestAmauraCompanyOS::test_no_employee_can_certify_own_work
+FAILED tests/test_amaura_os.py::TestAmauraCompanyOS::test_private_data_never_routes_to_cloud
+FAILED tests/test_amaura_oss_capabilities.py::test_scheduler_serializes_heavy_workers
+FAILED tests/test_amaura_production.py::TestAmauraProductionControls::test_readiness_separates_source_from_unavailable_live_infrastructure
+FAILED tests/test_amaura_production.py::TestAmauraProductionControls::test_review_models_must_be_distinct_for_production
+FAILED tests/test_amaura_production.py::TestAmauraProductionControls::test_review_task_accepts_real_object_decision_attestation
+FAILED tests/test_amaura_supervisor.py::TestAmauraSupervisor::test_approval_is_bound_to_exact_payload
+FAILED tests/test_amaura_supervisor.py::TestAmauraSupervisor::test_audit_chain_detects_database_tampering
+FAILED tests/test_amaura_supervisor.py::TestAmauraSupervisor::test_explicit_local_mode_is_zero_cost_and_has_no_cloud_fallback
+FAILED tests/test_amaura_supervisor.py::TestAmauraSupervisor::test_supervisor_leases_executes_and_reviews_independently
+FAILED tests/test_amaura_trust_foundation.py::test_audit_chain_is_atomic_across_processes
+FAILED tests/test_amaura_v350_hardening.py::test_model_gateway_uses_explicit_cloud_model_and_local_fallback
+FAILED tests/test_omniroute_integration.py::test_omniroute_selected_when_configured
+FAILED tests/test_omniroute_integration.py::test_omniroute_not_available_without_model
+====== 21 failed, 431 passed, 1 skipped, 5 warnings in 122.16s (0:02:02) =======

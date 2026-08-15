@@ -1,0 +1,169 @@
+{
+  "test_id": "12_workflow_tsv_to_json_output_first",
+  "status": "PASS",
+  "reason": "Output-before-input path roles.",
+  "verification": {
+    "expected": [
+      {
+        "item": "kite-lagoon-7577",
+        "qty": 16
+      },
+      {
+        "item": "dune-point-6341",
+        "qty": 7
+      },
+      {
+        "item": "pine-delta-6719",
+        "qty": 2
+      },
+      {
+        "item": "granite-bridge-2182",
+        "qty": 15
+      }
+    ],
+    "actual": [
+      {
+        "item": "kite-lagoon-7577",
+        "qty": 16
+      },
+      {
+        "item": "dune-point-6341",
+        "qty": 7
+      },
+      {
+        "item": "pine-delta-6719",
+        "qty": 2
+      },
+      {
+        "item": "granite-bridge-2182",
+        "qty": 15
+      }
+    ]
+  },
+  "chat": {
+    "prompt": "Save the JSON result to \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/dest_51810519.json\" after reading the tab-separated table from \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/source_85880385.tsv\". Produce an array of objects and keep qty numeric.",
+    "session_id": "s_85995105",
+    "http_status": 200,
+    "response_text": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/source_85880385.tsv, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/dest_51810519.json.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/source_85880385.tsv, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/dest_51810519.json.",
+        "session_id": "s_85995105",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/source_85880385.tsv, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/dest_51810519.json.",
+          "session_id": "s_85995105",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "requested_operation": "delimited_table_to_json",
+              "parsed_plan": {
+                "inputs": [
+                  "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/source_85880385.tsv"
+                ],
+                "operation": "delimited_table_to_json",
+                "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/dest_51810519.json",
+                "parameters": {
+                  "delimiter": "\t"
+                }
+              },
+              "input_values": [
+                "item\tqty\nkite-lagoon-7577\t16\ndune-point-6341\t7\npine-delta-6719\t2\ngranite-bridge-2182\t15\n"
+              ],
+              "computed_result": [
+                {
+                  "item": "kite-lagoon-7577",
+                  "qty": 16
+                },
+                {
+                  "item": "dune-point-6341",
+                  "qty": 7
+                },
+                {
+                  "item": "pine-delta-6719",
+                  "qty": 2
+                },
+                {
+                  "item": "granite-bridge-2182",
+                  "qty": 15
+                }
+              ],
+              "expected_output_hash": "3111940081d9fdb520173527acf806075d1328ca05b18f3dfa0b5d686c6ef14c",
+              "actual_output_hash": "3111940081d9fdb520173527acf806075d1328ca05b18f3dfa0b5d686c6ef14c",
+              "verification_passed": true,
+              "output_bytes": 221
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "policy_decision": "allowed",
+            "requested_operation": "delimited_table_to_json",
+            "parsed_plan": {
+              "inputs": [
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/source_85880385.tsv"
+              ],
+              "operation": "delimited_table_to_json",
+              "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/dest_51810519.json",
+              "parameters": {
+                "delimiter": "\t"
+              }
+            },
+            "input_values": [
+              "item\tqty\nkite-lagoon-7577\t16\ndune-point-6341\t7\npine-delta-6719\t2\ngranite-bridge-2182\t15\n"
+            ],
+            "computed_result": [
+              {
+                "item": "kite-lagoon-7577",
+                "qty": 16
+              },
+              {
+                "item": "dune-point-6341",
+                "qty": 7
+              },
+              {
+                "item": "pine-delta-6719",
+                "qty": 2
+              },
+              {
+                "item": "granite-bridge-2182",
+                "qty": 15
+              }
+            ],
+            "expected_output_hash": "3111940081d9fdb520173527acf806075d1328ca05b18f3dfa0b5d686c6ef14c",
+            "actual_output_hash": "3111940081d9fdb520173527acf806075d1328ca05b18f3dfa0b5d686c6ef14c",
+            "verification_passed": true,
+            "output_bytes": 221
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

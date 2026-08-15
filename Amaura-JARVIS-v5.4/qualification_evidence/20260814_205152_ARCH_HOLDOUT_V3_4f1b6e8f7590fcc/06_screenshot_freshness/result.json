@@ -1,0 +1,91 @@
+{
+  "test_id": "06_screenshot_freshness",
+  "status": "PASS",
+  "reason": "PASS requires a fresh valid PNG with screenshot execution evidence; BLOCKED only for explicit OS denial.",
+  "verification": {
+    "exists": true,
+    "fresh": true,
+    "valid_png": true,
+    "width": 2940,
+    "height": 1912,
+    "permission_blocked": false,
+    "capability_observed": true,
+    "provenance": {
+      "provider": "macos-native-tool",
+      "model": "",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "execution_type": "tool",
+      "tool_name": "take_screenshot",
+      "policy_decision": "allowed",
+      "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/display_58093057.png",
+      "size_bytes": 3526438,
+      "dimensions": "2940x1912",
+      "verification": "passed"
+    }
+  },
+  "chat": {
+    "prompt": "Save a screenshot of the current display as a PNG at \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/display_58093057.png\".",
+    "http_status": 200,
+    "response_text": "Screenshot saved to /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/display_58093057.png (3526438 bytes, 2940x1912).",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": "completed",
+    "goal_history": [],
+    "latency_ms": 674.3831634521484,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Screenshot saved to /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/display_58093057.png (3526438 bytes, 2940x1912).",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "macos-native-tool",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Screenshot saved to /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/display_58093057.png (3526438 bytes, 2940x1912).",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "take_screenshot",
+            "provider": "macos-native-tool",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/display_58093057.png",
+              "size_bytes": 3526438,
+              "dimensions": "2940x1912",
+              "verification": "passed"
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "macos-native-tool",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "take_screenshot",
+            "policy_decision": "allowed",
+            "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/display_58093057.png",
+            "size_bytes": 3526438,
+            "dimensions": "2940x1912",
+            "verification": "passed"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "freeze_name": "FINAL_PRE_HOLDOUT_FREEZE_PHASE5",
+  "phase": "PHASE_5",
+  "title": "Last-Mile Generalization + Deterministic Reliability Repair",
+  "timestamp": "2026-08-14T17:13:25.600890+00:00",
+  "git_head": "e61da5e7429420ffa5b5f7004d22969da22d4ca1",
+  "git_tree": "b946f1758feb4071965b8eb24322abd85584954b",
+  "source_immutability_verified": true,
+  "targeted_tests_passed": true,
+  "full_tests_passed": true,
+  "anti_overfit_verified": true,
+  "files": [
+    "ANTI_OVERFIT_SCAN.txt",
+    "FINAL_FREEZE_SOURCE_HASHES.json",
+    "FREEZE_MANIFEST.json",
+    "FULL_TEST_RESULTS.txt",
+    "GIT_DIFF.patch",
+    "GIT_DIFF_STAT.txt",
+    "GIT_HEAD.txt",
+    "GIT_STATUS.txt",
+    "GIT_TREE.txt",
+    "POST_FREEZE_SOURCE_HASHES.json",
+    "SOURCE_IMMUTABILITY.json",
+    "TARGETED_TEST_RESULTS.txt"
+  ]
+}

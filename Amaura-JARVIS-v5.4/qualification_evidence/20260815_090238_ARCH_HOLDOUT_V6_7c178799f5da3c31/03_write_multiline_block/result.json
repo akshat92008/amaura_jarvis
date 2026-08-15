@@ -1,0 +1,70 @@
+{
+  "test_id": "03_write_multiline_block",
+  "status": "FAIL",
+  "reason": "Multiline payload boundary preservation.",
+  "verification": {
+    "expected": "flint-edge-1701\n22 eagle-mill-9710\nmaple-edge-1151",
+    "actual": null,
+    "exact": false
+  },
+  "chat": {
+    "prompt": "Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/multi_33980041.txt\" with this exact text block:\nflint-edge-1701\n22 eagle-mill-9710\nmaple-edge-1151",
+    "session_id": "s3_90725992",
+    "http_status": 200,
+    "response_text": "Write action rejected: Write precondition failed: semantic content requested but parsed content is empty",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Write action rejected: Write precondition failed: semantic content requested but parsed content is empty",
+        "session_id": "s3_90725992",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "failed",
+        "executive": {
+          "intent": "mission",
+          "message": "Write action rejected: Write precondition failed: semantic content requested but parsed content is empty",
+          "session_id": "s3_90725992",
+          "goal_id": "",
+          "state": "failed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "reason": "write_precondition_failed",
+              "detail": "Write precondition failed: semantic content requested but parsed content is empty",
+              "verification_passed": false
+            },
+            "success": false
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "policy_decision": "allowed",
+            "reason": "write_precondition_failed",
+            "detail": "Write precondition failed: semantic content requested but parsed content is empty",
+            "verification_passed": false
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "failed"
+  }
+}

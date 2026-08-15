@@ -1,0 +1,61 @@
+{
+  "router_generated_case_count": 1000,
+  "screenshot_positive_case_count": 100,
+  "screenshot_negative_case_count": 500,
+  "screenshot_negative_categories": [
+    "quoted_screenshot_in_payload",
+    "negated_capture_clause",
+    "path_containing_desktop_or_image",
+    "conversational_take_number",
+    "text_writing_with_image_extension"
+  ],
+  "write_generated_case_count": 1500,
+  "write_ambiguous_case_count": 100,
+  "write_expected_payload_independent": true,
+  "exact_literal_generated_case_count": 2000,
+  "non_literal_exact_format_case_count": 500,
+  "response_mode_separation_asserted": true,
+  "display_mode_asserted": true,
+  "exact_raw_mode_asserted": true,
+  "exact_literal_concurrency_sizes": [
+    20,
+    40,
+    60,
+    80
+  ],
+  "mixed_action_concurrency_sizes": [
+    50
+  ],
+  "exact_zero_crosstalk_asserted": true,
+  "exact_zero_mission_asserted": true,
+  "exact_zero_model_asserted": true,
+  "exact_zero_service_error_asserted": true,
+  "wrong_action_invariant_asserted": true,
+  "wrong_action_collision_classes": [
+    "screenshot_vs_file_write",
+    "screenshot_vs_workflow",
+    "quoted_action_word_collision",
+    "negated_action_collision"
+  ],
+  "false_success_wrong_payload_asserted": true,
+  "false_success_wrong_tool_asserted": true,
+  "false_success_postcondition_asserted": true,
+  "false_success_missing_output_asserted": true,
+  "false_success_repo_unresolved_asserted": true,
+  "repo_wrong_helper_semantic_asserted": true,
+  "repo_comparison_semantic_asserted": true,
+  "repo_wrong_constant_semantic_asserted": true,
+  "repo_wrong_return_semantic_asserted": true,
+  "repo_boolean_semantic_asserted": true,
+  "failure_injection_cases": [
+    "ambiguous_write_payload",
+    "missing_write_output",
+    "post_write_byte_corruption",
+    "screenshot_permission_denial",
+    "negated_action",
+    "workflow_missing_input",
+    "raw_read_missing_file",
+    "unknown_repo_semantic_defect"
+  ],
+  "api_boundary_case_count": 210
+}

@@ -1,0 +1,261 @@
+{
+  "test_id": "08_memory_entity_paraphrase",
+  "status": "PASS",
+  "reason": "Memory recall under paraphrase and distractor.",
+  "verification": {
+    "correct": true,
+    "distractor_present": false
+  },
+  "chat": {
+    "store1": {
+      "prompt": "Remember this fact: the deployment code for Indigo Plaza service is heather-brook-5546.",
+      "session_id": "memory_18531857",
+      "http_status": 200,
+      "response_text": "Remembered under personal memory: this fact: the deployment code for Indigo Plaza service is heather-brook-5546.",
+      "error": null,
+      "events": [
+        {
+          "type": "complete",
+          "response": "Remembered under personal memory: this fact: the deployment code for Indigo Plaza service is heather-brook-5546.",
+          "session_id": "memory_18531857",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "not-invoked",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "memory_write",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "memory_write",
+            "message": "Remembered under personal memory: this fact: the deployment code for Indigo Plaza service is heather-brook-5546.",
+            "session_id": "memory_18531857",
+            "goal_id": "",
+            "state": "",
+            "result": {
+              "memory": {
+                "namespace": "jarvis.memory.personal",
+                "key": "this_fact_the_deployment_code_for_indigo_plaza_service_is_heather_brook",
+                "value": {
+                  "content": "this fact: the deployment code for Indigo Plaza service is heather-brook-5546.",
+                  "confidence": 1.0,
+                  "source": "explicit_chat",
+                  "trust": "founder",
+                  "entities": [
+                    "Indigo Plaza"
+                  ],
+                  "created_at": "2026-08-15T03:32:55.812004+00:00",
+                  "updated_at": "2026-08-15T03:32:55.812004+00:00",
+                  "history": []
+                },
+                "evidence_refs": [],
+                "sensitivity": "internal",
+                "updated_by": "founder",
+                "updated_at": "2026-08-15T03:32:55.812048+00:00"
+              }
+            },
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "not-invoked",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": ""
+            }
+          }
+        }
+      ],
+      "goal_id": null,
+      "goal_state": null
+    },
+    "store2": {
+      "prompt": "Remember this fact: the deployment code for Flint Terrace service is kelp-ferry-8847.",
+      "session_id": "memory_18531857",
+      "http_status": 200,
+      "response_text": "Remembered under personal memory: this fact: the deployment code for Flint Terrace service is kelp-ferry-8847.",
+      "error": null,
+      "events": [
+        {
+          "type": "complete",
+          "response": "Remembered under personal memory: this fact: the deployment code for Flint Terrace service is kelp-ferry-8847.",
+          "session_id": "memory_18531857",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "not-invoked",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "memory_write",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "memory_write",
+            "message": "Remembered under personal memory: this fact: the deployment code for Flint Terrace service is kelp-ferry-8847.",
+            "session_id": "memory_18531857",
+            "goal_id": "",
+            "state": "",
+            "result": {
+              "memory": {
+                "namespace": "jarvis.memory.personal",
+                "key": "this_fact_the_deployment_code_for_flint_terrace_service_is_kelp_ferry_88",
+                "value": {
+                  "content": "this fact: the deployment code for Flint Terrace service is kelp-ferry-8847.",
+                  "confidence": 1.0,
+                  "source": "explicit_chat",
+                  "trust": "founder",
+                  "entities": [
+                    "Flint Terrace"
+                  ],
+                  "created_at": "2026-08-15T03:32:59.001329+00:00",
+                  "updated_at": "2026-08-15T03:32:59.001329+00:00",
+                  "history": []
+                },
+                "evidence_refs": [],
+                "sensitivity": "internal",
+                "updated_by": "founder",
+                "updated_at": "2026-08-15T03:32:59.001365+00:00"
+              }
+            },
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "not-invoked",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": ""
+            }
+          }
+        }
+      ],
+      "goal_id": null,
+      "goal_state": null
+    },
+    "recall": {
+      "prompt": "Remind me which deployment code I assigned to Indigo Plaza service.",
+      "session_id": "memory_18531857",
+      "http_status": 200,
+      "response_text": "this fact: the deployment code for Indigo Plaza service is heather-brook-5546.",
+      "error": null,
+      "events": [
+        {
+          "type": "complete",
+          "response": "this fact: the deployment code for Indigo Plaza service is heather-brook-5546.",
+          "session_id": "memory_18531857",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "internal-memory",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "conversation",
+          "goal_id": "",
+          "state": "completed",
+          "executive": {
+            "intent": "conversation",
+            "message": "this fact: the deployment code for Indigo Plaza service is heather-brook-5546.",
+            "session_id": "memory_18531857",
+            "goal_id": "",
+            "state": "completed",
+            "result": {
+              "execution_type": "memory_retrieval",
+              "tool_name": "memory_retrieval",
+              "provider": "internal-memory",
+              "model": "",
+              "policy_decision": "allowed",
+              "evidence": [],
+              "telemetry": {
+                "memory_query": "Remind me which deployment code I assigned to Indigo Plaza service.",
+                "entities": [
+                  "Remind",
+                  "Indigo Plaza"
+                ],
+                "namespaces_searched": [
+                  "jarvis.memory.personal",
+                  "jarvis.memory.episodic",
+                  "company_work",
+                  "jarvis.memory.entity",
+                  "jarvis.memory.relation"
+                ],
+                "candidate_ids": [
+                  "jarvis.memory.personal:this_fact_the_deployment_code_for_indigo_plaza_service_is_heather_brook",
+                  "jarvis.memory.episodic:20260815T033255_memory_18531857",
+                  "company_work:task_98e06026d2b2",
+                  "jarvis.memory.entity:indigo_plaza",
+                  "jarvis.memory.relation:memory:personal:this_fact_the_deployment_code_for_indigo_plaza_service_is_heather_brook:mentions:indigo_plaza",
+                  "jarvis.memory.personal:this_fact_the_deployment_code_for_flint_terrace_service_is_kelp_ferry_88",
+                  "jarvis.memory.episodic:20260815T033259_memory_18531857",
+                  "company_work:task_65e225203ea2"
+                ],
+                "candidate_scores": [
+                  0.694,
+                  0.624,
+                  0.615,
+                  0.604,
+                  0.604,
+                  0.556,
+                  0.486,
+                  0.482
+                ],
+                "selected_ids": [
+                  "jarvis.memory.personal:this_fact_the_deployment_code_for_indigo_plaza_service_is_heather_brook"
+                ],
+                "selection_reason": "Top-scoring factual memory hit (jarvis.memory.personal:this_fact_the_deployment_code_for_indigo_plaza_service_is_heather_brook, score=0.694)"
+              },
+              "success": true
+            },
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "internal-memory",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": "",
+              "execution_type": "memory_retrieval",
+              "tool_name": "memory_retrieval",
+              "policy_decision": "allowed",
+              "memory_query": "Remind me which deployment code I assigned to Indigo Plaza service.",
+              "entities": [
+                "Remind",
+                "Indigo Plaza"
+              ],
+              "namespaces_searched": [
+                "jarvis.memory.personal",
+                "jarvis.memory.episodic",
+                "company_work",
+                "jarvis.memory.entity",
+                "jarvis.memory.relation"
+              ],
+              "candidate_ids": [
+                "jarvis.memory.personal:this_fact_the_deployment_code_for_indigo_plaza_service_is_heather_brook",
+                "jarvis.memory.episodic:20260815T033255_memory_18531857",
+                "company_work:task_98e06026d2b2",
+                "jarvis.memory.entity:indigo_plaza",
+                "jarvis.memory.relation:memory:personal:this_fact_the_deployment_code_for_indigo_plaza_service_is_heather_brook:mentions:indigo_plaza",
+                "jarvis.memory.personal:this_fact_the_deployment_code_for_flint_terrace_service_is_kelp_ferry_88",
+                "jarvis.memory.episodic:20260815T033259_memory_18531857",
+                "company_work:task_65e225203ea2"
+              ],
+              "candidate_scores": [
+                0.694,
+                0.624,
+                0.615,
+                0.604,
+                0.604,
+                0.556,
+                0.486,
+                0.482
+              ],
+              "selected_ids": [
+                "jarvis.memory.personal:this_fact_the_deployment_code_for_indigo_plaza_service_is_heather_brook"
+              ],
+              "selection_reason": "Top-scoring factual memory hit (jarvis.memory.personal:this_fact_the_deployment_code_for_indigo_plaza_service_is_heather_brook, score=0.694)"
+            }
+          }
+        }
+      ],
+      "goal_id": null,
+      "goal_state": "completed"
+    }
+  }
+}

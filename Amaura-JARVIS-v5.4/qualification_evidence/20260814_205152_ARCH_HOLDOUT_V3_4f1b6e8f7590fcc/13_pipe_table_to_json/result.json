@@ -1,0 +1,116 @@
+{
+  "test_id": "13_pipe_table_to_json",
+  "status": "FAIL",
+  "reason": "Requires a fresh structured read-transform-write workflow with runtime rows.",
+  "verification": {
+    "exists": true,
+    "exact": false,
+    "expected": [
+      {
+        "item": "velvet-ridge-5865",
+        "qty": 13
+      },
+      {
+        "item": "juniper-kestrel-4637",
+        "qty": 18
+      },
+      {
+        "item": "cedar-zephyr-7977",
+        "qty": 14
+      }
+    ],
+    "actual": {
+      "content": "item|qty\nvelvet-ridge-5865|13\njuniper-kestrel-4637|18\ncedar-zephyr-7977|14"
+    },
+    "capability_observed": true,
+    "provenance": {
+      "provider": "local-filesystem",
+      "model": "",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "execution_type": "workflow",
+      "tool_name": "multi_step_workflow",
+      "policy_decision": "allowed",
+      "input_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_30460350.dat",
+      "secondary_input_path": null,
+      "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_out_19809427.json",
+      "transform_type": "kv_to_json",
+      "expected_output_hash": "f54630d49bd1179fd40bae679d4c944f533d87a62f28d258c27ad75b5c2a4b87",
+      "actual_output_hash": "f54630d49bd1179fd40bae679d4c944f533d87a62f28d258c27ad75b5c2a4b87",
+      "verification_passed": true,
+      "output_bytes": 96
+    }
+  },
+  "chat": {
+    "prompt": "Read the pipe-separated table in \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_30460350.dat\". Convert its three data rows into a JSON array of objects with keys item and qty, keeping qty numeric, and save that JSON to \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_out_19809427.json\".",
+    "http_status": 200,
+    "response_text": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_30460350.dat, applied kv_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_out_19809427.json.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": "completed",
+    "goal_history": [],
+    "latency_ms": 18.62788200378418,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_30460350.dat, applied kv_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_out_19809427.json.",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_30460350.dat, applied kv_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_out_19809427.json.",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "input_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_30460350.dat",
+              "secondary_input_path": null,
+              "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_out_19809427.json",
+              "transform_type": "kv_to_json",
+              "expected_output_hash": "f54630d49bd1179fd40bae679d4c944f533d87a62f28d258c27ad75b5c2a4b87",
+              "actual_output_hash": "f54630d49bd1179fd40bae679d4c944f533d87a62f28d258c27ad75b5c2a4b87",
+              "verification_passed": true,
+              "output_bytes": 96
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "policy_decision": "allowed",
+            "input_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_30460350.dat",
+            "secondary_input_path": null,
+            "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_205152_ARCH_HOLDOUT_V3_4f1b6e8f7590fcc/workspace/table_out_19809427.json",
+            "transform_type": "kv_to_json",
+            "expected_output_hash": "f54630d49bd1179fd40bae679d4c944f533d87a62f28d258c27ad75b5c2a4b87",
+            "actual_output_hash": "f54630d49bd1179fd40bae679d4c944f533d87a62f28d258c27ad75b5c2a4b87",
+            "verification_passed": true,
+            "output_bytes": 96
+          }
+        }
+      }
+    ]
+  }
+}

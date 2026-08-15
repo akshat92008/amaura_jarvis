@@ -1,0 +1,18 @@
+{
+  "source_doc_created": true,
+  "pptx_created": false,
+  "tool_calls": [],
+  "source_facts": {
+    "project_code": "HELIOS-B8B484",
+    "lead_name": "Dr. Priya Varma-9108",
+    "coolant": "NX-C44CD7",
+    "launch_date": "Q3 2038",
+    "budget": "142 million credits",
+    "facility_main": "Hyderabad Lab-56",
+    "facility_sec": "Bangalore Research Hub-45",
+    "protocol": "ISO-91C074",
+    "crew": "7",
+    "review_month": "November"
+  },
+  "failure_reason": "PPTX not created by JARVIS"
+}

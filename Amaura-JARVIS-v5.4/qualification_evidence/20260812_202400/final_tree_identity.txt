@@ -1,0 +1,14 @@
+VERSION=5.4.1
+FINAL_COMMIT_SHA=8f10c54d1d6d166d2e120071c9b793a91829949a
+FINAL_TREE_SHA=3d1ba478d82e693c880a1b6a402ba36bc34803e6
+DIRTY=true
+MANIFEST_FILE=WORKING_TREE_SHA256SUMS.txt
+MANIFEST_ENTRIES=596
+QUALIFIED_STATE=WORKING_TREE_MANIFEST_BOUND
+
+Modified Files:
+- Amaura-JARVIS-v5.4/docs/tool_audit_matrix.md
+- Amaura-JARVIS-v5.4/jarvis/amaura/cognition.py
+- Amaura-JARVIS-v5.4/tests/test_macos_app_control.py
+
+Qualification Evidence Run: 20260812_202400

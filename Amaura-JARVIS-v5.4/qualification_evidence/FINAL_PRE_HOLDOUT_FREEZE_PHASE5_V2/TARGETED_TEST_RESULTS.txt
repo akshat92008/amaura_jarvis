@@ -1,0 +1,39 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- /Library/Frameworks/Python.framework/Versions/3.13/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4
+configfile: pyproject.toml
+plugins: cov-7.1.0, langsmith-0.10.13, anyio-4.14.2
+collecting ... collected 28 items
+
+tests/test_phase5_writes_and_failure_injection.py::test_write_action_parser_clause_variations PASSED [  3%]
+tests/test_phase5_writes_and_failure_injection.py::test_write_empty_file_explicit PASSED [  7%]
+tests/test_phase5_writes_and_failure_injection.py::test_write_precondition_unparsed_content_rejection PASSED [ 10%]
+tests/test_phase5_writes_and_failure_injection.py::test_write_failure_injections PASSED [ 14%]
+tests/test_phase5_workspace_security.py::test_workspace_security_refusal_when_model_gateway_offline PASSED [ 17%]
+tests/test_phase5_workspace_security.py::test_workspace_security_refusal_through_executive_kernel PASSED [ 21%]
+tests/test_phase5_browser_partial.py::test_browser_all_fields_succeed PASSED [ 25%]
+tests/test_phase5_browser_partial.py::test_browser_partial_failure_reporting PASSED [ 28%]
+tests/test_phase5_browser_partial.py::test_browser_all_fields_missing_reporting PASSED [ 32%]
+tests/test_phase5_repo_semantic_diagnosis.py::test_repo_diagnosis_wrong_returned_variable PASSED [ 35%]
+tests/test_phase5_repo_semantic_diagnosis.py::test_repo_diagnosis_wrong_boolean_operator PASSED [ 39%]
+tests/test_phase5_repo_semantic_diagnosis.py::test_repo_diagnosis_wrong_operator_arithmetic PASSED [ 42%]
+tests/test_phase5_repo_semantic_diagnosis.py::test_repo_diagnosis_comparison_inversion PASSED [ 46%]
+tests/test_phase5_repo_semantic_diagnosis.py::test_repo_diagnosis_indexing_error PASSED [ 50%]
+tests/test_phase5_workflow_path_roles.py::test_workflow_csv_to_json PASSED [ 53%]
+tests/test_phase5_workflow_path_roles.py::test_workflow_tsv_to_json PASSED [ 57%]
+tests/test_phase5_workflow_path_roles.py::test_workflow_pipe_delimited_markdown_to_json PASSED [ 60%]
+tests/test_phase5_workflow_path_roles.py::test_workflow_semicolon_to_json PASSED [ 64%]
+tests/test_phase5_workflow_path_roles.py::test_workflow_destination_first_path_ordering PASSED [ 67%]
+tests/test_phase5_exact_response_concurrency.py::test_exact_response_paraphrase_variations PASSED [ 71%]
+tests/test_phase5_exact_response_concurrency.py::test_concurrency_20_simultaneous_requests PASSED [ 75%]
+tests/test_phase5_exact_response_concurrency.py::test_concurrency_40_simultaneous_requests PASSED [ 78%]
+tests/test_phase5_executive_api_boundary.py::test_api_boundary_write_exact PASSED [ 82%]
+tests/test_phase5_executive_api_boundary.py::test_api_boundary_security_refusal_during_model_outage PASSED [ 85%]
+tests/test_phase5_executive_api_boundary.py::test_api_boundary_browser_partial_result PASSED [ 89%]
+tests/test_phase5_executive_api_boundary.py::test_api_boundary_repo_diagnosis PASSED [ 92%]
+tests/test_phase5_executive_api_boundary.py::test_api_boundary_tsv_workflow PASSED [ 96%]
+tests/test_phase5_executive_api_boundary.py::test_api_boundary_exact_response_burst PASSED [100%]
+
+============================= 28 passed in 10.65s ==============================
+

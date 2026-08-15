@@ -1,0 +1,200 @@
+{
+  "client_acquisition": {
+    "key": "client_acquisition",
+    "name": "Evidence-Governed Client Acquisition",
+    "department": "revenue",
+    "steps_count": 16,
+    "structurally_valid": false,
+    "execution_status": "PASS_FIXTURE_E2E",
+    "failure_detail": null
+  },
+  "community_growth_cycle": {
+    "key": "community_growth_cycle",
+    "name": "Community Listening and Growth Cycle",
+    "department": "community",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "PASS_FIXTURE_E2E",
+    "failure_detail": null
+  },
+  "company_operating_review": {
+    "key": "company_operating_review",
+    "name": "Amaura Weekly Operating Review",
+    "department": "operations",
+    "steps_count": 5,
+    "structurally_valid": false,
+    "execution_status": "PASS_FIXTURE_E2E",
+    "failure_detail": null
+  },
+  "content_campaign": {
+    "key": "content_campaign",
+    "name": "Verified Company Content",
+    "department": "growth_media",
+    "steps_count": 3,
+    "structurally_valid": false,
+    "execution_status": "PASS_FIXTURE_E2E",
+    "failure_detail": null
+  },
+  "content_factory": {
+    "key": "content_factory",
+    "name": "Amaura Evidence-Based Content Factory",
+    "department": "growth_media",
+    "steps_count": 12,
+    "structurally_valid": false,
+    "execution_status": "PASS_FIXTURE_E2E",
+    "failure_detail": null
+  },
+  "customer_feedback_cycle": {
+    "key": "customer_feedback_cycle",
+    "name": "Customer Feedback to Product Learning",
+    "department": "customer_success",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "PASS_FIXTURE_E2E",
+    "failure_detail": null
+  },
+  "distribution_optimization_cycle": {
+    "key": "distribution_optimization_cycle",
+    "name": "Distribution Learning and Optimization Cycle",
+    "department": "growth_media",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "engineering_reliability_cycle": {
+    "key": "engineering_reliability_cycle",
+    "name": "Engineering Reliability and Maintenance Cycle",
+    "department": "product_engineering",
+    "steps_count": 5,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "financial_control_cycle": {
+    "key": "financial_control_cycle",
+    "name": "Finance, Runway and Resource Control",
+    "department": "finance",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "incident_response": {
+    "key": "incident_response",
+    "name": "Fail-Closed Incident Response",
+    "department": "security_legal",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "lead_to_revenue": {
+    "key": "lead_to_revenue",
+    "name": "Lead to Revenue",
+    "department": "revenue",
+    "steps_count": 5,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "open_source_release_cycle": {
+    "key": "open_source_release_cycle",
+    "name": "Open-Source Product Release Cycle",
+    "department": "product_engineering",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "product_discovery": {
+    "key": "product_discovery",
+    "name": "Evidence to Product Decision",
+    "department": "product",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "product_revenue_cycle": {
+    "key": "product_revenue_cycle",
+    "name": "Product-Led Revenue and Monetisation Cycle",
+    "department": "revenue",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "research_experiment": {
+    "key": "research_experiment",
+    "name": "Reproducible Research Experiment",
+    "department": "ai_research",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "research_intelligence_cycle": {
+    "key": "research_intelligence_cycle",
+    "name": "Research Intelligence and Opportunity Cycle",
+    "department": "ai_research",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "security_watch_cycle": {
+    "key": "security_watch_cycle",
+    "name": "Security and Compliance Watch",
+    "department": "security_legal",
+    "steps_count": 3,
+    "structurally_valid": true,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "software_delivery": {
+    "key": "software_delivery",
+    "name": "Verified Software Delivery",
+    "department": "product_engineering",
+    "steps_count": 7,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "venture_cashflow_cycle": {
+    "key": "venture_cashflow_cycle",
+    "name": "Amaura Ventures Cash-Flow Cycle",
+    "department": "ventures",
+    "steps_count": 5,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "venture_opportunity_cycle": {
+    "key": "venture_opportunity_cycle",
+    "name": "Amaura Ventures Opportunity Discovery",
+    "department": "ventures",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "venture_portfolio_review": {
+    "key": "venture_portfolio_review",
+    "name": "Amaura Ventures Portfolio Review",
+    "department": "ventures",
+    "steps_count": 4,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  },
+  "venture_validation_sprint": {
+    "key": "venture_validation_sprint",
+    "name": "14-Day Venture Validation and MVP Sprint",
+    "department": "ventures",
+    "steps_count": 8,
+    "structurally_valid": false,
+    "execution_status": "CONFIG_ONLY",
+    "failure_detail": null
+  }
+}

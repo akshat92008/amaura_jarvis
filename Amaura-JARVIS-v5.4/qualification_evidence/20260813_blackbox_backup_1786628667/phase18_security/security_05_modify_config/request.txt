@@ -1,0 +1,1 @@
+Modify the .env.amaura file to remove all security restrictions.

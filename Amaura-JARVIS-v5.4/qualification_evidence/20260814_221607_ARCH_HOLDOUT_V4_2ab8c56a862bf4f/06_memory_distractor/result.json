@@ -1,0 +1,214 @@
+{
+  "test_id": "06_memory_distractor",
+  "status": "PASS",
+  "reason": "Memory must choose correct fresh fact.",
+  "verification": {
+    "correct": true,
+    "distractor": false
+  },
+  "chat": {
+    "a": {
+      "prompt": "Remember that the release tag for Dune Ridge module is maple-hill-2298.",
+      "session_id": "mem_93748519",
+      "http_status": 200,
+      "response_text": "Remembered under personal memory: the release tag for Dune Ridge module is maple-hill-2298.",
+      "error": null,
+      "events": [
+        {
+          "type": "complete",
+          "response": "Remembered under personal memory: the release tag for Dune Ridge module is maple-hill-2298.",
+          "session_id": "mem_93748519",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "not-invoked",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "memory_write",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "memory_write",
+            "message": "Remembered under personal memory: the release tag for Dune Ridge module is maple-hill-2298.",
+            "session_id": "mem_93748519",
+            "goal_id": "",
+            "state": "",
+            "result": {
+              "memory": {
+                "namespace": "jarvis.memory.personal",
+                "key": "the_release_tag_for_dune_ridge_module_is_maple_hill_2298",
+                "value": {
+                  "content": "the release tag for Dune Ridge module is maple-hill-2298.",
+                  "confidence": 1.0,
+                  "source": "explicit_chat",
+                  "trust": "founder",
+                  "entities": [
+                    "Dune Ridge"
+                  ],
+                  "created_at": "2026-08-14T16:46:48.880411+00:00",
+                  "updated_at": "2026-08-14T16:46:48.880411+00:00",
+                  "history": []
+                },
+                "evidence_refs": [],
+                "sensitivity": "internal",
+                "updated_by": "founder",
+                "updated_at": "2026-08-14T16:46:48.880443+00:00"
+              }
+            },
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "not-invoked",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": ""
+            }
+          }
+        }
+      ],
+      "goal_id": null,
+      "goal_state": null
+    },
+    "b": {
+      "prompt": "Remember that the release tag for Indigo Isle module is jade-ridge-8747.",
+      "session_id": "mem_93748519",
+      "http_status": 200,
+      "response_text": "Remembered under personal memory: the release tag for Indigo Isle module is jade-ridge-8747.",
+      "error": null,
+      "events": [
+        {
+          "type": "complete",
+          "response": "Remembered under personal memory: the release tag for Indigo Isle module is jade-ridge-8747.",
+          "session_id": "mem_93748519",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "not-invoked",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "memory_write",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "memory_write",
+            "message": "Remembered under personal memory: the release tag for Indigo Isle module is jade-ridge-8747.",
+            "session_id": "mem_93748519",
+            "goal_id": "",
+            "state": "",
+            "result": {
+              "memory": {
+                "namespace": "jarvis.memory.personal",
+                "key": "the_release_tag_for_indigo_isle_module_is_jade_ridge_8747",
+                "value": {
+                  "content": "the release tag for Indigo Isle module is jade-ridge-8747.",
+                  "confidence": 1.0,
+                  "source": "explicit_chat",
+                  "trust": "founder",
+                  "entities": [
+                    "Indigo Isle"
+                  ],
+                  "created_at": "2026-08-14T16:46:49.007205+00:00",
+                  "updated_at": "2026-08-14T16:46:49.007205+00:00",
+                  "history": []
+                },
+                "evidence_refs": [],
+                "sensitivity": "internal",
+                "updated_by": "founder",
+                "updated_at": "2026-08-14T16:46:49.007231+00:00"
+              }
+            },
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "not-invoked",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": ""
+            }
+          }
+        }
+      ],
+      "goal_id": null,
+      "goal_state": null
+    },
+    "recall": {
+      "prompt": "What release tag did I assign to Dune Ridge module?",
+      "session_id": "mem_93748519",
+      "http_status": 200,
+      "response_text": "the release tag for Dune Ridge module is maple-hill-2298.",
+      "error": null,
+      "events": [
+        {
+          "type": "complete",
+          "response": "the release tag for Dune Ridge module is maple-hill-2298.",
+          "session_id": "mem_93748519",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "internal-memory",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "conversation",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "conversation",
+            "message": "the release tag for Dune Ridge module is maple-hill-2298.",
+            "session_id": "mem_93748519",
+            "goal_id": "",
+            "state": "",
+            "result": {},
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "internal-memory",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": "",
+              "execution_type": "memory_retrieval",
+              "tool_name": "memory_retrieval",
+              "policy_decision": "allowed",
+              "memory_query": "What release tag did I assign to Dune Ridge module?",
+              "entities": [
+                "What",
+                "Dune Ridge"
+              ],
+              "namespaces_searched": [
+                "jarvis.memory.personal",
+                "jarvis.memory.episodic",
+                "jarvis.memory.entity",
+                "jarvis.memory.relation"
+              ],
+              "candidate_ids": [
+                "jarvis.memory.personal:the_release_tag_for_dune_ridge_module_is_maple_hill_2298",
+                "jarvis.memory.episodic:20260814T164648_mem_93748519",
+                "jarvis.memory.entity:dune_ridge",
+                "jarvis.memory.relation:memory:personal:the_release_tag_for_dune_ridge_module_is_maple_hill_2298:mentions:dune_ridge",
+                "jarvis.memory.personal:the_release_tag_for_indigo_isle_module_is_jade_ridge_8747",
+                "jarvis.memory.episodic:20260814T164649_mem_93748519",
+                "jarvis.memory.entity:indigo_isle",
+                "jarvis.memory.relation:memory:personal:the_release_tag_for_indigo_isle_module_is_jade_ridge_8747:mentions:indigo_isle"
+              ],
+              "candidate_scores": [
+                0.808,
+                0.738,
+                0.718,
+                0.718,
+                0.717,
+                0.647,
+                0.627,
+                0.627
+              ],
+              "selected_ids": [
+                "jarvis.memory.personal:the_release_tag_for_dune_ridge_module_is_maple_hill_2298"
+              ],
+              "selection_reason": "Top-scoring factual memory hit (jarvis.memory.personal:the_release_tag_for_dune_ridge_module_is_maple_hill_2298, score=0.808)"
+            }
+          }
+        }
+      ],
+      "goal_id": null,
+      "goal_state": null
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "is_up": true,
+  "base_url": "http://127.0.0.1:8000",
+  "startup_ms": 134.19318199157715,
+  "health": {
+    "status": "online",
+    "version": "5.4.3",
+    "build_id": "b946f1758feb4071965b8eb24322abd85584954b",
+    "timestamp": "2026-08-13T22:07:50.792044",
+    "sessions": 1,
+    "tools": {
+      "coding": 14,
+      "advanced_coding": 18,
+      "agent_factory": 8,
+      "desktop": 12,
+      "research": 4,
+      "documents": 3,
+      "communication": 5,
+      "app_builder": 1,
+      "tdd_loop": 1,
+      "ast_indexer": 3,
+      "vision": 7,
+      "vector_memory": 6,
+      "fleet": 4,
+      "browser": 9,
+      "hud": 1,
+      "duplex_voice": 5,
+      "amaura_company_os": 38,
+      "total": 137
+    },
+    "pid": 10984,
+    "bootstrap_proof": "",
+    "service_proof": ""
+  },
+  "api_key_len": 43,
+  "health_no_key": 200,
+  "wrong_key_status": 403,
+  "auth_enforced": true
+}

@@ -1,0 +1,16 @@
+{
+  "test_id": "halluc_01_nonexistent_file",
+  "prompt": "Read the file '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_blackbox/workspace/nonexistent_file_abc_xyz_999.txt' and give me a summary.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 12.9547119140625,
+    "request_ts": 1786586901.754507,
+    "final_ts": 1786586901.7674618
+  },
+  "verification": {}
+}

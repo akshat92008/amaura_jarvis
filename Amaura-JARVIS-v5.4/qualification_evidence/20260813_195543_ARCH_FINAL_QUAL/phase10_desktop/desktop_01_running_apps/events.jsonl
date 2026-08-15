@@ -1,0 +1,103 @@
+{"type": "token", "content": "I"}
+{"type": "token", "content": "'m"}
+{"type": "token", "content": " not"}
+{"type": "token", "content": " capable"}
+{"type": "token", "content": " of"}
+{"type": "token", "content": " directly"}
+{"type": "token", "content": " accessing"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " monitoring"}
+{"type": "token", "content": " your"}
+{"type": "token", "content": " Mac"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " any"}
+{"type": "token", "content": " other"}
+{"type": "token", "content": " external"}
+{"type": "token", "content": " devices"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " I"}
+{"type": "token", "content": "'m"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " text"}
+{"type": "token", "content": "-based"}
+{"type": "token", "content": " AI"}
+{"type": "token", "content": " assistant"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " do"}
+{"type": "token", "content": " not"}
+{"type": "token", "content": " have"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " ability"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " retrieve"}
+{"type": "token", "content": " information"}
+{"type": "token", "content": " about"}
+{"type": "token", "content": " your"}
+{"type": "token", "content": " system"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " running"}
+{"type": "token", "content": " applications"}
+{"type": "token", "content": ".\n\n"}
+{"type": "token", "content": "However"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " easily"}
+{"type": "token", "content": " find"}
+{"type": "token", "content": " this"}
+{"type": "token", "content": " information"}
+{"type": "token", "content": " on"}
+{"type": "token", "content": " your"}
+{"type": "token", "content": " Mac"}
+{"type": "token", "content": " by"}
+{"type": "token", "content": " using"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " Activity"}
+{"type": "token", "content": " Monitor"}
+{"type": "token", "content": " application"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " which"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " be"}
+{"type": "token", "content": " found"}
+{"type": "token", "content": " in"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " Applications"}
+{"type": "token", "content": "/"}
+{"type": "token", "content": "Utilities"}
+{"type": "token", "content": " folder"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " by"}
+{"type": "token", "content": " using"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " Command"}
+{"type": "token", "content": " +"}
+{"type": "token", "content": " Tab"}
+{"type": "token", "content": " keys"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " cycle"}
+{"type": "token", "content": " through"}
+{"type": "token", "content": " your"}
+{"type": "token", "content": " open"}
+{"type": "token", "content": " applications"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " by"}
+{"type": "token", "content": " using"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " Command"}
+{"type": "token", "content": " +"}
+{"type": "token", "content": " Option"}
+{"type": "token", "content": " +"}
+{"type": "token", "content": " Esc"}
+{"type": "token", "content": " keys"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " open"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " Force"}
+{"type": "token", "content": " Quit"}
+{"type": "token", "content": " Applications"}
+{"type": "token", "content": " window"}
+{"type": "token", "content": "."}
+{"type": "complete", "response": "I'm not capable of directly accessing or monitoring your Mac or any other external devices. I'm a text-based AI assistant and do not have the ability to retrieve information about your system or running applications.\n\nHowever, you can easily find this information on your Mac by using the Activity Monitor application, which can be found in the Applications/Utilities folder, or by using the Command + Tab keys to cycle through your open applications, or by using the Command + Option + Esc keys to open the Force Quit Applications window.", "session_id": "default", "model": "llama-3.3-70b-versatile", "model_key": "llama-3.3-70b-versatile", "model_provider": "omniroute", "model_fallback_used": false, "model_fallback_reason": "", "model_latency_ms": 935, "model_ttft_ms": 550, "intent": "conversation", "goal_id": "", "state": "", "executive": {"intent": "conversation", "message": "I'm not capable of directly accessing or monitoring your Mac or any other external devices. I'm a text-based AI assistant and do not have the ability to retrieve information about your system or running applications.\n\nHowever, you can easily find this information on your Mac by using the Activity Monitor application, which can be found in the Applications/Utilities folder, or by using the Command + Tab keys to cycle through your open applications, or by using the Command + Option + Esc keys to open the Force Quit Applications window.", "session_id": "default", "goal_id": "", "state": "", "result": {}, "context_sources": [], "model_provenance": {"provider": "omniroute", "model": "llama-3.3-70b-versatile", "fallback_used": false, "fallback_reason": "", "requested_model": "groq/llama-3.3-70b-versatile", "resolved_provider": "omniroute", "resolved_model": "llama-3.3-70b-versatile", "latency_ms": 935, "ttft_ms": 550}}}

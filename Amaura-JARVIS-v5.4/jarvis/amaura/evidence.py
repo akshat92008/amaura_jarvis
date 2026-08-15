@@ -397,6 +397,32 @@ def deterministic_evidence_review(
                     f"Evidence {index + 1} failed integrity verification: "
                     f"{result['reason']}"
                 )
+            else:
+                # Inspect structured verification receipt fields
+                try:
+                    raw_text = vault.get_text(reference)
+                    receipt_data = json.loads(raw_text)
+                    if isinstance(receipt_data, dict):
+                        # Write verification
+                        if receipt_data.get("tool_name") == "write_file" or receipt_data.get("action") == "write":
+                            if receipt_data.get("verification_passed") is False:
+                                findings.append(f"Evidence {index + 1} write verification failed")
+                            if receipt_data.get("content_match") is False:
+                                findings.append(f"Evidence {index + 1} write content mismatch")
+                            exp_size = int(receipt_data.get("expected_size", 0) or 0)
+                            act_size = int(receipt_data.get("actual_size", receipt_data.get("size_bytes", receipt_data.get("bytes", 0))) or 0)
+                            if exp_size > 0 and act_size == 0:
+                                findings.append(f"Evidence {index + 1} produced 0-byte file for non-empty write request ({exp_size} chars expected)")
+                        # Workflow verification
+                        elif receipt_data.get("tool_name") == "multi_step_workflow" or receipt_data.get("execution_type") == "workflow":
+                            if receipt_data.get("verification_passed") is False:
+                                findings.append(f"Evidence {index + 1} workflow verification failed")
+                        # Browser compound verification
+                        elif "browser" in str(receipt_data.get("tool_name", "")).lower() or receipt_data.get("execution_type") == "browser":
+                            if receipt_data.get("verification_passed") is False or receipt_data.get("status") in {"partial_failure", "total_failure"}:
+                                findings.append(f"Evidence {index + 1} browser extraction failed required fields")
+                except Exception:
+                    pass
         elif strict or item.get("type") == "tool_result":
             findings.append(
                 f"Evidence {index + 1} is not stored in the content-addressed evidence vault"

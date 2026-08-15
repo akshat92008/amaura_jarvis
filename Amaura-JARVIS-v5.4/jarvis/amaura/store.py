@@ -1186,18 +1186,19 @@ class CompanyStore:
             # predate per-entry signatures.  Signing that history is safe only
             # after validating the chain and only through the explicit,
             # one-time controlled migration switch.
-            if hash_chain_only and os.environ.get("AMAURA_ALLOW_LEGACY_AUDIT_MIGRATION", "0") == "1":
+            if os.environ.get("AMAURA_ALLOW_LEGACY_AUDIT_MIGRATION", "0") == "1":
                 if len(self._audit_key()) < 32:
                     raise RuntimeError("Legacy audit migration requires AMAURA_AUDIT_HMAC_KEY of at least 32 bytes")
                 if self._checkpoint_path() is None:
                     raise RuntimeError("Legacy audit migration requires AMAURA_AUDIT_CHECKPOINT_PATH")
                 key_id = self._audit_key_id()
-                for row in rows:
-                    self._connection.execute(
-                        "UPDATE audit_logs SET entry_signature=?, signature_key_id=? WHERE sequence=?",
-                        (self._audit_signature(str(row["entry_hash"])), key_id, row["sequence"]),
-                    )
-                self._connection.commit()
+                if hash_chain_only:
+                    for row in rows:
+                        self._connection.execute(
+                            "UPDATE audit_logs SET entry_signature=?, signature_key_id=? WHERE sequence=?",
+                            (self._audit_signature(str(row["entry_hash"])), key_id, row["sequence"]),
+                        )
+                    self._connection.commit()
                 self._write_external_audit_checkpoint(
                     sequence=int(rows[-1]["sequence"]), head=str(rows[-1]["entry_hash"]),
                     signature=self._audit_signature(str(rows[-1]["entry_hash"])), key_id=key_id,

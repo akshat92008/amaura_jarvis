@@ -1,0 +1,47 @@
+{
+  "built_at": "2026-08-12T07:36:02.490240+00:00",
+  "bundle_name": "Amaura-Company-OS-v5.4.1-Source-Qualified-Release-Bundle.zip",
+  "checksums": {
+    "name": "SHA256SUMS",
+    "sha256": "8eb3f864de20bd71b52c781845fa68c71062333ad589e8b9e0d4113f397660d5"
+  },
+  "forbidden_runtime_state": "absent",
+  "production_ready": false,
+  "provenance": {
+    "name": "PROVENANCE.intoto.json",
+    "sha256": "b5009bb7583d9e509ca3c5163f0d9bab80c40ff398997a0eca188c977c449e50"
+  },
+  "qualification": {
+    "directory": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/.amaura-data/qualification",
+    "git_commit": "37159f7b603e54de0b656f10b770cd61ea214b67",
+    "source_certified": true,
+    "tests": 451,
+    "version": "5.4.1"
+  },
+  "sbom": {
+    "locked_components": 517,
+    "name": "Amaura-Company-OS-v5.4.1.spdx.json",
+    "sha256": "6d627b433a240e1b6cf5fc8df0119a53f6d3cc04e040ba8ff9d3246251f8d0e5"
+  },
+  "signature": {
+    "signature": null,
+    "status": "not_requested"
+  },
+  "source_files": 375,
+  "source_zip": {
+    "bytes": 2038166,
+    "name": "Amaura-Company-OS-v5.4.1-Hardened.zip",
+    "sha256": "575ccdce026c56ec46ea07dca0b3cf9792de534f1ec2d05917d72c5a35b4e39a"
+  },
+  "status": "built",
+  "version": "5.4.1",
+  "wheel": {
+    "bytes": 652335,
+    "name": "jarvis-5.4.1-py3-none-any.whl",
+    "sha256": "286479924c6ce5aa20250c42f31704974b04469f7b215f446eea50216517a070"
+  },
+  "wheel_smoke": {
+    "profiles": 59,
+    "version": "5.4.1"
+  }
+}

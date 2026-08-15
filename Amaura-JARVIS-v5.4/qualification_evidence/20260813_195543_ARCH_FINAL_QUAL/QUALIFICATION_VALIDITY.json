@@ -1,0 +1,15 @@
+{
+  "run_id": "20260813_195543_ARCH_FINAL_QUAL",
+  "timestamp": null,
+  "harness_self_test_passed": true,
+  "canaries_passed": 5,
+  "canaries_total": 5,
+  "host_continuity_verified": true,
+  "source_integrity_verified": true,
+  "harness_integrity_verified": true,
+  "server_identity": "Amaura ARCH / JARVIS v5.4",
+  "worker_health": "healthy",
+  "evidence_completeness": true,
+  "script_hash_mismatches": [],
+  "qualification_valid": true
+}

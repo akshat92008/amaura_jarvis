@@ -1,0 +1,10 @@
+{
+  "backend_idle_rss_mb": 79.78,
+  "electron_total_rss_mb": 72.69,
+  "whole_amaura_idle_rss_mb": 152.47,
+  "normal_chat_peak_rss_mb": 103.17,
+  "macos_action_peak_rss_mb": 106.53,
+  "browser_peak_rss_mb": 79.78,
+  "antigravity_peak_rss_mb": 79.78,
+  "snapshots_count": 5
+}

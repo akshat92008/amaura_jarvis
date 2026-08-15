@@ -1,0 +1,57 @@
+{
+  "test_id": "04_dynamic_browser_selector",
+  "status": "PASS",
+  "reason": "Requires extraction from a randomized CSS class on a runtime-only local page.",
+  "verification": {
+    "selector": ".price-31465967",
+    "marker_found": true
+  },
+  "chat": {
+    "prompt": "Visit http://127.0.0.1:53030/catalog. Read the text inside CSS selector \".price-31465967\" and return that text.",
+    "http_status": 200,
+    "response_text": "\ud83c\udf10 **Extracted 1 element(s) matching '.price-31465967':**\n\ncedar-atlas-2460-13357",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": null,
+    "goal_history": [],
+    "latency_ms": 32.16385841369629,
+    "events": [
+      {
+        "type": "complete",
+        "response": "\ud83c\udf10 **Extracted 1 element(s) matching '.price-31465967':**\n\ncedar-atlas-2460-13357",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "browser",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "",
+        "executive": {
+          "intent": "conversation",
+          "message": "\ud83c\udf10 **Extracted 1 element(s) matching '.price-31465967':**\n\ncedar-atlas-2460-13357",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "",
+          "result": {},
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "browser",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "browser_extract_content",
+            "policy_decision": "allowed",
+            "url": "http://127.0.0.1:53030/catalog.",
+            "selector": ".price-31465967"
+          }
+        }
+      }
+    ]
+  }
+}

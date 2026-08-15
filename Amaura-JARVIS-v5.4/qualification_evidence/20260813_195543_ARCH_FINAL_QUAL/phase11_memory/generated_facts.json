@@ -1,0 +1,142 @@
+[
+  {
+    "index": 0,
+    "project": "PROJECT-C01D0D80",
+    "item": "ITEM-F269CC",
+    "value": "VALUE-1639C8",
+    "fact": "PROJECT-C01D0D80 requires component ITEM-F269CC with specification VALUE-1639C8."
+  },
+  {
+    "index": 1,
+    "project": "PROJECT-0E935537",
+    "item": "ITEM-632935",
+    "value": "VALUE-4650D2",
+    "fact": "PROJECT-0E935537 requires component ITEM-632935 with specification VALUE-4650D2."
+  },
+  {
+    "index": 2,
+    "project": "PROJECT-2E2020A7",
+    "item": "ITEM-2DC30C",
+    "value": "VALUE-357A83",
+    "fact": "PROJECT-2E2020A7 requires component ITEM-2DC30C with specification VALUE-357A83."
+  },
+  {
+    "index": 3,
+    "project": "PROJECT-7FAC75A2",
+    "item": "ITEM-555C13",
+    "value": "VALUE-1A2C6F",
+    "fact": "PROJECT-7FAC75A2 requires component ITEM-555C13 with specification VALUE-1A2C6F."
+  },
+  {
+    "index": 4,
+    "project": "PROJECT-01EBCE9D",
+    "item": "ITEM-8CBE19",
+    "value": "VALUE-5275D5",
+    "fact": "PROJECT-01EBCE9D requires component ITEM-8CBE19 with specification VALUE-5275D5."
+  },
+  {
+    "index": 5,
+    "project": "PROJECT-A82101E5",
+    "item": "ITEM-E4BA25",
+    "value": "VALUE-932A3C",
+    "fact": "PROJECT-A82101E5 requires component ITEM-E4BA25 with specification VALUE-932A3C."
+  },
+  {
+    "index": 6,
+    "project": "PROJECT-DC585071",
+    "item": "ITEM-B2CD7A",
+    "value": "VALUE-404E20",
+    "fact": "PROJECT-DC585071 requires component ITEM-B2CD7A with specification VALUE-404E20."
+  },
+  {
+    "index": 7,
+    "project": "PROJECT-CD46F652",
+    "item": "ITEM-D6D717",
+    "value": "VALUE-D9C82E",
+    "fact": "PROJECT-CD46F652 requires component ITEM-D6D717 with specification VALUE-D9C82E."
+  },
+  {
+    "index": 8,
+    "project": "PROJECT-35B459A3",
+    "item": "ITEM-E74B2A",
+    "value": "VALUE-7B0336",
+    "fact": "PROJECT-35B459A3 requires component ITEM-E74B2A with specification VALUE-7B0336."
+  },
+  {
+    "index": 9,
+    "project": "PROJECT-987E6D20",
+    "item": "ITEM-888770",
+    "value": "VALUE-9EE26A",
+    "fact": "PROJECT-987E6D20 requires component ITEM-888770 with specification VALUE-9EE26A."
+  },
+  {
+    "index": 10,
+    "project": "PROJECT-542D721A",
+    "item": "ITEM-7FC9F7",
+    "value": "VALUE-9DACBA",
+    "fact": "PROJECT-542D721A requires component ITEM-7FC9F7 with specification VALUE-9DACBA."
+  },
+  {
+    "index": 11,
+    "project": "PROJECT-4138B1DB",
+    "item": "ITEM-D82E20",
+    "value": "VALUE-13101C",
+    "fact": "PROJECT-4138B1DB requires component ITEM-D82E20 with specification VALUE-13101C."
+  },
+  {
+    "index": 12,
+    "project": "PROJECT-12009B8A",
+    "item": "ITEM-8C54E0",
+    "value": "VALUE-11D1EF",
+    "fact": "PROJECT-12009B8A requires component ITEM-8C54E0 with specification VALUE-11D1EF."
+  },
+  {
+    "index": 13,
+    "project": "PROJECT-E4AC0B3B",
+    "item": "ITEM-7C708E",
+    "value": "VALUE-806955",
+    "fact": "PROJECT-E4AC0B3B requires component ITEM-7C708E with specification VALUE-806955."
+  },
+  {
+    "index": 14,
+    "project": "PROJECT-520B549F",
+    "item": "ITEM-E3226C",
+    "value": "VALUE-77978F",
+    "fact": "PROJECT-520B549F requires component ITEM-E3226C with specification VALUE-77978F."
+  },
+  {
+    "index": 15,
+    "project": "PROJECT-A6F642DF",
+    "item": "ITEM-3E4141",
+    "value": "VALUE-C6F2F0",
+    "fact": "PROJECT-A6F642DF requires component ITEM-3E4141 with specification VALUE-C6F2F0."
+  },
+  {
+    "index": 16,
+    "project": "PROJECT-694E3941",
+    "item": "ITEM-00149A",
+    "value": "VALUE-1A580F",
+    "fact": "PROJECT-694E3941 requires component ITEM-00149A with specification VALUE-1A580F."
+  },
+  {
+    "index": 17,
+    "project": "PROJECT-A6CD561E",
+    "item": "ITEM-385D17",
+    "value": "VALUE-F717C7",
+    "fact": "PROJECT-A6CD561E requires component ITEM-385D17 with specification VALUE-F717C7."
+  },
+  {
+    "index": 18,
+    "project": "PROJECT-470A61B1",
+    "item": "ITEM-E954E4",
+    "value": "VALUE-A1C657",
+    "fact": "PROJECT-470A61B1 requires component ITEM-E954E4 with specification VALUE-A1C657."
+  },
+  {
+    "index": 19,
+    "project": "PROJECT-532751CB",
+    "item": "ITEM-000FF4",
+    "value": "VALUE-16978F",
+    "fact": "PROJECT-532751CB requires component ITEM-000FF4 with specification VALUE-16978F."
+  }
+]

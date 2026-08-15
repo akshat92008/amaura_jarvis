@@ -1,0 +1,310 @@
+{
+  "test_id": "07_memory_paraphrase",
+  "status": "PASS",
+  "reason": "Requires natural-language storage and differently worded recall.",
+  "verification": {
+    "entity": "Amber Grove Initiative",
+    "recalled": true,
+    "recall_provenance": {
+      "provider": "internal-memory",
+      "model": "",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "execution_type": "memory_retrieval",
+      "tool_name": "memory_retrieval",
+      "policy_decision": "allowed",
+      "memory_query": "I forgot the review alias for the Amber Grove Initiative. What did I assign?",
+      "entities": [
+        "Amber Grove Initiative",
+        "What"
+      ],
+      "namespaces_searched": [
+        "jarvis.memory.episodic",
+        "company_work",
+        "jarvis.memory.entity",
+        "jarvis.memory.relation",
+        "vector_memory"
+      ],
+      "candidate_ids": [
+        "jarvis.memory.episodic:20260814T152227_default",
+        "company_work:task_98e06026d2b2",
+        "company_work:task_65e225203ea2",
+        "company_work:task_b7edad901a97",
+        "jarvis.memory.entity:amber_grove_initiative",
+        "jarvis.memory.relation:memory:episodic:20260814T152227_default:mentions:amber_grove_initiative",
+        "vector_memory:hybrid_recall",
+        "jarvis.memory.episodic:20260814T152207_default"
+      ],
+      "candidate_scores": [
+        0.624,
+        0.533,
+        0.528,
+        0.469,
+        0.466,
+        0.466,
+        0.42,
+        0.417
+      ],
+      "selected_ids": [
+        "jarvis.memory.episodic:20260814T152227_default"
+      ],
+      "selection_reason": "Top-scoring factual memory hit (jarvis.memory.episodic:20260814T152227_default, score=0.624)"
+    }
+  },
+  "chat": {
+    "store": {
+      "prompt": "Keep this in memory for later: the review alias assigned to the Amber Grove Initiative is Lumen Comet 76.",
+      "http_status": 200,
+      "response_text": "I've stored the information: the review alias for the Amber Grove Initiative is Lumen Comet 76. I'll keep it in memory for later reference.",
+      "error": null,
+      "tool_calls": [],
+      "goal_id": null,
+      "goal_state": null,
+      "goal_history": [],
+      "latency_ms": 621.5591430664062,
+      "events": [
+        {
+          "type": "token",
+          "content": "I"
+        },
+        {
+          "type": "token",
+          "content": "'ve"
+        },
+        {
+          "type": "token",
+          "content": " stored"
+        },
+        {
+          "type": "token",
+          "content": " the"
+        },
+        {
+          "type": "token",
+          "content": " information"
+        },
+        {
+          "type": "token",
+          "content": ":"
+        },
+        {
+          "type": "token",
+          "content": " the"
+        },
+        {
+          "type": "token",
+          "content": " review"
+        },
+        {
+          "type": "token",
+          "content": " alias"
+        },
+        {
+          "type": "token",
+          "content": " for"
+        },
+        {
+          "type": "token",
+          "content": " the"
+        },
+        {
+          "type": "token",
+          "content": " Amber"
+        },
+        {
+          "type": "token",
+          "content": " Grove"
+        },
+        {
+          "type": "token",
+          "content": " Initiative"
+        },
+        {
+          "type": "token",
+          "content": " is"
+        },
+        {
+          "type": "token",
+          "content": " L"
+        },
+        {
+          "type": "token",
+          "content": "umen"
+        },
+        {
+          "type": "token",
+          "content": " Comet"
+        },
+        {
+          "type": "token",
+          "content": " "
+        },
+        {
+          "type": "token",
+          "content": "76"
+        },
+        {
+          "type": "token",
+          "content": "."
+        },
+        {
+          "type": "token",
+          "content": " I"
+        },
+        {
+          "type": "token",
+          "content": "'ll"
+        },
+        {
+          "type": "token",
+          "content": " keep"
+        },
+        {
+          "type": "token",
+          "content": " it"
+        },
+        {
+          "type": "token",
+          "content": " in"
+        },
+        {
+          "type": "token",
+          "content": " memory"
+        },
+        {
+          "type": "token",
+          "content": " for"
+        },
+        {
+          "type": "token",
+          "content": " later"
+        },
+        {
+          "type": "token",
+          "content": " reference"
+        },
+        {
+          "type": "token",
+          "content": "."
+        },
+        {
+          "type": "complete",
+          "response": "I've stored the information: the review alias for the Amber Grove Initiative is Lumen Comet 76. I'll keep it in memory for later reference.",
+          "session_id": "default",
+          "model": "llama-3.3-70b-versatile",
+          "model_key": "llama-3.3-70b-versatile",
+          "model_provider": "omniroute",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 581,
+          "model_ttft_ms": 422,
+          "intent": "conversation",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "conversation",
+            "message": "I've stored the information: the review alias for the Amber Grove Initiative is Lumen Comet 76. I'll keep it in memory for later reference.",
+            "session_id": "default",
+            "goal_id": "",
+            "state": "",
+            "result": {},
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "omniroute",
+              "model": "llama-3.3-70b-versatile",
+              "fallback_used": false,
+              "fallback_reason": "",
+              "requested_model": "groq/llama-3.3-70b-versatile",
+              "resolved_provider": "omniroute",
+              "resolved_model": "llama-3.3-70b-versatile",
+              "latency_ms": 581,
+              "ttft_ms": 422
+            }
+          }
+        }
+      ]
+    },
+    "recall": {
+      "prompt": "I forgot the review alias for the Amber Grove Initiative. What did I assign?",
+      "http_status": 200,
+      "response_text": "{\"summary\": \"User: Keep this in memory for later: the review alias assigned to the Amber Grove Initiative is Lumen Comet 76.\\nAssistant: I've stored the information: the review alias for the Amber Grove Initiative is Lumen Comet 76. I'll keep it in memory for later reference.\", \"outcome\": \"conversation\", \"goal_id\": \"\"}",
+      "error": null,
+      "tool_calls": [],
+      "goal_id": null,
+      "goal_state": null,
+      "goal_history": [],
+      "latency_ms": 204.64825630187988,
+      "events": [
+        {
+          "type": "complete",
+          "response": "{\"summary\": \"User: Keep this in memory for later: the review alias assigned to the Amber Grove Initiative is Lumen Comet 76.\\nAssistant: I've stored the information: the review alias for the Amber Grove Initiative is Lumen Comet 76. I'll keep it in memory for later reference.\", \"outcome\": \"conversation\", \"goal_id\": \"\"}",
+          "session_id": "default",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "internal-memory",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "conversation",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "conversation",
+            "message": "{\"summary\": \"User: Keep this in memory for later: the review alias assigned to the Amber Grove Initiative is Lumen Comet 76.\\nAssistant: I've stored the information: the review alias for the Amber Grove Initiative is Lumen Comet 76. I'll keep it in memory for later reference.\", \"outcome\": \"conversation\", \"goal_id\": \"\"}",
+            "session_id": "default",
+            "goal_id": "",
+            "state": "",
+            "result": {},
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "internal-memory",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": "",
+              "execution_type": "memory_retrieval",
+              "tool_name": "memory_retrieval",
+              "policy_decision": "allowed",
+              "memory_query": "I forgot the review alias for the Amber Grove Initiative. What did I assign?",
+              "entities": [
+                "Amber Grove Initiative",
+                "What"
+              ],
+              "namespaces_searched": [
+                "jarvis.memory.episodic",
+                "company_work",
+                "jarvis.memory.entity",
+                "jarvis.memory.relation",
+                "vector_memory"
+              ],
+              "candidate_ids": [
+                "jarvis.memory.episodic:20260814T152227_default",
+                "company_work:task_98e06026d2b2",
+                "company_work:task_65e225203ea2",
+                "company_work:task_b7edad901a97",
+                "jarvis.memory.entity:amber_grove_initiative",
+                "jarvis.memory.relation:memory:episodic:20260814T152227_default:mentions:amber_grove_initiative",
+                "vector_memory:hybrid_recall",
+                "jarvis.memory.episodic:20260814T152207_default"
+              ],
+              "candidate_scores": [
+                0.624,
+                0.533,
+                0.528,
+                0.469,
+                0.466,
+                0.466,
+                0.42,
+                0.417
+              ],
+              "selected_ids": [
+                "jarvis.memory.episodic:20260814T152227_default"
+              ],
+              "selection_reason": "Top-scoring factual memory hit (jarvis.memory.episodic:20260814T152227_default, score=0.624)"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

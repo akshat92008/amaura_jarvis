@@ -1,0 +1,153 @@
+{
+  "test_id": "13_workflow_pipe_to_json_source_first",
+  "status": "PASS",
+  "reason": "Pipe table to JSON.",
+  "verification": {
+    "expected": [
+      {
+        "sku": "iris-grove-6978",
+        "price": 71
+      },
+      {
+        "sku": "juniper-harvest-5179",
+        "price": 53
+      },
+      {
+        "sku": "granite-nexus-5838",
+        "price": 12
+      }
+    ],
+    "actual": [
+      {
+        "sku": "iris-grove-6978",
+        "price": 71
+      },
+      {
+        "sku": "juniper-harvest-5179",
+        "price": 53
+      },
+      {
+        "sku": "granite-nexus-5838",
+        "price": 12
+      }
+    ]
+  },
+  "chat": {
+    "prompt": "Read \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/pipe_96459941.tbl\" as a pipe-delimited table and write a JSON array of objects to \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/out_41391621.json\". Price must be numeric.",
+    "session_id": "s_17900661",
+    "http_status": 200,
+    "response_text": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/pipe_96459941.tbl, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/out_41391621.json.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/pipe_96459941.tbl, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/out_41391621.json.",
+        "session_id": "s_17900661",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully executed workflow: read /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/pipe_96459941.tbl, applied delimited_table_to_json, and verified /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/out_41391621.json.",
+          "session_id": "s_17900661",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "requested_operation": "delimited_table_to_json",
+              "parsed_plan": {
+                "inputs": [
+                  "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/pipe_96459941.tbl"
+                ],
+                "operation": "delimited_table_to_json",
+                "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/out_41391621.json",
+                "parameters": {
+                  "delimiter": "|"
+                }
+              },
+              "input_values": [
+                "sku|price\niris-grove-6978|71\njuniper-harvest-5179|53\ngranite-nexus-5838|12\n"
+              ],
+              "computed_result": [
+                {
+                  "sku": "iris-grove-6978",
+                  "price": 71
+                },
+                {
+                  "sku": "juniper-harvest-5179",
+                  "price": 53
+                },
+                {
+                  "sku": "granite-nexus-5838",
+                  "price": 12
+                }
+              ],
+              "expected_output_hash": "f93904c5b8acbc0f5216ca835fed2b8238f20e86ab3bb8442d66496c6c2909e6",
+              "actual_output_hash": "f93904c5b8acbc0f5216ca835fed2b8238f20e86ab3bb8442d66496c6c2909e6",
+              "verification_passed": true,
+              "output_bytes": 175
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "workflow",
+            "tool_name": "multi_step_workflow",
+            "policy_decision": "allowed",
+            "requested_operation": "delimited_table_to_json",
+            "parsed_plan": {
+              "inputs": [
+                "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/pipe_96459941.tbl"
+              ],
+              "operation": "delimited_table_to_json",
+              "output_path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_235259_ARCH_HOLDOUT_V5_28875ed0b632dd5/workspace/out_41391621.json",
+              "parameters": {
+                "delimiter": "|"
+              }
+            },
+            "input_values": [
+              "sku|price\niris-grove-6978|71\njuniper-harvest-5179|53\ngranite-nexus-5838|12\n"
+            ],
+            "computed_result": [
+              {
+                "sku": "iris-grove-6978",
+                "price": 71
+              },
+              {
+                "sku": "juniper-harvest-5179",
+                "price": 53
+              },
+              {
+                "sku": "granite-nexus-5838",
+                "price": 12
+              }
+            ],
+            "expected_output_hash": "f93904c5b8acbc0f5216ca835fed2b8238f20e86ab3bb8442d66496c6c2909e6",
+            "actual_output_hash": "f93904c5b8acbc0f5216ca835fed2b8238f20e86ab3bb8442d66496c6c2909e6",
+            "verification_passed": true,
+            "output_bytes": 175
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

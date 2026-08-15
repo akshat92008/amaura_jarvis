@@ -1,0 +1,1344 @@
+[
+  {
+    "agent_id": "jarvis",
+    "department": "control_plane",
+    "enabled": true,
+    "execution_class": "control_plane:high",
+    "missing_tools": [],
+    "permissions": [
+      "plan",
+      "delegate",
+      "pause",
+      "escalate",
+      "request_approval"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "amaura_create_program",
+      "amaura_company_status",
+      "amaura_company_blueprint",
+      "amaura_resource_inventory",
+      "amaura_capability_health",
+      "amaura_capability_plan",
+      "amaura_execute_capability",
+      "amaura_task_packet",
+      "amaura_daily_briefing",
+      "amaura_supervisor_status",
+      "amaura_supervisor_tick"
+    ],
+    "workflow_memberships": [
+      "client_acquisition",
+      "community_growth_cycle",
+      "company_operating_review",
+      "content_campaign",
+      "customer_feedback_cycle",
+      "engineering_reliability_cycle",
+      "financial_control_cycle",
+      "incident_response",
+      "lead_to_revenue",
+      "open_source_release_cycle",
+      "product_discovery",
+      "product_revenue_cycle",
+      "research_experiment",
+      "research_intelligence_cycle",
+      "software_delivery",
+      "venture_cashflow_cycle",
+      "venture_opportunity_cycle",
+      "venture_portfolio_review",
+      "venture_validation_sprint"
+    ]
+  },
+  {
+    "agent_id": "opportunity_scout",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:low",
+    "missing_tools": [],
+    "permissions": [
+      "research",
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "web_search",
+      "web_fetch",
+      "read_file",
+      "amaura_execute_capability"
+    ],
+    "workflow_memberships": [
+      "lead_to_revenue"
+    ]
+  },
+  {
+    "agent_id": "lead_qualification",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory"
+    ],
+    "workflow_memberships": [
+      "client_acquisition",
+      "lead_to_revenue"
+    ]
+  },
+  {
+    "agent_id": "proposal",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:medium",
+    "missing_tools": [],
+    "permissions": [
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "create_document"
+    ],
+    "workflow_memberships": [
+      "lead_to_revenue"
+    ]
+  },
+  {
+    "agent_id": "crm",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:low",
+    "missing_tools": [],
+    "permissions": [
+      "read_crm",
+      "update_crm"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "write_file",
+      "amaura_transition_lead"
+    ],
+    "workflow_memberships": [
+      "lead_to_revenue"
+    ]
+  },
+  {
+    "agent_id": "client_communication",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:medium",
+    "missing_tools": [],
+    "permissions": [
+      "draft_external"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "create_document"
+    ],
+    "workflow_memberships": []
+  },
+  {
+    "agent_id": "product_manager",
+    "department": "product_engineering",
+    "enabled": true,
+    "execution_class": "product_engineering:low",
+    "missing_tools": [],
+    "permissions": [
+      "plan",
+      "define_acceptance_criteria"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "search_code",
+      "get_project_structure"
+    ],
+    "workflow_memberships": [
+      "customer_feedback_cycle",
+      "product_discovery",
+      "software_delivery"
+    ]
+  },
+  {
+    "agent_id": "technical_architect",
+    "department": "product_engineering",
+    "enabled": true,
+    "execution_class": "product_engineering:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse_repo",
+      "author_adr",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "search_code",
+      "get_project_structure",
+      "analyze_code"
+    ],
+    "workflow_memberships": [
+      "engineering_reliability_cycle",
+      "software_delivery"
+    ]
+  },
+  {
+    "agent_id": "repository_intelligence",
+    "department": "product_engineering",
+    "enabled": true,
+    "execution_class": "product_engineering:low",
+    "missing_tools": [],
+    "permissions": [
+      "read_repo",
+      "index_repo"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "search_code",
+      "find_files",
+      "get_project_structure",
+      "index_codebase_ast",
+      "search_symbol"
+    ],
+    "workflow_memberships": [
+      "engineering_reliability_cycle",
+      "open_source_release_cycle",
+      "software_delivery"
+    ]
+  },
+  {
+    "agent_id": "builder",
+    "department": "product_engineering",
+    "enabled": true,
+    "execution_class": "product_engineering:medium",
+    "missing_tools": [],
+    "permissions": [
+      "read_repo",
+      "write_branch",
+      "run_safe_commands"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "search_code",
+      "write_file",
+      "run_command",
+      "run_tests"
+    ],
+    "workflow_memberships": [
+      "software_delivery",
+      "venture_validation_sprint"
+    ]
+  },
+  {
+    "agent_id": "patch_engineer",
+    "department": "product_engineering",
+    "enabled": true,
+    "execution_class": "product_engineering:medium",
+    "missing_tools": [],
+    "permissions": [
+      "read_repo",
+      "write_exact_patch"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "edit_file",
+      "diff_files"
+    ],
+    "workflow_memberships": [
+      "engineering_reliability_cycle",
+      "software_delivery"
+    ]
+  },
+  {
+    "agent_id": "qa",
+    "department": "product_engineering",
+    "enabled": true,
+    "execution_class": "product_engineering:low",
+    "missing_tools": [],
+    "permissions": [
+      "read_repo",
+      "run_safe_commands",
+      "approve_or_reject"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "search_code",
+      "run_tests",
+      "lint_code",
+      "analyze_code",
+      "git_diff"
+    ],
+    "workflow_memberships": [
+      "engineering_reliability_cycle",
+      "incident_response",
+      "open_source_release_cycle",
+      "research_experiment",
+      "software_delivery",
+      "venture_validation_sprint"
+    ]
+  },
+  {
+    "agent_id": "content_strategy",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:low",
+    "missing_tools": [],
+    "permissions": [
+      "research",
+      "plan",
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "web_search"
+    ],
+    "workflow_memberships": [
+      "content_campaign",
+      "content_factory"
+    ]
+  },
+  {
+    "agent_id": "content_production",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:medium",
+    "missing_tools": [],
+    "permissions": [
+      "draft_public"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "create_document",
+      "create_presentation"
+    ],
+    "workflow_memberships": [
+      "community_growth_cycle",
+      "content_campaign",
+      "open_source_release_cycle"
+    ]
+  },
+  {
+    "agent_id": "research_evaluation",
+    "department": "ai_research",
+    "enabled": true,
+    "execution_class": "ai_research:medium",
+    "missing_tools": [],
+    "permissions": [
+      "research",
+      "run_sandboxed_experiment",
+      "evaluate"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "web_search",
+      "web_fetch",
+      "read_pdf",
+      "read_file",
+      "run_command",
+      "run_tests"
+    ],
+    "workflow_memberships": [
+      "research_experiment",
+      "research_intelligence_cycle"
+    ]
+  },
+  {
+    "agent_id": "revenue_orchestrator",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:medium",
+    "missing_tools": [],
+    "permissions": [
+      "plan",
+      "delegate",
+      "recommend",
+      "request_approval"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "web_search",
+      "amaura_company_status",
+      "amaura_list_tasks"
+    ],
+    "workflow_memberships": []
+  },
+  {
+    "agent_id": "chief_revenue_officer",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:medium",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "prioritise",
+      "recommend_pricing",
+      "request_approval"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory",
+      "amaura_company_status",
+      "amaura_list_tasks"
+    ],
+    "workflow_memberships": [
+      "product_revenue_cycle"
+    ]
+  },
+  {
+    "agent_id": "campaign_manager",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:low",
+    "missing_tools": [],
+    "permissions": [
+      "plan",
+      "configure_campaign"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "lead_scout",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:low",
+    "missing_tools": [],
+    "permissions": [
+      "research",
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "web_search",
+      "web_fetch",
+      "read_file",
+      "amaura_discover_lead"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "prospect_research",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:low",
+    "missing_tools": [],
+    "permissions": [
+      "research",
+      "extract"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "web_fetch",
+      "read_file",
+      "amaura_record_lead_evidence"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "contact_resolver",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:low",
+    "missing_tools": [],
+    "permissions": [
+      "research",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "web_fetch",
+      "read_file"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "portfolio_matcher",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory",
+      "amaura_score_lead",
+      "amaura_transition_lead"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "opportunity_analyst",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "outreach_writer",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:medium",
+    "missing_tools": [],
+    "permissions": [
+      "draft_external"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "create_document",
+      "amaura_stage_outreach"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "compliance_reviewer",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "approve_or_reject"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory",
+      "amaura_transition_lead"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "approval_coordinator",
+    "department": "control_plane",
+    "enabled": true,
+    "execution_class": "control_plane:high",
+    "missing_tools": [],
+    "permissions": [
+      "request_approval",
+      "create_draft_after_approval"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "sales_closer",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:medium",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "draft_external",
+      "recommend_pricing"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "create_document",
+      "recall_memory"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "followup",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:medium",
+    "missing_tools": [],
+    "permissions": [
+      "draft_external"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "create_document",
+      "amaura_register_content_asset"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "reply_intelligence",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:medium",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "draft_external"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "discovery",
+    "department": "revenue",
+    "enabled": true,
+    "execution_class": "revenue:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "create_document",
+      "recall_memory"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "project_handoff",
+    "department": "delivery",
+    "enabled": true,
+    "execution_class": "delivery:medium",
+    "missing_tools": [],
+    "permissions": [
+      "draft",
+      "create_delivery_packet"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "write_file",
+      "create_document"
+    ],
+    "workflow_memberships": [
+      "client_acquisition"
+    ]
+  },
+  {
+    "agent_id": "marketing_head",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:medium",
+    "missing_tools": [],
+    "permissions": [
+      "plan",
+      "draft_public"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "web_search",
+      "create_document"
+    ],
+    "workflow_memberships": [
+      "community_growth_cycle"
+    ]
+  },
+  {
+    "agent_id": "content_research",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:low",
+    "missing_tools": [],
+    "permissions": [
+      "research",
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "web_search",
+      "web_fetch",
+      "read_file",
+      "amaura_register_content_asset",
+      "amaura_execute_capability"
+    ],
+    "workflow_memberships": [
+      "content_factory",
+      "research_intelligence_cycle"
+    ]
+  },
+  {
+    "agent_id": "scriptwriter",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:medium",
+    "missing_tools": [],
+    "permissions": [
+      "draft_public"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "create_document"
+    ],
+    "workflow_memberships": [
+      "content_factory"
+    ]
+  },
+  {
+    "agent_id": "demo_operator",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:medium",
+    "missing_tools": [],
+    "permissions": [
+      "run_safe_commands",
+      "record_demo"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "run_command",
+      "amaura_register_content_asset",
+      "amaura_execute_capability"
+    ],
+    "workflow_memberships": [
+      "content_factory"
+    ]
+  },
+  {
+    "agent_id": "voice_production",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:low",
+    "missing_tools": [],
+    "permissions": [
+      "run_safe_commands",
+      "render_audio"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "run_command",
+      "amaura_register_content_asset",
+      "amaura_execute_capability"
+    ],
+    "workflow_memberships": [
+      "content_factory"
+    ]
+  },
+  {
+    "agent_id": "asset_curator",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:low",
+    "missing_tools": [],
+    "permissions": [
+      "research",
+      "download_approved_assets"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "web_search",
+      "web_fetch",
+      "read_file",
+      "amaura_execute_capability"
+    ],
+    "workflow_memberships": [
+      "content_factory"
+    ]
+  },
+  {
+    "agent_id": "video_production",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:medium",
+    "missing_tools": [],
+    "permissions": [
+      "run_safe_commands",
+      "render_media"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "run_command",
+      "amaura_execute_capability"
+    ],
+    "workflow_memberships": [
+      "content_factory"
+    ]
+  },
+  {
+    "agent_id": "shorts_editor",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:medium",
+    "missing_tools": [],
+    "permissions": [
+      "run_safe_commands",
+      "render_media"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "run_command",
+      "amaura_execute_capability"
+    ],
+    "workflow_memberships": [
+      "content_factory"
+    ]
+  },
+  {
+    "agent_id": "thumbnail_metadata",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:medium",
+    "missing_tools": [],
+    "permissions": [
+      "draft_public",
+      "render_media"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "create_document",
+      "run_command",
+      "amaura_register_content_asset",
+      "amaura_execute_capability"
+    ],
+    "workflow_memberships": [
+      "content_factory",
+      "distribution_optimization_cycle"
+    ]
+  },
+  {
+    "agent_id": "media_qa",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:low",
+    "missing_tools": [],
+    "permissions": [
+      "run_safe_commands",
+      "approve_or_reject"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "run_command",
+      "amaura_register_content_asset",
+      "amaura_execute_capability"
+    ],
+    "workflow_memberships": [
+      "content_factory"
+    ]
+  },
+  {
+    "agent_id": "publishing",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:high",
+    "missing_tools": [],
+    "permissions": [
+      "draft_public",
+      "schedule_after_approval"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file"
+    ],
+    "workflow_memberships": [
+      "content_factory",
+      "distribution_optimization_cycle"
+    ]
+  },
+  {
+    "agent_id": "content_analytics",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory",
+      "amaura_record_content_metrics"
+    ],
+    "workflow_memberships": [
+      "content_factory",
+      "distribution_optimization_cycle"
+    ]
+  },
+  {
+    "agent_id": "strategy_director",
+    "department": "strategy",
+    "enabled": true,
+    "execution_class": "strategy:low",
+    "missing_tools": [],
+    "permissions": [
+      "plan",
+      "analyse",
+      "prioritise",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory",
+      "web_search",
+      "amaura_company_status",
+      "amaura_list_tasks",
+      "create_document"
+    ],
+    "workflow_memberships": [
+      "company_operating_review",
+      "financial_control_cycle",
+      "product_discovery",
+      "research_intelligence_cycle"
+    ]
+  },
+  {
+    "agent_id": "product_discovery",
+    "department": "product",
+    "enabled": true,
+    "execution_class": "product:low",
+    "missing_tools": [],
+    "permissions": [
+      "research",
+      "analyse",
+      "draft",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "web_search",
+      "web_fetch",
+      "read_file",
+      "recall_memory",
+      "create_document"
+    ],
+    "workflow_memberships": [
+      "customer_feedback_cycle",
+      "product_discovery"
+    ]
+  },
+  {
+    "agent_id": "operations_manager",
+    "department": "operations",
+    "enabled": true,
+    "execution_class": "operations:low",
+    "missing_tools": [],
+    "permissions": [
+      "plan",
+      "analyse",
+      "prioritise",
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory",
+      "amaura_company_status",
+      "amaura_list_tasks",
+      "create_document"
+    ],
+    "workflow_memberships": [
+      "company_operating_review"
+    ]
+  },
+  {
+    "agent_id": "finance_controller",
+    "department": "finance",
+    "enabled": true,
+    "execution_class": "finance:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "prioritise",
+      "recommend",
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory",
+      "amaura_company_status",
+      "amaura_list_tasks",
+      "create_document"
+    ],
+    "workflow_memberships": [
+      "company_operating_review",
+      "financial_control_cycle",
+      "product_revenue_cycle"
+    ]
+  },
+  {
+    "agent_id": "security_director",
+    "department": "security_legal",
+    "enabled": true,
+    "execution_class": "security_legal:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse_repo",
+      "approve_or_reject",
+      "run_safe_commands",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "search_code",
+      "get_project_structure",
+      "analyze_code",
+      "run_tests",
+      "lint_code",
+      "git_diff"
+    ],
+    "workflow_memberships": [
+      "company_operating_review",
+      "incident_response",
+      "security_watch_cycle"
+    ]
+  },
+  {
+    "agent_id": "legal_compliance",
+    "department": "security_legal",
+    "enabled": true,
+    "execution_class": "security_legal:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "approve_or_reject",
+      "recommend",
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory",
+      "web_fetch",
+      "create_document"
+    ],
+    "workflow_memberships": [
+      "security_watch_cycle"
+    ]
+  },
+  {
+    "agent_id": "customer_success",
+    "department": "customer_success",
+    "enabled": true,
+    "execution_class": "customer_success:medium",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "draft_external",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory",
+      "create_document",
+      "amaura_company_status"
+    ],
+    "workflow_memberships": [
+      "customer_feedback_cycle",
+      "product_revenue_cycle"
+    ]
+  },
+  {
+    "agent_id": "community_manager",
+    "department": "community",
+    "enabled": true,
+    "execution_class": "community:medium",
+    "missing_tools": [],
+    "permissions": [
+      "research",
+      "draft_public",
+      "analyse",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "web_search",
+      "create_document",
+      "amaura_register_content_asset",
+      "amaura_record_content_metrics"
+    ],
+    "workflow_memberships": [
+      "community_growth_cycle"
+    ]
+  },
+  {
+    "agent_id": "distribution_manager",
+    "department": "growth_media",
+    "enabled": true,
+    "execution_class": "growth_media:medium",
+    "missing_tools": [],
+    "permissions": [
+      "plan",
+      "research",
+      "draft_public",
+      "analyse",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "web_search",
+      "create_document",
+      "amaura_register_content_asset",
+      "amaura_record_content_metrics"
+    ],
+    "workflow_memberships": [
+      "distribution_optimization_cycle"
+    ]
+  },
+  {
+    "agent_id": "venture_director",
+    "department": "ventures",
+    "enabled": true,
+    "execution_class": "ventures:medium",
+    "missing_tools": [],
+    "permissions": [
+      "plan",
+      "analyse",
+      "recommend",
+      "request_approval"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "web_search",
+      "web_fetch",
+      "read_file",
+      "create_document",
+      "amaura_company_status",
+      "amaura_venture_dashboard",
+      "amaura_cashflow_dashboard",
+      "amaura_cashflow_tick",
+      "amaura_venture_recommendation"
+    ],
+    "workflow_memberships": [
+      "venture_cashflow_cycle",
+      "venture_opportunity_cycle",
+      "venture_portfolio_review"
+    ]
+  },
+  {
+    "agent_id": "venture_opportunity_researcher",
+    "department": "ventures",
+    "enabled": true,
+    "execution_class": "ventures:low",
+    "missing_tools": [],
+    "permissions": [
+      "research",
+      "analyse",
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "web_search",
+      "web_fetch",
+      "read_file",
+      "create_document",
+      "amaura_register_venture_opportunity"
+    ],
+    "workflow_memberships": [
+      "venture_cashflow_cycle",
+      "venture_opportunity_cycle"
+    ]
+  },
+  {
+    "agent_id": "venture_validation_analyst",
+    "department": "ventures",
+    "enabled": true,
+    "execution_class": "ventures:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "recommend",
+      "define_acceptance_criteria",
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "web_search",
+      "create_document",
+      "amaura_company_status",
+      "amaura_venture_dashboard",
+      "amaura_cashflow_dashboard",
+      "amaura_venture_recommendation"
+    ],
+    "workflow_memberships": [
+      "venture_opportunity_cycle",
+      "venture_validation_sprint"
+    ]
+  },
+  {
+    "agent_id": "venture_growth_operator",
+    "department": "ventures",
+    "enabled": true,
+    "execution_class": "ventures:medium",
+    "missing_tools": [],
+    "permissions": [
+      "plan",
+      "draft_public",
+      "analyse",
+      "recommend"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "web_search",
+      "read_file",
+      "create_document",
+      "amaura_register_content_asset",
+      "amaura_record_content_metrics",
+      "amaura_record_venture_metric",
+      "amaura_cashflow_dashboard"
+    ],
+    "workflow_memberships": [
+      "venture_cashflow_cycle",
+      "venture_validation_sprint"
+    ]
+  },
+  {
+    "agent_id": "venture_portfolio_analyst",
+    "department": "ventures",
+    "enabled": true,
+    "execution_class": "ventures:low",
+    "missing_tools": [],
+    "permissions": [
+      "analyse",
+      "recommend",
+      "draft"
+    ],
+    "registered": true,
+    "routing_validity": true,
+    "tools": [
+      "read_file",
+      "recall_memory",
+      "amaura_company_status",
+      "create_document",
+      "amaura_venture_dashboard",
+      "amaura_cashflow_dashboard",
+      "amaura_record_venture_metric",
+      "amaura_record_cashflow_financial",
+      "amaura_venture_recommendation"
+    ],
+    "workflow_memberships": [
+      "venture_cashflow_cycle",
+      "venture_portfolio_review",
+      "venture_validation_sprint"
+    ]
+  }
+]

@@ -1,0 +1,37 @@
+{"type": "token", "content": "I"}
+{"type": "token", "content": " don"}
+{"type": "token", "content": "'t"}
+{"type": "token", "content": " have"}
+{"type": "token", "content": " information"}
+{"type": "token", "content": " about"}
+{"type": "token", "content": " PROJECT"}
+{"type": "token", "content": "-C"}
+{"type": "token", "content": "01"}
+{"type": "token", "content": "D"}
+{"type": "token", "content": "0"}
+{"type": "token", "content": "D"}
+{"type": "token", "content": "80"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " its"}
+{"type": "token", "content": " required"}
+{"type": "token", "content": " components"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " If"}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " could"}
+{"type": "token", "content": " provide"}
+{"type": "token", "content": " more"}
+{"type": "token", "content": " context"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " details"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " I"}
+{"type": "token", "content": "'d"}
+{"type": "token", "content": " be"}
+{"type": "token", "content": " happy"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " try"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " help"}
+{"type": "token", "content": "."}
+{"type": "complete", "response": "I don't have information about PROJECT-C01D0D80 or its required components. If you could provide more context or details, I'd be happy to try and help.", "session_id": "default", "model": "llama-3.3-70b-versatile", "model_key": "llama-3.3-70b-versatile", "model_provider": "omniroute", "model_fallback_used": false, "model_fallback_reason": "", "model_latency_ms": 652, "model_ttft_ms": 465, "intent": "conversation", "goal_id": "", "state": "", "executive": {"intent": "conversation", "message": "I don't have information about PROJECT-C01D0D80 or its required components. If you could provide more context or details, I'd be happy to try and help.", "session_id": "default", "goal_id": "", "state": "", "result": {}, "context_sources": [], "model_provenance": {"provider": "omniroute", "model": "llama-3.3-70b-versatile", "fallback_used": false, "fallback_reason": "", "requested_model": "groq/llama-3.3-70b-versatile", "resolved_provider": "omniroute", "resolved_model": "llama-3.3-70b-versatile", "latency_ms": 652, "ttft_ms": 465}}}

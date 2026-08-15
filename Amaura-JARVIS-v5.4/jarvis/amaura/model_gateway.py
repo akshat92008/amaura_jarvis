@@ -186,11 +186,19 @@ class CognitiveModelGateway:
             return until > now
 
     @classmethod
+    def reset_circuits(cls) -> None:
+        with cls._circuit_lock:
+            cls._circuit_failures.clear()
+            cls._circuit_open_until.clear()
+
+    @classmethod
     def _record_provider_success(cls, provider: str) -> None:
         key = cls._circuit_key(provider)
         with cls._circuit_lock:
             cls._circuit_failures.pop(key, None)
             cls._circuit_open_until.pop(key, None)
+            cls._circuit_failures.pop(provider, None)
+            cls._circuit_open_until.pop(provider, None)
 
     @classmethod
     def _record_provider_failure(cls, provider: str) -> None:
@@ -353,6 +361,21 @@ class CognitiveModelGateway:
     def status(cls, *, purpose: str = "general") -> dict[str, str | bool]:
         selection = cls.select(purpose=purpose)
         if selection is None:
+            requested = (
+                os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower()
+                or os.environ.get("AMAURA_JARVIS_PROVIDER", "auto").strip().lower()
+                or "auto"
+            )
+            order = [requested] if requested != "auto" else [
+                item.strip().lower()
+                for item in os.environ.get(
+                    "AMAURA_JARVIS_PROVIDER_ORDER",
+                    "omniroute,openrouter,openai,anthropic,nvidia,groq,ollama",
+                ).split(",")
+                if item.strip()
+            ]
+            circuit_open = any(p in cls.PROVIDERS and cls._circuit_is_open(p) for p in order)
+            reason = "[CIRCUIT_OPEN] Provider circuit breaker is open" if circuit_open else "[ROUTER_NO_PROVIDER] No cognition provider configured or available"
             return {
                 "available": False,
                 "provider": "deterministic-fallback",
@@ -360,7 +383,7 @@ class CognitiveModelGateway:
                 "purpose": purpose,
                 "gateway": "none",
                 "status": "BLOCKED",
-                "reason": "No cognition provider configured or available",
+                "reason": reason,
             }
         if selection.provider == "omniroute":
             key = os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
@@ -453,7 +476,7 @@ class CognitiveModelGateway:
         for attempt in range(max_retries + 1):
             remaining = deadline_monotonic - _time.monotonic() if deadline_monotonic is not None else timeout_sec
             if remaining <= 0:
-                last_error_class = "interactive_deadline_exceeded"
+                last_error_class = "PROVIDER_TIMEOUT"
                 break
             attempt_timeout = max(0.5, min(timeout_sec, remaining))
             t0 = _time.monotonic()
@@ -528,7 +551,7 @@ class CognitiveModelGateway:
                 # completion so the configured fallback can answer instead of
                 # making the founder-facing UI look mysteriously unavailable.
                 if not text.strip():
-                    last_error_class = "empty_response"
+                    last_error_class = "MODEL_RESPONSE_EMPTY"
                     if fallback_model and target_model != fallback_model:
                         return cls._omniroute(
                             model=fallback_model,
@@ -536,7 +559,7 @@ class CognitiveModelGateway:
                             temperature=temperature,
                             max_tokens=max_tokens,
                             requested_model=original_model,
-                            fallback_reason=last_error_class,
+                            fallback_reason="empty_response",
                             deadline_monotonic=deadline_monotonic,
                             max_retries_override=max_retries_override,
                         )
@@ -568,7 +591,7 @@ class CognitiveModelGateway:
                     raise
                 code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else 0
                 if isinstance(exc, httpx.RequestError):
-                    last_error_class = "timeout" if isinstance(exc, httpx.TimeoutException) else "network_error"
+                    last_error_class = "PROVIDER_TIMEOUT" if isinstance(exc, httpx.TimeoutException) else "PROVIDER_HTTP_ERROR"
                     # A pooled connection can become stale after a server or
                     # route restart. Recreate the pool before the next attempt.
                     with cls._pooled_client_lock:
@@ -576,31 +599,32 @@ class CognitiveModelGateway:
                             cls._pooled_client.close()
                             cls._pooled_client = None
                 if code in (401, 403):
-                    last_error_class = "authentication_failure"
+                    last_error_class = "PROVIDER_UNAVAILABLE"
                     break  # Don't retry auth errors
                 elif code == 429:
-                    last_error_class = "rate_limit"
+                    last_error_class = "PROVIDER_UNAVAILABLE"
                 elif code == 400:
-                    last_error_class = "context_length_failure"
+                    last_error_class = "PROVIDER_HTTP_ERROR"
                     break
                 elif code in (502, 503, 504):
-                    last_error_class = "provider_unavailable"
+                    last_error_class = "PROVIDER_UNAVAILABLE"
                 elif code:
-                    last_error_class = "invalid_response"
+                    last_error_class = "PROVIDER_HTTP_ERROR"
 
-                if attempt < max_retries and last_error_class in {"rate_limit", "provider_unavailable", "invalid_response", "network_error", "timeout"}:
+                if attempt < max_retries and last_error_class in {"PROVIDER_UNAVAILABLE", "PROVIDER_HTTP_ERROR", "PROVIDER_TIMEOUT"}:
                     _time.sleep(0.5 * (2 ** attempt))
                     continue
 
         # If primary model failed and fallback model is configured
         if fallback_model and model != fallback_model:
+            reason_str = "provider_unavailable" if last_error_class == "PROVIDER_UNAVAILABLE" else ("empty_response" if last_error_class == "MODEL_RESPONSE_EMPTY" else last_error_class.lower())
             return cls._omniroute(
                 model=fallback_model,
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
                 requested_model=original_model,
-                fallback_reason=last_error_class,
+                fallback_reason=reason_str,
                 deadline_monotonic=deadline_monotonic,
                 max_retries_override=max_retries_override,
             )
@@ -860,11 +884,11 @@ class CognitiveModelGateway:
         candidate = result.text.strip()
         start, end = candidate.find("{"), candidate.rfind("}")
         if start < 0 or end <= start:
-            raise GovernanceError("Cognition model returned no JSON object")
+            raise GovernanceError("[MODEL_RESPONSE_INVALID] Cognition model returned no JSON object")
         try:
             value = _json.loads(candidate[start : end + 1])
         except _json.JSONDecodeError as exc:
-            raise GovernanceError("Cognition model returned malformed JSON") from exc
+            raise GovernanceError("[EXECUTIVE_PARSE_ERROR] Cognition model returned malformed JSON") from exc
         if not isinstance(value, dict):
-            raise GovernanceError("Cognition model JSON must be an object")
+            raise GovernanceError("[MODEL_RESPONSE_INVALID] Cognition model JSON must be an object")
         return value, result

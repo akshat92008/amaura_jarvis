@@ -1,0 +1,5 @@
+EVIDENCE ID: E-BUILD-003
+CLAIM: New backend reports B
+EXPECTED: f49a07e398da1e9951387d5c2c6e8943fced717f
+ACTUAL: f49a07e398da1e9951387d5c2c6e8943fced717f
+JSON: {'status': 'online', 'version': '5.4.1', 'build_id': 'f49a07e398da1e9951387d5c2c6e8943fced717f', 'timestamp': '2026-08-12T19:47:14.248456', 'sessions': 0, 'tools': {'coding': 14, 'advanced_coding': 18, 'agent_factory': 8, 'desktop': 12, 'research': 4, 'documents': 3, 'communication': 5, 'app_builder': 1, 'tdd_loop': 1, 'ast_indexer': 3, 'vision': 7, 'vector_memory': 6, 'fleet': 4, 'browser': 9, 'hud': 1, 'duplex_voice': 5, 'amaura_company_os': 38, 'total': 137}, 'pid': 68594, 'bootstrap_proof': '', 'service_proof': ''}

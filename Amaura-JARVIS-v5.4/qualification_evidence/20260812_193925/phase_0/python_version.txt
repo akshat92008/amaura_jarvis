@@ -1,0 +1,8 @@
+COMMAND: python --version
+EXIT_CODE: 127
+
+STDOUT:
+
+
+STDERR:
+/bin/sh: python: command not found

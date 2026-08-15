@@ -1,0 +1,32 @@
+[
+  {
+    "type": "complete",
+    "response": "alpha_a6bfde6.py\nbeta_668a793.py\ngamma_25926e1.py",
+    "session_id": "default",
+    "model": "add_calendar_event",
+    "model_key": "add_calendar_event",
+    "model_provider": "macos-native-tool",
+    "model_fallback_used": false,
+    "model_fallback_reason": "",
+    "model_latency_ms": 0,
+    "model_ttft_ms": 0,
+    "intent": "conversation",
+    "goal_id": "",
+    "state": "",
+    "executive": {
+      "intent": "conversation",
+      "message": "alpha_a6bfde6.py\nbeta_668a793.py\ngamma_25926e1.py",
+      "session_id": "default",
+      "goal_id": "",
+      "state": "",
+      "result": {},
+      "context_sources": [],
+      "model_provenance": {
+        "provider": "macos-native-tool",
+        "model": "add_calendar_event",
+        "fallback_used": false,
+        "fallback_reason": ""
+      }
+    }
+  }
+]

@@ -1,0 +1,50 @@
+{
+  "test_id": "10_concurrency",
+  "status": "PASS",
+  "reason": "PASS requires all five exact UUID responses, zero cross-talk, and zero service-unavailable responses.",
+  "verification": {
+    "requests": [
+      {
+        "i": 0,
+        "own_exact": true,
+        "other_token_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "ARCH-CONC-0-7325566c-0357-4b27-afd5-0b6fc95cd50a"
+      },
+      {
+        "i": 1,
+        "own_exact": true,
+        "other_token_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "ARCH-CONC-1-48db30c4-fc07-4490-868b-e4494d795dc3"
+      },
+      {
+        "i": 2,
+        "own_exact": true,
+        "other_token_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "ARCH-CONC-2-ca8b6014-b6f3-4be9-8627-6af77ded693a"
+      },
+      {
+        "i": 3,
+        "own_exact": true,
+        "other_token_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "ARCH-CONC-3-b9e441fe-b853-44e9-b5f7-520de7d997a4"
+      },
+      {
+        "i": 4,
+        "own_exact": true,
+        "other_token_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "ARCH-CONC-4-a83be15d-6a3f-4363-8fb2-a5d41351e875"
+      }
+    ]
+  },
+  "chat": null
+}

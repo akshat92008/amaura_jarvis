@@ -1,0 +1,6 @@
+{
+  "test": "Full Test Pipeline",
+  "returncode": 0,
+  "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0\nrootdir: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4\nconfigfile: pyproject.toml\nplugins: langsmith-0.10.13, anyio-4.14.2, Faker-40.36.0\ncollected 61 items\n\ntests/test_macos_app_control.py .....                                    [  8%]\ntests/test_antigravity_contract.py .............................         [ 55%]\ntests/test_omniroute_integration.py ...........................          [100%]\n\n============================== 61 passed in 3.42s ==============================\n",
+  "success": true
+}

@@ -1,0 +1,437 @@
+{
+  "test_id": "01_exact_write_after_path",
+  "status": "FAIL",
+  "reason": "Nested extensionless write with exact payload.",
+  "verification": {
+    "exists": true,
+    "exact": false,
+    "capability": true
+  },
+  "chat": {
+    "prompt": "Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+    "session_id": "s_93017803",
+    "http_status": 200,
+    "response_text": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195 (0 chars).\n\nMission goal_4c0b8276d756 completed. The work passed through Amaura's evidence/review pipeline.",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195 (0 chars).\n\nMission goal_4c0b8276d756 completed. The work passed through Amaura's evidence/review pipeline.",
+        "session_id": "s_93017803",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "not-invoked",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "goal_4c0b8276d756",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195 (0 chars).\n\nMission goal_4c0b8276d756 completed. The work passed through Amaura's evidence/review pipeline.",
+          "session_id": "s_93017803",
+          "goal_id": "goal_4c0b8276d756",
+          "state": "completed",
+          "result": {
+            "goal": {
+              "id": "goal_4c0b8276d756",
+              "parent_id": null,
+              "item_type": "programme",
+              "workflow_id": "goalplan_f55af169e69c",
+              "title": "Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_",
+              "description": "Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+              "owner_id": "jarvis",
+              "reviewer_id": "founder",
+              "state": "assigned",
+              "priority": 3,
+              "deadline": null,
+              "budget_cents": 0,
+              "spent_cents": 0,
+              "risk": "low",
+              "action_type": "internal_work",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "acceptance_criteria": [],
+              "dependencies": [],
+              "evidence": [],
+              "summary": "",
+              "metadata": {
+                "dynamic_goal": true,
+                "goal_request": {
+                  "objective": "Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                  "success_criteria": [],
+                  "workspace": "",
+                  "constraints": [],
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "priority": 3,
+                  "max_steps": 8,
+                  "max_replans": 2,
+                  "title": "",
+                  "metadata": {
+                    "executive_session_id": "s_93017803"
+                  }
+                },
+                "goal_plan": {
+                  "plan_id": "goalplan_f55af169e69c",
+                  "domain": "direct_action",
+                  "objective": "Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                  "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                  "assumptions": [
+                    "Direct action bypasses standard research and planning."
+                  ],
+                  "tasks": [
+                    {
+                      "key": "execute",
+                      "title": "Execute direct action",
+                      "description": "Execute the founder request directly: Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                      "owner_id": "builder",
+                      "reviewer_id": "jarvis",
+                      "acceptance_criteria": [
+                        "Action completed successfully"
+                      ],
+                      "depends_on": [],
+                      "risk": "low",
+                      "budget_cents": 200,
+                      "action_type": "direct_action",
+                      "metadata": {}
+                    }
+                  ],
+                  "planner": "deterministic-direct-action",
+                  "coding_backend": "antigravity",
+                  "workspace": ""
+                },
+                "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                "max_replans": 2,
+                "replans_used": 0,
+                "autonomy": "execute_until_approval",
+                "coding_backend": "antigravity",
+                "mission_runnable": true,
+                "mission_paused": false,
+                "mission_execution": "background",
+                "mission_generation": 1,
+                "antigravity_handoff": false
+              },
+              "created_at": "2026-08-14T16:46:18.470936+00:00",
+              "updated_at": "2026-08-14T16:46:18.470936+00:00"
+            },
+            "project_id": null,
+            "milestone_id": null,
+            "tasks": [
+              {
+                "id": "task_c32ec02e563c",
+                "parent_id": "goal_4c0b8276d756",
+                "item_type": "task",
+                "workflow_id": "goalplan_f55af169e69c",
+                "title": "Execute direct action",
+                "description": "Execute the founder request directly: Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                "owner_id": "builder",
+                "reviewer_id": "jarvis",
+                "state": "assigned",
+                "priority": 3,
+                "deadline": null,
+                "budget_cents": 200,
+                "spent_cents": 0,
+                "risk": "low",
+                "action_type": "direct_action",
+                "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                "acceptance_criteria": [
+                  "Action completed successfully"
+                ],
+                "dependencies": [],
+                "evidence": [],
+                "summary": "",
+                "metadata": {
+                  "dynamic_goal": true,
+                  "goal_request": {
+                    "objective": "Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                    "success_criteria": [],
+                    "workspace": "",
+                    "constraints": [],
+                    "autonomy": "execute_until_approval",
+                    "coding_backend": "antigravity",
+                    "priority": 3,
+                    "max_steps": 8,
+                    "max_replans": 2,
+                    "title": "",
+                    "metadata": {
+                      "executive_session_id": "s_93017803"
+                    }
+                  },
+                  "goal_plan": {
+                    "plan_id": "goalplan_f55af169e69c",
+                    "domain": "direct_action",
+                    "objective": "Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "assumptions": [
+                      "Direct action bypasses standard research and planning."
+                    ],
+                    "tasks": [
+                      {
+                        "key": "execute",
+                        "title": "Execute direct action",
+                        "description": "Execute the founder request directly: Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                        "owner_id": "builder",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Action completed successfully"
+                        ],
+                        "depends_on": [],
+                        "risk": "low",
+                        "budget_cents": 200,
+                        "action_type": "direct_action",
+                        "metadata": {}
+                      }
+                    ],
+                    "planner": "deterministic-direct-action",
+                    "coding_backend": "antigravity",
+                    "workspace": ""
+                  },
+                  "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                  "max_replans": 2,
+                  "replans_used": 0,
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "mission_runnable": true,
+                  "mission_paused": false,
+                  "mission_execution": "background",
+                  "mission_generation": 1,
+                  "antigravity_handoff": false,
+                  "step_key": "execute",
+                  "programme_id": "goal_4c0b8276d756",
+                  "sensitivity": "internal"
+                },
+                "created_at": "2026-08-14T16:46:18.472330+00:00",
+                "updated_at": "2026-08-14T16:46:18.472330+00:00"
+              }
+            ],
+            "plan": {
+              "plan_id": "goalplan_f55af169e69c",
+              "domain": "direct_action",
+              "objective": "Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "assumptions": [
+                "Direct action bypasses standard research and planning."
+              ],
+              "tasks": [
+                {
+                  "key": "execute",
+                  "title": "Execute direct action",
+                  "description": "Execute the founder request directly: Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                  "owner_id": "builder",
+                  "reviewer_id": "jarvis",
+                  "acceptance_criteria": [
+                    "Action completed successfully"
+                  ],
+                  "depends_on": [],
+                  "risk": "low",
+                  "budget_cents": 200,
+                  "action_type": "direct_action",
+                  "metadata": {}
+                }
+              ],
+              "planner": "deterministic-direct-action",
+              "coding_backend": "antigravity",
+              "workspace": ""
+            },
+            "execution": {
+              "goal_id": "goal_4c0b8276d756",
+              "state": "completed",
+              "ticks": [
+                {
+                  "status": "executed",
+                  "recovered": [],
+                  "outbox_dispatched": [],
+                  "execution": {
+                    "id": "run_9a975e58c5904431",
+                    "task_id": "task_c32ec02e563c",
+                    "worker_id": "Akshats-Laptop-4.local-42221-bbdb00",
+                    "attempt": 1,
+                    "state": "succeeded",
+                    "lease_until": "2026-08-14T17:01:18.475709+00:00",
+                    "heartbeat_at": "2026-08-14T16:46:18.486103+00:00",
+                    "started_at": "2026-08-14T16:46:18.475709+00:00",
+                    "finished_at": "2026-08-14T16:46:18.486103+00:00",
+                    "error": "",
+                    "result": {
+                      "employee": "builder",
+                      "evidence": [
+                        {
+                          "byte_length": 625,
+                          "excerpt": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195 (0 chars).",
+                          "reference": "evidence://manifest/b3491a1a6e3288fe51d224f52e7bb2bee9e5028963d297815eedbc58aa853812",
+                          "sha256": "cde68f403a27746c0973862fd0e5c7a82e89a76efb1ac895be4096960521a518",
+                          "success": true,
+                          "type": "direct_action"
+                        }
+                      ],
+                      "iterations": 1,
+                      "model_execution_receipt": {
+                        "actual_model": "write_file",
+                        "provider": "local-filesystem",
+                        "requested_route": "deterministic-direct-action"
+                      },
+                      "reviewer": "jarvis",
+                      "status": "awaiting_review",
+                      "summary": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195 (0 chars).",
+                      "task_id": "task_c32ec02e563c"
+                    }
+                  },
+                  "result": {
+                    "status": "awaiting_review",
+                    "task_id": "task_c32ec02e563c",
+                    "employee": "builder",
+                    "iterations": 1,
+                    "summary": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195 (0 chars).",
+                    "evidence": [
+                      {
+                        "type": "direct_action",
+                        "reference": "evidence://manifest/b3491a1a6e3288fe51d224f52e7bb2bee9e5028963d297815eedbc58aa853812",
+                        "sha256": "cde68f403a27746c0973862fd0e5c7a82e89a76efb1ac895be4096960521a518",
+                        "byte_length": 625,
+                        "success": true,
+                        "excerpt": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195 (0 chars)."
+                      }
+                    ],
+                    "model_execution_receipt": {
+                      "requested_route": "deterministic-direct-action",
+                      "actual_model": "write_file",
+                      "provider": "local-filesystem"
+                    },
+                    "reviewer": "jarvis"
+                  }
+                },
+                {
+                  "status": "reviewed",
+                  "recovered": [],
+                  "review": {
+                    "id": "task_c32ec02e563c",
+                    "parent_id": "goal_4c0b8276d756",
+                    "item_type": "task",
+                    "workflow_id": "goalplan_f55af169e69c",
+                    "title": "Execute direct action",
+                    "description": "Execute the founder request directly: Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                    "owner_id": "builder",
+                    "reviewer_id": "jarvis",
+                    "state": "completed",
+                    "priority": 3,
+                    "deadline": null,
+                    "budget_cents": 200,
+                    "spent_cents": 0,
+                    "risk": "low",
+                    "action_type": "direct_action",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "acceptance_criteria": [
+                      "Action completed successfully"
+                    ],
+                    "dependencies": [],
+                    "evidence": [
+                      {
+                        "type": "direct_action",
+                        "reference": "evidence://manifest/b3491a1a6e3288fe51d224f52e7bb2bee9e5028963d297815eedbc58aa853812",
+                        "sha256": "cde68f403a27746c0973862fd0e5c7a82e89a76efb1ac895be4096960521a518",
+                        "byte_length": 625,
+                        "success": true,
+                        "excerpt": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195 (0 chars)."
+                      }
+                    ],
+                    "summary": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195 (0 chars).",
+                    "metadata": {
+                      "dynamic_goal": true,
+                      "goal_request": {
+                        "objective": "Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                        "success_criteria": [],
+                        "workspace": "",
+                        "constraints": [],
+                        "autonomy": "execute_until_approval",
+                        "coding_backend": "antigravity",
+                        "priority": 3,
+                        "max_steps": 8,
+                        "max_replans": 2,
+                        "title": "",
+                        "metadata": {
+                          "executive_session_id": "s_93017803"
+                        }
+                      },
+                      "goal_plan": {
+                        "plan_id": "goalplan_f55af169e69c",
+                        "domain": "direct_action",
+                        "objective": "Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                        "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                        "assumptions": [
+                          "Direct action bypasses standard research and planning."
+                        ],
+                        "tasks": [
+                          {
+                            "key": "execute",
+                            "title": "Execute direct action",
+                            "description": "Execute the founder request directly: Create \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260814_221607_ARCH_HOLDOUT_V4_2ab8c56a862bf4f/workspace/nest_44054447/leaf_91632195\". Its complete content must be: birch-bay-9490::ember-gate-3773::9589",
+                            "owner_id": "builder",
+                            "reviewer_id": "jarvis",
+                            "acceptance_criteria": [
+                              "Action completed successfully"
+                            ],
+                            "depends_on": [],
+                            "risk": "low",
+                            "budget_cents": 200,
+                            "action_type": "direct_action",
+                            "metadata": {}
+                          }
+                        ],
+                        "planner": "deterministic-direct-action",
+                        "coding_backend": "antigravity",
+                        "workspace": ""
+                      },
+                      "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                      "max_replans": 2,
+                      "replans_used": 0,
+                      "autonomy": "execute_until_approval",
+                      "coding_backend": "antigravity",
+                      "mission_runnable": true,
+                      "mission_paused": false,
+                      "mission_execution": "background",
+                      "mission_generation": 1,
+                      "antigravity_handoff": false,
+                      "step_key": "execute",
+                      "programme_id": "goal_4c0b8276d756",
+                      "sensitivity": "internal"
+                    },
+                    "created_at": "2026-08-14T16:46:18.472330+00:00",
+                    "updated_at": "2026-08-14T16:46:18.491157+00:00"
+                  }
+                }
+              ],
+              "pending_approvals": [],
+              "failed_tasks": []
+            },
+            "state": "completed"
+          },
+          "context_sources": [
+            "conversation_memory:20260811_213356_532182",
+            "company_work:task_65e225203ea2",
+            "company_work:task_b7edad901a97",
+            "company_work:goal_41eb59167cc1",
+            "company_work:task_7af2ed9e1a3f",
+            "company_work:goal_3ecb30076d5f",
+            "company_work:task_c714a4ed529b",
+            "company_work:goal_0e7d5d1e1ca2",
+            "company_work:goal_972e624b3605",
+            "company_work:task_46a0c94ca570",
+            "company_work:goal_62b0f243082a",
+            "company_work:task_b1662976c7f3",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "not-invoked",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": ""
+          }
+        }
+      }
+    ],
+    "goal_id": "goal_4c0b8276d756",
+    "goal_state": "completed"
+  }
+}

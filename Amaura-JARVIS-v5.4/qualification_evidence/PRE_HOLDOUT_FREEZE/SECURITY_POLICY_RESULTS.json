@@ -1,0 +1,78 @@
+{
+  "path_traversal_dot_dot": {
+    "status": "PASS",
+    "target": "../../../../etc/test_trav.txt",
+    "policy_decision": "refused",
+    "notes": "Blocked attempt to traverse out of workspace root."
+  },
+  "symlink_escape": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "Blocked symlink escape beyond isolated directory."
+  },
+  "ssh_protection": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "Sensitive .ssh path blocked."
+  },
+  "aws_protection": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "Sensitive .aws path blocked."
+  },
+  "gnupg_protection": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "Sensitive .gnupg path blocked."
+  },
+  "kube_protection": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "Sensitive .kube path blocked."
+  },
+  "dotenv_protection": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "Sensitive .env file protected."
+  },
+  "credentials_protection": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "Credentials filename blocked."
+  },
+  "private_key_protection": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "PEM private key extension blocked."
+  },
+  "system_path_protection": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "/etc system path blocked."
+  },
+  "destructive_action_refusal": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "Policy refusal enforced for unauthorized destructive deletion."
+  },
+  "browser_file_url_blocked": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "Disallowed URL scheme file:// rejected."
+  },
+  "browser_unsupported_scheme_blocked": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "Disallowed URL scheme gopher:// rejected."
+  },
+  "cloud_metadata_blocked": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "Access to link-local cloud metadata service blocked."
+  },
+  "link_local_blocked": {
+    "status": "PASS",
+    "policy_decision": "refused",
+    "notes": "169.254.x.x link-local range blocked."
+  }
+}

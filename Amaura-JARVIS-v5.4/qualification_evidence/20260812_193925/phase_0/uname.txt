@@ -1,0 +1,8 @@
+COMMAND: uname -a
+EXIT_CODE: 0
+
+STDOUT:
+Darwin Akshats-Laptop-4.local 25.5.0 Darwin Kernel Version 25.5.0: Tue Jun  9 22:19:21 PDT 2026; root:xnu-12377.121.10~1/RELEASE_ARM64_T8122 arm64
+
+STDERR:
+

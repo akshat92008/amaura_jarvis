@@ -1,0 +1,17 @@
+{
+  "matches_frozen_manifest_after_run": {
+    "expected_count": 118,
+    "actual_count": 118,
+    "mismatch_count": 0,
+    "mismatches": [],
+    "ok": true
+  },
+  "pre_vs_post": {
+    "expected_count": 118,
+    "actual_count": 118,
+    "mismatch_count": 0,
+    "mismatches": [],
+    "ok": true
+  },
+  "production_source_unchanged_during_holdout": true
+}

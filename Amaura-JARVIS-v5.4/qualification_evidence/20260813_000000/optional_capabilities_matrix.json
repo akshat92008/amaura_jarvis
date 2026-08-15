@@ -1,0 +1,21 @@
+{
+  "Crawl4AI": "CONFIG_ONLY",
+  "Browser_Use": "CONFIG_ONLY",
+  "SearXNG": "NOT_CONFIGURED",
+  "Docling": "CONFIG_ONLY",
+  "PaddleOCR": "CONFIG_ONLY",
+  "LlamaIndex": "PASS_FIXTURE_E2E",
+  "FFmpeg": {
+    "status": "PASS_REAL_E2E",
+    "duration": 1.020998,
+    "video_codec": "h264",
+    "input_sha256": "17f1f6ce1bc3d35596db9c12985873995ef25ee78782e7b5024f3297cd7f7585",
+    "output_sha256": "19e41911e09e25bd6c392a93672dd65ae6aecfb2615d7d54af57d21ac3462b01"
+  },
+  "Remotion": "CONFIG_ONLY",
+  "Whisper": "CONFIG_ONLY",
+  "Kokoro": "CONFIG_ONLY",
+  "ComfyUI": "NOT_CONFIGURED",
+  "Langfuse": "NOT_CONFIGURED",
+  "MCP": "CONFIG_ONLY"
+}

@@ -1,0 +1,20 @@
+{
+  "test_id": "canary_e_request_4",
+  "prompt": "Respond with your assigned identifier and nothing else: ARCH-CONCURRENCY-4-369d7e58-8090-428a-bed1-60a7c8c96134",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "ARCH-CONCURRENCY-4-369d7e58-8090-428a-bed1-60a7c8c96134",
+  "response_excerpt": "ARCH-CONCURRENCY-4-369d7e58-8090-428a-bed1-60a7c8c96134",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": 654.2370319366455,
+    "total_ms": 740.1070594787598,
+    "request_ts": 1786631234.407585,
+    "final_ts": 1786631235.147692
+  },
+  "verification": {}
+}

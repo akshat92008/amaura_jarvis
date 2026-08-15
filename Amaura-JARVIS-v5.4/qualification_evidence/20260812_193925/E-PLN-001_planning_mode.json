@@ -1,0 +1,53 @@
+{
+  "test": "Planning Mode Isolation",
+  "autonomy": "plan_only",
+  "is_running_before": false,
+  "is_running_after": false,
+  "chat_response": {
+    "response": "[PLANNING MODE] Would open Safari.",
+    "session_id": "qual_phase11",
+    "model": "Llama 3.3 70B",
+    "model_key": "llama-3.3-70b",
+    "model_provider": "not-invoked",
+    "model_fallback_used": false,
+    "model_fallback_reason": "",
+    "model_latency_ms": 0,
+    "model_ttft_ms": 0,
+    "intent": "macos_app",
+    "goal_id": "",
+    "state": "held",
+    "executive": {
+      "intent": "macos_app",
+      "message": "[PLANNING MODE] Would open Safari.",
+      "session_id": "qual_phase11",
+      "goal_id": "",
+      "state": "held",
+      "result": {
+        "app_control": "[PLANNING MODE] Would open Safari.",
+        "plan_only": true
+      },
+      "context_sources": [
+        "jarvis.memory.episodic:20260812T144046_qual_phase11",
+        "jarvis.memory.episodic:20260812T144034_qual_phase11",
+        "jarvis.memory.episodic:20260812T142643_qual_phase3",
+        "jarvis.memory.episodic:20260812T142524_qual_phase2",
+        "jarvis.memory.episodic:20260812T122600_default",
+        "jarvis.memory.episodic:20260812T122526_default",
+        "jarvis.memory.episodic:20260812T122233_default",
+        "jarvis.memory.episodic:20260812T121026_desktop-1786536620896",
+        "jarvis.memory.episodic:20260812T115234_desktop-1786535516138",
+        "company_work:task_9b82b9a266d4",
+        "conversation_memory:20260810_234027_410502",
+        "conversation_memory:20260810_225322_246153",
+        "entity_graph"
+      ],
+      "model_provenance": {
+        "provider": "not-invoked",
+        "model": "",
+        "fallback_used": false,
+        "fallback_reason": ""
+      }
+    }
+  },
+  "success": true
+}

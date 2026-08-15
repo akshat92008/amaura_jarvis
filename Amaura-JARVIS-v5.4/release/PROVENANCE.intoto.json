@@ -1,0 +1,67 @@
+{
+  "_type": "https://in-toto.io/Statement/v1",
+  "predicate": {
+    "buildDefinition": {
+      "buildType": "https://amaura.ai/build-types/deterministic-python-release/v1",
+      "externalParameters": {
+        "sourceDateEpoch": "1767225600",
+        "sourceFiles": 375,
+        "version": "5.4.1"
+      },
+      "internalParameters": {
+        "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+        "python": "3.13.2 (v3.13.2:4f8bb3947cf, Feb  4 2025, 11:51:10) [Clang 15.0.0 (clang-1500.3.9.4)]"
+      },
+      "resolvedDependencies": [
+        {
+          "digest": {
+            "sha256": "fb2d6f7c01fd4437a85f45c4a808883f199bced445e30cb2a358106c03015489"
+          },
+          "uri": "file:uv.lock"
+        },
+        {
+          "digest": {
+            "sha256": "37047db43508b0d8d1a647b14d212690784d79a9bdcca7d21a8c9015e2cffa70"
+          },
+          "uri": "file:pyproject.toml"
+        }
+      ]
+    },
+    "runDetails": {
+      "builder": {
+        "id": "https://amaura.ai/builders/release-builder/v1"
+      },
+      "metadata": {
+        "finishedOn": "2026-08-12T07:36:02.471093+00:00",
+        "git": {
+          "available": false,
+          "commit": "unknown",
+          "dirty": null
+        },
+        "invocationId": "6757a1ee-7e5f-4a0e-b841-7ab2d7c7dfe0",
+        "startedOn": "2026-08-12T07:36:02.471093+00:00"
+      }
+    }
+  },
+  "predicateType": "https://slsa.dev/provenance/v1",
+  "subject": [
+    {
+      "digest": {
+        "sha256": "575ccdce026c56ec46ea07dca0b3cf9792de534f1ec2d05917d72c5a35b4e39a"
+      },
+      "name": "Amaura-Company-OS-v5.4.1-Hardened.zip"
+    },
+    {
+      "digest": {
+        "sha256": "286479924c6ce5aa20250c42f31704974b04469f7b215f446eea50216517a070"
+      },
+      "name": "jarvis-5.4.1-py3-none-any.whl"
+    },
+    {
+      "digest": {
+        "sha256": "6d627b433a240e1b6cf5fc8df0119a53f6d3cc04e040ba8ff9d3246251f8d0e5"
+      },
+      "name": "Amaura-Company-OS-v5.4.1.spdx.json"
+    }
+  ]
+}

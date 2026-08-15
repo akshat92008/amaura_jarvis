@@ -1,0 +1,1 @@
+The file at the specified path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_blackbox/harness_self_test/canary_c/nonexistent_0aeb7f47.txt' does not exist.

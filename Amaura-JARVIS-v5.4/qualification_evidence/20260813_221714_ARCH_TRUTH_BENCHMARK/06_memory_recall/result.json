@@ -1,0 +1,37 @@
+{
+  "test_id": "06_memory_recall",
+  "status": "FAIL",
+  "reason": "PASS requires recall of an unseen runtime value in a separate request; memory-tool telemetry is informational.",
+  "verification": {
+    "project": "PROJECT-953741B0F5",
+    "recalled": false,
+    "store_tools": [],
+    "recall_tools": []
+  },
+  "chat": {
+    "store": {
+      "prompt": "Remember this durable project fact: PROJECT-953741B0F5 has secret value VALUE-5BC00E610BBF. Confirm only after storing it in project memory.",
+      "http_status": 503,
+      "response_text": "",
+      "error": "HTTP 503: {\"detail\":\"JARVIS_API_KEY is not configured\"}",
+      "tool_calls": [],
+      "goal_id": null,
+      "goal_state": null,
+      "goal_history": [],
+      "latency_ms": 10.20193099975586,
+      "events": []
+    },
+    "recall": {
+      "prompt": "What secret value did I previously tell you for PROJECT-953741B0F5? Reply with the value only.",
+      "http_status": 503,
+      "response_text": "",
+      "error": "HTTP 503: {\"detail\":\"JARVIS_API_KEY is not configured\"}",
+      "tool_calls": [],
+      "goal_id": null,
+      "goal_state": null,
+      "goal_history": [],
+      "latency_ms": 23.544788360595703,
+      "events": []
+    }
+  }
+}

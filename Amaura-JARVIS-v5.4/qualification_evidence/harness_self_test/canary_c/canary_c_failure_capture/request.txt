@@ -1,0 +1,1 @@
+Read the content of the file at path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/harness_self_test/canary_c/nonexistent_ce7f5b20.txt'.

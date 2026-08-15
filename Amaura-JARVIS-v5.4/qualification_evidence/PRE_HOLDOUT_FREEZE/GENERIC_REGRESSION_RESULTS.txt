@@ -1,0 +1,27 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.2, pytest-9.1.1, pluggy-1.6.0 -- /Library/Frameworks/Python.framework/Versions/3.13/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4
+configfile: pyproject.toml
+plugins: cov-7.1.0, langsmith-0.10.13, anyio-4.14.2
+collecting ... collected 11 items
+
+tests/test_generic_execution_repair.py::test_filesystem_write_and_read_randomized PASSED [  9%]
+tests/test_generic_execution_repair.py::test_filesystem_list_randomized PASSED [ 18%]
+tests/test_generic_execution_repair.py::test_filesystem_security_sensitive_paths PASSED [ 27%]
+tests/test_generic_execution_repair.py::test_browser_execution_randomized PASSED [ 36%]
+tests/test_generic_execution_repair.py::test_memory_retrieval_randomized PASSED [ 45%]
+tests/test_generic_execution_repair.py::test_repository_inspection_operator_mismatch PASSED [ 54%]
+tests/test_generic_execution_repair.py::test_repository_inspection_subtraction_operator_mismatch PASSED [ 63%]
+tests/test_generic_execution_repair.py::test_multi_step_workflow_schema_a PASSED [ 72%]
+tests/test_generic_execution_repair.py::test_multi_step_workflow_schema_b PASSED [ 81%]
+tests/test_generic_execution_repair.py::test_exact_response_randomized PASSED [ 90%]
+tests/test_generic_execution_repair.py::test_concurrency_isolation PASSED [100%]
+
+=============================== warnings summary ===============================
+tests/test_generic_execution_repair.py::test_concurrency_isolation
+  /Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/httpx/_config.py:51: DeprecationWarning: `verify=<str>` is deprecated. Use `verify=ssl.create_default_context(cafile=...)` or `verify=ssl.create_default_context(capath=...)` instead.
+    warnings.warn(message, DeprecationWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 11 passed, 1 warning in 11.29s ========================

@@ -1,0 +1,16 @@
+{
+  "test_id": "recovery_04_nonexistent_process",
+  "prompt": "Kill process 9999999.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 12.233972549438477,
+    "request_ts": 1786586901.646668,
+    "final_ts": 1786586901.658902
+  },
+  "verification": {}
+}

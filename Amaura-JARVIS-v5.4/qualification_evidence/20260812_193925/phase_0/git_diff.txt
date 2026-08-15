@@ -1,0 +1,19 @@
+COMMAND: git diff
+EXIT_CODE: 0
+
+STDOUT:
+diff --git a/Amaura-JARVIS-v5.4/jarvis/amaura/cognition.py b/Amaura-JARVIS-v5.4/jarvis/amaura/cognition.py
+index 4a12194..486f2cd 100644
+--- a/Amaura-JARVIS-v5.4/jarvis/amaura/cognition.py
++++ b/Amaura-JARVIS-v5.4/jarvis/amaura/cognition.py
+@@ -1720,7 +1720,7 @@ class ExecutiveKernel:
+             
+             try:
+                 res = CapabilityRuntime().execute("macos_app", op, {"name": app_name})
+-                message = f"✅ Successfully {'closed' if op == 'close' else 'opened'} {app_name}." if res.ok else f"❌ Failed: {res.output}"
++                message = f"✅ Successfully {'closed' if op == 'close' else 'opened'} {app_name}." if res.get("ok") else f"❌ Failed: {res.get('output')}"
+             except Exception as exc:
+                 message = f"❌ Error: {exc}"
+
+STDERR:
+

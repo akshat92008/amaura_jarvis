@@ -1,0 +1,143 @@
+{
+  "test": "True Streaming Proof",
+  "request": "Count from 1 to 5 slowly.",
+  "chunks": [
+    {
+      "timestamp": 0.4724879264831543,
+      "data": {
+        "type": "token",
+        "content": "1"
+      }
+    },
+    {
+      "timestamp": 0.47263479232788086,
+      "data": {
+        "type": "token",
+        "content": "..."
+      }
+    },
+    {
+      "timestamp": 0.4726738929748535,
+      "data": {
+        "type": "token",
+        "content": " "
+      }
+    },
+    {
+      "timestamp": 0.47403597831726074,
+      "data": {
+        "type": "token",
+        "content": "2"
+      }
+    },
+    {
+      "timestamp": 0.47415709495544434,
+      "data": {
+        "type": "token",
+        "content": "..."
+      }
+    },
+    {
+      "timestamp": 0.47431182861328125,
+      "data": {
+        "type": "token",
+        "content": " "
+      }
+    },
+    {
+      "timestamp": 0.4744589328765869,
+      "data": {
+        "type": "token",
+        "content": "3"
+      }
+    },
+    {
+      "timestamp": 0.474564790725708,
+      "data": {
+        "type": "token",
+        "content": "..."
+      }
+    },
+    {
+      "timestamp": 0.4804689884185791,
+      "data": {
+        "type": "token",
+        "content": " "
+      }
+    },
+    {
+      "timestamp": 0.4806180000305176,
+      "data": {
+        "type": "token",
+        "content": "4"
+      }
+    },
+    {
+      "timestamp": 0.48075175285339355,
+      "data": {
+        "type": "token",
+        "content": "..."
+      }
+    },
+    {
+      "timestamp": 0.48090481758117676,
+      "data": {
+        "type": "token",
+        "content": " "
+      }
+    },
+    {
+      "timestamp": 0.48102593421936035,
+      "data": {
+        "type": "token",
+        "content": "5"
+      }
+    },
+    {
+      "timestamp": 0.4971179962158203,
+      "data": {
+        "type": "token",
+        "content": "."
+      }
+    },
+    {
+      "timestamp": 0.5523660182952881,
+      "data": {
+        "type": "complete",
+        "response": "1... 2... 3... 4... 5.",
+        "session_id": "qual_phase8",
+        "model": "llama-3.3-70b-versatile",
+        "model_key": "llama-3.3-70b-versatile",
+        "model_provider": "omniroute",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 421,
+        "model_ttft_ms": 350,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "",
+        "executive": {
+          "intent": "conversation",
+          "message": "1... 2... 3... 4... 5.",
+          "session_id": "qual_phase8",
+          "goal_id": "",
+          "state": "",
+          "result": {},
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "omniroute",
+            "model": "llama-3.3-70b-versatile",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "requested_model": "groq/llama-3.3-70b-versatile",
+            "resolved_provider": "omniroute",
+            "resolved_model": "llama-3.3-70b-versatile",
+            "latency_ms": 421,
+            "ttft_ms": 350
+          }
+        }
+      }
+    }
+  ],
+  "success": true
+}

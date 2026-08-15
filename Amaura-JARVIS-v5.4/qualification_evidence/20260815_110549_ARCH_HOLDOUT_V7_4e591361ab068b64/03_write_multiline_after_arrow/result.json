@@ -1,0 +1,90 @@
+{
+  "test_id": "03_write_multiline_after_arrow",
+  "status": "FAIL",
+  "reason": "Multiline block after arrow delimiter.",
+  "verification": {
+    "expected": "juniper-trail-1068\n4121 falcon-basin-2270\niris-wharf-7505",
+    "actual": "exactly ->\njuniper-trail-1068\n4121 falcon-basin-2270\niris-wharf-7505",
+    "exact": false
+  },
+  "chat": {
+    "prompt": "Write \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_110549_ARCH_HOLDOUT_V7_4e591361ab068b64/workspace/notes_22219945.txt\". The body is exactly ->\njuniper-trail-1068\n4121 falcon-basin-2270\niris-wharf-7505",
+    "session_id": "v7s3_54082584",
+    "http_status": 200,
+    "response_text": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_110549_ARCH_HOLDOUT_V7_4e591361ab068b64/workspace/notes_22219945.txt (68 chars).",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_110549_ARCH_HOLDOUT_V7_4e591361ab068b64/workspace/notes_22219945.txt (68 chars).",
+        "session_id": "v7s3_54082584",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_110549_ARCH_HOLDOUT_V7_4e591361ab068b64/workspace/notes_22219945.txt (68 chars).",
+          "session_id": "v7s3_54082584",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_110549_ARCH_HOLDOUT_V7_4e591361ab068b64/workspace/notes_22219945.txt",
+              "raw_content_clause": ". The body is exactly ->\njuniper-trail-1068\n4121 falcon-basin-2270\niris-wharf-7505",
+              "payload_span": [
+                182,
+                250
+              ],
+              "payload": "exactly ->\njuniper-trail-1068\n4121 falcon-basin-2270\niris-wharf-7505",
+              "exactness_mode": true,
+              "expected_size": 68,
+              "actual_size": 68,
+              "content_match": true,
+              "bytes": 68,
+              "verification_passed": true
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "policy_decision": "allowed",
+            "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_110549_ARCH_HOLDOUT_V7_4e591361ab068b64/workspace/notes_22219945.txt",
+            "raw_content_clause": ". The body is exactly ->\njuniper-trail-1068\n4121 falcon-basin-2270\niris-wharf-7505",
+            "payload_span": [
+              182,
+              250
+            ],
+            "payload": "exactly ->\njuniper-trail-1068\n4121 falcon-basin-2270\niris-wharf-7505",
+            "exactness_mode": true,
+            "expected_size": 68,
+            "actual_size": 68,
+            "content_match": true,
+            "bytes": 68,
+            "verification_passed": true
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

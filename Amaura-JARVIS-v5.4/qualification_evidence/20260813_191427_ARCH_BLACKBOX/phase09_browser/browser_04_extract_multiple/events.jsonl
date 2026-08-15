@@ -1,0 +1,230 @@
+{"type": "token", "content": "I"}
+{"type": "token", "content": "'m"}
+{"type": "token", "content": " not"}
+{"type": "token", "content": " capable"}
+{"type": "token", "content": " of"}
+{"type": "token", "content": " directly"}
+{"type": "token", "content": " accessing"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " navigating"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " external"}
+{"type": "token", "content": " URLs"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " including"}
+{"type": "token", "content": " '"}
+{"type": "token", "content": "https"}
+{"type": "token", "content": "://"}
+{"type": "token", "content": "quotes"}
+{"type": "token", "content": ".t"}
+{"type": "token", "content": "osc"}
+{"type": "token", "content": "rape"}
+{"type": "token", "content": ".com"}
+{"type": "token", "content": "',"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " interacting"}
+{"type": "token", "content": " with"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " browser"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " However"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " I"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " guide"}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " through"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " process"}
+{"type": "token", "content": " of"}
+{"type": "token", "content": " retrieving"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " content"}
+{"type": "token", "content": ".\n\n"}
+{"type": "token", "content": "You"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " use"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " web"}
+{"type": "token", "content": " browser"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " navigate"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " '"}
+{"type": "token", "content": "https"}
+{"type": "token", "content": "://"}
+{"type": "token", "content": "quotes"}
+{"type": "token", "content": ".t"}
+{"type": "token", "content": "osc"}
+{"type": "token", "content": "rape"}
+{"type": "token", "content": ".com"}
+{"type": "token", "content": "'"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " view"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " quotes"}
+{"type": "token", "content": " on"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " page"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " The"}
+{"type": "token", "content": " first"}
+{"type": "token", "content": " three"}
+{"type": "token", "content": " quotes"}
+{"type": "token", "content": " are"}
+{"type": "token", "content": " likely"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " be"}
+{"type": "token", "content": " from"}
+{"type": "token", "content": " famous"}
+{"type": "token", "content": " authors"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " but"}
+{"type": "token", "content": " I"}
+{"type": "token", "content": " don"}
+{"type": "token", "content": "'t"}
+{"type": "token", "content": " have"}
+{"type": "token", "content": " real"}
+{"type": "token", "content": "-time"}
+{"type": "token", "content": " access"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " page"}
+{"type": "token", "content": " content"}
+{"type": "token", "content": ".\n\n"}
+{"type": "token", "content": "Alternatively"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " use"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " tool"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " programming"}
+{"type": "token", "content": " language"}
+{"type": "token", "content": " like"}
+{"type": "token", "content": " Python"}
+{"type": "token", "content": " with"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " `"}
+{"type": "token", "content": "requests"}
+{"type": "token", "content": "`"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " `"}
+{"type": "token", "content": "Beautiful"}
+{"type": "token", "content": "Soup"}
+{"type": "token", "content": "`"}
+{"type": "token", "content": " libraries"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " fetch"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " content"}
+{"type": "token", "content": " of"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " URL"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " parse"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " HTML"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " extract"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " quotes"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " Here"}
+{"type": "token", "content": "'s"}
+{"type": "token", "content": " an"}
+{"type": "token", "content": " example"}
+{"type": "token", "content": ":\n\n"}
+{"type": "token", "content": "```"}
+{"type": "token", "content": "python"}
+{"type": "token", "content": "\n"}
+{"type": "token", "content": "import"}
+{"type": "token", "content": " requests"}
+{"type": "token", "content": "\n"}
+{"type": "token", "content": "from"}
+{"type": "token", "content": " bs"}
+{"type": "token", "content": "4"}
+{"type": "token", "content": " import"}
+{"type": "token", "content": " BeautifulSoup"}
+{"type": "token", "content": "\n\n"}
+{"type": "token", "content": "response"}
+{"type": "token", "content": " ="}
+{"type": "token", "content": " requests"}
+{"type": "token", "content": ".get"}
+{"type": "token", "content": "('"}
+{"type": "token", "content": "https"}
+{"type": "token", "content": "://"}
+{"type": "token", "content": "quotes"}
+{"type": "token", "content": ".t"}
+{"type": "token", "content": "osc"}
+{"type": "token", "content": "rape"}
+{"type": "token", "content": ".com"}
+{"type": "token", "content": "')\n"}
+{"type": "token", "content": "soup"}
+{"type": "token", "content": " ="}
+{"type": "token", "content": " BeautifulSoup"}
+{"type": "token", "content": "(response"}
+{"type": "token", "content": ".text"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " '"}
+{"type": "token", "content": "html"}
+{"type": "token", "content": ".parser"}
+{"type": "token", "content": "')\n"}
+{"type": "token", "content": "quotes"}
+{"type": "token", "content": " ="}
+{"type": "token", "content": " soup"}
+{"type": "token", "content": ".find"}
+{"type": "token", "content": "_all"}
+{"type": "token", "content": "('"}
+{"type": "token", "content": "span"}
+{"type": "token", "content": "',"}
+{"type": "token", "content": " class"}
+{"type": "token", "content": "_='"}
+{"type": "token", "content": "text"}
+{"type": "token", "content": "')\n\n"}
+{"type": "token", "content": "for"}
+{"type": "token", "content": " i"}
+{"type": "token", "content": " in"}
+{"type": "token", "content": " range"}
+{"type": "token", "content": "(3"}
+{"type": "token", "content": "):\n"}
+{"type": "token", "content": "   "}
+{"type": "token", "content": " print"}
+{"type": "token", "content": "(quotes"}
+{"type": "token", "content": "[i"}
+{"type": "token", "content": "]."}
+{"type": "token", "content": "text"}
+{"type": "token", "content": ")\n"}
+{"type": "token", "content": "``"}
+{"type": "token", "content": "`\n\n"}
+{"type": "token", "content": "This"}
+{"type": "token", "content": " code"}
+{"type": "token", "content": " will"}
+{"type": "token", "content": " print"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " text"}
+{"type": "token", "content": " of"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " first"}
+{"type": "token", "content": " three"}
+{"type": "token", "content": " quotes"}
+{"type": "token", "content": " on"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " page"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " If"}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " run"}
+{"type": "token", "content": " this"}
+{"type": "token", "content": " code"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " should"}
+{"type": "token", "content": " see"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " actual"}
+{"type": "token", "content": " quotes"}
+{"type": "token", "content": "."}
+{"type": "complete", "response": "I'm not capable of directly accessing or navigating to external URLs, including 'https://quotes.toscrape.com', or interacting with a browser. However, I can guide you through the process of retrieving the content.\n\nYou can use a web browser to navigate to 'https://quotes.toscrape.com' and view the quotes on the page. The first three quotes are likely to be from famous authors, but I don't have real-time access to the page content.\n\nAlternatively, you can use a tool or a programming language like Python with the `requests` and `BeautifulSoup` libraries to fetch the content of the URL and parse the HTML to extract the quotes. Here's an example:\n\n```python\nimport requests\nfrom bs4 import BeautifulSoup\n\nresponse = requests.get('https://quotes.toscrape.com')\nsoup = BeautifulSoup(response.text, 'html.parser')\nquotes = soup.find_all('span', class_='text')\n\nfor i in range(3):\n    print(quotes[i].text)\n```\n\nThis code will print the text of the first three quotes on the page. If you run this code, you should see the actual quotes.", "session_id": "default", "model": "llama-3.3-70b-versatile", "model_key": "llama-3.3-70b-versatile", "model_provider": "omniroute", "model_fallback_used": false, "model_fallback_reason": "", "model_latency_ms": 3387, "model_ttft_ms": 2816, "intent": "conversation", "goal_id": "", "state": "", "executive": {"intent": "conversation", "message": "I'm not capable of directly accessing or navigating to external URLs, including 'https://quotes.toscrape.com', or interacting with a browser. However, I can guide you through the process of retrieving the content.\n\nYou can use a web browser to navigate to 'https://quotes.toscrape.com' and view the quotes on the page. The first three quotes are likely to be from famous authors, but I don't have real-time access to the page content.\n\nAlternatively, you can use a tool or a programming language like Python with the `requests` and `BeautifulSoup` libraries to fetch the content of the URL and parse the HTML to extract the quotes. Here's an example:\n\n```python\nimport requests\nfrom bs4 import BeautifulSoup\n\nresponse = requests.get('https://quotes.toscrape.com')\nsoup = BeautifulSoup(response.text, 'html.parser')\nquotes = soup.find_all('span', class_='text')\n\nfor i in range(3):\n    print(quotes[i].text)\n```\n\nThis code will print the text of the first three quotes on the page. If you run this code, you should see the actual quotes.", "session_id": "default", "goal_id": "", "state": "", "result": {}, "context_sources": [], "model_provenance": {"provider": "omniroute", "model": "llama-3.3-70b-versatile", "fallback_used": false, "fallback_reason": "", "requested_model": "groq/llama-3.3-70b-versatile", "resolved_provider": "omniroute", "resolved_model": "llama-3.3-70b-versatile", "latency_ms": 3387, "ttft_ms": 2816}}}

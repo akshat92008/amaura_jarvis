@@ -1,0 +1,7 @@
+{
+  "command": "PYTHONPATH=. python3 -m pytest tests/ -q",
+  "exit_code": 0,
+  "started_at_utc": "2026-08-15T06:27:20.196083+00:00",
+  "finished_at_utc": "2026-08-15T06:29:11.104743+00:00",
+  "duration_seconds": 110.908515
+}

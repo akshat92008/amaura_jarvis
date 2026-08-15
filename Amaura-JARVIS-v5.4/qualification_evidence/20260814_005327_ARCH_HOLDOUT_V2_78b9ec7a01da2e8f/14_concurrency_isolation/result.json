@@ -1,0 +1,90 @@
+{
+  "test_id": "14_concurrency_isolation",
+  "status": "PASS",
+  "reason": "Requires 10 simultaneous unrelated exact responses with zero cross-talk and zero service failures.",
+  "verification": {
+    "requests": [
+      {
+        "index": 0,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "quartz.grove.154822"
+      },
+      {
+        "index": 1,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "orbit.meadow.770701"
+      },
+      {
+        "index": 2,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "tiger.meadow.431733"
+      },
+      {
+        "index": 3,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "pine.nova.204559"
+      },
+      {
+        "index": 4,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "juniper.meadow.516404"
+      },
+      {
+        "index": 5,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "harbor.heron.934786"
+      },
+      {
+        "index": 6,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "orbit.comet.463583"
+      },
+      {
+        "index": 7,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "juniper.drift.541420"
+      },
+      {
+        "index": 8,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "cedar.nova.459407"
+      },
+      {
+        "index": 9,
+        "own_exact": true,
+        "other_payload_seen": false,
+        "service_error": false,
+        "http_status": 200,
+        "response": "lumen.zephyr.863915"
+      }
+    ]
+  },
+  "chat": null
+}

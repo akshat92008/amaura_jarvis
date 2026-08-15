@@ -1,0 +1,169 @@
+[
+  {
+    "capability": "Crawl4AI",
+    "key": "crawl4ai",
+    "present": true,
+    "requirement": {
+      "module": "crawl4ai"
+    },
+    "status": "CONFIG_ONLY"
+  },
+  {
+    "capability": "Browser Use",
+    "key": "browser_use",
+    "present": true,
+    "requirement": {
+      "module": "browser_use"
+    },
+    "status": "CONFIG_ONLY"
+  },
+  {
+    "capability": "SearXNG",
+    "key": "searxng",
+    "present": false,
+    "requirement": {
+      "env": "SEARXNG_URL"
+    },
+    "status": "NOT_CONFIGURED"
+  },
+  {
+    "capability": "Docling",
+    "key": "docling",
+    "present": true,
+    "requirement": {
+      "module": "docling"
+    },
+    "status": "CONFIG_ONLY"
+  },
+  {
+    "capability": "PaddleOCR",
+    "key": "paddleocr",
+    "present": true,
+    "requirement": {
+      "module": "paddleocr"
+    },
+    "status": "CONFIG_ONLY"
+  },
+  {
+    "capability": "LlamaIndex",
+    "key": "llamaindex",
+    "present": true,
+    "requirement": {
+      "module": "llama_index.core"
+    },
+    "status": "CONFIG_ONLY"
+  },
+  {
+    "capability": "Remotion",
+    "key": "remotion",
+    "present": true,
+    "requirement": {
+      "binary": "npx"
+    },
+    "status": "CONFIG_ONLY"
+  },
+  {
+    "capability": "faster-whisper",
+    "key": "faster_whisper",
+    "present": true,
+    "requirement": {
+      "module": "faster_whisper"
+    },
+    "status": "CONFIG_ONLY"
+  },
+  {
+    "capability": "Kokoro",
+    "key": "kokoro",
+    "present": true,
+    "requirement": {
+      "module": "kokoro"
+    },
+    "status": "CONFIG_ONLY"
+  },
+  {
+    "capability": "ComfyUI",
+    "key": "comfyui",
+    "present": false,
+    "requirement": {
+      "env": "COMFYUI_URL"
+    },
+    "status": "NOT_CONFIGURED"
+  },
+  {
+    "capability": "Langfuse",
+    "key": "langfuse",
+    "present": false,
+    "requirement": {
+      "env": "LANGFUSE_HOST"
+    },
+    "status": "NOT_CONFIGURED"
+  },
+  {
+    "capability": "MCP",
+    "key": "mcp",
+    "present": true,
+    "requirement": {
+      "module": "mcp"
+    },
+    "status": "CONFIG_ONLY"
+  },
+  {
+    "capability": "FFmpeg",
+    "commands": [
+      {
+        "cmd": [
+          "ffmpeg",
+          "-hide_banner",
+          "-y",
+          "-f",
+          "lavfi",
+          "-i",
+          "sine=frequency=440:duration=1",
+          "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_235221/capability_audit_correction/fixtures/ffmpeg_input.wav"
+        ],
+        "duration": 0.197,
+        "exit_code": 0,
+        "stderr": "Input #0, lavfi, from 'sine=frequency=440:duration=1':\n  Duration: N/A, start: 0.000000, bitrate: 705 kb/s\n  Stream #0:0: Audio: pcm_s16le, 44100 Hz, mono, s16, 705 kb/s\nStream mapping:\n  Stream #0:0 -> #0:0 (pcm_s16le (native) -> pcm_s16le (native))\nPress [q] to stop, [?] for help\nOutput #0, wav, to '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_235221/capability_audit_correction/fixtures/ffmpeg_input.wav':\n  Metadata:\n    ISFT            : Lavf62.12.101\n  Stream #0:0: Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, mono, s16, 705 kb/s\n    Metadata:\n      encoder         : Lavc62.28.101 pcm_s16le\n[out#0/wav @ 0x8c6c0c9c0] video:0KiB audio:86KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.088435%\nsize=      86KiB time=00:00:01.00 bitrate= 706.2kbits/s speed= 181x elapsed=0:00:00.00    \n",
+        "stdout": "",
+        "timed_out": false
+      },
+      {
+        "cmd": [
+          "ffmpeg",
+          "-hide_banner",
+          "-y",
+          "-i",
+          "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_235221/capability_audit_correction/fixtures/ffmpeg_input.wav",
+          "-codec:a",
+          "libmp3lame",
+          "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_235221/capability_audit_correction/fixtures/ffmpeg_output.mp3"
+        ],
+        "duration": 0.054,
+        "exit_code": 0,
+        "stderr": "[aist#0:0/pcm_s16le @ 0x86ac14180] Guessed Channel Layout: mono\nInput #0, wav, from '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_235221/capability_audit_correction/fixtures/ffmpeg_input.wav':\n  Metadata:\n    encoder         : Lavf62.12.101\n  Duration: 00:00:01.00, bitrate: 706 kb/s\n  Stream #0:0: Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, mono, s16, 705 kb/s\nStream mapping:\n  Stream #0:0 -> #0:0 (pcm_s16le (native) -> mp3 (libmp3lame))\nPress [q] to stop, [?] for help\nOutput #0, mp3, to '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_235221/capability_audit_correction/fixtures/ffmpeg_output.mp3':\n  Metadata:\n    TSSE            : Lavf62.12.101\n  Stream #0:0: Audio: mp3, 44100 Hz, mono, s16p\n    Metadata:\n      encoder         : Lavc62.28.101 libmp3lame\n[out#0/mp3 @ 0x86b060180] video:0KiB audio:8KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 2.715636%\nsize=       8KiB time=00:00:01.00 bitrate=  68.7kbits/s speed=99.9x elapsed=0:00:00.01    \n",
+        "stdout": "",
+        "timed_out": false
+      },
+      {
+        "cmd": [
+          "ffprobe",
+          "-v",
+          "error",
+          "-show_entries",
+          "format=duration",
+          "-of",
+          "json",
+          "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_235221/capability_audit_correction/fixtures/ffmpeg_output.mp3"
+        ],
+        "duration": 0.032,
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "{\n    \"format\": {\n        \"duration\": \"1.000000\"\n    }\n}\n",
+        "timed_out": false
+      }
+    ],
+    "input_sha256": "d8f4b4c5cc785de6ddb0b899ca2ef509897f2606b8d14a1e9bd48c820cd7283f",
+    "output_sha256": "55bb4831be8cfadaa1dee512c42d4467ef0f2f2d10ebe33c3ac60745e8bada9f",
+    "status": "PASS_REAL_E2E"
+  }
+]

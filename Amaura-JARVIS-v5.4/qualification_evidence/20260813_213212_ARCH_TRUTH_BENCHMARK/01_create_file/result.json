@@ -1,0 +1,674 @@
+{
+  "test_id": "01_create_file",
+  "status": "FAIL",
+  "reason": "PASS requires the exact runtime file to exist without benchmark assistance and no failed/cancelled mission state.",
+  "verification": {
+    "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt",
+    "exists": false,
+    "exact_content": false,
+    "fresh": false,
+    "real_tools": [],
+    "write_tool_observed": false,
+    "goal_state": "failed",
+    "mission_ok": false
+  },
+  "chat": {
+    "prompt": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc",
+    "http_status": 200,
+    "response_text": "Mission goal_e536589cc7d6 is queued. I created the governed plan and preserved its execution state.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": "goal_e536589cc7d6",
+    "goal_state": "failed",
+    "goal_history": [
+      {
+        "state": "queued",
+        "ts": 1786636953.291618
+      },
+      {
+        "state": "running",
+        "ts": 1786636956.679053
+      },
+      {
+        "state": "failed",
+        "ts": 1786636972.492883
+      }
+    ],
+    "latency_ms": 17580.00683784485,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Mission goal_e536589cc7d6 is queued. I created the governed plan and preserved its execution state.",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "not-invoked",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "goal_e536589cc7d6",
+        "state": "queued",
+        "executive": {
+          "intent": "mission",
+          "message": "Mission goal_e536589cc7d6 is queued. I created the governed plan and preserved its execution state.",
+          "session_id": "default",
+          "goal_id": "goal_e536589cc7d6",
+          "state": "queued",
+          "result": {
+            "goal": {
+              "id": "goal_e536589cc7d6",
+              "parent_id": null,
+              "item_type": "programme",
+              "workflow_id": "goalplan_8e2611726021",
+              "title": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/202",
+              "description": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc",
+              "owner_id": "jarvis",
+              "reviewer_id": "founder",
+              "state": "assigned",
+              "priority": 3,
+              "deadline": null,
+              "budget_cents": 0,
+              "spent_cents": 0,
+              "risk": "low",
+              "action_type": "internal_work",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "acceptance_criteria": [],
+              "dependencies": [],
+              "evidence": [],
+              "summary": "",
+              "metadata": {
+                "dynamic_goal": true,
+                "goal_request": {
+                  "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc",
+                  "success_criteria": [],
+                  "workspace": "",
+                  "constraints": [],
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "priority": 3,
+                  "max_steps": 8,
+                  "max_replans": 2,
+                  "title": "",
+                  "metadata": {
+                    "executive_session_id": "default"
+                  }
+                },
+                "goal_plan": {
+                  "plan_id": "goalplan_8e2611726021",
+                  "domain": "general",
+                  "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc",
+                  "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                  "assumptions": [
+                    "External commitments remain subject to the existing Amaura approval policies."
+                  ],
+                  "tasks": [
+                    {
+                      "key": "understand",
+                      "title": "Establish objective context",
+                      "description": "Understand the founder objective: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                      "owner_id": "strategy_director",
+                      "reviewer_id": "jarvis",
+                      "acceptance_criteria": [
+                        "Objective and constraints are explicit",
+                        "Unknowns that can materially change execution are identified",
+                        "Evidence needed for completion is defined"
+                      ],
+                      "depends_on": [],
+                      "risk": "low",
+                      "budget_cents": 300,
+                      "action_type": "analysis",
+                      "metadata": {}
+                    },
+                    {
+                      "key": "plan",
+                      "title": "Create the execution plan",
+                      "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                      "owner_id": "strategy_director",
+                      "reviewer_id": "jarvis",
+                      "acceptance_criteria": [
+                        "Plan maps directly to the objective",
+                        "Dependencies and stop conditions are explicit",
+                        "Founder-only actions are not silently executed"
+                      ],
+                      "depends_on": [
+                        "understand"
+                      ],
+                      "risk": "low",
+                      "budget_cents": 300,
+                      "action_type": "planning",
+                      "metadata": {}
+                    },
+                    {
+                      "key": "execute",
+                      "title": "Execute the approved internal work",
+                      "description": "Execute the reversible internal work required for: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                      "owner_id": "operations_manager",
+                      "reviewer_id": "jarvis",
+                      "acceptance_criteria": [
+                        "The requested outcome is materially completed",
+                        "Claims are backed by evidence",
+                        "Open risks and founder decisions are explicit"
+                      ],
+                      "depends_on": [
+                        "plan"
+                      ],
+                      "risk": "low",
+                      "budget_cents": 300,
+                      "action_type": "company_operations",
+                      "metadata": {}
+                    }
+                  ],
+                  "planner": "deterministic-general",
+                  "coding_backend": "antigravity",
+                  "workspace": ""
+                },
+                "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                "max_replans": 2,
+                "replans_used": 0,
+                "autonomy": "execute_until_approval",
+                "coding_backend": "antigravity",
+                "mission_runnable": true,
+                "mission_paused": false,
+                "mission_execution": "background",
+                "mission_generation": 1,
+                "antigravity_handoff": false
+              },
+              "created_at": "2026-08-13T16:02:33.079665+00:00",
+              "updated_at": "2026-08-13T16:02:33.079665+00:00"
+            },
+            "project_id": "proj_1fafd4e8b26d",
+            "milestone_id": "mile_07b1aa9876fa",
+            "tasks": [
+              {
+                "id": "task_4679a6df058a",
+                "parent_id": "mile_07b1aa9876fa",
+                "item_type": "task",
+                "workflow_id": "goalplan_8e2611726021",
+                "title": "Establish objective context",
+                "description": "Understand the founder objective: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                "owner_id": "strategy_director",
+                "reviewer_id": "jarvis",
+                "state": "assigned",
+                "priority": 3,
+                "deadline": null,
+                "budget_cents": 300,
+                "spent_cents": 0,
+                "risk": "low",
+                "action_type": "analysis",
+                "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                "acceptance_criteria": [
+                  "Objective and constraints are explicit",
+                  "Unknowns that can materially change execution are identified",
+                  "Evidence needed for completion is defined"
+                ],
+                "dependencies": [],
+                "evidence": [],
+                "summary": "",
+                "metadata": {
+                  "dynamic_goal": true,
+                  "goal_request": {
+                    "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc",
+                    "success_criteria": [],
+                    "workspace": "",
+                    "constraints": [],
+                    "autonomy": "execute_until_approval",
+                    "coding_backend": "antigravity",
+                    "priority": 3,
+                    "max_steps": 8,
+                    "max_replans": 2,
+                    "title": "",
+                    "metadata": {
+                      "executive_session_id": "default"
+                    }
+                  },
+                  "goal_plan": {
+                    "plan_id": "goalplan_8e2611726021",
+                    "domain": "general",
+                    "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "assumptions": [
+                      "External commitments remain subject to the existing Amaura approval policies."
+                    ],
+                    "tasks": [
+                      {
+                        "key": "understand",
+                        "title": "Establish objective context",
+                        "description": "Understand the founder objective: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Objective and constraints are explicit",
+                          "Unknowns that can materially change execution are identified",
+                          "Evidence needed for completion is defined"
+                        ],
+                        "depends_on": [],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "analysis",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "plan",
+                        "title": "Create the execution plan",
+                        "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Plan maps directly to the objective",
+                          "Dependencies and stop conditions are explicit",
+                          "Founder-only actions are not silently executed"
+                        ],
+                        "depends_on": [
+                          "understand"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "planning",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "execute",
+                        "title": "Execute the approved internal work",
+                        "description": "Execute the reversible internal work required for: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                        "owner_id": "operations_manager",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "The requested outcome is materially completed",
+                          "Claims are backed by evidence",
+                          "Open risks and founder decisions are explicit"
+                        ],
+                        "depends_on": [
+                          "plan"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "company_operations",
+                        "metadata": {}
+                      }
+                    ],
+                    "planner": "deterministic-general",
+                    "coding_backend": "antigravity",
+                    "workspace": ""
+                  },
+                  "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                  "max_replans": 2,
+                  "replans_used": 0,
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "mission_runnable": true,
+                  "mission_paused": false,
+                  "mission_execution": "background",
+                  "mission_generation": 1,
+                  "antigravity_handoff": false,
+                  "step_key": "understand",
+                  "programme_id": "goal_e536589cc7d6",
+                  "sensitivity": "internal"
+                },
+                "created_at": "2026-08-13T16:02:33.083506+00:00",
+                "updated_at": "2026-08-13T16:02:33.083506+00:00"
+              },
+              {
+                "id": "task_e6bd5a631a9d",
+                "parent_id": "mile_07b1aa9876fa",
+                "item_type": "task",
+                "workflow_id": "goalplan_8e2611726021",
+                "title": "Create the execution plan",
+                "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                "owner_id": "strategy_director",
+                "reviewer_id": "jarvis",
+                "state": "assigned",
+                "priority": 3,
+                "deadline": null,
+                "budget_cents": 300,
+                "spent_cents": 0,
+                "risk": "low",
+                "action_type": "planning",
+                "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                "acceptance_criteria": [
+                  "Plan maps directly to the objective",
+                  "Dependencies and stop conditions are explicit",
+                  "Founder-only actions are not silently executed"
+                ],
+                "dependencies": [
+                  "task_4679a6df058a"
+                ],
+                "evidence": [],
+                "summary": "",
+                "metadata": {
+                  "dynamic_goal": true,
+                  "goal_request": {
+                    "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc",
+                    "success_criteria": [],
+                    "workspace": "",
+                    "constraints": [],
+                    "autonomy": "execute_until_approval",
+                    "coding_backend": "antigravity",
+                    "priority": 3,
+                    "max_steps": 8,
+                    "max_replans": 2,
+                    "title": "",
+                    "metadata": {
+                      "executive_session_id": "default"
+                    }
+                  },
+                  "goal_plan": {
+                    "plan_id": "goalplan_8e2611726021",
+                    "domain": "general",
+                    "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "assumptions": [
+                      "External commitments remain subject to the existing Amaura approval policies."
+                    ],
+                    "tasks": [
+                      {
+                        "key": "understand",
+                        "title": "Establish objective context",
+                        "description": "Understand the founder objective: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Objective and constraints are explicit",
+                          "Unknowns that can materially change execution are identified",
+                          "Evidence needed for completion is defined"
+                        ],
+                        "depends_on": [],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "analysis",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "plan",
+                        "title": "Create the execution plan",
+                        "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Plan maps directly to the objective",
+                          "Dependencies and stop conditions are explicit",
+                          "Founder-only actions are not silently executed"
+                        ],
+                        "depends_on": [
+                          "understand"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "planning",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "execute",
+                        "title": "Execute the approved internal work",
+                        "description": "Execute the reversible internal work required for: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                        "owner_id": "operations_manager",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "The requested outcome is materially completed",
+                          "Claims are backed by evidence",
+                          "Open risks and founder decisions are explicit"
+                        ],
+                        "depends_on": [
+                          "plan"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "company_operations",
+                        "metadata": {}
+                      }
+                    ],
+                    "planner": "deterministic-general",
+                    "coding_backend": "antigravity",
+                    "workspace": ""
+                  },
+                  "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                  "max_replans": 2,
+                  "replans_used": 0,
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "mission_runnable": true,
+                  "mission_paused": false,
+                  "mission_execution": "background",
+                  "mission_generation": 1,
+                  "antigravity_handoff": false,
+                  "step_key": "plan",
+                  "programme_id": "goal_e536589cc7d6",
+                  "sensitivity": "internal"
+                },
+                "created_at": "2026-08-13T16:02:33.084618+00:00",
+                "updated_at": "2026-08-13T16:02:33.084618+00:00"
+              },
+              {
+                "id": "task_778a44399692",
+                "parent_id": "mile_07b1aa9876fa",
+                "item_type": "task",
+                "workflow_id": "goalplan_8e2611726021",
+                "title": "Execute the approved internal work",
+                "description": "Execute the reversible internal work required for: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                "owner_id": "operations_manager",
+                "reviewer_id": "jarvis",
+                "state": "assigned",
+                "priority": 3,
+                "deadline": null,
+                "budget_cents": 300,
+                "spent_cents": 0,
+                "risk": "low",
+                "action_type": "company_operations",
+                "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                "acceptance_criteria": [
+                  "The requested outcome is materially completed",
+                  "Claims are backed by evidence",
+                  "Open risks and founder decisions are explicit"
+                ],
+                "dependencies": [
+                  "task_e6bd5a631a9d"
+                ],
+                "evidence": [],
+                "summary": "",
+                "metadata": {
+                  "dynamic_goal": true,
+                  "goal_request": {
+                    "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc",
+                    "success_criteria": [],
+                    "workspace": "",
+                    "constraints": [],
+                    "autonomy": "execute_until_approval",
+                    "coding_backend": "antigravity",
+                    "priority": 3,
+                    "max_steps": 8,
+                    "max_replans": 2,
+                    "title": "",
+                    "metadata": {
+                      "executive_session_id": "default"
+                    }
+                  },
+                  "goal_plan": {
+                    "plan_id": "goalplan_8e2611726021",
+                    "domain": "general",
+                    "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "assumptions": [
+                      "External commitments remain subject to the existing Amaura approval policies."
+                    ],
+                    "tasks": [
+                      {
+                        "key": "understand",
+                        "title": "Establish objective context",
+                        "description": "Understand the founder objective: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Objective and constraints are explicit",
+                          "Unknowns that can materially change execution are identified",
+                          "Evidence needed for completion is defined"
+                        ],
+                        "depends_on": [],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "analysis",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "plan",
+                        "title": "Create the execution plan",
+                        "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                        "owner_id": "strategy_director",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Plan maps directly to the objective",
+                          "Dependencies and stop conditions are explicit",
+                          "Founder-only actions are not silently executed"
+                        ],
+                        "depends_on": [
+                          "understand"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "planning",
+                        "metadata": {}
+                      },
+                      {
+                        "key": "execute",
+                        "title": "Execute the approved internal work",
+                        "description": "Execute the reversible internal work required for: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                        "owner_id": "operations_manager",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "The requested outcome is materially completed",
+                          "Claims are backed by evidence",
+                          "Open risks and founder decisions are explicit"
+                        ],
+                        "depends_on": [
+                          "plan"
+                        ],
+                        "risk": "low",
+                        "budget_cents": 300,
+                        "action_type": "company_operations",
+                        "metadata": {}
+                      }
+                    ],
+                    "planner": "deterministic-general",
+                    "coding_backend": "antigravity",
+                    "workspace": ""
+                  },
+                  "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                  "max_replans": 2,
+                  "replans_used": 0,
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "mission_runnable": true,
+                  "mission_paused": false,
+                  "mission_execution": "background",
+                  "mission_generation": 1,
+                  "antigravity_handoff": false,
+                  "step_key": "execute",
+                  "programme_id": "goal_e536589cc7d6",
+                  "sensitivity": "internal"
+                },
+                "created_at": "2026-08-13T16:02:33.085067+00:00",
+                "updated_at": "2026-08-13T16:02:33.085067+00:00"
+              }
+            ],
+            "plan": {
+              "plan_id": "goalplan_8e2611726021",
+              "domain": "general",
+              "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "assumptions": [
+                "External commitments remain subject to the existing Amaura approval policies."
+              ],
+              "tasks": [
+                {
+                  "key": "understand",
+                  "title": "Establish objective context",
+                  "description": "Understand the founder objective: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Gather only the context needed to execute it, identify constraints, unknowns, dependencies and evidence requirements.",
+                  "owner_id": "strategy_director",
+                  "reviewer_id": "jarvis",
+                  "acceptance_criteria": [
+                    "Objective and constraints are explicit",
+                    "Unknowns that can materially change execution are identified",
+                    "Evidence needed for completion is defined"
+                  ],
+                  "depends_on": [],
+                  "risk": "low",
+                  "budget_cents": 300,
+                  "action_type": "analysis",
+                  "metadata": {}
+                },
+                {
+                  "key": "plan",
+                  "title": "Create the execution plan",
+                  "description": "Create a bounded execution plan for the founder objective using available Amaura capabilities. Prefer reversible actions and identify any action that must remain founder-controlled.",
+                  "owner_id": "strategy_director",
+                  "reviewer_id": "jarvis",
+                  "acceptance_criteria": [
+                    "Plan maps directly to the objective",
+                    "Dependencies and stop conditions are explicit",
+                    "Founder-only actions are not silently executed"
+                  ],
+                  "depends_on": [
+                    "understand"
+                  ],
+                  "risk": "low",
+                  "budget_cents": 300,
+                  "action_type": "planning",
+                  "metadata": {}
+                },
+                {
+                  "key": "execute",
+                  "title": "Execute the approved internal work",
+                  "description": "Execute the reversible internal work required for: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_213212_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-11ed981e-3eac-4551-ba4e-e54a21b652dc. Use only authorised tools and data, preserve evidence, and stop before any unapproved external consequence.",
+                  "owner_id": "operations_manager",
+                  "reviewer_id": "jarvis",
+                  "acceptance_criteria": [
+                    "The requested outcome is materially completed",
+                    "Claims are backed by evidence",
+                    "Open risks and founder decisions are explicit"
+                  ],
+                  "depends_on": [
+                    "plan"
+                  ],
+                  "risk": "low",
+                  "budget_cents": 300,
+                  "action_type": "company_operations",
+                  "metadata": {}
+                }
+              ],
+              "planner": "deterministic-general",
+              "coding_backend": "antigravity",
+              "workspace": ""
+            },
+            "execution": {
+              "goal_id": "goal_e536589cc7d6",
+              "state": "queued",
+              "background": true
+            },
+            "state": "queued"
+          },
+          "context_sources": [
+            "company_work:task_196b0904dad8",
+            "conversation_memory:20260811_195401_627462",
+            "company_work:task_24f96826f1f5",
+            "company_work:task_e50ea77fbb2a",
+            "company_work:task_935b8cbdd2fc",
+            "company_work:task_18d7404ef20f",
+            "company_work:task_13b474149da4",
+            "company_work:task_7789be64aa98",
+            "company_work:proj_70b948a931c6",
+            "company_work:goal_dc50ccf4b66b",
+            "company_work:task_1a7dc4b8c8e3",
+            "company_work:task_5c46756ea20f",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "not-invoked",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": ""
+          }
+        }
+      }
+    ]
+  }
+}

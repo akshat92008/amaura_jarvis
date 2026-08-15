@@ -1,0 +1,16 @@
+{
+  "test_id": "hitl_D_outbound",
+  "prompt": "Send an iMessage to +15555550199 saying 'JARVIS qualification test'.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 15.368223190307617,
+    "request_ts": 1786586901.498546,
+    "final_ts": 1786586901.513914
+  },
+  "verification": {}
+}

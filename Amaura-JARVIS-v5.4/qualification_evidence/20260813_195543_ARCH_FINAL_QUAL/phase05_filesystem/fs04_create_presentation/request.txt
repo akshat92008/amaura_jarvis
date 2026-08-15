@@ -1,0 +1,1 @@
+Create a five-slide PowerPoint presentation at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_blackbox/workspace/jarvis_blackbox_alpha/ai_overview.pptx' explaining what an AI assistant does. Each slide should have a title and bullet points.

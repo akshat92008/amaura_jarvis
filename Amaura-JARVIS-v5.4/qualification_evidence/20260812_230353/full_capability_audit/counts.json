@@ -1,0 +1,26 @@
+{
+  "AGENTS": 15,
+  "CAPABILITY_ADAPTERS": 46,
+  "REGISTERED_TOOLS": 137,
+  "WORKFLOWS": 22,
+  "tool_categories": {
+    "advanced_coding": 18,
+    "agent_factory": 8,
+    "amaura_company_os": 38,
+    "app_builder": 1,
+    "ast_indexer": 3,
+    "browser": 9,
+    "coding": 14,
+    "communication": 5,
+    "desktop": 12,
+    "documents": 3,
+    "duplex_voice": 5,
+    "fleet": 4,
+    "hud": 1,
+    "research": 4,
+    "tdd_loop": 1,
+    "total": 137,
+    "vector_memory": 6,
+    "vision": 7
+  }
+}

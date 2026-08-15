@@ -1,0 +1,138 @@
+ARCH PHASE 5.2 SOURCE GIT INVENTORY RECONCILIATION REPORT
+Timestamp (UTC): 2026-08-14T19:28:12.290902+00:00
+Live production Python files: 118
+Tracked production Python files: 117
+Untracked production Python files: 1
+Ignored-only production Python files: 0
+Unexplained production Python files: 0
+Tracked + untracked + ignored-only: 118
+Freeze source files: 118
+Freeze vs live mismatches: 0
+Previous reported tracked count: 98
+Why previous count was wrong: In git pathspec matching without the :(glob) prefix, `git ls-files "jarvis/**/*.py"` requires at least one directory level between jarvis/ and the .py file (matching jarvis/*/*.py at depth >= 2), which matched the 98 nested files in subdirectories (e.g. jarvis/amaura/, jarvis/tools/) but omitted the 19 top-level Python files located directly under jarvis/ (e.g. jarvis/agent.py, jarvis/server.py). Using authoritative `git ls-files` without restrictive globbing correctly discovers all 117 tracked Python files (19 top-level + 98 nested) which together with 1 untracked file (jarvis/amaura/direct_action.py) equals exactly 118 live production Python files.
+Untracked files: ['jarvis/amaura/direct_action.py']
+Ignored-only files: NONE
+Unexplained files: NONE
+direct_action.py Git state: ?? jarvis/amaura/direct_action.py (untracked, not ignored)
+Source hash mismatches during audit: 0
+Inventory status: RECONCILED
+
+MUTUALLY EXCLUSIVE CLASSIFICATION OF ALL 118 LIVE PYTHON FILES:
+  [TRACKED   ] jarvis/__init__.py
+  [TRACKED   ] jarvis/__main__.py
+  [TRACKED   ] jarvis/agent.py
+  [TRACKED   ] jarvis/amaura/__init__.py
+  [TRACKED   ] jarvis/amaura/actions.py
+  [TRACKED   ] jarvis/amaura/antigravity_bridge.py
+  [TRACKED   ] jarvis/amaura/auth.py
+  [TRACKED   ] jarvis/amaura/autopilot.py
+  [TRACKED   ] jarvis/amaura/billing.py
+  [TRACKED   ] jarvis/amaura/brain.py
+  [TRACKED   ] jarvis/amaura/browser_egress.py
+  [TRACKED   ] jarvis/amaura/bus.py
+  [TRACKED   ] jarvis/amaura/capabilities.py
+  [TRACKED   ] jarvis/amaura/capability_runtime.py
+  [TRACKED   ] jarvis/amaura/capability_worker.py
+  [TRACKED   ] jarvis/amaura/channels.py
+  [TRACKED   ] jarvis/amaura/cli.py
+  [TRACKED   ] jarvis/amaura/cognition.py
+  [TRACKED   ] jarvis/amaura/commands.py
+  [TRACKED   ] jarvis/amaura/company.py
+  [TRACKED   ] jarvis/amaura/company_autonomy.py
+  [TRACKED   ] jarvis/amaura/content_factory.py
+  [TRACKED   ] jarvis/amaura/control_plane.py
+  [TRACKED   ] jarvis/amaura/database.py
+  [UNTRACKED ] jarvis/amaura/direct_action.py
+  [TRACKED   ] jarvis/amaura/distribution.py
+  [TRACKED   ] jarvis/amaura/doctor.py
+  [TRACKED   ] jarvis/amaura/evaluation.py
+  [TRACKED   ] jarvis/amaura/evidence.py
+  [TRACKED   ] jarvis/amaura/executor.py
+  [TRACKED   ] jarvis/amaura/experimental/graph_supervisor.py
+  [TRACKED   ] jarvis/amaura/experimental/graphs/content.py
+  [TRACKED   ] jarvis/amaura/experimental/graphs/lead.py
+  [TRACKED   ] jarvis/amaura/experimental/graphs/software.py
+  [TRACKED   ] jarvis/amaura/gitops.py
+  [TRACKED   ] jarvis/amaura/handoffs.py
+  [TRACKED   ] jarvis/amaura/inbox.py
+  [TRACKED   ] jarvis/amaura/integration_control.py
+  [TRACKED   ] jarvis/amaura/integrations.py
+  [TRACKED   ] jarvis/amaura/intelligence_benchmark.py
+  [TRACKED   ] jarvis/amaura/macos_service.py
+  [TRACKED   ] jarvis/amaura/mcp_registry.py
+  [TRACKED   ] jarvis/amaura/mission_control.py
+  [TRACKED   ] jarvis/amaura/mission_runner.py
+  [TRACKED   ] jarvis/amaura/model_gateway.py
+  [TRACKED   ] jarvis/amaura/models.py
+  [TRACKED   ] jarvis/amaura/n8n.py
+  [TRACKED   ] jarvis/amaura/network.py
+  [TRACKED   ] jarvis/amaura/nexus_bridge.py
+  [TRACKED   ] jarvis/amaura/noryx_bridge.py
+  [TRACKED   ] jarvis/amaura/oauth.py
+  [TRACKED   ] jarvis/amaura/operation_policy.py
+  [TRACKED   ] jarvis/amaura/pipeline.py
+  [TRACKED   ] jarvis/amaura/policies.py
+  [TRACKED   ] jarvis/amaura/policy.py
+  [TRACKED   ] jarvis/amaura/prompts/__init__.py
+  [TRACKED   ] jarvis/amaura/public_sources.py
+  [TRACKED   ] jarvis/amaura/readiness.py
+  [TRACKED   ] jarvis/amaura/registry.py
+  [TRACKED   ] jarvis/amaura/resource_control.py
+  [TRACKED   ] jarvis/amaura/resources.py
+  [TRACKED   ] jarvis/amaura/runtime.py
+  [TRACKED   ] jarvis/amaura/sandbox.py
+  [TRACKED   ] jarvis/amaura/security.py
+  [TRACKED   ] jarvis/amaura/state.py
+  [TRACKED   ] jarvis/amaura/store.py
+  [TRACKED   ] jarvis/amaura/store_api.py
+  [TRACKED   ] jarvis/amaura/supervisor.py
+  [TRACKED   ] jarvis/amaura/telemetry.py
+  [TRACKED   ] jarvis/amaura/tool_governance.py
+  [TRACKED   ] jarvis/amaura/ventures.py
+  [TRACKED   ] jarvis/amaura/ventures_cashflow.py
+  [TRACKED   ] jarvis/amaura/verification.py
+  [TRACKED   ] jarvis/amaura/workflows.py
+  [TRACKED   ] jarvis/amaura/workspace_integrations.py
+  [TRACKED   ] jarvis/api.py
+  [TRACKED   ] jarvis/cli.py
+  [TRACKED   ] jarvis/fable_engine.py
+  [TRACKED   ] jarvis/fleet.py
+  [TRACKED   ] jarvis/gcp_model.py
+  [TRACKED   ] jarvis/history.py
+  [TRACKED   ] jarvis/hud.py
+  [TRACKED   ] jarvis/memory.py
+  [TRACKED   ] jarvis/models.py
+  [TRACKED   ] jarvis/network_security.py
+  [TRACKED   ] jarvis/paths.py
+  [TRACKED   ] jarvis/safety.py
+  [TRACKED   ] jarvis/server.py
+  [TRACKED   ] jarvis/telegram/__init__.py
+  [TRACKED   ] jarvis/telegram/bot.py
+  [TRACKED   ] jarvis/tools/__init__.py
+  [TRACKED   ] jarvis/tools/advanced_coding.py
+  [TRACKED   ] jarvis/tools/agent_factory.py
+  [TRACKED   ] jarvis/tools/amaura.py
+  [TRACKED   ] jarvis/tools/app_builder.py
+  [TRACKED   ] jarvis/tools/ast_indexer.py
+  [TRACKED   ] jarvis/tools/browser.py
+  [TRACKED   ] jarvis/tools/coding.py
+  [TRACKED   ] jarvis/tools/communication.py
+  [TRACKED   ] jarvis/tools/desktop.py
+  [TRACKED   ] jarvis/tools/documents.py
+  [TRACKED   ] jarvis/tools/process.py
+  [TRACKED   ] jarvis/tools/registry.py
+  [TRACKED   ] jarvis/tools/research.py
+  [TRACKED   ] jarvis/tools/result.py
+  [TRACKED   ] jarvis/tools/schema_validation.py
+  [TRACKED   ] jarvis/tools/security.py
+  [TRACKED   ] jarvis/tools/tdd_loop.py
+  [TRACKED   ] jarvis/tools/vector_memory.py
+  [TRACKED   ] jarvis/tools/vision.py
+  [TRACKED   ] jarvis/ui.py
+  [TRACKED   ] jarvis/user_memory.py
+  [TRACKED   ] jarvis/voice/__init__.py
+  [TRACKED   ] jarvis/voice/duplex_voice.py
+  [TRACKED   ] jarvis/voice/engine.py
+  [TRACKED   ] jarvis/voice/listener.py
+  [TRACKED   ] jarvis/voice/speaker.py
+  [TRACKED   ] jarvis/web.py

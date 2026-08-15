@@ -1,0 +1,18 @@
+{
+  "source_doc_created": true,
+  "pptx_created": false,
+  "tool_calls": [],
+  "source_facts": {
+    "project_code": "HELIOS-7F7626",
+    "lead_name": "Dr. Priya Varma-9346",
+    "coolant": "NX-2C395D",
+    "launch_date": "Q3 2038",
+    "budget": "142 million credits",
+    "facility_main": "Hyderabad Lab-86",
+    "facility_sec": "Bangalore Research Hub-42",
+    "protocol": "ISO-7F82FD",
+    "crew": "4",
+    "review_month": "November"
+  },
+  "failure_reason": "PPTX not created by JARVIS"
+}

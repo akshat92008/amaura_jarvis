@@ -1,0 +1,5 @@
+{
+  "test": "Antigravity Failure Path",
+  "payload": "{\"schema\": \"amaura.antigravity-result.v1\", \"success\": true, \"summary\": \"Bad path traversal\", \"changed_files\": [\"../../etc/passwd\"], \"verification_commands\": [\"python -m unittest\"]}",
+  "success": true
+}

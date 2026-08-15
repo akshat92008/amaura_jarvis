@@ -1,0 +1,480 @@
+{
+  "test_id": "01_create_file",
+  "status": "PASS",
+  "reason": "PASS requires the exact runtime file to exist without benchmark assistance and no failed/cancelled mission state.",
+  "verification": {
+    "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt",
+    "exists": true,
+    "exact_content": true,
+    "fresh": true,
+    "real_tools": [],
+    "write_tool_observed": false,
+    "goal_state": "completed",
+    "mission_ok": true
+  },
+  "chat": {
+    "prompt": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-62a53212-c1d9-46be-877e-8c581f257534",
+    "http_status": 200,
+    "response_text": "Mission goal_ce4f73316b40 completed. The work passed through Amaura's evidence/review pipeline.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": "goal_ce4f73316b40",
+    "goal_state": "completed",
+    "goal_history": [
+      {
+        "state": "completed",
+        "ts": 1786642404.353981
+      }
+    ],
+    "latency_ms": 20211.000680923462,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Mission goal_ce4f73316b40 completed. The work passed through Amaura's evidence/review pipeline.",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "not-invoked",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "goal_ce4f73316b40",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Mission goal_ce4f73316b40 completed. The work passed through Amaura's evidence/review pipeline.",
+          "session_id": "default",
+          "goal_id": "goal_ce4f73316b40",
+          "state": "completed",
+          "result": {
+            "goal": {
+              "id": "goal_ce4f73316b40",
+              "parent_id": null,
+              "item_type": "programme",
+              "workflow_id": "goalplan_03232da8deb0",
+              "title": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/202",
+              "description": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-62a53212-c1d9-46be-877e-8c581f257534",
+              "owner_id": "jarvis",
+              "reviewer_id": "founder",
+              "state": "assigned",
+              "priority": 3,
+              "deadline": null,
+              "budget_cents": 0,
+              "spent_cents": 0,
+              "risk": "low",
+              "action_type": "internal_work",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "acceptance_criteria": [],
+              "dependencies": [],
+              "evidence": [],
+              "summary": "",
+              "metadata": {
+                "dynamic_goal": true,
+                "goal_request": {
+                  "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-62a53212-c1d9-46be-877e-8c581f257534",
+                  "success_criteria": [],
+                  "workspace": "",
+                  "constraints": [],
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "priority": 3,
+                  "max_steps": 8,
+                  "max_replans": 2,
+                  "title": "",
+                  "metadata": {
+                    "executive_session_id": "default"
+                  }
+                },
+                "goal_plan": {
+                  "plan_id": "goalplan_03232da8deb0",
+                  "domain": "direct_action",
+                  "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-62a53212-c1d9-46be-877e-8c581f257534",
+                  "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                  "assumptions": [
+                    "Direct action bypasses standard research and planning."
+                  ],
+                  "tasks": [
+                    {
+                      "key": "execute",
+                      "title": "Execute direct action",
+                      "description": "Execute the founder request directly: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-62a53212-c1d9-46be-877e-8c581f257534",
+                      "owner_id": "builder",
+                      "reviewer_id": "jarvis",
+                      "acceptance_criteria": [
+                        "Action completed successfully"
+                      ],
+                      "depends_on": [],
+                      "risk": "low",
+                      "budget_cents": 200,
+                      "action_type": "direct_action",
+                      "metadata": {}
+                    }
+                  ],
+                  "planner": "deterministic-direct-action",
+                  "coding_backend": "antigravity",
+                  "workspace": ""
+                },
+                "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                "max_replans": 2,
+                "replans_used": 0,
+                "autonomy": "execute_until_approval",
+                "coding_backend": "antigravity",
+                "mission_runnable": true,
+                "mission_paused": false,
+                "mission_execution": "background",
+                "mission_generation": 1,
+                "antigravity_handoff": false
+              },
+              "created_at": "2026-08-13T17:33:15.998542+00:00",
+              "updated_at": "2026-08-13T17:33:15.998542+00:00"
+            },
+            "project_id": null,
+            "milestone_id": null,
+            "tasks": [
+              {
+                "id": "task_d2eba538efbd",
+                "parent_id": "goal_ce4f73316b40",
+                "item_type": "task",
+                "workflow_id": "goalplan_03232da8deb0",
+                "title": "Execute direct action",
+                "description": "Execute the founder request directly: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-62a53212-c1d9-46be-877e-8c581f257534",
+                "owner_id": "builder",
+                "reviewer_id": "jarvis",
+                "state": "assigned",
+                "priority": 3,
+                "deadline": null,
+                "budget_cents": 200,
+                "spent_cents": 0,
+                "risk": "low",
+                "action_type": "direct_action",
+                "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                "acceptance_criteria": [
+                  "Action completed successfully"
+                ],
+                "dependencies": [],
+                "evidence": [],
+                "summary": "",
+                "metadata": {
+                  "dynamic_goal": true,
+                  "goal_request": {
+                    "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-62a53212-c1d9-46be-877e-8c581f257534",
+                    "success_criteria": [],
+                    "workspace": "",
+                    "constraints": [],
+                    "autonomy": "execute_until_approval",
+                    "coding_backend": "antigravity",
+                    "priority": 3,
+                    "max_steps": 8,
+                    "max_replans": 2,
+                    "title": "",
+                    "metadata": {
+                      "executive_session_id": "default"
+                    }
+                  },
+                  "goal_plan": {
+                    "plan_id": "goalplan_03232da8deb0",
+                    "domain": "direct_action",
+                    "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-62a53212-c1d9-46be-877e-8c581f257534",
+                    "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+                    "assumptions": [
+                      "Direct action bypasses standard research and planning."
+                    ],
+                    "tasks": [
+                      {
+                        "key": "execute",
+                        "title": "Execute direct action",
+                        "description": "Execute the founder request directly: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-62a53212-c1d9-46be-877e-8c581f257534",
+                        "owner_id": "builder",
+                        "reviewer_id": "jarvis",
+                        "acceptance_criteria": [
+                          "Action completed successfully"
+                        ],
+                        "depends_on": [],
+                        "risk": "low",
+                        "budget_cents": 200,
+                        "action_type": "direct_action",
+                        "metadata": {}
+                      }
+                    ],
+                    "planner": "deterministic-direct-action",
+                    "coding_backend": "antigravity",
+                    "workspace": ""
+                  },
+                  "workspace": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4",
+                  "max_replans": 2,
+                  "replans_used": 0,
+                  "autonomy": "execute_until_approval",
+                  "coding_backend": "antigravity",
+                  "mission_runnable": true,
+                  "mission_paused": false,
+                  "mission_execution": "background",
+                  "mission_generation": 1,
+                  "antigravity_handoff": false,
+                  "step_key": "execute",
+                  "programme_id": "goal_ce4f73316b40",
+                  "sensitivity": "internal"
+                },
+                "created_at": "2026-08-13T17:33:15.998651+00:00",
+                "updated_at": "2026-08-13T17:33:15.998651+00:00"
+              }
+            ],
+            "plan": {
+              "plan_id": "goalplan_03232da8deb0",
+              "domain": "direct_action",
+              "objective": "Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-62a53212-c1d9-46be-877e-8c581f257534",
+              "success_metric": "Objective is completed with verifiable evidence and no unresolved critical failures",
+              "assumptions": [
+                "Direct action bypasses standard research and planning."
+              ],
+              "tasks": [
+                {
+                  "key": "execute",
+                  "title": "Execute direct action",
+                  "description": "Execute the founder request directly: Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' containing exactly this text and nothing else: ARCH-FILE-62a53212-c1d9-46be-877e-8c581f257534",
+                  "owner_id": "builder",
+                  "reviewer_id": "jarvis",
+                  "acceptance_criteria": [
+                    "Action completed successfully"
+                  ],
+                  "depends_on": [],
+                  "risk": "low",
+                  "budget_cents": 200,
+                  "action_type": "direct_action",
+                  "metadata": {}
+                }
+              ],
+              "planner": "deterministic-direct-action",
+              "coding_backend": "antigravity",
+              "workspace": ""
+            },
+            "execution": {
+              "goal_id": "goal_ce4f73316b40",
+              "state": "completed",
+              "ticks": [
+                {
+                  "status": "executed",
+                  "recovered": [],
+                  "outbox_dispatched": [],
+                  "execution": {
+                    "id": "run_c5ddb50a14d34d71",
+                    "task_id": "task_d2eba538efbd",
+                    "worker_id": "Akshats-Laptop-4.local-22363-bab39c",
+                    "attempt": 1,
+                    "state": "succeeded",
+                    "lease_until": "2026-08-13T17:48:16.002523+00:00",
+                    "heartbeat_at": "2026-08-13T17:33:16.009758+00:00",
+                    "started_at": "2026-08-13T17:33:16.002523+00:00",
+                    "finished_at": "2026-08-13T17:33:16.009758+00:00",
+                    "error": "",
+                    "result": {
+                      "employee": "builder",
+                      "evidence": [
+                        {
+                          "byte_length": 275,
+                          "excerpt": "Wrote file /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt",
+                          "reference": "evidence://manifest/36f6d9e96666185c7184b6572421c1a821a1cffec4c07dd63f69f8cd180495aa",
+                          "sha256": "cafc1916e4d8ccbed0efba38decfe45c92dcde7de9f7ace087c69e9f0bf33bfc",
+                          "success": true,
+                          "type": "direct_action"
+                        }
+                      ],
+                      "iterations": 1,
+                      "model_execution_receipt": {
+                        "actual_model": "deterministic-direct-action",
+                        "provider": "direct-action",
+                        "requested_route": "deterministic-direct-action"
+                      },
+                      "reviewer": "jarvis",
+                      "status": "awaiting_review",
+                      "summary": "Executed direct action successfully.",
+                      "task_id": "task_d2eba538efbd"
+                    }
+                  },
+                  "result": {
+                    "status": "awaiting_review",
+                    "task_id": "task_d2eba538efbd",
+                    "employee": "builder",
+                    "iterations": 1,
+                    "summary": "Executed direct action successfully.",
+                    "evidence": [
+                      {
+                        "type": "direct_action",
+                        "reference": "evidence://manifest/36f6d9e96666185c7184b6572421c1a821a1cffec4c07dd63f69f8cd180495aa",
+                        "sha256": "cafc1916e4d8ccbed0efba38decfe45c92dcde7de9f7ace087c69e9f0bf33bfc",
+                        "byte_length": 275,
+                        "success": true,
+                        "excerpt": "Wrote file /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt"
+                      }
+                    ],
+                    "model_execution_receipt": {
+                      "requested_route": "deterministic-direct-action",
+                      "actual_model": "deterministic-direct-action",
+                      "provider": "direct-action"
+                    },
+                    "reviewer": "jarvis"
+                  }
+                },
+                {
+                  "status": "reviewed",
+                  "recovered": [],
+                  "review": {
+                    "task_id": "task_d2eba538efbd",
+                    "reviewer_id": "jarvis",
+                    "reviewer_model": "mistral-large-latest",
+                    "requested_reviewer_model": "auto/best-reasoning",
+                    "reviewer_provider": "omniroute",
+                    "approve": true,
+                    "findings": "All acceptance criteria were met with verifiable evidence. The direct action was executed successfully, and the file was created at the specified path with the exact required content. No deviations or anomalies were detected in the evidence provided.",
+                    "state": "completed",
+                    "criteria": [
+                      {
+                        "criterion_index": 1,
+                        "criterion": "Action completed successfully",
+                        "passed": true,
+                        "evidence_refs": [
+                          "evidence://manifest/36f6d9e96666185c7184b6572421c1a821a1cffec4c07dd63f69f8cd180495aa"
+                        ],
+                        "notes": "The evidence manifest confirms the file was written to the exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' with the required content. SHA256 and byte length match expectations for the specified text."
+                      }
+                    ],
+                    "criterion_review": {
+                      "ok": true,
+                      "strict": true,
+                      "findings": [],
+                      "criteria": [
+                        {
+                          "criterion_index": 1,
+                          "criterion": "Action completed successfully",
+                          "passed": true,
+                          "evidence_refs": [
+                            "evidence://manifest/36f6d9e96666185c7184b6572421c1a821a1cffec4c07dd63f69f8cd180495aa"
+                          ],
+                          "notes": "The evidence manifest confirms the file was written to the exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' with the required content. SHA256 and byte length match expectations for the specified text."
+                        }
+                      ],
+                      "criteria_count": 1,
+                      "covered_count": 1
+                    },
+                    "deterministic_review": {
+                      "approve": true,
+                      "findings": [],
+                      "verified_evidence": [
+                        {
+                          "ok": true,
+                          "reference": "evidence://manifest/36f6d9e96666185c7184b6572421c1a821a1cffec4c07dd63f69f8cd180495aa",
+                          "sha256": "cafc1916e4d8ccbed0efba38decfe45c92dcde7de9f7ace087c69e9f0bf33bfc",
+                          "byte_length": 275,
+                          "reason": "",
+                          "provenance": {
+                            "algorithm": "hmac-sha256",
+                            "byte_length": 275,
+                            "captured_at": "2026-08-13T17:33:16.006896+00:00",
+                            "media_type": "application/json",
+                            "payload_sha256": "cafc1916e4d8ccbed0efba38decfe45c92dcde7de9f7ace087c69e9f0bf33bfc",
+                            "retrieval_metadata": {},
+                            "signature": "a8f74e257a3b4982e65e1247260e68a9b31d41782655fcea5d3916b9fb5d64fd",
+                            "source": "task:task_d2eba538efbd:direct_action",
+                            "task_id": "",
+                            "version": 1,
+                            "worker_id": ""
+                          },
+                          "provenance_authenticated": true
+                        }
+                      ],
+                      "criteria_count": 1,
+                      "evidence_count": 1,
+                      "strict": true,
+                      "submission_sha256": "1a4c9f92497800fe4790820b412aee237e5034209a72f9a66da40d3cfe49dd75"
+                    },
+                    "attestation": {
+                      "task_id": "task_d2eba538efbd",
+                      "reviewer_id": "jarvis",
+                      "reviewer_model": "mistral-large-latest",
+                      "reviewer_provider": "omniroute",
+                      "requested_reviewer_model": "auto/best-reasoning",
+                      "decision": {
+                        "approve": true,
+                        "findings": "All acceptance criteria were met with verifiable evidence. The direct action was executed successfully, and the file was created at the specified path with the exact required content. No deviations or anomalies were detected in the evidence provided.",
+                        "criteria": [
+                          {
+                            "criterion_index": 1,
+                            "criterion": "Action completed successfully",
+                            "passed": true,
+                            "evidence_refs": [
+                              "evidence://manifest/36f6d9e96666185c7184b6572421c1a821a1cffec4c07dd63f69f8cd180495aa"
+                            ],
+                            "notes": "The evidence manifest confirms the file was written to the exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230302_ARCH_TRUTH_BENCHMARK/workspace/01_created.txt' with the required content. SHA256 and byte length match expectations for the specified text."
+                          }
+                        ]
+                      },
+                      "deterministic_review": {
+                        "approve": true,
+                        "findings": [],
+                        "verified_evidence": [
+                          {
+                            "ok": true,
+                            "reference": "evidence://manifest/36f6d9e96666185c7184b6572421c1a821a1cffec4c07dd63f69f8cd180495aa",
+                            "sha256": "cafc1916e4d8ccbed0efba38decfe45c92dcde7de9f7ace087c69e9f0bf33bfc",
+                            "byte_length": 275,
+                            "reason": "",
+                            "provenance": {
+                              "algorithm": "hmac-sha256",
+                              "byte_length": 275,
+                              "captured_at": "2026-08-13T17:33:16.006896+00:00",
+                              "media_type": "application/json",
+                              "payload_sha256": "cafc1916e4d8ccbed0efba38decfe45c92dcde7de9f7ace087c69e9f0bf33bfc",
+                              "retrieval_metadata": {},
+                              "signature": "a8f74e257a3b4982e65e1247260e68a9b31d41782655fcea5d3916b9fb5d64fd",
+                              "source": "task:task_d2eba538efbd:direct_action",
+                              "task_id": "",
+                              "version": 1,
+                              "worker_id": ""
+                            },
+                            "provenance_authenticated": true
+                          }
+                        ],
+                        "criteria_count": 1,
+                        "evidence_count": 1,
+                        "strict": true,
+                        "submission_sha256": "1a4c9f92497800fe4790820b412aee237e5034209a72f9a66da40d3cfe49dd75"
+                      },
+                      "created_at": "2026-08-13T17:33:24.274000+00:00",
+                      "algorithm": "hmac-sha256",
+                      "signature": "b4aa280fce95fadbeeb082eed349e8dd66fe42db8037d27a6d162919d7ef8fa3"
+                    }
+                  }
+                }
+              ],
+              "pending_approvals": [],
+              "failed_tasks": []
+            },
+            "state": "completed"
+          },
+          "context_sources": [
+            "company_work:task_7af2ed9e1a3f",
+            "company_work:goal_41eb59167cc1",
+            "company_work:goal_3ecb30076d5f",
+            "company_work:task_c714a4ed529b",
+            "company_work:goal_972e624b3605",
+            "company_work:task_46a0c94ca570",
+            "company_work:goal_62b0f243082a",
+            "company_work:task_b1662976c7f3",
+            "jarvis.memory.episodic:20260813T173058_default",
+            "jarvis.memory.episodic:20260813T172956_default",
+            "jarvis.memory.episodic:20260813T172817_default",
+            "jarvis.memory.episodic:20260813T172441_default",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "not-invoked",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": ""
+          }
+        }
+      }
+    ]
+  }
+}

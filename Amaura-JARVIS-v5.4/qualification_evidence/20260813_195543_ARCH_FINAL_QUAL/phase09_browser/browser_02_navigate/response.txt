@@ -1,0 +1,1 @@
+❌ Error: Application ''https://example.com' in the browser, then click on the 'More information...' link, and tell me the URL of the page you ended up on.' is not in the strict allowlist.

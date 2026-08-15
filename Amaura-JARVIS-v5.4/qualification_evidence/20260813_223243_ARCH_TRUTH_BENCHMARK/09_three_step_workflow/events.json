@@ -1,0 +1,46 @@
+[
+  {
+    "type": "complete",
+    "response": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+    "session_id": "default",
+    "model": "Llama 3.3 70B",
+    "model_key": "llama-3.3-70b",
+    "model_provider": "unavailable",
+    "model_fallback_used": true,
+    "model_fallback_reason": "[EXECUTIVE_INTERNAL_ERROR] Error code: 401 - {'status': 401, 'title': 'Unauthorized', 'detail': 'Authentication failed'}",
+    "model_latency_ms": 0,
+    "model_ttft_ms": 0,
+    "intent": "conversation",
+    "goal_id": "",
+    "state": "",
+    "executive": {
+      "intent": "conversation",
+      "message": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+      "session_id": "default",
+      "goal_id": "",
+      "state": "",
+      "result": {},
+      "context_sources": [
+        "jarvis.memory.episodic:20260813T170054_default",
+        "conversation_memory:20260811_195401_627462",
+        "company_work:goal_62b0f243082a",
+        "company_work:task_b1662976c7f3",
+        "conversation_memory:20260811_213356_532182",
+        "jarvis.memory.episodic:20260813T170252_default",
+        "jarvis.memory.episodic:20260813T170246_default",
+        "jarvis.memory.episodic:20260813T165946_default",
+        "conversation_memory:20260810_225052_112228",
+        "jarvis.memory.episodic:20260813T170259_default",
+        "jarvis.memory.episodic:20260813T170053_default",
+        "jarvis.memory.episodic:20260813T165949_default",
+        "entity_graph"
+      ],
+      "model_provenance": {
+        "provider": "unavailable",
+        "model": "",
+        "fallback_used": true,
+        "fallback_reason": "[EXECUTIVE_INTERNAL_ERROR] Error code: 401 - {'status': 401, 'title': 'Unauthorized', 'detail': 'Authentication failed'}"
+      }
+    }
+  }
+]

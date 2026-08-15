@@ -1,0 +1,26 @@
+ M Amaura-JARVIS-v5.4/docs/tool_audit_matrix.md
+ M Amaura-JARVIS-v5.4/jarvis/amaura/cognition.py
+ M Amaura-JARVIS-v5.4/tests/test_macos_app_control.py
+?? Amaura-JARVIS-v5.4/audit_script.py
+?? Amaura-JARVIS-v5.4/fix.py
+?? Amaura-JARVIS-v5.4/qualification_evidence/
+?? Amaura-JARVIS-v5.4/release/
+?? Amaura-JARVIS-v5.4/scripts/qual_harness.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase1.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase10.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase11.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase12_13_14.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase15_16_17.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase18_21.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase2.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase22_25.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase26_34.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase3.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase5.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase7.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase8.py
+?? Amaura-JARVIS-v5.4/scripts/qual_phase9.py
+?? Amaura-JARVIS-v5.4/test_chat.py
+?? Amaura-JARVIS-v5.4/test_direct_exec.py
+?? Amaura-JARVIS-v5.4/test_jarvis_run.py
+?? Amaura-JARVIS-v5.4/test_macos_apps_script.py

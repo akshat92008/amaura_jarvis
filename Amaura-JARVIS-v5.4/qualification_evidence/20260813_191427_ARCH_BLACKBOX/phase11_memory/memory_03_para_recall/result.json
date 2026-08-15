@@ -1,0 +1,16 @@
+{
+  "test_id": "memory_03_para_recall",
+  "prompt": "What's the required item for the project identified as PROJECT-B4C8604E?",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 318.13597679138184,
+    "request_ts": 1786628980.1416771,
+    "final_ts": 1786628980.459813
+  },
+  "verification": {}
+}

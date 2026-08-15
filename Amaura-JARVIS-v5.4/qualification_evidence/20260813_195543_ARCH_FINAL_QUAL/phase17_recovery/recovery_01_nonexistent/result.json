@@ -1,0 +1,20 @@
+{
+  "test_id": "recovery_01_nonexistent",
+  "prompt": "Read the file '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_blackbox/workspace/absolutely_does_not_exist_xyzabc123.txt' and summarize it.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+  "response_excerpt": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 22.66693115234375,
+    "request_ts": 1786631554.000709,
+    "final_ts": 1786631554.023376
+  },
+  "verification": {}
+}

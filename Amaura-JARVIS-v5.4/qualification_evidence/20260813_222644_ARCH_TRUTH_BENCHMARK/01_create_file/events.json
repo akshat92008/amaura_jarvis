@@ -1,0 +1,48 @@
+[
+  {
+    "type": "complete",
+    "response": "This request requires governed execution. Authenticate this session with the Amaura operator key before I create or run the mission.",
+    "session_id": "default",
+    "model": "Llama 3.3 70B",
+    "model_key": "llama-3.3-70b",
+    "model_provider": "not-invoked",
+    "model_fallback_used": false,
+    "model_fallback_reason": "",
+    "model_latency_ms": 0,
+    "model_ttft_ms": 0,
+    "intent": "mission",
+    "goal_id": "",
+    "state": "authorization_required",
+    "executive": {
+      "intent": "mission",
+      "message": "This request requires governed execution. Authenticate this session with the Amaura operator key before I create or run the mission.",
+      "session_id": "default",
+      "goal_id": "",
+      "state": "authorization_required",
+      "result": {
+        "authorization_required": true
+      },
+      "context_sources": [
+        "jarvis.memory.episodic:20260813T165359_default",
+        "jarvis.memory.episodic:20260813T163910_default",
+        "jarvis.memory.episodic:20260813T160233_default",
+        "company_work:task_196b0904dad8",
+        "conversation_memory:20260811_195401_627462",
+        "company_work:goal_dc50ccf4b66b",
+        "company_work:proj_70b948a931c6",
+        "company_work:task_24f96826f1f5",
+        "company_work:task_e50ea77fbb2a",
+        "company_work:task_935b8cbdd2fc",
+        "company_work:task_18d7404ef20f",
+        "company_work:task_13b474149da4",
+        "entity_graph"
+      ],
+      "model_provenance": {
+        "provider": "not-invoked",
+        "model": "",
+        "fallback_used": false,
+        "fallback_reason": ""
+      }
+    }
+  }
+]

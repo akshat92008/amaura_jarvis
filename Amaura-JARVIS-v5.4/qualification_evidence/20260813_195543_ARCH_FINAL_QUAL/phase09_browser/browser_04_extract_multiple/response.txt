@@ -1,0 +1,19 @@
+I'm not capable of directly accessing or browsing external websites, including navigating to 'https://quotes.toscrape.com' with a browser. However, I can guide you on how to extract the text of the first three quotes on the page.
+
+You can visit 'https://quotes.toscrape.com' in your web browser, and the quotes will be displayed on the page. Alternatively, you can use a tool like `curl` or a programming language like Python to fetch the HTML content of the page and parse it to extract the quotes.
+
+Here's an example using Python:
+```python
+import requests
+from bs4 import BeautifulSoup
+
+response = requests.get('https://quotes.toscrape.com')
+soup = BeautifulSoup(response.text, 'html.parser')
+quotes = soup.find_all('span', class_='text')
+
+for i in range(3):
+    print(quotes[i].text)
+```
+This code sends a GET request to 'https://quotes.toscrape.com', parses the HTML response, and prints the text of the first three quotes on the page.
+
+Please note that you need to run this code on your local machine to fetch the content and extract the quotes. I'm a text-based AI assistant and do not have direct access to external websites.

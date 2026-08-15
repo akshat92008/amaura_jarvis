@@ -1,0 +1,75 @@
+{
+  "test_id": "09_three_step_workflow",
+  "status": "FAIL",
+  "reason": "PASS requires an exact runtime read\u2192reason\u2192write output and no failed/cancelled mission state.",
+  "verification": {
+    "exists": false,
+    "parsed": null,
+    "expected": {
+      "project": "HELIOS-1623460E",
+      "budget": 22333,
+      "coolant": "NX-F5AC13"
+    },
+    "exact": false,
+    "read_tool": false,
+    "write_tool": false,
+    "goal_state": null
+  },
+  "chat": {
+    "prompt": "Read '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_222941_ARCH_TRUTH_BENCHMARK/workspace/09_source.md', extract project, budget, and coolant, then create JSON at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_222941_ARCH_TRUTH_BENCHMARK/workspace/09_output.json' with exactly those three keys: project, budget, coolant. Budget must be a number.",
+    "http_status": 200,
+    "response_text": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": null,
+    "goal_history": [],
+    "latency_ms": 1694.993019104004,
+    "events": [
+      {
+        "type": "complete",
+        "response": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+        "session_id": "default",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "unavailable",
+        "model_fallback_used": true,
+        "model_fallback_reason": "[EXECUTIVE_INTERNAL_ERROR] Error code: 400 - {'error': {'message': 'invalid model ID', 'type': 'invalid_request_error', 'param': None, 'code': None}}",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "",
+        "executive": {
+          "intent": "conversation",
+          "message": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "",
+          "result": {},
+          "context_sources": [
+            "conversation_memory:20260811_195401_627462",
+            "conversation_memory:20260811_213356_532182",
+            "jarvis.memory.episodic:20260813T165946_default",
+            "jarvis.memory.episodic:20260813T165949_default",
+            "conversation_memory:20260810_225052_112228",
+            "jarvis.memory.episodic:20260813T165953_default",
+            "jarvis.memory.episodic:20260813T165848_default",
+            "conversation_memory:20260810_225322_246153",
+            "conversation_memory:20260810_225245_100125",
+            "jarvis.memory.episodic:20260813T165948_default",
+            "conversation_memory:20260812_200800_390239",
+            "conversation_memory:20260810_233536_656202",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "unavailable",
+            "model": "",
+            "fallback_used": true,
+            "fallback_reason": "[EXECUTIVE_INTERNAL_ERROR] Error code: 400 - {'error': {'message': 'invalid model ID', 'type': 'invalid_request_error', 'param': None, 'code': None}}"
+          }
+        }
+      }
+    ]
+  }
+}

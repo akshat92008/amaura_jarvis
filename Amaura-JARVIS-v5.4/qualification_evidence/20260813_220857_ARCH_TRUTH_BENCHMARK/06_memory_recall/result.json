@@ -1,0 +1,122 @@
+{
+  "test_id": "06_memory_recall",
+  "status": "FAIL",
+  "reason": "PASS requires recall of an unseen runtime value in a separate request; memory-tool telemetry is informational.",
+  "verification": {
+    "project": "PROJECT-F0FEFAB5A9",
+    "recalled": false,
+    "store_tools": [],
+    "recall_tools": []
+  },
+  "chat": {
+    "store": {
+      "prompt": "Remember this durable project fact: PROJECT-F0FEFAB5A9 has secret value VALUE-0896CABE9B29. Confirm only after storing it in project memory.",
+      "http_status": 200,
+      "response_text": "Remembered under project memory: this durable project fact: PROJECT-F0FEFAB5A9 has secret value VALUE-0896CABE9B29. Confirm only after storing it in project memory.",
+      "error": null,
+      "tool_calls": [],
+      "goal_id": null,
+      "goal_state": null,
+      "goal_history": [],
+      "latency_ms": 478.40309143066406,
+      "events": [
+        {
+          "type": "complete",
+          "response": "Remembered under project memory: this durable project fact: PROJECT-F0FEFAB5A9 has secret value VALUE-0896CABE9B29. Confirm only after storing it in project memory.",
+          "session_id": "default",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "not-invoked",
+          "model_fallback_used": false,
+          "model_fallback_reason": "",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "memory_write",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "memory_write",
+            "message": "Remembered under project memory: this durable project fact: PROJECT-F0FEFAB5A9 has secret value VALUE-0896CABE9B29. Confirm only after storing it in project memory.",
+            "session_id": "default",
+            "goal_id": "",
+            "state": "",
+            "result": {
+              "memory": {
+                "namespace": "jarvis.memory.project",
+                "key": "this_durable_project_fact_project_f0fefab5a9_has_secret_value_value_0896",
+                "value": {
+                  "content": "this durable project fact: PROJECT-F0FEFAB5A9 has secret value VALUE-0896CABE9B29. Confirm only after storing it in project memory.",
+                  "confidence": 1.0,
+                  "source": "explicit_chat",
+                  "trust": "founder",
+                  "entities": [
+                    "PROJECT-F0FEFAB5A9",
+                    "VALUE-0896CABE9B29",
+                    "Confirm"
+                  ],
+                  "created_at": "2026-08-13T16:40:16.099933+00:00",
+                  "updated_at": "2026-08-13T16:40:16.099933+00:00",
+                  "history": []
+                },
+                "evidence_refs": [],
+                "sensitivity": "internal",
+                "updated_by": "founder",
+                "updated_at": "2026-08-13T16:40:16.099968+00:00"
+              }
+            },
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "not-invoked",
+              "model": "",
+              "fallback_used": false,
+              "fallback_reason": ""
+            }
+          }
+        }
+      ]
+    },
+    "recall": {
+      "prompt": "What secret value did I previously tell you for PROJECT-F0FEFAB5A9? Reply with the value only.",
+      "http_status": 200,
+      "response_text": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+      "error": null,
+      "tool_calls": [],
+      "goal_id": null,
+      "goal_state": null,
+      "goal_history": [],
+      "latency_ms": 19.86098289489746,
+      "events": [
+        {
+          "type": "complete",
+          "response": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+          "session_id": "default",
+          "model": "Llama 3.3 70B",
+          "model_key": "llama-3.3-70b",
+          "model_provider": "unavailable",
+          "model_fallback_used": true,
+          "model_fallback_reason": "executive cognition provider unavailable",
+          "model_latency_ms": 0,
+          "model_ttft_ms": 0,
+          "intent": "conversation",
+          "goal_id": "",
+          "state": "",
+          "executive": {
+            "intent": "conversation",
+            "message": "The interactive cognition service is temporarily unavailable. Please try again shortly.",
+            "session_id": "default",
+            "goal_id": "",
+            "state": "",
+            "result": {},
+            "context_sources": [],
+            "model_provenance": {
+              "provider": "unavailable",
+              "model": "",
+              "fallback_used": true,
+              "fallback_reason": "executive cognition provider unavailable"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

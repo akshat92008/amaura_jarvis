@@ -1,0 +1,135 @@
+{"type": "token", "content": "I"}
+{"type": "token", "content": " recall"}
+{"type": "token", "content": " several"}
+{"type": "token", "content": " recent"}
+{"type": "token", "content": " project"}
+{"type": "token", "content": " specifications"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " \n\n"}
+{"type": "token", "content": "1"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " Research"}
+{"type": "token", "content": "ing"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " main"}
+{"type": "token", "content": " new"}
+{"type": "token", "content": " features"}
+{"type": "token", "content": " of"}
+{"type": "token", "content": " Python"}
+{"type": "token", "content": " "}
+{"type": "token", "content": "3"}
+{"type": "token", "content": "."}
+{"type": "token", "content": "13"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " finding"}
+{"type": "token", "content": " at"}
+{"type": "token", "content": " least"}
+{"type": "token", "content": " "}
+{"type": "token", "content": "3"}
+{"type": "token", "content": " key"}
+{"type": "token", "content": " points"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " then"}
+{"type": "token", "content": " saving"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " findings"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " markdown"}
+{"type": "token", "content": " file"}
+{"type": "token", "content": ".\n"}
+{"type": "token", "content": "2"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " Creating"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " CSV"}
+{"type": "token", "content": " file"}
+{"type": "token", "content": " with"}
+{"type": "token", "content": " columns"}
+{"type": "token", "content": " for"}
+{"type": "token", "content": " task"}
+{"type": "token", "content": " name"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " priority"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " status"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " adding"}
+{"type": "token", "content": " exactly"}
+{"type": "token", "content": " "}
+{"type": "token", "content": "5"}
+{"type": "token", "content": " rows"}
+{"type": "token", "content": " of"}
+{"type": "token", "content": " randomly"}
+{"type": "token", "content": " generated"}
+{"type": "token", "content": " project"}
+{"type": "token", "content": " tasks"}
+{"type": "token", "content": ".\n"}
+{"type": "token", "content": "3"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " Creating"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " five"}
+{"type": "token", "content": "-slide"}
+{"type": "token", "content": " PowerPoint"}
+{"type": "token", "content": " presentation"}
+{"type": "token", "content": " explaining"}
+{"type": "token", "content": " what"}
+{"type": "token", "content": " an"}
+{"type": "token", "content": " AI"}
+{"type": "token", "content": " assistant"}
+{"type": "token", "content": " does"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " with"}
+{"type": "token", "content": " each"}
+{"type": "token", "content": " slide"}
+{"type": "token", "content": " having"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " title"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " bullet"}
+{"type": "token", "content": " points"}
+{"type": "token", "content": ".\n"}
+{"type": "token", "content": "4"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " Creating"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " markdown"}
+{"type": "token", "content": " file"}
+{"type": "token", "content": " with"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " brief"}
+{"type": "token", "content": " project"}
+{"type": "token", "content": " description"}
+{"type": "token", "content": ".\n\n"}
+{"type": "token", "content": "These"}
+{"type": "token", "content": " are"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " project"}
+{"type": "token", "content": " specifications"}
+{"type": "token", "content": " I"}
+{"type": "token", "content": " remember"}
+{"type": "token", "content": " from"}
+{"type": "token", "content": " our"}
+{"type": "token", "content": " recent"}
+{"type": "token", "content": " conversations"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " If"}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " have"}
+{"type": "token", "content": " any"}
+{"type": "token", "content": " further"}
+{"type": "token", "content": " questions"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " need"}
+{"type": "token", "content": " more"}
+{"type": "token", "content": " information"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " feel"}
+{"type": "token", "content": " free"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " ask"}
+{"type": "token", "content": "."}
+{"type": "complete", "response": "I recall several recent project specifications. \n\n1. Researching the main new features of Python 3.13 and finding at least 3 key points, then saving the findings to a markdown file.\n2. Creating a CSV file with columns for task name, priority, and status, and adding exactly 5 rows of randomly generated project tasks.\n3. Creating a five-slide PowerPoint presentation explaining what an AI assistant does, with each slide having a title and bullet points.\n4. Creating a markdown file with a brief project description.\n\nThese are the project specifications I remember from our recent conversations. If you have any further questions or need more information, feel free to ask.", "session_id": "default", "model": "llama-3.3-70b-versatile", "model_key": "llama-3.3-70b-versatile", "model_provider": "omniroute", "model_fallback_used": false, "model_fallback_reason": "", "model_latency_ms": 1776, "model_ttft_ms": 1050, "intent": "conversation", "goal_id": "", "state": "", "executive": {"intent": "conversation", "message": "I recall several recent project specifications. \n\n1. Researching the main new features of Python 3.13 and finding at least 3 key points, then saving the findings to a markdown file.\n2. Creating a CSV file with columns for task name, priority, and status, and adding exactly 5 rows of randomly generated project tasks.\n3. Creating a five-slide PowerPoint presentation explaining what an AI assistant does, with each slide having a title and bullet points.\n4. Creating a markdown file with a brief project description.\n\nThese are the project specifications I remember from our recent conversations. If you have any further questions or need more information, feel free to ask.", "session_id": "default", "goal_id": "", "state": "", "result": {}, "context_sources": ["conversation_memory:20260811_195401_627462", "conversation_memory:20260812_200926_162384", "jarvis.memory.episodic:20260813T143133_default", "jarvis.memory.episodic:20260812T144014_qual_phase10", "jarvis.memory.episodic:20260812T143958_qual_phase10", "jarvis.memory.episodic:20260812T143917_qual_phase10", "jarvis.memory.episodic:20260812T143903_qual_phase10", "jarvis.memory.episodic:20260811T142621_ws_20260811_194718_387541", "conversation_memory:20260812_200800_390239", "jarvis.memory.episodic:20260813T143134_default", "jarvis.memory.episodic:20260813T143102_default", "jarvis.memory.episodic:20260813T134910_default", "entity_graph"], "model_provenance": {"provider": "omniroute", "model": "llama-3.3-70b-versatile", "fallback_used": false, "fallback_reason": "", "requested_model": "groq/llama-3.3-70b-versatile", "resolved_provider": "omniroute", "resolved_model": "llama-3.3-70b-versatile", "latency_ms": 1776, "ttft_ms": 1050}}}

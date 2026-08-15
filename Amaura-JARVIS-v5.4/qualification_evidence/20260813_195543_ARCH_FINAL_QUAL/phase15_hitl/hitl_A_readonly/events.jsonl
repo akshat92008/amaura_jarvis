@@ -1,0 +1,70 @@
+{"type": "token", "content": "I"}
+{"type": "token", "content": "'m"}
+{"type": "token", "content": " not"}
+{"type": "token", "content": " capable"}
+{"type": "token", "content": " of"}
+{"type": "token", "content": " directly"}
+{"type": "token", "content": " reading"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " accessing"}
+{"type": "token", "content": " files"}
+{"type": "token", "content": " on"}
+{"type": "token", "content": " your"}
+{"type": "token", "content": " device"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " I"}
+{"type": "token", "content": "'m"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " text"}
+{"type": "token", "content": "-based"}
+{"type": "token", "content": " AI"}
+{"type": "token", "content": " assistant"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " do"}
+{"type": "token", "content": " not"}
+{"type": "token", "content": " have"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " ability"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " interact"}
+{"type": "token", "content": " with"}
+{"type": "token", "content": " your"}
+{"type": "token", "content": " file"}
+{"type": "token", "content": " system"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " However"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " copy"}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " paste"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " contents"}
+{"type": "token", "content": " of"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " '"}
+{"type": "token", "content": "Super"}
+{"type": "token", "content": "Mario"}
+{"type": "token", "content": ".py"}
+{"type": "token", "content": "'"}
+{"type": "token", "content": " file"}
+{"type": "token", "content": " into"}
+{"type": "token", "content": " this"}
+{"type": "token", "content": " conversation"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " and"}
+{"type": "token", "content": " I"}
+{"type": "token", "content": "'ll"}
+{"type": "token", "content": " be"}
+{"type": "token", "content": " happy"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " help"}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " review"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " discuss"}
+{"type": "token", "content": " its"}
+{"type": "token", "content": " contents"}
+{"type": "token", "content": "."}
+{"type": "complete", "response": "I'm not capable of directly reading or accessing files on your device. I'm a text-based AI assistant and do not have the ability to interact with your file system. However, you can copy and paste the contents of the 'SuperMario.py' file into this conversation, and I'll be happy to help you review or discuss its contents.", "session_id": "default", "model": "llama-3.3-70b-versatile", "model_key": "llama-3.3-70b-versatile", "model_provider": "omniroute", "model_fallback_used": false, "model_fallback_reason": "", "model_latency_ms": 5103, "model_ttft_ms": 4939, "intent": "conversation", "goal_id": "", "state": "", "executive": {"intent": "conversation", "message": "I'm not capable of directly reading or accessing files on your device. I'm a text-based AI assistant and do not have the ability to interact with your file system. However, you can copy and paste the contents of the 'SuperMario.py' file into this conversation, and I'll be happy to help you review or discuss its contents.", "session_id": "default", "goal_id": "", "state": "", "result": {}, "context_sources": [], "model_provenance": {"provider": "omniroute", "model": "llama-3.3-70b-versatile", "fallback_used": false, "fallback_reason": "", "requested_model": "groq/llama-3.3-70b-versatile", "resolved_provider": "omniroute", "resolved_model": "llama-3.3-70b-versatile", "latency_ms": 5103, "ttft_ms": 4939}}}

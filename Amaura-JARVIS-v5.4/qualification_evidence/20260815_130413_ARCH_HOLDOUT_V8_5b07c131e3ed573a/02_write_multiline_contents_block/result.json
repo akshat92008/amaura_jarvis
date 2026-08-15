@@ -1,0 +1,92 @@
+{
+  "test_id": "02_write_multiline_contents_block",
+  "status": "PASS",
+  "reason": "Multiline content must exclude instruction grammar.",
+  "verification": {
+    "expected": "jade-gate-2891\ncinder-quay-9043 9192\nglacier-jetty-1123",
+    "actual": "jade-gate-2891\ncinder-quay-9043 9192\nglacier-jetty-1123",
+    "exact": true
+  },
+  "chat": {
+    "prompt": "Make the complete contents of \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/memo_36802611.txt\" be:\njade-gate-2891\ncinder-quay-9043 9192\nglacier-jetty-1123",
+    "session_id": "v8w2_64932681",
+    "http_status": 200,
+    "response_text": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/memo_36802611.txt (55 chars).",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/memo_36802611.txt (55 chars).",
+        "session_id": "v8w2_64932681",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/memo_36802611.txt (55 chars).",
+          "session_id": "v8w2_64932681",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/memo_36802611.txt",
+              "raw_content_clause": "Make the complete contents of \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/memo_36802611.txt\" be:\njade-gate-2891\ncinder-quay-9043 9192\nglacier-jetty-1123",
+              "payload_span": [
+                196,
+                251
+              ],
+              "payload": "jade-gate-2891\ncinder-quay-9043 9192\nglacier-jetty-1123",
+              "payload_type": "MULTILINE_BLOCK",
+              "exactness_mode": true,
+              "expected_size": 55,
+              "actual_size": 55,
+              "content_match": true,
+              "bytes": 55,
+              "verification_passed": true
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "policy_decision": "allowed",
+            "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/memo_36802611.txt",
+            "raw_content_clause": "Make the complete contents of \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_130413_ARCH_HOLDOUT_V8_5b07c131e3ed573a/workspace/memo_36802611.txt\" be:\njade-gate-2891\ncinder-quay-9043 9192\nglacier-jetty-1123",
+            "payload_span": [
+              196,
+              251
+            ],
+            "payload": "jade-gate-2891\ncinder-quay-9043 9192\nglacier-jetty-1123",
+            "payload_type": "MULTILINE_BLOCK",
+            "exactness_mode": true,
+            "expected_size": 55,
+            "actual_size": 55,
+            "content_match": true,
+            "bytes": 55,
+            "verification_passed": true
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

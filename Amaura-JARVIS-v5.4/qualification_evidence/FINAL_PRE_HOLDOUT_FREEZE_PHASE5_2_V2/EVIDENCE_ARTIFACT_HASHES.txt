@@ -1,0 +1,19 @@
+Filename                            | Size (Bytes) | SHA256
+------------------------------------+--------------+-----------------------------------------------------------------
+FINAL_FREEZE_SOURCE_HASHES.json     | 11760        | df6078600ce00e5c316bed28a24a941ad6bbe562bc5660c284957f022d60cc43
+POST_FREEZE_SOURCE_HASHES.json      | 11760        | df6078600ce00e5c316bed28a24a941ad6bbe562bc5660c284957f022d60cc43
+SOURCE_IMMUTABILITY.json            | 211          | 5091adcfdda3870a32e5e13b712f49b446110a280a268296a92d60b98e24aa79
+SOURCE_INVENTORY_AUDIT.json         | 7677         | 41a64ac761728130f095c9dcbc77a8831c504ec40a60789c7007273208559d16
+TARGETED_TEST_RESULTS.txt           | 19170        | 8661e033bc4b0f214f063e1a7a44034fe7380faeabea038c4806aec6c341daf7
+TARGETED_TEST_METADATA.json         | 350          | 97fbe8d41e74bda363c0a20cdccaf84f7e0d24bd0a4518c03e4a1d546127214e
+FULL_TEST_RESULTS.txt               | 1891         | 5270f623c0b4c512ce8d6c6136d273332c6dd9b5be65440538b7a734c6b447ba
+FULL_TEST_METADATA.json             | 155          | 438397acb3c0ae43e7f768a966129a2c775f83cced3b2e88aba3bb47ab4d75ca
+ANTI_OVERFIT_SCAN.txt               | 1583         | 0fceea09238c319e8b6666f4ea69c50755df3c5f643d2da749ab392cd887b51a
+ANTI_OVERFIT_SCAN.json              | 2655         | 588b78bb0bfc5242452e73defa37429b8655fd2ed6bb4576d6e142043bc453ad
+GIT_HEAD.txt                        | 41           | 4661ef50e072d5dc118e8db0833ccf001a9bed25723ecd3be4e541538c2e3bb6
+GIT_TREE.txt                        | 41           | 4789784473094eb0ca7f97a3afd999ee6572dd8c42c8e35ec8f462b9e1d4d948
+GIT_STATUS.txt                      | 2497         | cbd1d06cf6834560240126bb426ddf1011de14f801813ee37b54e881ec023710
+GIT_DIFF_STAT.txt                   | 842          | c29484bb12000e1c396a561800652e04fe057db66f9b7e4cea40282e5b03cebb
+GIT_DIFF_NAME_STATUS.txt            | 523          | 4735b8876835fcc35793a3b0126e7435ac98e41dca702f8ec572ece54323325a
+GIT_DIFF.patch                      | 74831        | 9e7c29567ca329f20ed4e7f0f49983c7f0dcd4e158428d3a34cc4514dfa599c0
+FREEZE_MANIFEST.json                | 1338         | 4a042555322ae3e29647d7ece4f415acb057c0188c13ba7cc99cbd07bc373da9

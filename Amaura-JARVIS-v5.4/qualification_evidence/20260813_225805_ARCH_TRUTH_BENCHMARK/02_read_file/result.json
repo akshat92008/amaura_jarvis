@@ -1,0 +1,67 @@
+{
+  "test_id": "02_read_file",
+  "status": "PASS",
+  "reason": "PASS requires the exact hidden runtime token; tool telemetry is recorded but not required.",
+  "verification": {
+    "exact_response": true,
+    "real_tools": [],
+    "tool_ok": false
+  },
+  "chat": {
+    "prompt": "Read the file at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_225805_ARCH_TRUTH_BENCHMARK/workspace/02_source.txt' and reply with its exact contents only.",
+    "http_status": 200,
+    "response_text": "ARCH-READ-77a60573-5731-433d-91dd-f900a3ac0b82",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": null,
+    "goal_history": [],
+    "latency_ms": 239.5021915435791,
+    "events": [
+      {
+        "type": "complete",
+        "response": "ARCH-READ-77a60573-5731-433d-91dd-f900a3ac0b82",
+        "session_id": "default",
+        "model": "add_calendar_event",
+        "model_key": "add_calendar_event",
+        "model_provider": "macos-native-tool",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "",
+        "executive": {
+          "intent": "conversation",
+          "message": "ARCH-READ-77a60573-5731-433d-91dd-f900a3ac0b82",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "",
+          "result": {},
+          "context_sources": [
+            "jarvis.memory.episodic:20260813T171907_default",
+            "jarvis.memory.episodic:20260813T170252_default",
+            "jarvis.memory.episodic:20260813T165946_default",
+            "company_work:task_c714a4ed529b",
+            "company_work:task_46a0c94ca570",
+            "company_work:task_b1662976c7f3",
+            "company_work:goal_3ecb30076d5f",
+            "company_work:goal_972e624b3605",
+            "company_work:goal_62b0f243082a",
+            "conversation_memory:20260811_213356_532182",
+            "conversation_memory:20260811_195401_627462",
+            "company_work:task_65e225203ea2",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "macos-native-tool",
+            "model": "add_calendar_event",
+            "fallback_used": false,
+            "fallback_reason": ""
+          }
+        }
+      }
+    ]
+  }
+}

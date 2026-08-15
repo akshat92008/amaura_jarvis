@@ -1,0 +1,57 @@
+{"type": "token", "content": "I"}
+{"type": "token", "content": "\u2019m"}
+{"type": "token", "content": " sorry"}
+{"type": "token", "content": "\u2014I"}
+{"type": "token", "content": " don"}
+{"type": "token", "content": "\u2019t"}
+{"type": "token", "content": " have"}
+{"type": "token", "content": " any"}
+{"type": "token", "content": " information"}
+{"type": "token", "content": " about"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " required"}
+{"type": "token", "content": " component"}
+{"type": "token", "content": " for"}
+{"type": "token", "content": " **"}
+{"type": "token", "content": "PROJECT"}
+{"type": "token", "content": "\u2011"}
+{"type": "token", "content": "C"}
+{"type": "token", "content": "01"}
+{"type": "token", "content": "D"}
+{"type": "token", "content": "0"}
+{"type": "token", "content": "D"}
+{"type": "token", "content": "80"}
+{"type": "token", "content": "**"}
+{"type": "token", "content": " in"}
+{"type": "token", "content": " the"}
+{"type": "token", "content": " data"}
+{"type": "token", "content": " I"}
+{"type": "token", "content": "\u2019ve"}
+{"type": "token", "content": " been"}
+{"type": "token", "content": " given"}
+{"type": "token", "content": "."}
+{"type": "token", "content": " If"}
+{"type": "token", "content": " you"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " point"}
+{"type": "token", "content": " me"}
+{"type": "token", "content": " to"}
+{"type": "token", "content": " a"}
+{"type": "token", "content": " specification"}
+{"type": "token", "content": " document"}
+{"type": "token", "content": " or"}
+{"type": "token", "content": " file"}
+{"type": "token", "content": " that"}
+{"type": "token", "content": " mentions"}
+{"type": "token", "content": " this"}
+{"type": "token", "content": " project"}
+{"type": "token", "content": ","}
+{"type": "token", "content": " I"}
+{"type": "token", "content": " can"}
+{"type": "token", "content": " look"}
+{"type": "token", "content": " it"}
+{"type": "token", "content": " up"}
+{"type": "token", "content": " for"}
+{"type": "token", "content": " you"}
+{"type": "token", "content": "."}
+{"type": "complete", "response": "I\u2019m sorry\u2014I don\u2019t have any information about a required component for **PROJECT\u2011C01D0D80** in the data I\u2019ve been given. If you can point me to a specification document or file that mentions this project, I can look it up for you.", "session_id": "default", "model": "openai/gpt-oss-120b", "model_key": "openai/gpt-oss-120b", "model_provider": "omniroute", "model_fallback_used": false, "model_fallback_reason": "", "model_latency_ms": 18559, "model_ttft_ms": 18215, "intent": "conversation", "goal_id": "", "state": "", "executive": {"intent": "conversation", "message": "I\u2019m sorry\u2014I don\u2019t have any information about a required component for **PROJECT\u2011C01D0D80** in the data I\u2019ve been given. If you can point me to a specification document or file that mentions this project, I can look it up for you.", "session_id": "default", "goal_id": "", "state": "", "result": {}, "context_sources": ["conversation_memory:20260811_195401_627462", "company_work:task_fb66bedd7690", "company_work:task_879ff6ccb3e7", "company_work:task_2251f004ac05", "company_work:task_1fea86f7ff42", "company_work:task_90594c7dacce", "company_work:task_7999d71811ed", "company_work:task_9943f1d70703", "company_work:task_20841f1af95a", "company_work:task_bc94525bb739", "company_work:task_a17eb615c275", "company_work:task_bceee4fc4bbb", "entity_graph"], "model_provenance": {"provider": "omniroute", "model": "openai/gpt-oss-120b", "fallback_used": false, "fallback_reason": "", "requested_model": "groq/llama-3.3-70b-versatile", "resolved_provider": "omniroute", "resolved_model": "openai/gpt-oss-120b", "latency_ms": 18559, "ttft_ms": 18215}}}

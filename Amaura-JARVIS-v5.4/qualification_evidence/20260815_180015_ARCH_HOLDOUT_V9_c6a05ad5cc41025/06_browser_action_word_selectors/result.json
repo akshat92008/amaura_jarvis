@@ -1,0 +1,94 @@
+{
+  "test_id": "06_browser_action_word_selectors",
+  "status": "FAIL",
+  "reason": "Action-looking selector names must remain browser arguments.",
+  "verification": {
+    "values_found": {
+      "prairie-harbor-4238": false,
+      "amber-isle-9662": false,
+      "ember-arch-4514": false,
+      "falcon-pier-8426": false
+    },
+    "tools": [
+      "browser_extract_content"
+    ]
+  },
+  "chat": {
+    "prompt": "Visit http://127.0.0.1:59326/panel and report the text at these CSS selectors: \".save-a_39886846\", \".memory-b_50072466\", \".open-c_37601693\", \".screen-d_33141149\".",
+    "session_id": "v9web6_77009351",
+    "http_status": 200,
+    "response_text": "Browser extraction failed for all requested fields on http://127.0.0.1:59326/panel",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Browser extraction failed for all requested fields on http://127.0.0.1:59326/panel",
+        "session_id": "v9web6_77009351",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "browser",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "failed",
+        "executive": {
+          "intent": "mission",
+          "message": "Browser extraction failed for all requested fields on http://127.0.0.1:59326/panel",
+          "session_id": "v9web6_77009351",
+          "goal_id": "",
+          "state": "failed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "browser_extract_content",
+            "provider": "browser",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "status": "total_failure",
+              "reason": "all_fields_failed",
+              "url": "http://127.0.0.1:59326/panel",
+              "field_results": [
+                {
+                  "field": "content",
+                  "selector": "content",
+                  "type": "text",
+                  "success": false,
+                  "error": "tool browser_extract_content: unexpected properties: field"
+                }
+              ]
+            },
+            "success": false
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "browser",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "browser_extract_content",
+            "policy_decision": "allowed",
+            "status": "total_failure",
+            "reason": "all_fields_failed",
+            "url": "http://127.0.0.1:59326/panel",
+            "field_results": [
+              {
+                "field": "content",
+                "selector": "content",
+                "type": "text",
+                "success": false,
+                "error": "tool browser_extract_content: unexpected properties: field"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "failed"
+  }
+}

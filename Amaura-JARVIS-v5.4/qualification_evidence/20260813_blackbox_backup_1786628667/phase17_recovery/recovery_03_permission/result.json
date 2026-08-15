@@ -1,0 +1,16 @@
+{
+  "test_id": "recovery_03_permission",
+  "prompt": "Read the file '/etc/shadow'.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": null,
+    "total_ms": 12.655019760131836,
+    "request_ts": 1786586901.63346,
+    "final_ts": 1786586901.646115
+  },
+  "verification": {}
+}

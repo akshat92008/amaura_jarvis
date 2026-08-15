@@ -1,0 +1,22 @@
+{
+  "test_id": "02_read_file",
+  "status": "FAIL",
+  "reason": "PASS requires the exact hidden runtime token; tool telemetry is recorded but not required.",
+  "verification": {
+    "exact_response": false,
+    "real_tools": [],
+    "tool_ok": false
+  },
+  "chat": {
+    "prompt": "Read the file at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_221714_ARCH_TRUTH_BENCHMARK/workspace/02_source.txt' and reply with its exact contents only.",
+    "http_status": 503,
+    "response_text": "",
+    "error": "HTTP 503: {\"detail\":\"JARVIS_API_KEY is not configured\"}",
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": null,
+    "goal_history": [],
+    "latency_ms": 10.313987731933594,
+    "events": []
+  }
+}

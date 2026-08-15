@@ -1,0 +1,20 @@
+{
+  "test_id": "memory_02_direct_recall",
+  "prompt": "What component does PROJECT-C01D0D80 require?",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_text": "I don't have information about PROJECT-C01D0D80 or its required components. If you could provide more context or details, I'd be happy to try and help.",
+  "response_excerpt": "I don't have information about PROJECT-C01D0D80 or its required components. If you could provide more context or details, I'd be happy to try and help.",
+  "tool_calls": [],
+  "goal_id": null,
+  "goal_state": null,
+  "mission_state_history": [],
+  "latency": {
+    "ttft_ms": 488.18373680114746,
+    "total_ms": 692.4989223480225,
+    "request_ts": 1786631461.8742862,
+    "final_ts": 1786631462.566785
+  },
+  "verification": {}
+}

@@ -22,3 +22,7 @@ __pycache__/
 *.log
 *.sqlite
 *.db
+
+# Temporary Qualification / Sandbox dirs
+qual_antigravity_*
+Amaura-JARVIS-v5.4-FROZEN-*

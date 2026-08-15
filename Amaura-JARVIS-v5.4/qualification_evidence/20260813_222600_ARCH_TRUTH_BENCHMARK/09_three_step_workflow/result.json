@@ -1,0 +1,30 @@
+{
+  "test_id": "09_three_step_workflow",
+  "status": "FAIL",
+  "reason": "PASS requires an exact runtime read\u2192reason\u2192write output and no failed/cancelled mission state.",
+  "verification": {
+    "exists": false,
+    "parsed": null,
+    "expected": {
+      "project": "HELIOS-D5606512",
+      "budget": 24728,
+      "coolant": "NX-53D286"
+    },
+    "exact": false,
+    "read_tool": false,
+    "write_tool": false,
+    "goal_state": null
+  },
+  "chat": {
+    "prompt": "Read '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_222600_ARCH_TRUTH_BENCHMARK/workspace/09_source.md', extract project, budget, and coolant, then create JSON at '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_222600_ARCH_TRUTH_BENCHMARK/workspace/09_output.json' with exactly those three keys: project, budget, coolant. Budget must be a number.",
+    "http_status": 503,
+    "response_text": "",
+    "error": "HTTP 503: {\"detail\":\"JARVIS_API_KEY is not configured\"}",
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": null,
+    "goal_history": [],
+    "latency_ms": 17.13395118713379,
+    "events": []
+  }
+}

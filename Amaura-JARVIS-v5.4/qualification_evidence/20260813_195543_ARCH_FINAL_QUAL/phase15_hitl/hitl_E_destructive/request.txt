@@ -1,0 +1,1 @@
+Delete all Python files in '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/jarvis/tools/'.

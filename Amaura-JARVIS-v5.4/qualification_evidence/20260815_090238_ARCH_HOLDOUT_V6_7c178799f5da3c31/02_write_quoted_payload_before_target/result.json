@@ -1,0 +1,90 @@
+{
+  "test_id": "02_write_quoted_payload_before_target",
+  "status": "FAIL",
+  "reason": "Quoted payload before target must exclude instruction words.",
+  "verification": {
+    "expected": "heather-brook-3998 9402",
+    "actual": "only the quoted value \"heather-brook-3998 9402\"",
+    "exact": false
+  },
+  "chat": {
+    "prompt": "Store only the quoted value \"heather-brook-3998 9402\" in file \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/quoted_29615319.blob\".",
+    "session_id": "s2_54435531",
+    "http_status": 200,
+    "response_text": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/quoted_29615319.blob (47 chars).",
+    "error": null,
+    "events": [
+      {
+        "type": "complete",
+        "response": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/quoted_29615319.blob (47 chars).",
+        "session_id": "s2_54435531",
+        "model": "Llama 3.3 70B",
+        "model_key": "llama-3.3-70b",
+        "model_provider": "local-filesystem",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "mission",
+        "goal_id": "",
+        "state": "completed",
+        "executive": {
+          "intent": "mission",
+          "message": "Successfully wrote file at /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/quoted_29615319.blob (47 chars).",
+          "session_id": "s2_54435531",
+          "goal_id": "",
+          "state": "completed",
+          "result": {
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "provider": "local-filesystem",
+            "model": "",
+            "policy_decision": "allowed",
+            "evidence": [],
+            "telemetry": {
+              "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/quoted_29615319.blob",
+              "raw_content_clause": "Store only the quoted value \"heather-brook-3998 9402\" in file \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/quoted_29615319.blob",
+              "payload_span": [
+                6,
+                53
+              ],
+              "payload": "only the quoted value \"heather-brook-3998 9402\"",
+              "exactness_mode": false,
+              "expected_size": 47,
+              "actual_size": 47,
+              "content_match": true,
+              "bytes": 47,
+              "verification_passed": true
+            },
+            "success": true
+          },
+          "context_sources": [],
+          "model_provenance": {
+            "provider": "local-filesystem",
+            "model": "",
+            "fallback_used": false,
+            "fallback_reason": "",
+            "execution_type": "tool",
+            "tool_name": "write_file",
+            "policy_decision": "allowed",
+            "path": "/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/quoted_29615319.blob",
+            "raw_content_clause": "Store only the quoted value \"heather-brook-3998 9402\" in file \"/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260815_090238_ARCH_HOLDOUT_V6_7c178799f5da3c31/workspace/quoted_29615319.blob",
+            "payload_span": [
+              6,
+              53
+            ],
+            "payload": "only the quoted value \"heather-brook-3998 9402\"",
+            "exactness_mode": false,
+            "expected_size": 47,
+            "actual_size": 47,
+            "content_match": true,
+            "bytes": 47,
+            "verification_passed": true
+          }
+        }
+      }
+    ],
+    "goal_id": null,
+    "goal_state": "completed"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "test_id": "03_list_folder",
+  "status": "PASS",
+  "reason": "PASS requires all three runtime-generated names; tool telemetry is informational.",
+  "verification": {
+    "expected": [
+      "alpha_498b29f.py",
+      "beta_381ce37.py",
+      "gamma_fd1bc8f.py"
+    ],
+    "all_found": true,
+    "real_tools": [],
+    "tool_ok": false
+  },
+  "chat": {
+    "prompt": "List the file names inside '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260813_230606_ARCH_TRUTH_BENCHMARK/workspace/03_list_fixture'. Return all file names you actually find.",
+    "http_status": 200,
+    "response_text": "alpha_498b29f.py\nbeta_381ce37.py\ngamma_fd1bc8f.py",
+    "error": null,
+    "tool_calls": [],
+    "goal_id": null,
+    "goal_state": null,
+    "goal_history": [],
+    "latency_ms": 105.74078559875488,
+    "events": [
+      {
+        "type": "complete",
+        "response": "alpha_498b29f.py\nbeta_381ce37.py\ngamma_fd1bc8f.py",
+        "session_id": "default",
+        "model": "add_calendar_event",
+        "model_key": "add_calendar_event",
+        "model_provider": "macos-native-tool",
+        "model_fallback_used": false,
+        "model_fallback_reason": "",
+        "model_latency_ms": 0,
+        "model_ttft_ms": 0,
+        "intent": "conversation",
+        "goal_id": "",
+        "state": "",
+        "executive": {
+          "intent": "conversation",
+          "message": "alpha_498b29f.py\nbeta_381ce37.py\ngamma_fd1bc8f.py",
+          "session_id": "default",
+          "goal_id": "",
+          "state": "",
+          "result": {},
+          "context_sources": [
+            "jarvis.memory.episodic:20260813T173556_default",
+            "jarvis.memory.episodic:20260813T173324_default",
+            "jarvis.memory.episodic:20260813T173133_default",
+            "jarvis.memory.episodic:20260813T173008_default",
+            "jarvis.memory.episodic:20260813T172831_default",
+            "jarvis.memory.episodic:20260813T172516_default",
+            "jarvis.memory.episodic:20260813T172306_default",
+            "jarvis.memory.episodic:20260813T171912_default",
+            "jarvis.memory.episodic:20260813T170052_default",
+            "jarvis.memory.episodic:20260813T165948_default",
+            "conversation_memory:20260811_213356_532182",
+            "conversation_memory:20260811_195401_627462",
+            "entity_graph"
+          ],
+          "model_provenance": {
+            "provider": "macos-native-tool",
+            "model": "add_calendar_event",
+            "fallback_used": false,
+            "fallback_reason": ""
+          }
+        }
+      }
+    ]
+  }
+}

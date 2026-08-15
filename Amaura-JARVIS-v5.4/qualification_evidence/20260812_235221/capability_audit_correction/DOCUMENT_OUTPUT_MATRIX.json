@@ -1,0 +1,93 @@
+[
+  {
+    "capability": "PPT",
+    "result": {
+      "code": "OK",
+      "data": {
+        "output": "\u2705 Presentation created: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_235221/capability_audit_correction/fixtures/amaura_qualification.pptx\n   5 slides, titled \"Amaura JARVIS Qualification\""
+      },
+      "error": null,
+      "evidence_ids": [],
+      "external_id": "",
+      "ok": true,
+      "retryable": false
+    },
+    "status": "PASS_REAL_E2E",
+    "verification": {
+      "exists": true,
+      "expected_content": true,
+      "openxml": true,
+      "sha256": "6d36353ec51f6ff2ca96dd5364902ae1b28e52fe85f71cd0021ced74f8347b85",
+      "slides": 5
+    }
+  },
+  {
+    "capability": "Markdown",
+    "result": {
+      "code": "OK",
+      "data": {
+        "output": "\u2705 Document created: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_235221/capability_audit_correction/fixtures/amaura_qualification.md\n   3 words, titled \"Amaura Markdown\""
+      },
+      "error": null,
+      "evidence_ids": [],
+      "external_id": "",
+      "ok": true,
+      "retryable": false
+    },
+    "status": "PASS_REAL_E2E",
+    "verification": {
+      "contains": true,
+      "exists": true,
+      "sha256": "61f2179e7f199a0c0b3c985811ef1a5ab9291d976c70d00b6095ea20c46e7414"
+    }
+  },
+  {
+    "capability": "CSV",
+    "result": {
+      "code": "OK",
+      "data": {
+        "output": "\u2705 Spreadsheet created: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_235221/capability_audit_correction/fixtures/amaura_qualification.csv\n   1 rows \u00d7 2 columns"
+      },
+      "error": null,
+      "evidence_ids": [],
+      "external_id": "",
+      "ok": true,
+      "retryable": false
+    },
+    "status": "PASS_REAL_E2E",
+    "verification": {
+      "exists": true,
+      "rows": [
+        [
+          "fact",
+          "value"
+        ],
+        [
+          "version",
+          "5.4.2"
+        ]
+      ],
+      "sha256": "ac86244ffa9522f3cc0e7fb208dc9dea52ec48c4a7c179d26a8b9cfbb5ab47b9"
+    }
+  },
+  {
+    "capability": "Document-to-PPT",
+    "result": {
+      "code": "OK",
+      "data": {
+        "output": "\u2705 Presentation created: /Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/20260812_235221/capability_audit_correction/fixtures/source_document_to_ppt.pptx\n   2 slides, titled \"Source Derived PPT\""
+      },
+      "error": null,
+      "evidence_ids": [],
+      "external_id": "",
+      "ok": true,
+      "retryable": false
+    },
+    "status": "PASS_CONTROLLED_FIXTURE",
+    "verification": {
+      "exists": true,
+      "openxml": true,
+      "sha256": "9561b646a75015e38bdde5ae33069c2c1871d14c334148ce5127b8c1b23a9423"
+    }
+  }
+]

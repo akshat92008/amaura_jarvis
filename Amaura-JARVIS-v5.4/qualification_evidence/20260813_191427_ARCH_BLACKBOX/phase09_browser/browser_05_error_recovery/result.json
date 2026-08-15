@@ -1,0 +1,16 @@
+{
+  "test_id": "browser_05_error_recovery",
+  "prompt": "Navigate to 'https://httpbin.org/status/404' in the browser and tell me what HTTP status or error message you encountered.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": 10794.414043426514,
+    "total_ms": 10815.146923065186,
+    "request_ts": 1786628917.696778,
+    "final_ts": 1786628928.511925
+  },
+  "verification": {}
+}

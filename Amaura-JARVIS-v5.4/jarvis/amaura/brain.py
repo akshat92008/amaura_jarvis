@@ -42,6 +42,7 @@ GoalDomain = Literal[
     "content",
     "operations",
     "general",
+    "direct_action",
 ]
 AutonomyMode = Literal["plan_only", "execute", "execute_until_approval"]
 CodingBackend = Literal["auto", "internal", "noryx", "antigravity"]
@@ -293,6 +294,10 @@ class GoalCompiler:
         return str(path)
 
     def classify(self, request: GoalRequest) -> GoalDomain:
+        from jarvis.amaura.direct_action import DirectActionRouter
+        if DirectActionRouter.can_handle(request.objective):
+            return "direct_action"
+            
         text = request.objective.lower()
         tokens = set(re.findall(r"[a-z0-9_+-]+", text))
         if any(term in text for term in self._VENTURE_TERMS):
@@ -302,7 +307,7 @@ class GoalCompiler:
         # "API". An explicit workspace still makes repository context primary.
         if not request.workspace and tokens & self._RESEARCH_TERMS:
             return "research"
-        if request.workspace or tokens & self._SOFTWARE_TERMS:
+        if request.workspace or tokens & self._SOFTWARE_TERMS or "repo" in text or "repository" in text or "codebase" in text:
             return "software"
         if tokens & self._REVENUE_TERMS:
             return "revenue"
@@ -452,6 +457,32 @@ class GoalCompiler:
             tasks=tasks[: request.max_steps],
             planner="deterministic-software",
             coding_backend=backend,
+            workspace=workspace,
+        )
+
+    def _direct_action_plan(self, request: GoalRequest, workspace: str) -> GoalPlan:
+        objective = request.objective
+        tasks = [
+            GoalTaskSpec(
+                key="execute",
+                title="Execute direct action",
+                description=f"Execute the founder request directly: {objective}",
+                owner_id="builder",
+                reviewer_id="jarvis",
+                acceptance_criteria=self._criteria(request, ["Action completed successfully"]),
+                depends_on=[],
+                action_type="direct_action",
+                budget_cents=200,
+            )
+        ]
+        return GoalPlan(
+            domain="direct_action",
+            objective=objective,
+            success_metric=self._default_success_metric(request),
+            assumptions=["Direct action bypasses standard research and planning."],
+            tasks=tasks,
+            planner="deterministic-direct-action",
+            coding_backend=request.coding_backend,
             workspace=workspace,
         )
 
@@ -655,7 +686,25 @@ class GoalCompiler:
 
     def compile(self, request: GoalRequest, *, memory_context: str = "") -> GoalPlan:
         workspace = self._normalise_workspace(request.workspace)
+        if not workspace:
+            from jarvis.amaura.direct_action import PathExtractor
+            args = PathExtractor.extract_structured_arguments(request.objective)
+            repo_cand = args.get("repo_path") or args.get("directory") or args.get("input_path")
+            if not repo_cand:
+                all_cands = PathExtractor.extract_all_paths(request.objective)
+                if all_cands:
+                    repo_cand = all_cands[0]
+            if repo_cand:
+                try:
+                    p = Path(repo_cand).expanduser().resolve()
+                    if p.exists() and p.is_dir():
+                        workspace = str(p)
+                        request = request.model_copy(update={"workspace": workspace})
+                except Exception:
+                    pass
         domain = self.classify(request)
+        if domain == "direct_action":
+            return self._direct_action_plan(request, workspace)
         if domain == "software" and self.is_new_software_project(request) and (
             not workspace or request.metadata.get("managed_new_project") is True
         ):
@@ -976,6 +1025,7 @@ class JarvisBrain:
         }
         task_ids = {task.key: _id("task") for task in plan.tasks}
         created_tasks: list[dict[str, Any]] = []
+        skip_hierarchy = len(plan.tasks) == 1
 
         with self.control.store.atomic_block():
             programme = self.control.store.insert_work_item(
@@ -994,38 +1044,39 @@ class JarvisBrain:
                     "metadata": base_metadata,
                 }
             )
-            self.control.store.insert_work_item(
-                {
-                    "id": project_id,
-                    "parent_id": programme_id,
-                    "item_type": "project",
-                    "workflow_id": workflow_id,
-                    "title": f"JARVIS {plan.domain.title()} Mission",
-                    "description": f"Dynamic execution plan for: {request.objective}",
-                    "owner_id": "jarvis",
-                    "reviewer_id": "founder",
-                    "state": initial_state,
-                    "priority": request.priority,
-                    "success_metric": plan.success_metric,
-                    "metadata": base_metadata,
-                }
-            )
-            self.control.store.insert_work_item(
-                {
-                    "id": milestone_id,
-                    "parent_id": project_id,
-                    "item_type": "milestone",
-                    "workflow_id": workflow_id,
-                    "title": "Complete founder objective",
-                    "description": plan.success_metric,
-                    "owner_id": "jarvis",
-                    "reviewer_id": "founder",
-                    "state": initial_state,
-                    "priority": request.priority,
-                    "success_metric": plan.success_metric,
-                    "metadata": base_metadata,
-                }
-            )
+            if not skip_hierarchy:
+                self.control.store.insert_work_item(
+                    {
+                        "id": project_id,
+                        "parent_id": programme_id,
+                        "item_type": "project",
+                        "workflow_id": workflow_id,
+                        "title": f"JARVIS {plan.domain.title()} Mission",
+                        "description": f"Dynamic execution plan for: {request.objective}",
+                        "owner_id": "jarvis",
+                        "reviewer_id": "founder",
+                        "state": initial_state,
+                        "priority": request.priority,
+                        "success_metric": plan.success_metric,
+                        "metadata": base_metadata,
+                    }
+                )
+                self.control.store.insert_work_item(
+                    {
+                        "id": milestone_id,
+                        "parent_id": project_id,
+                        "item_type": "milestone",
+                        "workflow_id": workflow_id,
+                        "title": "Complete founder objective",
+                        "description": plan.success_metric,
+                        "owner_id": "jarvis",
+                        "reviewer_id": "founder",
+                        "state": initial_state,
+                        "priority": request.priority,
+                        "success_metric": plan.success_metric,
+                        "metadata": base_metadata,
+                    }
+                )
             for spec in plan.tasks:
                 metadata = {
                     **base_metadata,
@@ -1038,7 +1089,7 @@ class JarvisBrain:
                 task = self.control.store.insert_work_item(
                     {
                         "id": task_ids[spec.key],
-                        "parent_id": milestone_id,
+                        "parent_id": programme_id if skip_hierarchy else milestone_id,
                         "item_type": "task",
                         "workflow_id": workflow_id,
                         "title": spec.title,
@@ -1080,12 +1131,31 @@ class JarvisBrain:
             "allowed",
             {"workflow_id": workflow_id, "domain": plan.domain, "planner": plan.planner},
         )
-        return {"goal": programme, "project_id": project_id, "milestone_id": milestone_id, "tasks": created_tasks, "plan": plan.model_dump(mode="json")}
+        return {"goal": programme, "project_id": project_id if not skip_hierarchy else None, "milestone_id": milestone_id if not skip_hierarchy else None, "tasks": created_tasks, "plan": plan.model_dump(mode="json")}
 
     def submit(self, request: GoalRequest, *, external_context: str = "") -> dict[str, Any]:
         memory_context = self.memory.context(request.objective)
         combined_context = "\n".join(part for part in (memory_context, external_context) if part.strip())
         plan = self.compiler.compile(request, memory_context=combined_context)
+        if plan.domain == "software" and not plan.workspace:
+            if request.workspace:
+                plan = plan.model_copy(update={"workspace": request.workspace})
+            else:
+                from jarvis.amaura.direct_action import PathExtractor
+                args = PathExtractor.extract_structured_arguments(request.objective)
+                repo_cand = args.get("repo_path") or args.get("directory") or args.get("input_path")
+                if not repo_cand:
+                    all_cands = PathExtractor.extract_all_paths(request.objective)
+                    if all_cands:
+                        repo_cand = all_cands[0]
+                if repo_cand:
+                    try:
+                        p = Path(repo_cand).expanduser().resolve()
+                        if p.exists() and p.is_dir():
+                            plan = plan.model_copy(update={"workspace": str(p)})
+                            request = request.model_copy(update={"workspace": str(p)})
+                    except Exception:
+                        pass
         if plan.domain == "software" and not plan.workspace:
             if not self.compiler.is_new_software_project(request):
                 raise GovernanceError(
@@ -1128,9 +1198,9 @@ class JarvisBrain:
         # MissionRunner advances runnable goals in the background and resumes
         # them after app/server restarts.  Synchronous execution remains an
         # explicit compatibility/debug option only.
-        if os.environ.get("AMAURA_JARVIS_SYNC_SUBMIT", "0") == "1":
+        if os.environ.get("AMAURA_JARVIS_SYNC_SUBMIT", "0") == "1" or plan.domain == "direct_action":
             execution = self.run_goal(result["goal"]["id"], max_ticks=max(8, len(plan.tasks) * 5), auto_replan=True)
-            return {**result, "execution": execution.to_dict()}
+            return {**result, "execution": execution.to_dict(), "state": execution.state}
         return {
             **result,
             "execution": {"goal_id": result["goal"]["id"], "state": "queued", "background": True},
@@ -1230,20 +1300,21 @@ class JarvisBrain:
         self.control.store.audit(actor, "cancel_dynamic_goal", "programme", goal_id, "allowed", {"reason": reason[:1000]})
         return self.status(goal_id)
 
-    def _rollup_hierarchy(self, goal_id: str, *, completed: bool) -> None:
+    def _rollup_hierarchy(self, goal_id: str, *, completed: bool = False, failed: bool = False) -> None:
         goal = self.control.store.get_work_item(goal_id)
-        if not completed:
+        if not completed and not failed:
             return
+        target_state = TaskState.COMPLETED.value if completed else TaskState.FAILED.value
         # Dynamic goals have programme -> project -> milestone -> task. Roll up
         # every container so dashboards/world state do not retain stale ASSIGNED
-        # parents after all live task nodes have completed.
+        # parents after all live task nodes have completed or failed.
         children = self.control.store.list_work_items(parent_id=goal_id, limit=50)
         for project in children:
             milestones = self.control.store.list_work_items(parent_id=project["id"], limit=50)
             for milestone in milestones:
-                self.control.store.update_work_item(milestone["id"], state=TaskState.COMPLETED.value)
-            self.control.store.update_work_item(project["id"], state=TaskState.COMPLETED.value)
-        self.control.store.update_work_item(goal_id, state=TaskState.COMPLETED.value)
+                self.control.store.update_work_item(milestone["id"], state=target_state)
+            self.control.store.update_work_item(project["id"], state=target_state)
+        self.control.store.update_work_item(goal_id, state=target_state)
 
     def _goal_tasks(self, goal_id: str) -> list[dict[str, Any]]:
         goal = self.control.store.get_work_item(goal_id)
@@ -1290,6 +1361,9 @@ class JarvisBrain:
             state = "awaiting_approval"
         elif any(task["state"] == TaskState.FAILED.value for task in active_tasks):
             state = "failed"
+            self._rollup_hierarchy(goal_id, failed=True)
+            goal = self.control.store.get_work_item(goal_id)
+            metadata = dict(goal.get("metadata") or metadata)
         elif any(task["state"] in {TaskState.IN_PROGRESS.value, TaskState.AWAITING_REVIEW.value} for task in active_tasks):
             state = "running"
         else:

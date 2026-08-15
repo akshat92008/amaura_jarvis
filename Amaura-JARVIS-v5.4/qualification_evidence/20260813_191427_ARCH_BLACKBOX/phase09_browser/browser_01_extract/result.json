@@ -1,0 +1,16 @@
+{
+  "test_id": "browser_01_extract",
+  "prompt": "Navigate to 'https://httpbin.org/get' using the browser and tell me the exact value of the 'Host' field in the JSON response.",
+  "classification": "UNVERIFIED",
+  "http_status": 200,
+  "error": null,
+  "response_excerpt": "",
+  "tool_calls": [],
+  "latency": {
+    "ttft_ms": 604.985237121582,
+    "total_ms": 1031.6784381866455,
+    "request_ts": 1786628911.8939798,
+    "final_ts": 1786628912.9256582
+  },
+  "verification": {}
+}
