@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jarvis"
-version = "5.4.3"
+version = "5.5.0"
 description = "Amaura JARVIS — general executive assistant and governed autonomous Company OS."
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
@@ -90,6 +90,9 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"jarvis/amaura/semantic_core.py" = ["F401"]
 
 [tool.mypy]
 python_version = "3.11"
