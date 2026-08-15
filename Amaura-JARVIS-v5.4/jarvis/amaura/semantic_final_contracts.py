@@ -1,7 +1,7 @@
 """Final typed compatibility contracts for ARCH's semantic execution boundary.
 
 This module closes public compatibility gaps without weakening the semantic
-mutation firewall.  Every write performed here has an explicitly proven output
+mutation firewall. Every write performed here has an explicitly proven output
 role and is independently verified from persisted state.
 """
 from __future__ import annotations
@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import re
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 _INSTALLED = False
 
@@ -34,6 +34,61 @@ def install_semantic_final_contracts() -> None:
                 selectors.append(selector)
         return selectors
 
+    def _explicit_exact_literal(text: str, known_extensions: tuple[str, ...]) -> str | None:
+        """Compatibility exact-response grammar with an explicit zero-effect proof."""
+        clean = text.strip()
+        if not clean or core._execution_dependency(clean, known_extensions):
+            return None
+        lower = clean.lower()
+        command_signal = bool(re.search(
+            r"\b(?:reply|respond|return|say|echo|repeat|print|output)\b|\byour\s+entire\s+(?:reply|response)\b",
+            lower,
+        ))
+        constraint_signal = bool(re.search(
+            r"\b(?:only|exactly|just|verbatim|nothing\s+else|no\s+other\s+text|must\s+be|should\s+be)\b|^\s*echo\s*[: ]",
+            lower,
+        ))
+        if not command_signal or not constraint_signal:
+            return None
+
+        quoted = re.search(r"(?P<q>['\"`])(?P<payload>.*?)(?P=q)", clean, re.DOTALL)
+        if quoted:
+            return quoted.group("payload")
+
+        patterns = (
+            r"^\s*(?:please\s+)?(?:reply|respond)\s+with\s+exactly\s+(?P<payload>\S+)\s*[.!]?\s*$",
+            r"^\s*(?:just\s+)?echo\s*:?[ ]*(?P<payload>\S+)\s*[.!]?\s*$",
+            r"^\s*(?:please\s+)?(?:return|say|print|output|repeat)\s+(?:(?:only|exactly|just)\s+)?(?:the\s+token\s+)?(?P<payload>\S+?)(?:\s+(?:and\s+nothing\s+else|verbatim|and\s+no\s+other\s+text))?\s*[.!]?\s*$",
+            r"^\s*just\s+return\s+(?P<payload>\S+)\s*[.!]?\s*$",
+            r"^\s*reply\s+with\s+(?P<payload>\S+)\s+verbatim\s*[.!]?\s*$",
+            r"^\s*your\s+entire\s+(?:reply|response)\s+(?:must|should)\s+be\s+(?P<payload>\S+)\s*[.!]?\s*$",
+        )
+        for pattern in patterns:
+            match = re.match(pattern, clean, re.IGNORECASE)
+            if match:
+                return match.group("payload").rstrip(".!?")
+        return None
+
+    def _explicit_quoted_write(text: str) -> tuple[str, str] | None:
+        """Return payload,target when grammar proves both, including extensionless targets."""
+        patterns = (
+            r"^\s*(?:please\s+)?(?:save|write|put|store|output|record|dump)\s+"
+            r"(?:out\s+)?(?:the\s+)?(?:text\s+|data\s+|content\s+|payload\s+|following\s+)?"
+            r"(?P<q>['\"`])(?P<payload>.*?)(?P=q)\s+(?:to|into|in|at)\s+"
+            r"(?:file\s+|destination\s+)?(?P<qp>['\"`]?)(?P<path>[~/A-Za-z0-9_.\-/]+)(?P=qp)\s*[.!]?\s*$",
+            r"^\s*(?:please\s+)?create\s+(?:a\s+)?(?:new\s+)?(?:text\s+)?file\s+(?:at\s+)?"
+            r"(?P<qp>['\"`]?)(?P<path>[~/A-Za-z0-9_.\-/]+)(?P=qp)\s+"
+            r"(?:containing|with\s+(?:content|text|data|payload))\s+(?:exactly\s+)?(?:this\s+)?"
+            r"(?:text\s*:?[ ]*)?(?P<q>['\"`])(?P<payload>.*?)(?P=q)\s*[.!]?\s*$",
+            r"^\s*(?:please\s+)?create\s+(?P<qp>['\"`])(?P<path>[^'\"`\n]+)(?P=qp)\s+"
+            r"containing\s+(?P<q>['\"`])(?P<payload>.*?)(?P=q)\s*[.!]?\s*$",
+        )
+        for pattern in patterns:
+            match = re.match(pattern, text, re.IGNORECASE | re.DOTALL)
+            if match:
+                return match.group("payload"), match.group("path")
+        return None
+
     def parse_with_final_contracts(
         cls: Any,
         text: str,
@@ -41,6 +96,32 @@ def install_semantic_final_contracts() -> None:
     ) -> Any:
         graph = current_parse(cls, text, known_extensions)
         lower = text.lower()
+
+        # Recover exact-response phrasings only when no execution dependency exists.
+        if graph.action == core.SemanticAction.UNKNOWN:
+            literal = _explicit_exact_literal(text, known_extensions)
+            if literal is not None:
+                return core.SemanticRequestGraph(
+                    original_text=text,
+                    action=core.SemanticAction.EXACT_LITERAL,
+                    response_mode="EXACT_LITERAL",
+                    literal_payload=literal,
+                    evidence=["explicit_exact_literal_compat"],
+                )
+
+        # Explicit quoted writes may target a bare extensionless filename. The
+        # output role comes from grammar, not from a path-shape heuristic.
+        write_contract = _explicit_quoted_write(text)
+        if write_contract is not None and (graph.action == core.SemanticAction.UNKNOWN or graph.errors):
+            payload, target = write_contract
+            return core.SemanticRequestGraph(
+                original_text=text,
+                action=core.SemanticAction.FILE_WRITE,
+                response_mode=core._response_mode(text),
+                paths=[core.PathBinding(target, core.SemanticPathRole.OUTPUT, "explicit_write_target_compat")],
+                write_payload=payload,
+                evidence=["explicit_payload_and_output_grammar"],
+            )
 
         # Browser composition: naked CSS tokens such as #user-info are explicit
         # selector roles when an URL-backed extraction request already exists.
@@ -51,8 +132,7 @@ def install_semantic_final_contracts() -> None:
                         graph.browser.selectors.append(selector)
                         graph.evidence.append("explicit_bare_css_selector")
 
-        # Repository nouns + explicit read-only inspection verbs bind the repo
-        # target even for public synonyms such as "check" and "examine".
+        # Repository nouns + explicit read-only inspection verbs bind the repo target.
         repo_noun = bool(re.search(r"\b(?:repo|repository|codebase|project\s+repository)\b", lower))
         inspection = bool(re.search(
             r"\b(?:check|examine|inspect|review|analy[sz]e|diagnose|audit|investigate|find\s+(?:the\s+)?bug)\b",
@@ -76,7 +156,7 @@ def install_semantic_final_contracts() -> None:
     current_execute = da.DirectActionRouter.execute.__func__
 
     def _explicit_output(text: str, paths: list[str]) -> str:
-        """Bind an arithmetic destination from its mutation clause only."""
+        """Bind a workflow destination from its mutation clause only."""
         lower = text.lower()
         for path in paths:
             escaped = re.escape(path.lower())
@@ -127,7 +207,6 @@ def install_semantic_final_contracts() -> None:
         if not left_values or not right_values:
             raise ValueError("arithmetic inputs contain no numeric values")
         if operation == "add":
-            # Aggregate semantics intentionally sums every number from both files.
             return sum(left_values) + sum(right_values)
         left, right = left_values[0], right_values[0]
         if operation == "subtract":
@@ -176,9 +255,6 @@ def install_semantic_final_contracts() -> None:
                     telemetry={"reason": "tool_failed", "verification_passed": False},
                 )
 
-            # Independent postcondition: re-read both operands and recompute after
-            # the write, then compare to persisted output rather than trusting the
-            # tool receipt or the first calculation.
             verify_left = _numbers(path_a.read_text(encoding="utf-8", errors="replace"))
             verify_right = _numbers(path_b.read_text(encoding="utf-8", errors="replace"))
             expected_again = _format_number(_compute(operation, verify_left, verify_right))
@@ -249,6 +325,111 @@ def install_semantic_final_contracts() -> None:
             core._OUTPUT_SCOPE.reset(output_token)
             core._EFFECT_SCOPE.reset(effect_token)
 
+    def _prefix_contract(text: str) -> tuple[str, str, str] | None:
+        """Return input,prefix,output only for an explicit read-prefix-save grammar."""
+        match = re.match(
+            r"^\s*read\s+(?P<input>[^,]+),\s*prefix\s+with\s+"
+            r"(?P<q>['\"`])(?P<prefix>.*?)(?P=q)\s+and\s+save\s+to\s+(?P<output>\S+)\s*[.!]?\s*$",
+            text,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if not match:
+            return None
+        return (
+            match.group("input").strip().strip("'\"`"),
+            match.group("prefix"),
+            match.group("output").strip().strip("'\"`").rstrip(".!?"),
+        )
+
+    def _execute_prefix_workflow(text: str, workspace: str) -> Any | None:
+        contract = _prefix_contract(text)
+        if contract is None:
+            return None
+        input_path, prefix, output_path = contract
+        ws = Path(workspace if workspace else da.workspace_root()).expanduser().resolve()
+        effect_token = core._EFFECT_SCOPE.set(frozenset({"write_file"}))
+        output_token = core._OUTPUT_SCOPE.set(frozenset({output_path}))
+        try:
+            with da.tool_workspace(ws):
+                resolved_input = da.resolve_workspace_path(input_path, must_exist=True)
+                resolved_output = da.resolve_workspace_path(output_path, must_exist=False)
+            if not resolved_input.is_file():
+                raise FileNotFoundError(f"not a regular file: {input_path}")
+            source = resolved_input.read_text(encoding="utf-8", errors="replace")
+            payload = prefix + source
+            expected_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+            with da.tool_workspace(ws):
+                write_result = da.parse_tool_result(
+                    da.execute_tool("write_file", {"path": str(resolved_output), "content": payload})
+                )
+            if not write_result.ok:
+                raise RuntimeError(write_result.error or "write tool failed")
+            # Re-read the source as well as the output so verification is independent
+            # of both the initial read and the write-tool receipt.
+            expected_again = prefix + resolved_input.read_text(encoding="utf-8", errors="replace")
+            observed = resolved_output.read_text(encoding="utf-8", errors="replace")
+            actual_hash = hashlib.sha256(observed.encode("utf-8")).hexdigest()
+            if observed != expected_again:
+                return da.DirectActionResult(
+                    False,
+                    "Prefix workflow verification failed: persisted output differs from recomputed transform.",
+                    execution_type="workflow",
+                    tool_name="multi_step_workflow",
+                    provider="local-filesystem",
+                    telemetry={
+                        "reason": "content_mismatch",
+                        "verification_passed": False,
+                        "expected_output_hash": expected_hash,
+                        "actual_output_hash": actual_hash,
+                    },
+                )
+            return da.DirectActionResult(
+                True,
+                f"Prefixed {resolved_input} and independently verified {resolved_output}.",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="local-filesystem",
+                telemetry={
+                    "verification_passed": True,
+                    "input_path": str(resolved_input),
+                    "output_path": str(resolved_output),
+                    "expected_output_hash": expected_hash,
+                    "actual_output_hash": actual_hash,
+                    "semantic_verifier": "fresh_source_plus_prefix_equals_persisted_output",
+                },
+            )
+        except PermissionError as exc:
+            return da.DirectActionResult(
+                False,
+                f"Policy refusal: {exc}",
+                execution_type="policy_enforcement",
+                tool_name="effect_authorizer",
+                provider="security-policy",
+                policy_decision="refused",
+                telemetry={"reason": "workspace_escape", "error": str(exc), "verification_passed": False},
+            )
+        except FileNotFoundError as exc:
+            return da.DirectActionResult(
+                False,
+                f"Prefix workflow input not found: {exc}",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="local-filesystem",
+                telemetry={"reason": "input_file_not_found", "error": str(exc), "verification_passed": False},
+            )
+        except Exception as exc:
+            return da.DirectActionResult(
+                False,
+                f"Prefix workflow failed: {exc}",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="local-filesystem",
+                telemetry={"reason": "prefix_workflow_failed", "error": str(exc), "verification_passed": False},
+            )
+        finally:
+            core._OUTPUT_SCOPE.reset(output_token)
+            core._EFFECT_SCOPE.reset(effect_token)
+
     def _is_raw_read(text: str) -> bool:
         lower = text.lower()
         return any(phrase in lower for phrase in (
@@ -272,14 +453,10 @@ def install_semantic_final_contracts() -> None:
             telemetry = {}
             result.telemetry = telemetry
 
-        # Historical exact-response provenance is a public compatibility field;
-        # execution still originates from the semantic graph and performs no I/O.
         if getattr(result, "execution_type", "") == "exact_response":
             result.provider = "system"
             result.tool_name = "echo"
 
-        # Restore file-write verification metadata from the already verified
-        # semantic payload and persisted file. This does not affect authorization.
         if getattr(result, "success", False) and getattr(result, "tool_name", "") == "write_file":
             payload = str(telemetry.get("payload", ""))
             telemetry["expected_size"] = len(payload)
@@ -301,8 +478,6 @@ def install_semantic_final_contracts() -> None:
                     result.output = f"File read failed: not found: {error_text or result.output}"
                     telemetry.setdefault("error_kind", "not_found")
 
-        # Browser verification must fail closed when a provider reports a
-        # semantic no-match as successful text instead of an error status.
         if getattr(result, "provider", "") in {"browser", "browser-automation"}:
             structured = telemetry.get("structured_result", {})
             values = structured.values() if isinstance(structured, dict) else []
@@ -334,8 +509,18 @@ def install_semantic_final_contracts() -> None:
                 arithmetic,
             )
 
-        # Syntax-only canonicalization: preserve every entity and relation while
-        # mapping a public phrase to the verified JSON transform grammar.
+        prefix_result = _execute_prefix_workflow(text, workspace)
+        if prefix_result is not None:
+            return core._render(
+                da,
+                core.SemanticRequestGraph(
+                    original_text=text,
+                    action=core.SemanticAction.UNKNOWN,
+                    response_mode=core._response_mode(text),
+                ),
+                prefix_result,
+            )
+
         normalized = re.sub(
             r"\bsave\s+json\s+file\s+to\b",
             "save json to",
@@ -352,9 +537,6 @@ def install_semantic_final_contracts() -> None:
         if result is None:
             return None
 
-        # Truthful public provenance for path-policy refusals. The underlying
-        # workspace resolver remains the authority; this only normalizes the
-        # outward result after it has refused the operation.
         if not getattr(result, "success", False) and getattr(result, "policy_decision", "") == "refused":
             error_text = str((getattr(result, "telemetry", {}) or {}).get("error", result.output)).lower()
             if any(marker in error_text for marker in ("outside workspace", "workspace", "escape", "sensitive", "permission")):
@@ -365,12 +547,26 @@ def install_semantic_final_contracts() -> None:
 
     da.DirectActionRouter.execute = classmethod(execute_with_final_contracts)
 
-    # Cognition may call ExactResponseParser directly; keep that path graph-based
-    # while restoring the established public provider metadata.
-    current_exact_parse: Callable[..., Any] = da.ExactResponseParser.parse.__func__
-
+    # Cognition may call ExactResponseParser directly; keep it on the same graph
+    # and restore only the established public provenance fields.
     def exact_with_public_metadata(cls: Any, text: str, workspace: str = "") -> Any:
-        result = current_exact_parse(cls, text, workspace=workspace)
+        graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
+        if graph.action != core.SemanticAction.EXACT_LITERAL:
+            return None
+        result = da.DirectActionResult(
+            success=True,
+            output=graph.literal_payload,
+            execution_type="exact_response",
+            tool_name="echo",
+            provider="system",
+            model="",
+            policy_decision="allowed",
+            telemetry={
+                "semantic_action": graph.action.value,
+                "side_effects": "none",
+                "verification_passed": True,
+            },
+        )
         return _restore_public_metadata(result, text)
 
     da.ExactResponseParser.parse = classmethod(exact_with_public_metadata)
