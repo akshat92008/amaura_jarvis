@@ -2,10 +2,12 @@
 
 These patches do not classify top-level intent. They only prevent legacy
 capability adapters from re-vetoing an action that the semantic graph already
-classified and authorized.
+classified and authorized, and normalize syntax-only command prefixes before
+one central semantic parse.
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 _INSTALLED = False
@@ -17,6 +19,19 @@ def install_semantic_adapters() -> None:
         return
 
     from jarvis.amaura import direct_action as da
+    from jarvis.amaura import semantic_core as core
+
+    # Syntax normalization only: keep Echo:/Repeat: from leaking ':' into the
+    # exact literal payload while still using the same SemanticParser.
+    original_parse = core.SemanticParser.parse.__func__
+
+    def normalized_parse(cls: Any, text: str, known_extensions: tuple[str, ...]) -> Any:
+        normalized = re.sub(r"^(\s*(?:echo|repeat))\s*:\s*", r"\1 ", text, flags=re.IGNORECASE)
+        graph = original_parse(cls, normalized, known_extensions)
+        graph.original_text = text
+        return graph
+
+    core.SemanticParser.parse = classmethod(normalized_parse)
 
     # Repository execution is invoked only after SemanticRequestGraph has
     # classified the request as REPOSITORY. The legacy adapter must therefore
