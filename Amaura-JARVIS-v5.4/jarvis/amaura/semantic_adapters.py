@@ -1,9 +1,9 @@
 """Compatibility adapters behind the Phase 9 SemanticRequestGraph.
 
 These adapters never classify a competing top-level action. They normalize
-syntax, collapse legacy exact-response entry points onto the semantic graph,
-and preserve only explicitly-targeted non-arithmetic transformation workflows
-behind the graph/effect firewall.
+syntax, enrich typed roles for legacy public phrasings, collapse direct
+exact-response entry points onto the semantic graph, and preserve only
+explicitly-targeted transformations behind the graph/effect firewall.
 """
 from __future__ import annotations
 
@@ -23,14 +23,32 @@ def install_semantic_adapters() -> None:
 
     original_parse = core.SemanticParser.parse.__func__
 
+    def explicit_transform_output(text: str, paths: list[str]) -> str:
+        """Recognize only language-explicit transformation destinations."""
+        lower = text.lower()
+        for path in paths:
+            escaped = re.escape(path.lower())
+            patterns = (
+                rf"\b(?:create|make)\s+(?:a\s+)?(?:json\s+|text\s+|output\s+)?file\s+(?:at|to|in)\s+['\"`]?{escaped}",
+                rf"\b(?:save|write|store)\s+(?:the\s+)?(?:output|result|data|json)?\s*(?:to|at|in|into)\s+['\"`]?{escaped}",
+            )
+            if any(re.search(pattern, lower, re.IGNORECASE) for pattern in patterns):
+                return path
+        return ""
+
     def normalized_parse(cls: Any, text: str, known_extensions: tuple[str, ...]) -> Any:
         # Syntax-only normalization before the one central semantic parse.
         normalized = re.sub(r"^(\s*(?:echo|repeat))\s*:\s*", r"\1 ", text, flags=re.IGNORECASE)
+        normalized = re.sub(
+            r"^(\s*(?:reply|respond))\s+with\s+exactly\s*:\s*",
+            r"\1 exactly ",
+            normalized,
+            flags=re.IGNORECASE,
+        )
 
         # Canonicalize explicit write grammars while preserving the semantic
-        # contract. These rewrites are allowed only when the sentence itself
-        # names both payload and destination; path order is never used to infer
-        # an output role.
+        # contract. Both payload and destination must be present in the sentence;
+        # path order is never used to infer an output role.
         save_match = re.match(
             r"^\s*(?:save|write|store|put)\s+(['\"`])(?P<payload>.*?)\1\s+"
             r"(?:to|into|in|at)\s+['\"`]?(?P<path>[~/A-Za-z0-9_.\-/]+)['\"`]?\s*[.!]?\s*$",
@@ -58,9 +76,8 @@ def install_semantic_adapters() -> None:
         graph = original_parse(cls, normalized, known_extensions)
         graph.original_text = text
 
-        # Natural read phrasing retained from the pre-Phase-9 API. We only map
-        # "what is inside" to a file read when the extracted path is visibly a
-        # file (known extension); directories remain directory/list intents.
+        # Natural read phrasing retained from the pre-Phase-9 API. Map "what is
+        # inside" to FILE_READ only when the target has a known file extension.
         if graph.action == core.SemanticAction.UNKNOWN:
             paths = core.extract_paths(normalized, known_extensions)
             if (
@@ -75,6 +92,35 @@ def install_semantic_adapters() -> None:
                     paths=[core.PathBinding(paths[0], core.SemanticPathRole.INPUT, "natural_inside_file_read")],
                     evidence=["natural_inside_file_read"],
                 )
+
+        # Memory questions historically allow natural phrasings such as "What
+        # codename did I assign..." without saying "memory". Reuse the mature
+        # predicate only to enrich the graph after no other action was selected.
+        if graph.action == core.SemanticAction.UNKNOWN and da.DirectActionRouter._is_memory_recall_request(normalized):
+            graph = core.SemanticRequestGraph(
+                original_text=text,
+                action=core.SemanticAction.MEMORY_RECALL,
+                response_mode=core._response_mode(text),
+                evidence=["legacy_memory_predicate_enriched_graph"],
+            )
+
+        # Explicit read-transform-write requests are delegated to the retained
+        # transformation executor only after proving an output destination. Mark
+        # the graph UNKNOWN here so compat_execute can enter that gated adapter.
+        paths = core.extract_paths(normalized, known_extensions)
+        transform_output = explicit_transform_output(normalized, paths)
+        has_transform_shape = (
+            len(paths) >= 2
+            and bool(transform_output)
+            and bool(re.search(r"\b(?:read|extract|convert|transform|prefix|suffix|replace|concatenate)\b", normalized, re.IGNORECASE))
+        )
+        if graph.action == core.SemanticAction.FILE_WRITE and graph.errors and has_transform_shape:
+            graph = core.SemanticRequestGraph(
+                original_text=text,
+                action=core.SemanticAction.UNKNOWN,
+                response_mode=core._response_mode(text),
+                evidence=["explicit_transform_compatibility"],
+            )
 
         # Phase 8 compatibility: absolute paths are commonly unquoted. Preserve
         # semantic operand roles for those forms rather than textual order.
@@ -98,6 +144,26 @@ def install_semantic_adapters() -> None:
         return graph
 
     core.SemanticParser.parse = classmethod(normalized_parse)
+
+    # Extend PathExtractor's structured arguments only with language-proven roles
+    # needed by the retained transform executor. There is still no positional
+    # output fallback in the active semantic path.
+    base_structured_args = da.PathExtractor.extract_structured_arguments.__func__
+
+    def structured_args_with_explicit_transforms(cls: Any, text: str, *, default_workspace: str = "") -> dict[str, Any]:
+        args = dict(base_structured_args(cls, text, default_workspace=default_workspace))
+        paths = core.extract_paths(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
+        output = explicit_transform_output(text, paths)
+        if output:
+            args["output_path"] = output
+            inputs = [path for path in paths if path != output]
+            if inputs:
+                args["input_path"] = inputs[0]
+            if len(inputs) > 1:
+                args["secondary_input_path"] = inputs[1]
+        return args
+
+    da.PathExtractor.extract_structured_arguments = classmethod(structured_args_with_explicit_transforms)
 
     # Collapse cognition.py's direct ExactResponseParser.parse() fast path onto
     # the same semantic graph. There is no second exact parser anymore.
@@ -137,10 +203,6 @@ def install_semantic_adapters() -> None:
 
     da.DirectActionRouter._try_repository_inspection = classmethod(graph_authorized_repo_try)
 
-    # Preserve healthy Phase 8 transformations (CSV/TSV -> JSON, prefix/suffix,
-    # KV conversion, replace/concatenate) only as a post-graph compatibility
-    # path. Safety requirements: core graph did not recognize another action,
-    # arithmetic is excluded, and an explicit output role is proven first.
     core_can_handle = da.DirectActionRouter.can_handle.__func__
     core_execute = da.DirectActionRouter.execute.__func__
 
@@ -152,7 +214,7 @@ def install_semantic_adapters() -> None:
         if re.search(r"\b(?:add|sum|total|subtract|minus|difference|deduct|multiply|product|divide|quotient)\b", lower):
             return False, ""
         paths = core.extract_paths(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
-        output = core._explicit_output(text, paths)
+        output = core._explicit_output(text, paths) or explicit_transform_output(text, paths)
         if not output:
             return False, ""
         return bool(cls._is_workflow_request(text)), output
@@ -166,7 +228,6 @@ def install_semantic_adapters() -> None:
     def compat_execute(cls: Any, text: str, *, context: str = "", control: Any = None, workspace: str = "") -> Any:
         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
         if graph.action != core.SemanticAction.UNKNOWN:
-            # Keep cloud metadata endpoints fail-closed before browser execution.
             if graph.action == core.SemanticAction.BROWSER and graph.browser is not None:
                 url_lower = graph.browser.url.lower()
                 if "169.254.169.254" in url_lower or "metadata.google.internal" in url_lower:
@@ -185,8 +246,6 @@ def install_semantic_adapters() -> None:
             if result is None:
                 return None
 
-            # Preserve public compatibility contracts while semantic provenance
-            # remains present in telemetry.
             if graph.action in {
                 core.SemanticAction.FILE_READ,
                 core.SemanticAction.FILE_WRITE,
@@ -195,6 +254,8 @@ def install_semantic_adapters() -> None:
                 core.SemanticAction.SCREENSHOT,
             }:
                 result.execution_type = "tool"
+            if graph.action == core.SemanticAction.EXACT_LITERAL:
+                result.execution_type = "exact_response"
             if graph.action == core.SemanticAction.BROWSER:
                 result.provider = "browser"
             if graph.action == core.SemanticAction.POLICY_REFUSAL and "Policy refusal" not in result.output:
