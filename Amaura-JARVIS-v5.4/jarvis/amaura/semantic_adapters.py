@@ -24,12 +24,13 @@ def install_semantic_adapters() -> None:
     original_repo_try = da.DirectActionRouter._try_repository_inspection.__func__
 
     def graph_authorized_repo_try(cls: Any, text: str, workspace: str = "") -> Any:
-        original_check = cls._is_repository_inspection_request
+        original_descriptor = cls.__dict__.get("_is_repository_inspection_request")
         cls._is_repository_inspection_request = classmethod(lambda _cls, _text: True)
         try:
             return original_repo_try(cls, text, workspace=workspace)
         finally:
-            cls._is_repository_inspection_request = original_check
+            if original_descriptor is not None:
+                cls._is_repository_inspection_request = original_descriptor
 
     da.DirectActionRouter._try_repository_inspection = classmethod(graph_authorized_repo_try)
     _INSTALLED = True
