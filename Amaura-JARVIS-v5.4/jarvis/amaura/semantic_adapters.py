@@ -1,13 +1,14 @@
 """Compatibility adapters behind the Phase 9 SemanticRequestGraph.
 
-These adapters never classify a competing top-level action. They normalize
-syntax, enrich typed roles for legacy public phrasings, collapse direct
-exact-response entry points onto the semantic graph, and preserve only
-explicitly-targeted transformations behind the graph/effect firewall.
+The adapters in this module do not create a second routing system.  They only
+normalize established public phrasings into typed graph intents/roles and keep a
+small set of mature transformations behind the graph's effect firewall.
 """
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path
 from typing import Any
 
 _INSTALLED = False
@@ -36,66 +37,118 @@ def install_semantic_adapters() -> None:
                 return path
         return ""
 
+    def _explicit_write_parts(text: str) -> tuple[str, str] | None:
+        """Return (payload, target) only when both roles are explicit in grammar."""
+        patterns = (
+            # payload first: Save 'x' to 'file', Write data 'x' to destination 'file', etc.
+            r"^\s*(?:please\s+)?(?:save|write|put|store|output|record|dump)\s+(?:out\s+)?(?:the\s+)?(?:text\s+|data\s+|content\s+|payload\s+|following\s+)?(?P<q>['\"`])(?P<payload>.*?)(?P=q)\s+(?:to|into|in|at)\s+(?:file\s+|destination\s+)?(?P<qp>['\"`]?)(?P<path>[~/A-Za-z0-9_.\-/]+)(?P=qp)\s*[.!]?\s*$",
+            # target first: Create file 'p' containing/with content 'x'.
+            r"^\s*(?:please\s+)?create\s+(?:a\s+)?(?:new\s+)?(?:text\s+)?file\s+(?:at\s+)?(?P<qp>['\"`]?)(?P<path>[~/A-Za-z0-9_.\-/]+)(?P=qp)\s+(?:containing|with\s+(?:content|text|data|payload))\s+(?:exactly\s+)?(?:this\s+)?(?:text\s*:?[ ]*)?(?P<q>['\"`])(?P<payload>.*?)(?P=q)\s*[.!]?\s*$",
+            # "Please create 'p' containing 'x'".
+            r"^\s*(?:please\s+)?create\s+(?P<qp>['\"`])(?P<path>[^'\"`\n]+)(?P=qp)\s+containing\s+(?P<q>['\"`])(?P<payload>.*?)(?P=q)\s*[.!]?\s*$",
+            # "Put the following in 'p': 'x'".
+            r"^\s*(?:please\s+)?put\s+the\s+following\s+in\s+(?P<qp>['\"`])(?P<path>[^'\"`\n]+)(?P=qp)\s*:\s*(?P<q>['\"`])(?P<payload>.*?)(?P=q)\s*[.!]?\s*$",
+            # "Write to 'p' with data 'x'".
+            r"^\s*(?:please\s+)?write\s+to\s+(?P<qp>['\"`])(?P<path>[^'\"`\n]+)(?P=qp)\s+with\s+(?:data|content|text|payload)\s+(?P<q>['\"`])(?P<payload>.*?)(?P=q)\s*[.!]?\s*$",
+        )
+        for pattern in patterns:
+            match = re.match(pattern, text, re.IGNORECASE | re.DOTALL)
+            if match:
+                return match.group("payload"), match.group("path")
+        return None
+
+    def _known_file(path: str, known_extensions: tuple[str, ...]) -> bool:
+        return any(path.lower().endswith(ext) for ext in known_extensions)
+
+    def _quoted_target(text: str) -> str:
+        """Extract a quoted target from a read/list grammar, never from free text."""
+        patterns = (
+            r"\b(?:files?|entries|items|filenames|directory|folder)\b[^'\"`\n]*['\"`]([^'\"`\n]+)['\"`]",
+            r"\b(?:inside|under|from|in|at|of|located\s+at)\b\s*['\"`]([^'\"`\n]+)['\"`]",
+            r"['\"`]([^'\"`\n]+)['\"`]\s*(?:contain|contains|contain\?|\?|$)",
+        )
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                return match.group(1)
+        return ""
+
+    def _read_semantics(text: str) -> bool:
+        lower = text.lower()
+        return bool(re.search(
+            r"\b(?:read|open|display|show|cat|load|fetch|view|print|examine|inspect|retrieve)\b",
+            lower,
+        )) or bool(re.search(
+            r"\b(?:get\s+text|what\s+is\s+inside|what\s+does\b.+\bcontain|content\s+of|contents\s+of|text\s+inside|stored\s+in|what(?:'s|\s+is)\s+written)\b",
+            lower,
+        ))
+
+    def _list_semantics(text: str) -> bool:
+        lower = text.lower()
+        return bool(re.search(
+            r"\b(?:list\s+(?:all\s+)?(?:files|directory|folder|entries|items)|show\s+(?:me\s+)?(?:files|entries)|give\s+filenames|what\s+(?:files|entries)\b|directory\s+contents|folder\s+contents|files\s+exist)\b",
+            lower,
+        ))
+
     def normalized_parse(cls: Any, text: str, known_extensions: tuple[str, ...]) -> Any:
         # Syntax-only normalization before the one central semantic parse.
         normalized = re.sub(r"^(\s*(?:echo|repeat))\s*:\s*", r"\1 ", text, flags=re.IGNORECASE)
         normalized = re.sub(
-            r"^(\s*(?:reply|respond))\s+with\s+exactly\s*:\s*",
+            r"^(\s*(?:reply|respond|return|say))\s+(?:with\s+)?(?:only\s+)?exactly\s*:\s*",
+            r"\1 exactly ",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+        normalized = re.sub(
+            r"^(\s*(?:return|say))\s+only\s*:\s*",
             r"\1 exactly ",
             normalized,
             flags=re.IGNORECASE,
         )
 
-        # Canonicalize explicit write grammars while preserving the semantic
-        # contract. Both payload and destination must be present in the sentence;
-        # path order is never used to infer an output role.
-        save_match = re.match(
-            r"^\s*(?:save|write|store|put)\s+(['\"`])(?P<payload>.*?)\1\s+"
-            r"(?:to|into|in|at)\s+['\"`]?(?P<path>[~/A-Za-z0-9_.\-/]+)['\"`]?\s*[.!]?\s*$",
-            normalized,
-            re.IGNORECASE | re.DOTALL,
-        )
-        if save_match:
-            payload = save_match.group("payload")
-            path = save_match.group("path")
+        # Canonicalize public write phrasings only when grammar proves both
+        # payload and destination.  No positional path fallback exists here.
+        write_parts = _explicit_write_parts(normalized)
+        if write_parts is not None:
+            payload, path = write_parts
             delimiter = "`" if "`" not in payload else "'"
             normalized = f'Create "{path}" containing {delimiter}{payload}{delimiter}'
-        else:
-            create_match = re.match(
-                r"^\s*create\s+(?:a\s+)?(?:text\s+)?file\s+at\s+['\"`]?(?P<path>[~/A-Za-z0-9_.\-/]+)['\"`]?\s+"
-                r"containing\s+(?:exactly\s+)?(?:this\s+)?(?:text|content|payload)?\s*:\s*(?P<payload>.+?)\s*$",
-                normalized,
-                re.IGNORECASE | re.DOTALL,
-            )
-            if create_match:
-                payload = create_match.group("payload").strip()
-                path = create_match.group("path")
-                delimiter = "`" if "`" not in payload else "'"
-                normalized = f'Create "{path}" containing {delimiter}{payload}{delimiter}'
 
         graph = original_parse(cls, normalized, known_extensions)
         graph.original_text = text
 
-        # Natural read phrasing retained from the pre-Phase-9 API. Map "what is
-        # inside" to FILE_READ only when the target has a known file extension.
-        if graph.action == core.SemanticAction.UNKNOWN:
-            paths = core.extract_paths(normalized, known_extensions)
-            if (
-                paths
-                and re.search(r"\bwhat\s+is\s+inside\b", normalized, re.IGNORECASE)
-                and any(paths[0].lower().endswith(ext) for ext in known_extensions)
-            ):
+        paths = core.extract_paths(normalized, known_extensions)
+        explicit_quoted_target = _quoted_target(normalized)
+        if explicit_quoted_target and explicit_quoted_target not in paths:
+            # Only read/list grammar may promote a non-path-looking quoted token
+            # (e.g. a directory name without slash/extension) to a typed target.
+            paths = [explicit_quoted_target, *paths]
+
+        # File-content language wins over the broad repository "inspect" verb.
+        # A known file extension is required so "inspect /repo" stays REPOSITORY.
+        if paths and _known_file(paths[0], known_extensions) and _read_semantics(normalized):
+            graph = core.SemanticRequestGraph(
+                original_text=text,
+                action=core.SemanticAction.FILE_READ,
+                response_mode=core._response_mode(text),
+                paths=[core.PathBinding(paths[0], core.SemanticPathRole.INPUT, "explicit_file_content_target")],
+                evidence=["typed_file_read_compatibility"],
+            )
+
+        # Directory listing paraphrases may use a bare quoted directory name.
+        if _list_semantics(normalized):
+            target = paths[0] if paths else explicit_quoted_target
+            if target and not _known_file(target, known_extensions):
                 graph = core.SemanticRequestGraph(
                     original_text=text,
-                    action=core.SemanticAction.FILE_READ,
+                    action=core.SemanticAction.DIRECTORY_LIST,
                     response_mode=core._response_mode(text),
-                    paths=[core.PathBinding(paths[0], core.SemanticPathRole.INPUT, "natural_inside_file_read")],
-                    evidence=["natural_inside_file_read"],
+                    paths=[core.PathBinding(target, core.SemanticPathRole.TARGET, "explicit_directory_target")],
+                    evidence=["typed_directory_list_compatibility"],
                 )
 
-        # Memory questions historically allow natural phrasings such as "What
-        # codename did I assign..." without saying "memory". Reuse the mature
-        # predicate only to enrich the graph after no other action was selected.
+        # Memory questions historically allow natural phrasings without saying
+        # "memory".  Reuse the mature predicate only after no other typed action.
         if graph.action == core.SemanticAction.UNKNOWN and da.DirectActionRouter._is_memory_recall_request(normalized):
             graph = core.SemanticRequestGraph(
                 original_text=text,
@@ -104,13 +157,12 @@ def install_semantic_adapters() -> None:
                 evidence=["legacy_memory_predicate_enriched_graph"],
             )
 
-        # Explicit read-transform-write requests are delegated to the retained
-        # transformation executor only after proving an output destination. Mark
-        # the graph UNKNOWN here so compat_execute can enter that gated adapter.
-        paths = core.extract_paths(normalized, known_extensions)
-        transform_output = explicit_transform_output(normalized, paths)
+        # Explicit read-transform-write requests are delegated only after proving
+        # a destination role.  They never authorize "last path = output".
+        transform_paths = core.extract_paths(normalized, known_extensions)
+        transform_output = explicit_transform_output(normalized, transform_paths)
         has_transform_shape = (
-            len(paths) >= 2
+            len(transform_paths) >= 2
             and bool(transform_output)
             and bool(re.search(r"\b(?:read|extract|convert|transform|prefix|suffix|replace|concatenate)\b", normalized, re.IGNORECASE))
         )
@@ -122,8 +174,8 @@ def install_semantic_adapters() -> None:
                 evidence=["explicit_transform_compatibility"],
             )
 
-        # Phase 8 compatibility: absolute paths are commonly unquoted. Preserve
-        # semantic operand roles for those forms rather than textual order.
+        # Phase 8 compatibility: absolute operands are commonly unquoted.  Roles
+        # are derived from the operator grammar, never textual last-path order.
         if graph.action == core.SemanticAction.ARITHMETIC and graph.arithmetic is not None:
             plan = graph.arithmetic
             lower = normalized.lower()
@@ -145,9 +197,7 @@ def install_semantic_adapters() -> None:
 
     core.SemanticParser.parse = classmethod(normalized_parse)
 
-    # Extend PathExtractor's structured arguments only with language-proven roles
-    # needed by the retained transform executor. There is still no positional
-    # output fallback in the active semantic path.
+    # Extend structured arguments only with language-proven transformation roles.
     base_structured_args = da.PathExtractor.extract_structured_arguments.__func__
 
     def structured_args_with_explicit_transforms(cls: Any, text: str, *, default_workspace: str = "") -> dict[str, Any]:
@@ -165,8 +215,8 @@ def install_semantic_adapters() -> None:
 
     da.PathExtractor.extract_structured_arguments = classmethod(structured_args_with_explicit_transforms)
 
-    # Collapse cognition.py's direct ExactResponseParser.parse() fast path onto
-    # the same semantic graph. There is no second exact parser anymore.
+    # Collapse cognition.py's direct exact fast path onto the same graph while
+    # retaining the public provenance contract expected by callers.
     def exact_via_graph(cls: Any, text: str, workspace: str = "") -> Any:
         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
         if graph.action != core.SemanticAction.EXACT_LITERAL:
@@ -174,7 +224,7 @@ def install_semantic_adapters() -> None:
         return da.DirectActionResult(
             success=True,
             output=graph.literal_payload,
-            execution_type="semantic_graph",
+            execution_type="exact_response",
             tool_name="exact_response",
             provider="semantic-core",
             model="",
@@ -188,8 +238,8 @@ def install_semantic_adapters() -> None:
 
     da.ExactResponseParser.parse = classmethod(exact_via_graph)
 
-    # Repository execution is invoked only after SemanticRequestGraph classified
-    # the request as REPOSITORY. The legacy adapter must not re-veto that action.
+    # Repository execution is invoked only after the graph classified REPOSITORY;
+    # the legacy adapter must not re-veto that already-typed action.
     original_repo_try = da.DirectActionRouter._try_repository_inspection.__func__
 
     def graph_authorized_repo_try(cls: Any, text: str, workspace: str = "") -> Any:
@@ -218,6 +268,133 @@ def install_semantic_adapters() -> None:
         if not output:
             return False, ""
         return bool(cls._is_workflow_request(text)), output
+
+    def _parse_scalar(value: str) -> Any:
+        stripped = value.strip()
+        if re.fullmatch(r"[-+]?\d+", stripped):
+            return int(stripped)
+        if re.fullmatch(r"[-+]?(?:\d+\.\d*|\d*\.\d+)", stripped):
+            return float(stripped)
+        if stripped.lower() == "true":
+            return True
+        if stripped.lower() == "false":
+            return False
+        if stripped.lower() in {"null", "none"}:
+            return None
+        return stripped
+
+    def _verified_key_value_json(text: str, workspace: str, output: str) -> Any | None:
+        """Execute the common key:value -> JSON workflow without legacy re-parsing."""
+        if not output.lower().endswith(".json"):
+            return None
+        paths = core.extract_paths(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
+        input_candidates = [path for path in paths if path != output]
+        if len(input_candidates) != 1:
+            return None
+        input_path = input_candidates[0]
+        if not re.search(r"\b(?:extract\s+(?:data|fields)|convert\b|json\b)\b", text, re.IGNORECASE):
+            return None
+
+        ws = Path(workspace if workspace else da.workspace_root()).expanduser().resolve()
+        try:
+            with da.tool_workspace(ws):
+                resolved_input = da.resolve_workspace_path(input_path, must_exist=True)
+                resolved_output = da.resolve_workspace_path(output, must_exist=False)
+                read_result = da.parse_tool_result(da.execute_tool("read_file", {"path": str(resolved_input)}))
+            if not read_result.ok:
+                return da.DirectActionResult(
+                    False,
+                    f"Workflow read failed: {read_result.error or 'read tool failed'}",
+                    execution_type="workflow",
+                    tool_name="multi_step_workflow",
+                    provider="local-filesystem",
+                    telemetry={"reason": "tool_failed", "verification_passed": False},
+                )
+            raw = core._tool_output(read_result)
+            if isinstance(raw, dict):
+                raw = raw.get("content", raw.get("text", raw.get("output", "")))
+            source = str(raw)
+            parsed: dict[str, Any] = {}
+            for line in source.splitlines():
+                if not line.strip() or ":" not in line:
+                    continue
+                key, value = line.split(":", 1)
+                key = key.strip()
+                if key:
+                    parsed[key] = _parse_scalar(value)
+            if not parsed:
+                return da.DirectActionResult(
+                    False,
+                    "Workflow source contained no key:value fields.",
+                    execution_type="workflow",
+                    tool_name="multi_step_workflow",
+                    provider="local-filesystem",
+                    telemetry={"reason": "transform_failed", "verification_passed": False},
+                )
+            payload = json.dumps(parsed, ensure_ascii=False, indent=2)
+            with da.tool_workspace(ws):
+                write_result = da.parse_tool_result(da.execute_tool("write_file", {"path": str(resolved_output), "content": payload}))
+            if not write_result.ok:
+                return da.DirectActionResult(
+                    False,
+                    f"Workflow write failed: {write_result.error or 'write tool failed'}",
+                    execution_type="workflow",
+                    tool_name="multi_step_workflow",
+                    provider="local-filesystem",
+                    telemetry={"reason": "tool_failed", "verification_passed": False},
+                )
+            try:
+                observed = json.loads(resolved_output.read_text(encoding="utf-8"))
+            except Exception as exc:
+                return da.DirectActionResult(
+                    False,
+                    f"Workflow verification failed: {exc}",
+                    execution_type="workflow",
+                    tool_name="multi_step_workflow",
+                    provider="local-filesystem",
+                    telemetry={"reason": "content_mismatch", "verification_passed": False},
+                )
+            if observed != parsed:
+                return da.DirectActionResult(
+                    False,
+                    "Workflow verification failed: persisted JSON does not match transformed source.",
+                    execution_type="workflow",
+                    tool_name="multi_step_workflow",
+                    provider="local-filesystem",
+                    telemetry={"reason": "content_mismatch", "verification_passed": False, "expected": parsed, "observed": observed},
+                )
+            return da.DirectActionResult(
+                True,
+                f"Successfully transformed {resolved_input} to {resolved_output} and independently verified the result.",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="local-filesystem",
+                telemetry={
+                    "verification_passed": True,
+                    "input_path": str(resolved_input),
+                    "output_path": str(resolved_output),
+                    "value": parsed,
+                },
+            )
+        except (PermissionError, FileNotFoundError) as exc:
+            return da.DirectActionResult(
+                False,
+                f"Workflow path rejected: {exc}",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="security-policy" if isinstance(exc, PermissionError) else "local-filesystem",
+                policy_decision="refused" if isinstance(exc, PermissionError) else "allowed",
+                telemetry={"reason": "path_rejected", "error": str(exc), "verification_passed": False},
+            )
+        except Exception as exc:
+            return da.DirectActionResult(
+                False,
+                f"Workflow failed: {exc}",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="local-filesystem",
+                telemetry={"reason": "workflow_failed", "error": str(exc), "verification_passed": False},
+            )
 
     def compat_can_handle(cls: Any, text: str) -> bool:
         if core_can_handle(cls, text):
@@ -260,14 +437,25 @@ def install_semantic_adapters() -> None:
                 result.provider = "browser"
             if graph.action == core.SemanticAction.POLICY_REFUSAL and "Policy refusal" not in result.output:
                 result.output = f"Policy refusal: {result.output}"
+
+            error_text = str((result.telemetry or {}).get("error", result.output)).lower()
+            policy_error = any(marker in error_text for marker in ("permission", "sensitive", "blocked", "outside workspace", "escape", "symlink"))
+            if graph.action in {core.SemanticAction.FILE_READ, core.SemanticAction.FILE_WRITE, core.SemanticAction.DIRECTORY_LIST} and not result.success and policy_error:
+                result.provider = "security-policy"
+                result.policy_decision = "refused"
+
             if graph.action == core.SemanticAction.FILE_WRITE and not result.success:
-                error_text = str((result.telemetry or {}).get("error", result.output)).lower()
                 target = graph.output_path.lower()
                 sensitive_target = any(marker in target for marker in ("~/.ssh", "~/.aws", "~/.gnupg", "/.ssh/", "/.aws/"))
-                policy_error = any(marker in error_text for marker in ("permission", "sensitive", "blocked", "outside workspace", "escape"))
-                if sensitive_target or policy_error:
+                if sensitive_target:
                     result.provider = "security-policy"
                     result.policy_decision = "refused"
+                if "content mismatch" in error_text:
+                    result.telemetry["reason"] = "content_mismatch"
+                    result.telemetry["verification_passed"] = False
+                elif result.policy_decision != "refused":
+                    result.telemetry["reason"] = "tool_failed"
+                    result.telemetry["verification_passed"] = False
             return result
 
         legacy, output = safe_legacy_workflow(cls, text)
@@ -277,7 +465,11 @@ def install_semantic_adapters() -> None:
         token_effect = core._EFFECT_SCOPE.set(frozenset({"write_file"}))
         token_output = core._OUTPUT_SCOPE.set(frozenset({output}))
         try:
-            result = cls._try_multi_step_workflow(text, workspace=workspace)
+            verified = _verified_key_value_json(text, workspace, output)
+            if verified is not None:
+                result = verified
+            else:
+                result = cls._try_multi_step_workflow(text, workspace=workspace)
         finally:
             core._OUTPUT_SCOPE.reset(token_output)
             core._EFFECT_SCOPE.reset(token_effect)
