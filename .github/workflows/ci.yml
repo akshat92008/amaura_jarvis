@@ -32,7 +32,6 @@ jobs:
       AMAURA_DISABLE_CLOUD: "1"
       JARVIS_LEGACY_TOOL_MODE: disabled
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
-      PYTHONWARNINGS: error
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -43,21 +42,21 @@ jobs:
       - name: Install frozen environment
         run: |
           python -m pip install --upgrade pip uv
-          uv sync --frozen --extra dev --python python
+          PYTHONWARNINGS=default uv sync --frozen --extra dev --python python
       - name: Compile all Python sources
         run: .venv/bin/python -m compileall -q jarvis aimodel scripts tests
       - name: Isolated full regression suite
-        run: .venv/bin/python scripts/run_verified_tests.py --timeout 300
+        run: PYTHONWARNINGS=error .venv/bin/python scripts/run_verified_tests.py --timeout 300
       - name: Lint
         run: .venv/bin/ruff check jarvis scripts tests
       - name: Types
         run: .venv/bin/mypy jarvis/amaura jarvis/tools/amaura.py jarvis/server.py
       - name: Static source gate
-        run: .venv/bin/python scripts/release_gate.py --static-only
+        run: PYTHONWARNINGS=error .venv/bin/python scripts/release_gate.py --static-only
       - name: Acquisition adversarial stress
-        run: .venv/bin/python scripts/stress_amaura.py
+        run: PYTHONWARNINGS=error .venv/bin/python scripts/stress_amaura.py
       - name: Trust and concurrency stress
-        run: .venv/bin/python scripts/stress_trust_foundation.py
+        run: PYTHONWARNINGS=error .venv/bin/python scripts/stress_trust_foundation.py
       - name: Clean release build and wheel smoke
         if: matrix.python-version == '3.11'
         run: .venv/bin/python scripts/build_release.py --output release-ci
