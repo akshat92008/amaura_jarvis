@@ -6,6 +6,7 @@ from jarvis.amaura.integrations import ProviderReceipt
 from jarvis.amaura.models import ApprovalStatus, RiskLevel, TaskState
 from jarvis.amaura.semantic_adapters import install_semantic_adapters
 from jarvis.amaura.semantic_core import install_semantic_core
+from jarvis.amaura.semantic_final_contracts import install_semantic_final_contracts
 from jarvis.amaura.semantic_list_compat import install_semantic_list_compat
 from jarvis.amaura.semantic_path_normalization import install_semantic_path_normalization
 from jarvis.amaura.semantic_release_contracts import install_semantic_release_contracts
@@ -22,6 +23,7 @@ install_semantic_adapters()
 install_semantic_write_compat()
 install_semantic_list_compat()
 install_semantic_release_contracts()
+install_semantic_final_contracts()
 
 __all__ = [
     "AmauraControlPlane",
