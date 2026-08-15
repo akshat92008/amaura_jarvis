@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Run every pytest node in isolated, bounded operating-system processes.
+"""Run maintained pytest suites in isolated, bounded operating-system processes.
 
 Each shard is launched through ``python -m pytest`` rather than embedding
-``pytest.main``. That distinction is important for tests that use the
-``multiprocessing`` spawn start method: spawned children must not inherit a
-custom in-process pytest host as their main module.
+``pytest.main``. Historical qualification workspaces are immutable evidence,
+not live regression suites, so default collection is intentionally scoped to
+``tests/`` plus the maintained ``aimodel/test_engine.py`` suite.
 """
 from __future__ import annotations
 
@@ -17,11 +17,18 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_TEST_TARGETS = ["tests", "aimodel/test_engine.py"]
+PYTEST_PLUGINS = ["-p", "anyio.pytest_plugin"]
 
 
 def _collect(extra: list[str]) -> list[str]:
-    command = [sys.executable, "-m", "pytest", "--collect-only", "-q", *extra]
-    env = {**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+    targets = extra if extra else DEFAULT_TEST_TARGETS
+    command = [sys.executable, "-m", "pytest", *PYTEST_PLUGINS, "--collect-only", "-q", *targets]
+    env = {
+        **os.environ,
+        "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+        "PYTHONWARNINGS": "ignore::DeprecationWarning",
+    }
     result = subprocess.run(
         command,
         cwd=ROOT,
@@ -40,7 +47,7 @@ def _collect(extra: list[str]) -> list[str]:
         if "::" in line and not line.startswith("<")
     ]
     if not nodes:
-        raise SystemExit("No tests were collected")
+        raise SystemExit("No maintained tests were collected")
     return nodes
 
 
@@ -96,7 +103,7 @@ def main() -> int:
     if args.shard_index and not 1 <= args.shard_index <= total:
         raise SystemExit(f"--shard-index must be between 1 and {total}")
     indices = [args.shard_index - 1] if args.shard_index else list(range(total))
-    print(f"Collected {len(nodes)} tests; running {len(indices)} of {total} isolated shards", flush=True)
+    print(f"Collected {len(nodes)} maintained tests; running {len(indices)} of {total} isolated shards", flush=True)
 
     for index in indices:
         shard = nodes[index * shard_size : (index + 1) * shard_size]
@@ -111,6 +118,7 @@ def main() -> int:
                 sys.executable,
                 "-m",
                 "pytest",
+                *PYTEST_PLUGINS,
                 "-q",
                 "-W",
                 "ignore::DeprecationWarning",
@@ -127,7 +135,7 @@ def main() -> int:
                 return returncode
 
     verified = len(nodes) if not args.shard_index else len(nodes[(args.shard_index - 1) * shard_size:args.shard_index * shard_size])
-    print(f"Verified {verified} tests in isolated shards", flush=True)
+    print(f"Verified {verified} maintained tests in isolated shards", flush=True)
     return 0
 
 
