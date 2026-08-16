@@ -1,6 +1,6 @@
 --- a/Amaura-JARVIS-v5.4/jarvis/amaura/cognition.py
 +++ b/Amaura-JARVIS-v5.4/jarvis/amaura/cognition.py
-@@ -1625,14 +1625,17 @@
+@@ -1625,19 +1625,21 @@
          from jarvis.amaura.direct_action import DirectActionRouter, ExactResponseParser, PathExtractor
          echo_res = ExactResponseParser.parse(request.text)
          if echo_res is not None:
