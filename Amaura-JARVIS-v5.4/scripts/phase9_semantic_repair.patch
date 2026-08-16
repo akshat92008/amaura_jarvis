@@ -1,0 +1,149 @@
+--- a/Amaura-JARVIS-v5.4/jarvis/amaura/semantic_frontend.py
++++ b/Amaura-JARVIS-v5.4/jarvis/amaura/semantic_frontend.py
+@@ -44,15 +44,26 @@
+ 
+ 
+ def _execution_dependency(text: str, paths: list[str]) -> bool:
++    """Return True when the requested response depends on executing another action.
++
++    Exact-literal routing is intentionally conservative: response formatting words
++    such as "only" or "exactly" can never turn a lookup, calculation, file read,
++    browser extraction, or repository inspection into an echo.  Quoted paths are
++    data dependencies, not candidate literal payloads.
++    """
+     lower = text.lower()
+     masked = _mask_literals(text).lower()
+     if "://" in text:
+         return True
++
+     if paths and any(
+         phrase in lower
+         for phrase in (
+             "from the file",
+             "in the file",
++            "value in",
++            "number in",
++            "text in",
+             "file contents",
+             "contents of",
+             "raw file",
+@@ -66,11 +77,32 @@
+         )
+     ):
+         return True
++
++    # Calculations are primary actions even when the request ends in
++    # "return/reply only the number".  Mask quoted data first so action-like
++    # words inside literal payloads cannot trigger this guard.
++    if re.search(
++        r"\b(?:compute|calculate|add|sum|subtract|deduct|multiply|divide|quotient|difference|product|power)\b|"
++        r"\btake\b[^\n]{0,80}\baway\s+from\b|\bdivided\s+by\b|\braised\s+to\b",
++        masked,
++        re.IGNORECASE,
++    ):
++        return True
++
+     return any(
+         phrase in masked
+         for phrase in (
+             "from memory",
+             "stored in memory",
++            "remembered value",
++            "memory value",
++            "what was stored",
++            "stored value",
++            "deployment marker for",
++            "marker for",
++            "codename for",
++            "retrieve ",
++            "recall ",
+             "from the browser",
+             "from the page",
+             "css selector",
+@@ -135,6 +167,13 @@
+             re.IGNORECASE,
+         )
+     )
++    signal = signal or bool(
++        re.search(
++            rf"\b(?:make|set)\s+(?:the\s+)?{_SCOPE_NOUNS}\s+(?:equal\s+to|equals?|to|be)\b",
++            masked,
++            re.IGNORECASE,
++        )
++    )
+     signal = signal or bool(re.match(r"^\s*(?:please\s+|kindly\s+)?(?:echo|repeat)\s*[:\-]", clean, re.IGNORECASE))
+     if not signal:
+         return None
+@@ -448,7 +487,7 @@
+             return core.SemanticRequestGraph(
+                 clean,
+                 core.SemanticAction.EXACT_LITERAL,
+-                response_mode="EXACT_LITERAL",
++                response_mode=mode,
+                 literal_payload=literal,
+                 evidence=["formal_exact_response_contract"],
+             )
+@@ -514,6 +553,34 @@
+                 evidence=["screenshot_command"],
+             )
+ 
++        # Fail closed when the same write clause supplies multiple competing
++        # explicit payloads.  Do this before subordinate extraction so a parser
++        # fallback cannot silently choose one candidate and mutate the target.
++        if re.search(r"\b(?:create|write|save|store|put|dump|record)\b", masked):
++            quoted_payloads = []
++            for match in re.finditer(r"(['\"`])([^'\"`\n]*)\1", clean):
++                candidate = match.group(2)
++                if candidate in paths:
++                    continue
++                if candidate not in quoted_payloads:
++                    quoted_payloads.append(candidate)
++            if len(quoted_payloads) > 1 and re.search(
++                r"\b(?:contain(?:ing|s)?|content\s*:|payload\s*:|text\s*:|body\s*:)\b",
++                clean,
++                re.IGNORECASE,
++            ):
++                graph = core.SemanticRequestGraph(
++                    clean,
++                    core.SemanticAction.FILE_WRITE,
++                    mode,
++                    evidence=["ambiguous_write_payload_preflight"],
++                )
++                output = _explicit_output(clean, paths) or (paths[0] if len(paths) == 1 else "")
++                if output:
++                    graph.paths.append(core.PathBinding(output, core.SemanticPathRole.OUTPUT, "grammar_proven_write_target"))
++                graph.errors.append("ambiguous write payload: multiple competing explicit payloads")
++                return graph
++
+         # Reuse the mature clause/reference parser as a subordinate role parser;
+         # it no longer competes with other top-level actions.
+         write_action = da.WriteActionParser.parse(clean)
+@@ -709,7 +776,27 @@
+                 execution_type="workflow" if output_path else "semantic_graph",
+                 tool_name="multi_step_workflow" if output_path else "semantic_arithmetic",
+                 provider="local-filesystem",
+-                telemetry={"computed_result": normalized, "verification_passed": True, "input_paths": [str(left_path), str(right_path)], "output_path": output_path, "operation": plan.operation, "expected_output_hash": expected_hash, "actual_output_hash": actual_hash, "side_effects": "write_explicit_output" if output_path else "none", "semantic_action": graph.action.value, "status": "completed"},
++                telemetry={
++                    "computed_result": normalized,
++                    "verification_passed": True,
++                    "verification_contract": {
++                        "operation": plan.operation,
++                        "left_role": plan.left_role,
++                        "right_role": plan.right_role,
++                        "left_path": plan.left_path,
++                        "right_path": plan.right_path,
++                        "output_path": plan.output_path,
++                        "provenance": plan.provenance,
++                    },
++                    "input_paths": [str(left_path), str(right_path)],
++                    "output_path": output_path,
++                    "operation": plan.operation,
++                    "expected_output_hash": expected_hash,
++                    "actual_output_hash": actual_hash,
++                    "side_effects": "write_explicit_output" if output_path else "none",
++                    "semantic_action": graph.action.value,
++                    "status": "completed",
++                },
+             )
+         except PermissionError as exc:
+             return _result_failure(f"Arithmetic workflow refused by workspace policy: {exc}", tool="effect_authorizer", provider="security-policy", reason="workspace_escape", policy="refused")
