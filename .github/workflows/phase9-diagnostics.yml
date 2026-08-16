@@ -63,6 +63,11 @@ jobs:
           path: |
             Amaura-JARVIS-v5.4/phase9-diagnostics.txt
             Amaura-JARVIS-v5.4/phase9-exit-code.txt
+            Amaura-JARVIS-v5.4/jarvis/amaura/semantic_frontend.py
+            Amaura-JARVIS-v5.4/jarvis/amaura/semantic_core.py
+            Amaura-JARVIS-v5.4/jarvis/amaura/direct_action.py
+            Amaura-JARVIS-v5.4/tests/test_phase8_semantic_composition.py
+            Amaura-JARVIS-v5.4/tests/test_phase9_semantic_request_graph.py
           if-no-files-found: warn
           retention-days: 1
       - name: Enforce semantic result
