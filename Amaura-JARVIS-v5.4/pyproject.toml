@@ -102,21 +102,4 @@ follow_imports = "skip"
 ignore_missing_imports = true
 no_implicit_optional = true
 warn_redundant_casts = true
-warn_unused_ignores = false
-disable_error_code = [
-    "assignment",
-    "method-assign",
-    "attr-defined",
-    "arg-type",
-    "union-attr",
-    "index",
-    "call-overload",
-    "misc",
-    "var-annotated",
-    "valid-type",
-    "return-value",
-    "str-bytes-safe",
-    "no-redef",
-    "operator",
-    "dict-item",
-]
+warn_unused_ignores = true
