@@ -281,16 +281,19 @@ def canonicalize_wheel(path: Path) -> None:
 def build_wheel(stage: Path, output: Path) -> Path:
     wheel_dir = output / "wheel"
     wheel_dir.mkdir(parents=True, exist_ok=True)
-    command = [
-        sys.executable,
-        "-m",
-        "build",
-        "--wheel",
-        "--no-isolation",
-        "--outdir",
-        str(wheel_dir),
-        str(stage),
-    ]
+    uv_bin = shutil.which("uv")
+    if uv_bin:
+        command = [uv_bin, "build", "--wheel", "--out-dir", str(wheel_dir), str(stage)]
+    else:
+        command = [
+            sys.executable,
+            "-m",
+            "build",
+            "--wheel",
+            "--outdir",
+            str(wheel_dir),
+            str(stage),
+        ]
     build_env = {**os.environ, "SOURCE_DATE_EPOCH": SOURCE_DATE_EPOCH, "PYTHONHASHSEED": "0"}
     subprocess.run(command, cwd=stage, env=build_env, check=True, timeout=180)
     wheels = sorted(wheel_dir.glob("jarvis-*.whl"))
