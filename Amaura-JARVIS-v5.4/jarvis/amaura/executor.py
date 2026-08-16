@@ -1357,7 +1357,11 @@ class GovernedReviewRunner:
             deterministic_review=deterministic,
         )
         updated = self.control.review_task(
-            task_id, actor=reviewer_id, approve=approve, findings=findings.strip(), attestation=attestation
+            task_id,
+            actor=reviewer_id,
+            approve=review_approve,
+            findings=review_findings.strip(),
+            attestation=attestation,
         )
         self.control.store.record_review_attestation(attestation)
         self.control.store.audit(
@@ -1365,7 +1369,7 @@ class GovernedReviewRunner:
             "automated_independent_review",
             "task",
             task_id,
-            "approved" if approve else "rejected",
+            "approved" if review_approve else "rejected",
             {
                 "requested_model": model_id,
                 "actual_model": actual_model,
@@ -1383,8 +1387,8 @@ class GovernedReviewRunner:
             "reviewer_model": actual_model,
             "requested_reviewer_model": model_id,
             "reviewer_provider": actual_provider,
-            "approve": approve,
-            "findings": findings.strip(),
+            "approve": review_approve,
+            "findings": review_findings.strip(),
             "state": updated["state"],
             "criteria": decision.get("criteria", []),
             "criterion_review": criterion_review,
