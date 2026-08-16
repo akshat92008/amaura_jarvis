@@ -1127,7 +1127,15 @@ class WriteActionParser:
             cand = to_match.group(1).strip().strip("'\"`")
             while cand and cand[-1] in ('.', ',', ':', ';', '!', '?', ')', ']', '}'):
                 cand = cand[:-1].strip()
-            if cand in all_paths or any(cand.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS) or "/" in cand:
+            # An explicit write destination introduced by to/into/at/in is a
+            # path role even when it is extensionless.  Reject only obvious
+            # grammar stop words; do not require a suffix to prove a path.
+            if (
+                cand in all_paths
+                or any(cand.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS)
+                or "/" in cand
+                or (cand.lower() not in {"the", "a", "an", "this", "that", "it", "content", "text", "payload", "to", "into", "at", "in", "file", "path", "location", "destination", "target", "out", "output"} and bool(re.fullmatch(r"[~/A-Za-z0-9_.-]+", cand)))
+            ):
                 target_path = cand
 
         if not target_path and args.get("output_path"):
