@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -13,15 +12,15 @@ _PROMPTS_DIR = Path(__file__).parent
 @lru_cache(maxsize=1)
 def load_prompt_catalogue() -> dict[str, str]:
     """Load the founder-approved fenced prompts from the individual markdown files."""
-    catalogue = {}
+    catalogue: dict[str, str] = {}
     if not _PROMPTS_DIR.exists():
         return catalogue
-    
+
     for file in _PROMPTS_DIR.glob("*.md"):
         # The key is just the filename without the .md extension
         key = file.stem
         catalogue[key] = file.read_text(encoding="utf-8").strip()
-        
+
     return catalogue
 
 

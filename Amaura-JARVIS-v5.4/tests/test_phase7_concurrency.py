@@ -1,17 +1,12 @@
 """Phase 7 Test Suite 8: Request Isolation and Concurrency (20, 40, 60, 80 Workers & Mixed-Action)."""
 
 import concurrent.futures
-import json
 import random
 import tempfile
-import time
 from pathlib import Path
-from unittest.mock import patch
-import pytest
 
-from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.cognition import ExecutiveKernel, ExecutiveRequest
-from jarvis.amaura.direct_action import DirectActionRouter, ExactResponseParser
+from jarvis.amaura.control_plane import AmauraControlPlane
 
 
 def _run_exact_literal_concurrency(worker_count: int):
@@ -37,7 +32,9 @@ def _run_exact_literal_concurrency(worker_count: int):
 
         for session_id, expected_payload, resp in results:
             assert resp is not None
-            assert resp.message == expected_payload, f"Crosstalk detected! Expected {expected_payload}, got {resp.message}"
+            assert resp.message == expected_payload, (
+                f"Crosstalk detected! Expected {expected_payload}, got {resp.message}"
+            )
             assert resp.session_id == session_id
             assert resp.result.get("tool_name") in ("echo", "deterministic_echo")
 

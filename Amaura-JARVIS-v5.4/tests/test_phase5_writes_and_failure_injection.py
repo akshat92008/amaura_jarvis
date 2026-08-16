@@ -1,14 +1,11 @@
 """Phase 5 Tests: File Write Clause Parsing, Precondition, Postcondition, and Failure Injection."""
 
-import os
 import random
 import string
 import tempfile
 from pathlib import Path
-import pytest
 
-from jarvis.amaura.direct_action import DirectActionRouter, WriteActionParser, WriteAction
-from jarvis.tools.security import tool_workspace
+from jarvis.amaura.direct_action import DirectActionRouter, WriteAction, WriteActionParser
 
 
 def _random_token(length: int = 8) -> str:
@@ -19,7 +16,7 @@ def test_write_action_parser_clause_variations():
     """Test at least 30 randomized variations of write clause structures."""
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
-        
+
         variations = [
             # 1. Independent sentence after path with "Its complete content must be:"
             ("Create {path}. Its complete content must be: {payload}", "alpha_content_1"),
@@ -94,20 +91,20 @@ def test_write_action_parser_clause_variations():
             filename = f"test_file_{idx}_{_random_token(4)}{ext}"
             file_path = tmp_path / filename
             payload = f"{pfx}_{_random_token(12)}"
-            
+
             prompt = template.format(path=str(file_path), payload=payload)
             action = WriteActionParser.parse(prompt, default_workspace=str(tmp_path))
-            
+
             assert action is not None, f"Failed to parse prompt variation {idx}: '{prompt}'"
             assert action.target_path in (str(file_path), filename)
             assert not action.is_invalid, f"Variation {idx} marked invalid unexpectedly: {action.invalid_reason}"
-            
+
             # Execute through router
             res = DirectActionRouter.execute(prompt, workspace=str(tmp_path))
             assert res is not None, f"Router returned None for variation {idx}: '{prompt}'"
             assert res.success is True, f"Execution failed for variation {idx}: {res.output}"
             assert file_path.exists(), f"File {file_path} was not created on disk"
-            
+
             actual_content = file_path.read_text(encoding="utf-8")
             # Verify exact content match
             if "\n" in payload:
@@ -123,14 +120,14 @@ def test_write_empty_file_explicit():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         empty_file = tmp_path / "empty.txt"
-        
+
         prompt = f"Create an empty file at {empty_file}"
         action = WriteActionParser.parse(prompt, default_workspace=str(tmp_path))
         assert action is not None
         assert action.is_empty_requested is True
         assert action.content == ""
         assert not action.is_invalid
-        
+
         res = DirectActionRouter.execute(prompt, workspace=str(tmp_path))
         assert res is not None
         assert res.success is True
@@ -143,7 +140,7 @@ def test_write_precondition_unparsed_content_rejection():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         target = tmp_path / "target.txt"
-        
+
         # Artificially test WriteAction with has_explicit_content=True, content="", is_empty_requested=False
         invalid_action = WriteAction(
             target_path=str(target),
@@ -161,15 +158,15 @@ def test_write_failure_injections():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         file_path = tmp_path / "injected.txt"
-        
+
         # Test 1: Simulate write tool leaving 0 bytes when non-empty content was requested
-        file_path.write_text("") # 0 bytes
+        file_path.write_text("")  # 0 bytes
         expected_content = "non_empty_payload_12345"
-        
+
         # Direct verification check
         actual = file_path.read_text(encoding="utf-8")
         assert len(expected_content) > 0 and len(actual) == 0
-        
+
         # Test 2: Simulate write tool writing wrong bytes
         file_path.write_text("corrupted_payload")
         assert file_path.read_text(encoding="utf-8") != expected_content

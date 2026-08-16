@@ -1,3 +1,0 @@
-alpha_cbc60fc.py
-beta_67d1186.py
-gamma_061d18e.py

@@ -9,16 +9,16 @@ remain approval-gated by the existing control plane.
 from __future__ import annotations
 
 import os
-from contextlib import closing, contextmanager
 import sqlite3
 import time
 import uuid
+from contextlib import closing, contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from jarvis.amaura.company_autonomy import CompanyAutonomyEngine
 from jarvis.amaura.cognition import ProactiveCognition, WorldModel
+from jarvis.amaura.company_autonomy import CompanyAutonomyEngine
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.mission_control import MissionControl
 from jarvis.amaura.supervisor import AmauraSupervisor
@@ -48,6 +48,7 @@ class AutonomousCompanyRuntime:
             yield True
             return
         import fcntl
+
         lock_path = self.control.store.db_path.with_suffix(".company-autopilot.lock")
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         with lock_path.open("a+", encoding="utf-8") as handle:
@@ -72,8 +73,7 @@ class AutonomousCompanyRuntime:
         now = now or datetime.now(UTC)
         week_key = self._week_key(now)
         if any(
-            objective.get("workflow_key") == "company_operating_review"
-            and objective.get("status") == "active"
+            objective.get("workflow_key") == "company_operating_review" and objective.get("status") == "active"
             for objective in self.control.store.list_objectives(limit=1000)
         ):
             return []
@@ -94,7 +94,6 @@ class AutonomousCompanyRuntime:
             inputs={"review_window": week_key, "cadence_key": week_key},
         )
         return [created]
-
 
     def ensure_daily_backup(self, now: datetime | None = None) -> dict[str, Any]:
         """Create and verify one durable backup per UTC day.
@@ -135,8 +134,7 @@ class AutonomousCompanyRuntime:
                 foreign_keys = connection.execute("PRAGMA foreign_key_check").fetchall()
             if integrity != ["ok"] or foreign_keys:
                 raise RuntimeError(
-                    f"Automatic backup verification failed: integrity={integrity!r}, "
-                    f"foreign_keys={len(foreign_keys)}"
+                    f"Automatic backup verification failed: integrity={integrity!r}, foreign_keys={len(foreign_keys)}"
                 )
             os.replace(temporary, destination)
             self.control.store.set_control(control_key, day, "amaura-autopilot")
@@ -222,9 +220,7 @@ class AutonomousCompanyRuntime:
             signals_detected = self.company.detect_signals(now=now)
             signal_programmes = self.company.process_signals(now=now, max_signals=max_signals)
             created = self.ensure_operating_cadence(now)
-            objective_programmes = self.mission.plan_due_work(
-                now=now, max_new_programmes=max_new_programmes
-            )
+            objective_programmes = self.mission.plan_due_work(now=now, max_new_programmes=max_new_programmes)
             publications = self.control.distribution.dispatch_due(now=now, limit=5)
             units = max(1, min(int(max_work_units), 20))
             executions: list[dict[str, Any]] = []
@@ -239,21 +235,19 @@ class AutonomousCompanyRuntime:
             world = WorldModel(self.control).refresh()
             proactive_insights = ProactiveCognition(self.control).scan()
             from jarvis.amaura.ventures_cashflow import CashflowEngine
+
             venture_cashflow = CashflowEngine(self.control).tick(
-                actor="jarvis", proposal_limit=max(1, min(int(os.environ.get("AMAURA_VENTURE_PROPOSALS_PER_CYCLE", "4")), 20))
+                actor="jarvis",
+                proposal_limit=max(1, min(int(os.environ.get("AMAURA_VENTURE_PROPOSALS_PER_CYCLE", "4")), 20)),
             )
             result = {
                 "status": "ok",
                 "run_id": run["id"],
                 "backup": backup,
                 "cadence_programmes_created": [item["programme"]["id"] for item in created],
-                "objective_programmes_created": [
-                    item["programme"]["id"] for item in objective_programmes
-                ],
+                "objective_programmes_created": [item["programme"]["id"] for item in objective_programmes],
                 "signals_detected": [item["id"] for item in signals_detected],
-                "signal_programmes_created": [
-                    item["programme"]["programme"]["id"] for item in signal_programmes
-                ],
+                "signal_programmes_created": [item["programme"]["programme"]["id"] for item in signal_programmes],
                 "objective_progress_updates": progress_updates,
                 "publications_enqueued": [item["id"] for item in publications],
                 "circuit_breakers": [item["id"] for item in circuit_breakers],
@@ -291,8 +285,10 @@ class AutonomousCompanyRuntime:
                     "ventures_cashflow": {"status": "standby"},
                 }
             return self._tick_locked(
-                now=now, max_work_units=max_work_units,
-                max_new_programmes=max_new_programmes, max_signals=max_signals,
+                now=now,
+                max_work_units=max_work_units,
+                max_new_programmes=max_new_programmes,
+                max_signals=max_signals,
             )
 
     def run_forever(
@@ -313,17 +309,21 @@ class AutonomousCompanyRuntime:
         ``sleep_fn`` exist for deterministic service probes and tests.
         """
         delay = max(5.0, min(float(poll_seconds), 3600.0))
-        base_backoff = max(1.0, min(
-            float(os.environ.get("AMAURA_AUTOPILOT_FAILURE_BACKOFF_BASE_SECONDS", "5")),
-            3600.0,
-        ))
-        max_backoff = max(base_backoff, min(
-            float(os.environ.get("AMAURA_AUTOPILOT_FAILURE_BACKOFF_MAX_SECONDS", "300")),
-            86400.0,
-        ))
-        crash_threshold = max(1, min(
-            int(os.environ.get("AMAURA_AUTOPILOT_CRASH_THRESHOLD", "5")), 100
-        ))
+        base_backoff = max(
+            1.0,
+            min(
+                float(os.environ.get("AMAURA_AUTOPILOT_FAILURE_BACKOFF_BASE_SECONDS", "5")),
+                3600.0,
+            ),
+        )
+        max_backoff = max(
+            base_backoff,
+            min(
+                float(os.environ.get("AMAURA_AUTOPILOT_FAILURE_BACKOFF_MAX_SECONDS", "300")),
+                86400.0,
+            ),
+        )
+        crash_threshold = max(1, min(int(os.environ.get("AMAURA_AUTOPILOT_CRASH_THRESHOLD", "5")), 100))
         sleeper = sleep_fn or time.sleep
         failures = 0
         cycles = 0
@@ -346,38 +346,28 @@ class AutonomousCompanyRuntime:
                     "error_type": type(exc).__name__,
                     "error": str(exc)[:1000],
                 }
-                self.control.store.set_control(
-                    "autopilot.consecutive_failures", str(failures), actor
-                )
-                self.control.store.publish_event(
-                    "company.autopilot.cycle_failed", str(failures), details
-                )
-                self.control.store.audit(
-                    actor, "autopilot_cycle", "runtime", "company", "failed", details
-                )
+                self.control.store.set_control("autopilot.consecutive_failures", str(failures), actor)
+                self.control.store.publish_event("company.autopilot.cycle_failed", str(failures), details)
+                self.control.store.audit(actor, "autopilot_cycle", "runtime", "company", "failed", details)
                 if failures >= crash_threshold:
                     self.control.store.set_control("autopilot_enabled", "0", actor)
-                    self.control.store.set_control(
-                        "autopilot.crash_circuit", "open", actor
-                    )
-                    self.control.store.publish_event(
-                        "company.autopilot.circuit_opened", "company", details
-                    )
+                    self.control.store.set_control("autopilot.crash_circuit", "open", actor)
+                    self.control.store.publish_event("company.autopilot.circuit_opened", "company", details)
                     self.control.store.audit(
-                        actor, "autopilot_crash_circuit", "runtime", "company",
-                        "blocked", details,
+                        actor,
+                        "autopilot_crash_circuit",
+                        "runtime",
+                        "company",
+                        "blocked",
+                        details,
                     )
                     return
                 sleeper(backoff)
                 continue
             if failures:
                 failures = 0
-                self.control.store.set_control(
-                    "autopilot.consecutive_failures", "0", actor
-                )
-                self.control.store.set_control(
-                    "autopilot.crash_circuit", "closed", actor
-                )
+                self.control.store.set_control("autopilot.consecutive_failures", "0", actor)
+                self.control.store.set_control("autopilot.crash_circuit", "closed", actor)
             if max_cycles is None or cycles < max_cycles:
                 sleeper(delay)
 

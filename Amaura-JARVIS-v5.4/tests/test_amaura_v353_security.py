@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import base64
 import os
-import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from jarvis import cli
 from jarvis.network_security import is_loopback_host, validate_bind_security
@@ -63,7 +63,7 @@ def test_websocket_always_requires_key(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("JARVIS_EFFECTIVE_BIND_HOST", "127.0.0.1")
     monkeypatch.setenv("JARVIS_API_KEY", key)
     with TestClient(app) as client:
-        with pytest.raises(Exception):
+        with pytest.raises(WebSocketDisconnect):
             with client.websocket_connect("/ws/chat"):
                 pass
         with client.websocket_connect("/ws/chat", subprotocols=_ws_protocols(key)) as websocket:
@@ -72,8 +72,7 @@ def test_websocket_always_requires_key(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_legacy_web_exports_governed_server():
-    from jarvis import web
-    from jarvis import server
+    from jarvis import server, web
 
     assert web.app is server.app
     assert web.main is server.main

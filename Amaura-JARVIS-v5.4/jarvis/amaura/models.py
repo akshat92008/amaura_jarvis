@@ -106,10 +106,12 @@ class PolicyDecision:
 class GovernanceError(ValueError):
     """Raised when an action violates the Amaura operating doctrine."""
 
+
 class TaskBudget(BaseModel):
     limit_cents: int
     spent_cents: int
     remaining: int
+
 
 class TaskDependency(BaseModel):
     id: str
@@ -118,9 +120,11 @@ class TaskDependency(BaseModel):
     summary: str
     evidence: list[dict[str, Any]]
 
+
 class RepositoryContext(BaseModel):
     branch: str | None = None
     workspace_dir: str | None = None
+
 
 class CanonicalTaskPacket(BaseModel):
     packet_id: str = Field(default_factory=lambda: f"pkt_{uuid.uuid4().hex[:12]}")
@@ -139,6 +143,7 @@ class CanonicalTaskPacket(BaseModel):
     repository_context: RepositoryContext
     doctrine: list[str]
 
+
 class ContentCampaign(BaseModel):
     id: str
     title: str
@@ -146,6 +151,7 @@ class ContentCampaign(BaseModel):
     business_objective: str
     status: str = "draft"
     config: dict[str, Any] = Field(default_factory=dict)
+
 
 class ContentAsset(BaseModel):
     id: str

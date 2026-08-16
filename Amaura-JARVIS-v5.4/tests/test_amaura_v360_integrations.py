@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,19 +21,15 @@ from jarvis.amaura.inbox import (
     verify_meta_signature,
 )
 from jarvis.amaura.integration_control import IntegrationActionController
-from jarvis.amaura.integrations import ProviderReceipt
 from jarvis.amaura.models import GovernanceError
 from jarvis.amaura.nexus_bridge import NexusDeliveryAdapter
 from jarvis.amaura.oauth import OAuthTokenProvider
 from jarvis.amaura.public_sources import (
     AcquisitionDiscoveryRunner,
     DiscoveredBusiness,
-    FreeLeadDiscoveryService,
-    SearchHit,
-    WebsiteProfile,
 )
 from jarvis.amaura.supervisor import AmauraSupervisor
-from jarvis.amaura.workspace_integrations import GoogleCalendarAdapter, GoogleDriveAdapter, GitHubAdapter
+from jarvis.amaura.workspace_integrations import GitHubAdapter, GoogleCalendarAdapter, GoogleDriveAdapter
 
 RECEIPT_KEY = "r" * 64
 
@@ -164,10 +159,15 @@ def test_inbox_ingestion_classifies_and_stages_founder_review(tmp_path):
         assert inserted is True
         duplicate, inserted_again = service.ingest(
             InboundMessage(
-                provider="gmail", external_id="gmail-1", thread_id="thread-1",
-                sender="alice@example.com", recipient="akshat@example.com",
-                subject="Re: automation", body="I am interested. Please send more details and schedule a call.",
-                received_at=datetime.now(UTC).isoformat(), raw_metadata={},
+                provider="gmail",
+                external_id="gmail-1",
+                thread_id="thread-1",
+                sender="alice@example.com",
+                recipient="akshat@example.com",
+                subject="Re: automation",
+                body="I am interested. Please send more details and schedule a call.",
+                received_at=datetime.now(UTC).isoformat(),
+                raw_metadata={},
             )
         )
         assert inserted_again is False
@@ -189,10 +189,15 @@ def test_opt_out_is_enforced_immediately(tmp_path):
         service = InboxService(control.store, "founder")
         inbound, _ = service.ingest(
             InboundMessage(
-                provider="gmail", external_id="gmail-stop", thread_id="thread-stop",
-                sender="alice@example.com", recipient="akshat@example.com", subject="Stop",
+                provider="gmail",
+                external_id="gmail-stop",
+                thread_id="thread-stop",
+                sender="alice@example.com",
+                recipient="akshat@example.com",
+                subject="Stop",
                 body="Please unsubscribe and do not contact me again.",
-                received_at=datetime.now(UTC).isoformat(), raw_metadata={},
+                received_at=datetime.now(UTC).isoformat(),
+                raw_metadata={},
             )
         )
         processed = service.process(inbound["id"])
@@ -211,14 +216,24 @@ def test_gmail_parser_and_meta_signature(monkeypatch):
     def transport(url, **kwargs):
         if "?q=" in url:
             return 200, {"messages": [{"id": "m1"}]}, {}
-        return 200, {
-            "id": "m1", "threadId": "t1", "internalDate": "1700000000000",
-            "payload": {"mimeType": "text/plain", "headers": [
-                {"name": "From", "value": "Alice <alice@example.com>"},
-                {"name": "To", "value": "Akshat <akshat@example.com>"},
-                {"name": "Subject", "value": "Reply"},
-            ], "body": {"data": encoded}},
-        }, {}
+        return (
+            200,
+            {
+                "id": "m1",
+                "threadId": "t1",
+                "internalDate": "1700000000000",
+                "payload": {
+                    "mimeType": "text/plain",
+                    "headers": [
+                        {"name": "From", "value": "Alice <alice@example.com>"},
+                        {"name": "To", "value": "Akshat <akshat@example.com>"},
+                        {"name": "Subject", "value": "Reply"},
+                    ],
+                    "body": {"data": encoded},
+                },
+            },
+            {},
+        )
 
     tokens = OAuthTokenProvider("TEST_GMAIL", access_token="token")
     rows = GmailInboxAdapter(token_provider=tokens, transport=transport).list_messages()
@@ -236,16 +251,42 @@ def test_gmail_parser_and_meta_signature(monkeypatch):
 def test_meta_webhook_parses_whatsapp_and_messenger():
     whatsapp = {
         "object": "whatsapp_business_account",
-        "entry": [{"changes": [{"value": {
-            "metadata": {"display_phone_number": "+911234567890"},
-            "messages": [{"id": "wamid.1", "from": "919999999999", "timestamp": "1700000000", "type": "text", "text": {"body": "Interested"}}],
-        }}]}],
+        "entry": [
+            {
+                "changes": [
+                    {
+                        "value": {
+                            "metadata": {"display_phone_number": "+911234567890"},
+                            "messages": [
+                                {
+                                    "id": "wamid.1",
+                                    "from": "919999999999",
+                                    "timestamp": "1700000000",
+                                    "type": "text",
+                                    "text": {"body": "Interested"},
+                                }
+                            ],
+                        }
+                    }
+                ]
+            }
+        ],
     }
     assert parse_meta_webhook(whatsapp)[0].provider == "whatsapp"
     messenger = {
         "object": "page",
-        "entry": [{"messaging": [{"sender": {"id": "a"}, "recipient": {"id": "b"},
-                                    "timestamp": 1700000000000, "message": {"mid": "mid.1", "text": "Hello"}}]}],
+        "entry": [
+            {
+                "messaging": [
+                    {
+                        "sender": {"id": "a"},
+                        "recipient": {"id": "b"},
+                        "timestamp": 1700000000000,
+                        "message": {"mid": "mid.1", "text": "Hello"},
+                    }
+                ]
+            }
+        ],
     }
     assert parse_meta_webhook(messenger)[0].provider == "facebook"
 
@@ -255,7 +296,8 @@ def test_integration_action_requires_founder_and_enqueues_once(tmp_path):
     try:
         actions = IntegrationActionController(control.store, "founder")
         action = actions.stage(
-            provider="github", operation="create_github_issue",
+            provider="github",
+            operation="create_github_issue",
             payload={"owner": "amaura", "repo": "nexus", "title": "Bug", "body": "Details"},
         )
         with pytest.raises(GovernanceError):
@@ -277,7 +319,12 @@ def test_external_kill_switch_blocks_approval_and_dispatch(tmp_path, monkeypatch
         blocked = actions.stage(
             provider="assisted-browser",
             operation="prepare_assisted_message",
-            payload={"channel": "linkedin", "recipient": "https://linkedin.com/in/example", "subject": "", "body": "Approved text"},
+            payload={
+                "channel": "linkedin",
+                "recipient": "https://linkedin.com/in/example",
+                "subject": "",
+                "body": "Approved text",
+            },
         )
         control.store.set_control("external_actions_kill_switch", "on", "founder")
         with pytest.raises(GovernanceError):
@@ -322,8 +369,10 @@ def test_workspace_adapters_issue_signed_receipts(tmp_path, monkeypatch):
 
     calendar = GoogleCalendarAdapter(token_provider=token, transport=calendar_transport)
     receipt = calendar.create_event(
-        summary="Review", start={"dateTime": "2026-08-07T10:00:00+05:30"},
-        end={"dateTime": "2026-08-07T10:30:00+05:30"}, idempotency_key="calendar-1",
+        summary="Review",
+        start={"dateTime": "2026-08-07T10:00:00+05:30"},
+        end={"dateTime": "2026-08-07T10:30:00+05:30"},
+        idempotency_key="calendar-1",
     )
     assert receipt.verify()
 
@@ -340,7 +389,9 @@ def test_workspace_adapters_issue_signed_receipts(tmp_path, monkeypatch):
         return 201, {"id": 123, "html_url": "https://github.com/amaura/nexus/issues/1"}, {}
 
     github = GitHubAdapter(token="token", transport=github_transport)
-    assert github.create_issue(owner="amaura", repo="nexus", title="Bug", body="Details", idempotency_key="gh-1").verify()
+    assert github.create_issue(
+        owner="amaura", repo="nexus", title="Bug", body="Details", idempotency_key="gh-1"
+    ).verify()
 
 
 def test_telegram_notification_requires_exact_founder_chat(monkeypatch):
@@ -375,23 +426,43 @@ def test_invoice_generation_is_local_and_payment_is_not_self_confirmed(tmp_path,
 def test_public_discovery_runner_persists_evidence_and_scores(tmp_path):
     class FakeService:
         def discover(self, query, *, max_results=10):
-            return [DiscoveredBusiness(
-                company_name="Acme Realty", domain="acme.example", website="https://acme.example",
-                source_url="https://acme.example", source_title="Acme", source_snippet="Public real estate company",
-                social_urls={"linkedin": "https://linkedin.com/company/acme"},
-                emails=("hello@acme.example",), phones=(),
-                observations=({"claim_type": "conversion_gap", "claim": "No contact form found",
-                               "source_url": "https://acme.example", "source_excerpt": "Public website has no contact form.",
-                               "confidence": 0.8},),
-                profile={"has_contact_form": False},
-            )]
+            return [
+                DiscoveredBusiness(
+                    company_name="Acme Realty",
+                    domain="acme.example",
+                    website="https://acme.example",
+                    source_url="https://acme.example",
+                    source_title="Acme",
+                    source_snippet="Public real estate company",
+                    social_urls={"linkedin": "https://linkedin.com/company/acme"},
+                    emails=("hello@acme.example",),
+                    phones=(),
+                    observations=(
+                        {
+                            "claim_type": "conversion_gap",
+                            "claim": "No contact form found",
+                            "source_url": "https://acme.example",
+                            "source_excerpt": "Public website has no contact form.",
+                            "confidence": 0.8,
+                        },
+                    ),
+                    profile={"has_contact_form": False},
+                )
+            ]
 
     control = AmauraControlPlane(tmp_path / "amaura.sqlite3")
     try:
         control.acquisition.create_campaign(
-            campaign_id="campaign1", name="Campaign", target_segment="Real estate", offer="Automation",
-            minimum_score=70, daily_lead_limit=10, daily_outreach_limit=3,
-            daily_followup_limit=5, maximum_followups=2, config={},
+            campaign_id="campaign1",
+            name="Campaign",
+            target_segment="Real estate",
+            offer="Automation",
+            minimum_score=70,
+            daily_lead_limit=10,
+            daily_outreach_limit=3,
+            daily_followup_limit=5,
+            maximum_followups=2,
+            config={},
         )
         results = AcquisitionDiscoveryRunner(control.acquisition, service=FakeService()).run(
             campaign_id="campaign1", query="real estate"
@@ -416,8 +487,11 @@ def test_nexus_bridge_uses_argv_timeout_and_result_receipt(tmp_path, monkeypatch
     )
     adapter = NexusDeliveryAdapter(command=f"{sys.executable} {script}")
     receipt = adapter.run(
-        repository_path=str(repository), objective="Run verified task",
-        acceptance_criteria=["Tests pass"], idempotency_key="nexus-1", timeout_seconds=60,
+        repository_path=str(repository),
+        objective="Run verified task",
+        acceptance_criteria=["Tests pass"],
+        idempotency_key="nexus-1",
+        timeout_seconds=60,
     )
     assert receipt.external_id == "run-1"
     assert receipt.verify()

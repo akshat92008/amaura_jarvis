@@ -1,8 +1,0 @@
-{
-  "command": "PYTHONPATH=. python3 -m pytest tests/ -q",
-  "exit_code": 0,
-  "duration_seconds": 127.36,
-  "passed": 772,
-  "failed": 0,
-  "skipped": 1
-}

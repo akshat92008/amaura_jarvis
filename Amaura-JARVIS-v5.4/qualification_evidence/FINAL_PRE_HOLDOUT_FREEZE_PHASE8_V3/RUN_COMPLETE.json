@@ -1,7 +1,0 @@
-{
-  "completed_at_utc": "2026-08-15T12:03:11.453515+00:00",
-  "evidence_artifact_hashes_sha256": "3969e0d6c07c5c1249349430c4487847f7254d8b132f4705af44293cae81c166",
-  "final_source_mismatch_count": 0,
-  "freeze_run_id": "PHASE8_V3_b0ed8c0bb671427d",
-  "freeze_status": "FROZEN_AND_VERIFIED"
-}

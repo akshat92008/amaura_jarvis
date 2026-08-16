@@ -1,1 +1,0 @@
-Read the file '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/SuperMario.py' and tell me exactly what code is in it.

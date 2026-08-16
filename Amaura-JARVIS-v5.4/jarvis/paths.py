@@ -12,7 +12,9 @@ from pathlib import Path
 def get_data_dir() -> Path:
     """Return a writable data root, preferring JARVIS_DATA_DIR then the user profile."""
     configured = os.environ.get("JARVIS_DATA_DIR", "").strip()
-    candidates = [Path(configured).expanduser()] if configured else [Path.home() / ".jarvis", Path.cwd() / ".jarvis-data"]
+    candidates = (
+        [Path(configured).expanduser()] if configured else [Path.home() / ".jarvis", Path.cwd() / ".jarvis-data"]
+    )
     errors: list[str] = []
     for candidate in candidates:
         try:

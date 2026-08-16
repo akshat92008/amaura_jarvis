@@ -68,7 +68,8 @@ TOOL_RISK_CLASSES = {
         "amaura_register_content_asset",
         "amaura_record_content_metrics",
         "amaura_update_crm",
-        "amaura_register_venture_opportunity", "amaura_execute_capability",
+        "amaura_register_venture_opportunity",
+        "amaura_execute_capability",
         "amaura_record_venture_metric",
         "amaura_cashflow_tick",
         "amaura_record_cashflow_financial",
@@ -88,9 +89,22 @@ FORBIDDEN_FILE_PATTERNS = (
 
 CAPABILITY_RULES: dict[str, set[str]] = {
     "plan": {
-        "amaura_create_program", "amaura_task_packet", "amaura_list_tasks", "amaura_company_status",
-        "amaura_company_blueprint", "amaura_resource_inventory", "amaura_capability_health", "amaura_capability_plan", "amaura_execute_capability", "amaura_cashflow_dashboard", "amaura_cashflow_tick",
-        "read_file", "search_code", "get_project_structure", "web_search", "create_document"
+        "amaura_create_program",
+        "amaura_task_packet",
+        "amaura_list_tasks",
+        "amaura_company_status",
+        "amaura_company_blueprint",
+        "amaura_resource_inventory",
+        "amaura_capability_health",
+        "amaura_capability_plan",
+        "amaura_execute_capability",
+        "amaura_cashflow_dashboard",
+        "amaura_cashflow_tick",
+        "read_file",
+        "search_code",
+        "get_project_structure",
+        "web_search",
+        "create_document",
     },
     "delegate": {"amaura_run_task", "amaura_create_program", "amaura_supervisor_tick"},
     "pause": {"amaura_pause_agent"},
@@ -98,41 +112,120 @@ CAPABILITY_RULES: dict[str, set[str]] = {
     "request_approval": {"amaura_review_task", "amaura_record_decision", "amaura_pending_approvals", "read_file"},
     "configure_campaign": {"amaura_create_campaign", "read_file", "recall_memory"},
     "research": {
-        "web_search", "web_fetch", "read_file", "read_pdf", "amaura_discover_lead", "amaura_record_lead_evidence",
-        "search_code", "find_files", "get_project_structure", "amaura_register_content_asset",
-        "amaura_register_venture_opportunity", "amaura_execute_capability"
+        "web_search",
+        "web_fetch",
+        "read_file",
+        "read_pdf",
+        "amaura_discover_lead",
+        "amaura_record_lead_evidence",
+        "search_code",
+        "find_files",
+        "get_project_structure",
+        "amaura_register_content_asset",
+        "amaura_register_venture_opportunity",
+        "amaura_execute_capability",
     },
     "extract": {"amaura_record_lead_evidence", "web_fetch", "read_file", "amaura_execute_capability"},
     "analyse": {
-        "amaura_score_lead", "amaura_transition_lead", "amaura_record_content_metrics",
-        "read_file", "recall_memory", "analyze_code", "web_search", "web_fetch", "amaura_company_status", "amaura_list_tasks",
-        "amaura_venture_dashboard", "amaura_cashflow_dashboard", "amaura_record_venture_metric", "amaura_record_cashflow_financial", "amaura_venture_recommendation"
+        "amaura_score_lead",
+        "amaura_transition_lead",
+        "amaura_record_content_metrics",
+        "read_file",
+        "recall_memory",
+        "analyze_code",
+        "web_search",
+        "web_fetch",
+        "amaura_company_status",
+        "amaura_list_tasks",
+        "amaura_venture_dashboard",
+        "amaura_cashflow_dashboard",
+        "amaura_record_venture_metric",
+        "amaura_record_cashflow_financial",
+        "amaura_venture_recommendation",
     },
     "draft": {"read_file", "create_document", "write_file"},
     "draft_external": {"amaura_stage_outreach", "read_file", "create_document", "amaura_register_content_asset"},
-    "draft_public": {"amaura_register_content_asset", "read_file", "create_document", "create_presentation", "run_command"},
-    "download_approved_assets": {"amaura_register_content_asset", "web_search", "web_fetch", "read_file", "amaura_execute_capability"},
+    "draft_public": {
+        "amaura_register_content_asset",
+        "read_file",
+        "create_document",
+        "create_presentation",
+        "run_command",
+    },
+    "download_approved_assets": {
+        "amaura_register_content_asset",
+        "web_search",
+        "web_fetch",
+        "read_file",
+        "amaura_execute_capability",
+    },
     "render_media": {"amaura_register_content_asset", "read_file", "run_command", "amaura_execute_capability"},
     "approve_or_reject": {
-        "amaura_execute_capability", "amaura_transition_lead", "amaura_register_content_asset", "read_file", "search_code",
-        "run_tests", "lint_code", "analyze_code", "git_diff", "recall_memory"
+        "amaura_execute_capability",
+        "amaura_transition_lead",
+        "amaura_register_content_asset",
+        "read_file",
+        "search_code",
+        "run_tests",
+        "lint_code",
+        "analyze_code",
+        "git_diff",
+        "recall_memory",
     },
     "update_crm": {"amaura_transition_lead", "amaura_update_crm", "read_file", "write_file"},
     "read_crm": {"read_file", "write_file", "amaura_transition_lead"},
-    "recommend": {"read_file", "recall_memory", "web_fetch", "search_code", "get_project_structure", "analyze_code", "amaura_venture_dashboard", "amaura_cashflow_dashboard", "amaura_venture_recommendation"},
+    "recommend": {
+        "read_file",
+        "recall_memory",
+        "web_fetch",
+        "search_code",
+        "get_project_structure",
+        "analyze_code",
+        "amaura_venture_dashboard",
+        "amaura_cashflow_dashboard",
+        "amaura_venture_recommendation",
+    },
     "define_acceptance_criteria": {"read_file", "search_code", "get_project_structure"},
     "analyse_repo": {"read_file", "search_code", "get_project_structure", "analyze_code"},
     "author_adr": {"read_file", "search_code", "get_project_structure", "analyze_code"},
-    "read_repo": {"read_file", "search_code", "find_files", "get_project_structure", "index_codebase_ast", "search_symbol"},
-    "index_repo": {"index_codebase_ast", "search_symbol", "read_file", "search_code", "find_files", "get_project_structure"},
+    "read_repo": {
+        "read_file",
+        "search_code",
+        "find_files",
+        "get_project_structure",
+        "index_codebase_ast",
+        "search_symbol",
+    },
+    "index_repo": {
+        "index_codebase_ast",
+        "search_symbol",
+        "read_file",
+        "search_code",
+        "find_files",
+        "get_project_structure",
+    },
     "write_branch": {"write_file", "run_command", "run_tests", "read_file", "search_code"},
     "write_exact_patch": {"edit_file", "diff_files", "read_file"},
     "run_safe_commands": {
-        "run_command", "run_tests", "lint_code", "analyze_code", "git_diff", "read_file",
-        "amaura_register_content_asset", "create_document"
+        "run_command",
+        "run_tests",
+        "lint_code",
+        "analyze_code",
+        "git_diff",
+        "read_file",
+        "amaura_register_content_asset",
+        "create_document",
     },
     "run_sandboxed_experiment": {"run_command", "run_tests"},
-    "evaluate": {"read_file", "read_pdf", "web_search", "web_fetch", "run_command", "run_tests", "amaura_execute_capability"},
+    "evaluate": {
+        "read_file",
+        "read_pdf",
+        "web_search",
+        "web_fetch",
+        "run_command",
+        "run_tests",
+        "amaura_execute_capability",
+    },
     "prioritise": {"read_file", "recall_memory", "amaura_company_status", "amaura_list_tasks"},
     "recommend_pricing": {"read_file", "recall_memory", "amaura_company_status", "amaura_list_tasks"},
     "create_draft_after_approval": {"read_file"},
@@ -250,7 +343,9 @@ class PolicyEngine:
         if RISK_ORDER[risk] > RISK_ORDER[agent.max_risk]:
             reasons.append(f"{agent.name} may not own {risk.value}-risk work")
         if task["budget_cents"] > agent.cost_limit_cents:
-            reasons.append(f"Task budget {task['budget_cents']}c exceeds {agent.name}'s {agent.cost_limit_cents}c limit")
+            reasons.append(
+                f"Task budget {task['budget_cents']}c exceeds {agent.name}'s {agent.cost_limit_cents}c limit"
+            )
         if task.get("reviewer_id") == task["owner_id"]:
             reasons.append("No agent may review its own work")
         return PolicyDecision(allowed=not reasons, reasons=tuple(reasons))
@@ -276,7 +371,9 @@ class PolicyEngine:
         return PolicyDecision(allowed=not reasons, reasons=tuple(reasons))
 
     @staticmethod
-    def validate_tool_action(task: dict[str, Any], agent_id: str, tool_name: str, args: dict[str, Any]) -> PolicyDecision:
+    def validate_tool_action(
+        task: dict[str, Any], agent_id: str, tool_name: str, args: dict[str, Any]
+    ) -> PolicyDecision:
         agent = get_agent(agent_id)
         reasons: list[str] = []
         if task.get("state") != "in_progress":
@@ -286,13 +383,9 @@ class PolicyEngine:
         if tool_name not in agent.tools:
             reasons.append(f"Tool '{tool_name}' is outside {agent.name}'s approved tool set")
         capability_scopes = {
-            scope
-            for permission in agent.permissions
-            for scope in CAPABILITY_RULES.get(permission, set())
+            scope for permission in agent.permissions for scope in CAPABILITY_RULES.get(permission, set())
         }
-        governed_business_tools = {
-            tool for tools in CAPABILITY_RULES.values() for tool in tools
-        }
+        governed_business_tools = {tool for tools in CAPABILITY_RULES.values() for tool in tools}
         if tool_name in governed_business_tools and tool_name not in capability_scopes:
             reasons.append(f"Tool '{tool_name}' requires a matching agent permission scope")
         if tool_name == "amaura_execute_capability" and args:
@@ -310,7 +403,9 @@ class PolicyEngine:
                 )
         risk_class = tool_risk_class(tool_name)
         if risk_class in {"R3", "R4"}:
-            reasons.append(f"{risk_class} tool '{tool_name}' must execute through an authenticated founder approval adapter")
+            reasons.append(
+                f"{risk_class} tool '{tool_name}' must execute through an authenticated founder approval adapter"
+            )
         serialized = json.dumps(args, default=str)
         if any(pattern.search(serialized) for pattern in SECRET_PATTERNS):
             reasons.append("Potential credential or secret detected in action payload")
@@ -327,7 +422,9 @@ class PolicyEngine:
             candidate = candidate.resolve()
             if candidate != workspace and workspace not in candidate.parents:
                 reasons.append(f"Path argument '{key}' escapes the assigned workspace")
-            if any(pattern.search(str(candidate)) for pattern in FORBIDDEN_FILE_PATTERNS) or any(pattern.search(raw_value) for pattern in FORBIDDEN_FILE_PATTERNS):
+            if any(pattern.search(str(candidate)) for pattern in FORBIDDEN_FILE_PATTERNS) or any(
+                pattern.search(raw_value) for pattern in FORBIDDEN_FILE_PATTERNS
+            ):
                 reasons.append(f"Access to secret/credential file in argument '{key}' is strictly forbidden")
         if tool_name == "web_fetch":
             safe_url, url_reason = _public_http_url(str(args.get("url", "")))
@@ -339,7 +436,17 @@ class PolicyEngine:
                 reasons.append(f"Shell-backed argument '{argument}' contains unsafe characters")
         if tool_name == "run_tests":
             framework = str(args.get("framework", "")).strip()
-            if framework and framework not in {"pytest", "unittest", "jest", "vitest", "mocha", "go", "cargo", "rspec", "phpunit"}:
+            if framework and framework not in {
+                "pytest",
+                "unittest",
+                "jest",
+                "vitest",
+                "mocha",
+                "go",
+                "cargo",
+                "rspec",
+                "phpunit",
+            }:
                 reasons.append("Test framework is outside the governed allowlist")
         if tool_name == "lint_code":
             linter = str(args.get("linter", "")).strip()
@@ -370,7 +477,9 @@ class PolicyEngine:
                 reasons.append("Command is outside the governed test/build/read-only allowlist")
         risk = RiskLevel(task["risk"])
         manual = risk is RiskLevel.CRITICAL or risk_class == "R4"
-        requires_approval = manual or risk in {RiskLevel.MEDIUM, RiskLevel.HIGH} or task["action_type"] in EXTERNAL_ACTIONS
+        requires_approval = (
+            manual or risk in {RiskLevel.MEDIUM, RiskLevel.HIGH} or task["action_type"] in EXTERNAL_ACTIONS
+        )
         return PolicyDecision(
             allowed=not reasons and not manual,
             requires_approval=requires_approval,
@@ -389,7 +498,8 @@ class PolicyEngine:
             reasons.append("No external claim or commitment may proceed without evidence")
         return PolicyDecision(
             allowed=not reasons,
-            requires_approval=risk in {RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL} or task["action_type"] in EXTERNAL_ACTIONS,
+            requires_approval=risk in {RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL}
+            or task["action_type"] in EXTERNAL_ACTIONS,
             manual_execution=risk is RiskLevel.CRITICAL,
             reasons=tuple(reasons),
         )

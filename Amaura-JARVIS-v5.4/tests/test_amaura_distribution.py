@@ -25,9 +25,7 @@ def _ready_campaign(control: AmauraControlPlane, campaign_id: str = "campaign1")
         business_objective="Owned audience growth",
     )
     assets = []
-    for index, asset_type in enumerate(
-        ("master", "claim_map", "licence_inventory", "qa_report", "metadata")
-    ):
+    for index, asset_type in enumerate(("master", "claim_map", "licence_inventory", "qa_report", "metadata")):
         payload = f"{asset_type}-{index}".encode()
         assets.append(
             factory.register_asset(
@@ -45,8 +43,9 @@ def _ready_campaign(control: AmauraControlPlane, campaign_id: str = "campaign1")
 
 @pytest.fixture()
 def control():
-    with tempfile.TemporaryDirectory() as directory, patch.dict(
-        "os.environ", {"AMAURA_PROVIDER_RECEIPT_KEY": RECEIPT_KEY}
+    with (
+        tempfile.TemporaryDirectory() as directory,
+        patch.dict("os.environ", {"AMAURA_PROVIDER_RECEIPT_KEY": RECEIPT_KEY}),
     ):
         instance = AmauraControlPlane(Path(directory) / "amaura.db")
         try:
@@ -112,9 +111,7 @@ def test_publication_confirmation_requires_exact_signed_receipt(control: AmauraC
         payload=payload,
         status="published",
     )
-    confirmed = control.distribution.confirm_publication(
-        publication["id"], provider_receipt=receipt
-    )
+    confirmed = control.distribution.confirm_publication(publication["id"], provider_receipt=receipt)
     assert confirmed["status"] == "published"
     assert confirmed["external_id"] == "linkedin-post-123"
 
@@ -165,14 +162,17 @@ def test_public_adapter_requires_provider_echoes():
             {},
         )
 
-    with patch.dict(
-        "os.environ",
-        {
-            "AMAURA_ENABLE_PUBLICATION": "1",
-            "AMAURA_ENABLE_PUBLIC_PUBLISH": "1",
-            "AMAURA_PROVIDER_RECEIPT_KEY": RECEIPT_KEY,
-        },
-    ), patch("jarvis.amaura.integrations.validate_public_url"):
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "AMAURA_ENABLE_PUBLICATION": "1",
+                "AMAURA_ENABLE_PUBLIC_PUBLISH": "1",
+                "AMAURA_PROVIDER_RECEIPT_KEY": RECEIPT_KEY,
+            },
+        ),
+        patch("jarvis.amaura.integrations.validate_public_url"),
+    ):
         adapter = ApprovedPublicationAdapter(
             endpoint="https://api.example.com/publish",
             access_token="token",
@@ -259,8 +259,9 @@ def test_autopilot_enqueues_approved_due_publication(control: AmauraControlPlane
 
 
 def test_concurrent_autopilots_enqueue_one_publication():
-    with tempfile.TemporaryDirectory() as directory, patch.dict(
-        "os.environ", {"AMAURA_PROVIDER_RECEIPT_KEY": RECEIPT_KEY}
+    with (
+        tempfile.TemporaryDirectory() as directory,
+        patch.dict("os.environ", {"AMAURA_PROVIDER_RECEIPT_KEY": RECEIPT_KEY}),
     ):
         db_path = Path(directory) / "amaura.db"
         first = AmauraControlPlane(db_path)
@@ -289,10 +290,22 @@ def test_concurrent_autopilots_enqueue_one_publication():
             matching = [event for event in events if event["operation"] == "publish_content"]
             assert len(matching) == 1
             enqueued_events = first.store.list_events("distribution.publication.enqueued", limit=100)
-            assert len([event for event in enqueued_events if event["aggregate_id"] == staged["publication"]["id"]]) == 1
+            assert (
+                len([event for event in enqueued_events if event["aggregate_id"] == staged["publication"]["id"]]) == 1
+            )
             audits = first.store.list_audit(limit=200)
-            assert len([entry for entry in audits if entry["action"] == "enqueue_publication" and entry["resource_id"] == staged["publication"]["id"]]) == 1
-            publication = first.store.get_distribution_publication(staged["publication"]["id"] )
+            assert (
+                len(
+                    [
+                        entry
+                        for entry in audits
+                        if entry["action"] == "enqueue_publication"
+                        and entry["resource_id"] == staged["publication"]["id"]
+                    ]
+                )
+                == 1
+            )
+            publication = first.store.get_distribution_publication(staged["publication"]["id"])
             assert publication["outbox_event_id"] == matching[0]["id"]
         finally:
             first.close()

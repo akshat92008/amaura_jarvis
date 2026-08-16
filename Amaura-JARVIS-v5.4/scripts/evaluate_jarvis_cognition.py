@@ -6,12 +6,12 @@ founder-language intent routing and dynamic-plan invariants. For serious model
 qualification, pass a private JSONL scenario pack with --cases; the file is not
 bundled into release artifacts, reducing benchmark overfitting.
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import os
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -85,15 +85,17 @@ def planning_checks() -> list[dict]:
         key_set = set(keys)
         dependencies_valid = all(set(task.depends_on) <= key_set for task in plan.tasks)
         reviewers_separated = all(task.owner_id != task.reviewer_id for task in plan.tasks)
-        output.append({
-            "objective": objective,
-            "domain": plan.domain,
-            "task_count": len(plan.tasks),
-            "unique_keys": len(keys) == len(key_set),
-            "dependencies_valid": dependencies_valid,
-            "reviewers_separated": reviewers_separated,
-            "passed": bool(plan.tasks and len(keys) == len(key_set) and dependencies_valid and reviewers_separated),
-        })
+        output.append(
+            {
+                "objective": objective,
+                "domain": plan.domain,
+                "task_count": len(plan.tasks),
+                "unique_keys": len(keys) == len(key_set),
+                "dependencies_valid": dependencies_valid,
+                "reviewers_separated": reviewers_separated,
+                "passed": bool(plan.tasks and len(keys) == len(key_set) and dependencies_valid and reviewers_separated),
+            }
+        )
     return output
 
 
@@ -110,7 +112,9 @@ def main() -> int:
     intent_rows = []
     for case in load_cases(args.cases):
         actual = engine.classify(case.text)
-        intent_rows.append({"text": case.text, "expected": case.expected, "actual": actual, "passed": actual == case.expected})
+        intent_rows.append(
+            {"text": case.text, "expected": case.expected, "actual": actual, "passed": actual == case.expected}
+        )
     plans = planning_checks()
     result = {
         "intent": {
@@ -124,7 +128,10 @@ def main() -> int:
             "cases": plans,
         },
     }
-    result["passed"] = result["intent"]["passed"] == result["intent"]["total"] and result["planning"]["passed"] == result["planning"]["total"]
+    result["passed"] = (
+        result["intent"]["passed"] == result["intent"]["total"]
+        and result["planning"]["passed"] == result["planning"]["total"]
+    )
     payload = json.dumps(result, indent=2, sort_keys=True) + "\n"
     if args.output:
         args.output.write_text(payload, encoding="utf-8")

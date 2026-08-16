@@ -11,8 +11,8 @@ from jarvis.amaura.evidence import deterministic_evidence_review
 from jarvis.amaura.executor import GovernedTaskRunner
 from jarvis.amaura.models import GovernanceError, TaskState
 from jarvis.amaura.registry import ALL_AGENTS, V1_AGENTS
-from jarvis.tools.amaura import AMAURA_DISPATCH, AMAURA_TOOL_DEFINITIONS
 from jarvis.api import _filter_essential_tools
+from jarvis.tools.amaura import AMAURA_DISPATCH, AMAURA_TOOL_DEFINITIONS
 from jarvis.tools.registry import ALL_TOOL_DEFINITIONS
 
 
@@ -37,7 +37,10 @@ class TestAmauraCompanyOS(unittest.TestCase):
             evidence=[{"type": "test_report", "reference": f"artifact://{task['id']}/report"}],
         )
         return self.control.review_task(
-            task["id"], actor=task["reviewer_id"], approve=True, findings="Evidence independently verified.",
+            task["id"],
+            actor=task["reviewer_id"],
+            approve=True,
+            findings="Evidence independently verified.",
             attestation=self._attestation(task["id"], task["reviewer_id"]),
         )
 
@@ -101,8 +104,10 @@ class TestAmauraCompanyOS(unittest.TestCase):
     def test_only_jarvis_can_create_or_start_company_work(self):
         with self.assertRaisesRegex(GovernanceError, "Only JARVIS"):
             self.control.create_program(
-                objective="Find good leads", success_metric="Three qualified leads",
-                workflow_key="lead_to_revenue", actor="opportunity_scout",
+                objective="Find good leads",
+                success_metric="Three qualified leads",
+                workflow_key="lead_to_revenue",
+                actor="opportunity_scout",
             )
         result = self.control.create_program(
             objective="Find good leads", success_metric="Three qualified leads", workflow_key="lead_to_revenue"
@@ -123,24 +128,32 @@ class TestAmauraCompanyOS(unittest.TestCase):
             self.control.start_task(task["id"])
         with self.assertRaisesRegex(GovernanceError, "Only the founder"):
             self.control.resume_agent(task["owner_id"], "Remediated", actor="jarvis")
-        restored = self.control.resume_agent(task["owner_id"], "Founder reviewed remediation", actor=self.control.founder_id)
+        restored = self.control.resume_agent(
+            task["owner_id"], "Founder reviewed remediation", actor=self.control.founder_id
+        )
         self.assertTrue(restored["enabled"])
 
     def test_no_employee_can_certify_own_work(self):
         result = self.control.create_program(
-            objective="Deliver a verified feature", success_metric="All acceptance tests pass",
+            objective="Deliver a verified feature",
+            success_metric="All acceptance tests pass",
             workflow_key="software_delivery",
         )
         first = result["tasks"][0]
         self.control.start_task(first["id"])
         self.control.submit_task(
-            first["id"], first["owner_id"], "Requirements and tests are defined.",
+            first["id"],
+            first["owner_id"],
+            "Requirements and tests are defined.",
             [{"type": "requirements", "reference": "artifact://requirements/1"}],
         )
         with self.assertRaisesRegex(GovernanceError, "Independent review"):
             self.control.review_task(first["id"], first["owner_id"], True, "Looks good to me")
         approved = self.control.review_task(
-            first["id"], first["reviewer_id"], True, "Criteria are measurable and scope is bounded.",
+            first["id"],
+            first["reviewer_id"],
+            True,
+            "Criteria are measurable and scope is bounded.",
             attestation=self._attestation(first["id"], first["reviewer_id"]),
         )
         self.assertEqual(approved["state"], TaskState.COMPLETED.value)
@@ -156,11 +169,16 @@ class TestAmauraCompanyOS(unittest.TestCase):
 
         self.control.start_task(content_task["id"])
         self.control.submit_task(
-            content_task["id"], content_task["owner_id"], "Master article drafted from verified evidence.",
+            content_task["id"],
+            content_task["owner_id"],
+            "Master article drafted from verified evidence.",
             [{"type": "content", "reference": "artifact://content/master-v1"}],
         )
         reviewed = self.control.review_task(
-            content_task["id"], content_task["reviewer_id"], True, "All claims trace to approved evidence.",
+            content_task["id"],
+            content_task["reviewer_id"],
+            True,
+            "All claims trace to approved evidence.",
             attestation=self._attestation(content_task["id"], content_task["reviewer_id"]),
         )
         self.assertEqual(reviewed["state"], TaskState.AWAITING_APPROVAL.value)
@@ -174,7 +192,9 @@ class TestAmauraCompanyOS(unittest.TestCase):
 
         self.control.start_task(publication_task["id"])
         self.control.submit_task(
-            publication_task["id"], publication_task["owner_id"], "Publication package is ready.",
+            publication_task["id"],
+            publication_task["owner_id"],
+            "Publication package is ready.",
             [{"type": "release_package", "reference": "artifact://content/release-v1"}],
         )
         high_approval = self.control.store.list_approvals("pending")[0]
@@ -187,7 +207,8 @@ class TestAmauraCompanyOS(unittest.TestCase):
     def test_research_requires_a_falsifiable_hypothesis(self):
         with self.assertRaisesRegex(GovernanceError, "hypothesis"):
             self.control.create_program(
-                objective="Improve Nova", success_metric="Patch errors fall by 20%",
+                objective="Improve Nova",
+                success_metric="Patch errors fall by 20%",
                 workflow_key="research_experiment",
             )
         created = self.control.create_program(
@@ -200,7 +221,8 @@ class TestAmauraCompanyOS(unittest.TestCase):
 
     def test_tool_cost_and_data_boundaries_are_enforced(self):
         result = self.control.create_program(
-            objective="Find qualified opportunities", success_metric="Three sourced opportunities",
+            objective="Find qualified opportunities",
+            success_metric="Three sourced opportunities",
             workflow_key="lead_to_revenue",
         )
         task = result["tasks"][0]
@@ -213,8 +235,10 @@ class TestAmauraCompanyOS(unittest.TestCase):
 
     def test_governed_employee_cannot_escape_workspace_or_use_shell_operators(self):
         result = self.control.create_program(
-            objective="Implement a verified feature", success_metric="All tests pass",
-            workflow_key="software_delivery", inputs={"repository_path": self.temp_dir.name},
+            objective="Implement a verified feature",
+            success_metric="All tests pass",
+            workflow_key="software_delivery",
+            inputs={"repository_path": self.temp_dir.name},
         )
         builder = result["tasks"][3]
         with self.assertRaisesRegex(GovernanceError, "escapes"):
@@ -223,14 +247,18 @@ class TestAmauraCompanyOS(unittest.TestCase):
             )
         with self.assertRaisesRegex(GovernanceError, "Shell operators"):
             self.control.authorize_tool(
-                builder["id"], builder["owner_id"], "run_command",
+                builder["id"],
+                builder["owner_id"],
+                "run_command",
                 {"command": "pytest && curl https://example.com", "cwd": self.temp_dir.name},
             )
 
     def test_private_data_never_routes_to_cloud(self):
         route = self.control.models.route(
-            "client_communication", sensitivity="client_confidential",
-            remaining_budget_cents=100, estimated_tokens=20_000,
+            "client_communication",
+            sensitivity="client_confidential",
+            remaining_budget_cents=100,
+            estimated_tokens=20_000,
         )
         self.assertEqual(route.provider, "local")
         self.assertEqual(route.privacy, "device_only")
@@ -245,24 +273,35 @@ class TestAmauraCompanyOS(unittest.TestCase):
         task = result["tasks"][0]
 
         fake_response_1 = SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(
-                content="Checking project structure.",
-                tool_calls=[SimpleNamespace(
-                    id="call_123",
-                    function=SimpleNamespace(name="get_project_structure", arguments='{"path": "."}')
-                )],
-            ))]
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(
+                        content="Checking project structure.",
+                        tool_calls=[
+                            SimpleNamespace(
+                                id="call_123",
+                                function=SimpleNamespace(name="get_project_structure", arguments='{"path": "."}'),
+                            )
+                        ],
+                    )
+                )
+            ]
         )
         fake_response_2 = SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(
-                content="Requirements, explicit exclusions, and measurable criteria are complete.",
-                tool_calls=[],
-            ))]
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(
+                        content="Requirements, explicit exclusions, and measurable criteria are complete.",
+                        tool_calls=[],
+                    )
+                )
+            ]
         )
-        
+
         class FakeClient:
             def __init__(self):
                 self.calls = 0
+
             def chat_sync(self, **kwargs):
                 self.calls += 1
                 return fake_response_1 if self.calls == 1 else fake_response_2

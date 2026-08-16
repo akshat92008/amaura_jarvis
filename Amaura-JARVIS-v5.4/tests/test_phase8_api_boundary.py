@@ -11,10 +11,14 @@ Verifies end-to-end API streaming behavior for all Phase 8 semantic composition 
 
 import json
 import os
-import random
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+
+import pytest
+from starlette.testclient import TestClient
+
+from jarvis.server import app
+from jarvis.tools.amaura import reset_control_plane
 
 TEST_AUTH_TOKEN = "test_api_token_phase8_12345678901234567890"
 TEST_OP_TOKEN = "test_operator_token_phase8_9876543210"
@@ -24,13 +28,6 @@ os.environ["JARVIS_API_KEY"] = TEST_AUTH_TOKEN
 os.environ["AMAURA_OPERATOR_KEY"] = TEST_OP_TOKEN
 os.environ["AMAURA_AUDIT_HMAC_KEY"] = TEST_HMAC_SECRET
 os.environ["JARVIS_REQUIRE_LOCAL_AUTH"] = "0"
-
-import pytest
-from starlette.testclient import TestClient
-from jarvis.server import app
-from jarvis.tools.amaura import reset_control_plane
-from jarvis.amaura.direct_action import ResponseMode
-
 
 HEADERS = {
     "X-Jarvis-Key": TEST_AUTH_TOKEN,
@@ -66,7 +63,7 @@ def test_api_boundary_exact_literal_echo(client):
     res = client.post("/api/chat/stream", json=payload, headers=HEADERS)
     assert res.status_code == 200
     lines = [json.loads(line) for line in res.text.strip().split("\n") if line.strip()]
-    complete = [l for l in lines if l.get("type") == "complete"]
+    complete = [item for item in lines if item.get("type") == "complete"]
     assert len(complete) > 0
     assert complete[0]["response"] == "EXACT_PAYLOAD_PHASE8_999"
 
@@ -170,7 +167,7 @@ def test_calculate_total():
         res = client.post("/api/chat/stream", json=payload, headers=HEADERS)
         assert res.status_code == 200
         lines = [json.loads(line) for line in res.text.strip().split("\n") if line.strip()]
-        complete = [l for l in lines if l.get("type") == "complete"]
+        complete = [item for item in lines if item.get("type") == "complete"]
         assert len(complete) > 0
         response_text = complete[0]["response"]
         assert "wrong_helper_call" in response_text or "calculate_total" in response_text

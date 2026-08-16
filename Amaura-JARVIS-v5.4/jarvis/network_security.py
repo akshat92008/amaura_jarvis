@@ -5,6 +5,7 @@ an independently generated API key is configured. These helpers intentionally
 avoid trusting forwarded headers because the default server is not a proxy-aware
 internet service.
 """
+
 from __future__ import annotations
 
 import base64
@@ -51,10 +52,13 @@ def is_ip_address(value: Any) -> bool:
 
 
 def effective_bind_host() -> str:
-    return os.environ.get(
-        "JARVIS_EFFECTIVE_BIND_HOST",
-        os.environ.get("JARVIS_HOST", "127.0.0.1"),
-    ).strip() or "127.0.0.1"
+    return (
+        os.environ.get(
+            "JARVIS_EFFECTIVE_BIND_HOST",
+            os.environ.get("JARVIS_HOST", "127.0.0.1"),
+        ).strip()
+        or "127.0.0.1"
+    )
 
 
 def validate_bind_security(host: str, api_key: str | None = None) -> None:

@@ -32,16 +32,16 @@ import sys
 import tempfile
 import threading
 import time
-from dataclasses import dataclass, asdict, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import httpx
-
 
 # ---------------------------------------------------------------------------
 # Repo / independent source baseline
 # ---------------------------------------------------------------------------
+
 
 def find_repo_root() -> Path:
     here = Path(__file__).resolve()
@@ -56,6 +56,7 @@ sys.path.insert(0, str(ROOT))
 
 try:
     from jarvis.amaura.runtime import load_amaura_env
+
     load_amaura_env()
 except Exception:
     pass
@@ -76,17 +77,45 @@ WORK.mkdir(parents=True, exist_ok=True)
 PASS, FAIL, BLOCKED = "PASS", "FAIL", "BLOCKED"
 
 WORDS1 = [
-    "amber", "birch", "cobalt", "delta", "ember", "falcon", "granite", "harbor",
-    "indigo", "juniper", "kepler", "lilac", "maple", "nebula", "onyx", "prairie",
+    "amber",
+    "birch",
+    "cobalt",
+    "delta",
+    "ember",
+    "falcon",
+    "granite",
+    "harbor",
+    "indigo",
+    "juniper",
+    "kepler",
+    "lilac",
+    "maple",
+    "nebula",
+    "onyx",
+    "prairie",
 ]
 WORDS2 = [
-    "arch", "brook", "cove", "dune", "field", "grove", "harbor", "isle",
-    "junction", "lake", "meadow", "nook", "orbit", "pier", "ridge", "vale",
+    "arch",
+    "brook",
+    "cove",
+    "dune",
+    "field",
+    "grove",
+    "harbor",
+    "isle",
+    "junction",
+    "lake",
+    "meadow",
+    "nook",
+    "orbit",
+    "pier",
+    "ridge",
+    "vale",
 ]
 
 
 def token() -> str:
-    return f"{R.choice(WORDS1)}-{R.choice(WORDS2)}-{R.randrange(1000,9999)}"
+    return f"{R.choice(WORDS1)}-{R.choice(WORDS2)}-{R.randrange(1000, 9999)}"
 
 
 def unique(prefix: str, suffix: str = "") -> str:
@@ -94,7 +123,7 @@ def unique(prefix: str, suffix: str = "") -> str:
 
 
 def ident(prefix: str) -> str:
-    return f"{prefix}_{R.randrange(1000,9999)}_{R.choice(WORDS1)}"
+    return f"{prefix}_{R.randrange(1000, 9999)}_{R.choice(WORDS1)}"
 
 
 def sha256_file(p: Path) -> str:
@@ -132,8 +161,9 @@ def compare_hashes(expected: dict[str, str], actual: dict[str, str]) -> dict[str
 
 def git_text(*args: str) -> str:
     try:
-        return subprocess.run(["git", *args], cwd=ROOT, text=True, stdout=subprocess.PIPE,
-                              stderr=subprocess.STDOUT, timeout=15).stdout.strip()
+        return subprocess.run(
+            ["git", *args], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=15
+        ).stdout.strip()
     except Exception as e:
         return f"<git-error:{e!r}>"
 
@@ -141,6 +171,7 @@ def git_text(*args: str) -> str:
 # ---------------------------------------------------------------------------
 # Server / API
 # ---------------------------------------------------------------------------
+
 
 def free_port() -> int:
     s = socket.socket()
@@ -206,12 +237,12 @@ def start_server() -> subprocess.Popen:
 class Chat:
     prompt: str
     session_id: str
-    http_status: Optional[int] = None
+    http_status: int | None = None
     response_text: str = ""
-    error: Optional[str] = None
+    error: str | None = None
     events: list[dict[str, Any]] = field(default_factory=list)
-    goal_id: Optional[str] = None
-    goal_state: Optional[str] = None
+    goal_id: str | None = None
+    goal_state: str | None = None
 
 
 def chat(prompt: str, session_id: str, timeout: int = 120, poll_seconds: int = 35) -> Chat:
@@ -295,20 +326,32 @@ def event_haystack(c: Chat) -> str:
 
 def service_error(c: Chat) -> bool:
     text = ((c.response_text or "") + " " + (c.error or "")).lower()
-    return (
-        c.http_status in (500, 502, 503, 504)
-        or "temporarily unavailable" in text
-        or "service unavailable" in text
-    )
+    return c.http_status in (500, 502, 503, 504) or "temporarily unavailable" in text or "service unavailable" in text
 
 
 REMOTE_PROVIDERS = {
-    "openai", "anthropic", "groq", "openrouter", "cerebras", "sambanova",
-    "gemini", "google", "omniroute", "nvidia",
+    "openai",
+    "anthropic",
+    "groq",
+    "openrouter",
+    "cerebras",
+    "sambanova",
+    "gemini",
+    "google",
+    "omniroute",
+    "nvidia",
 }
 DETERMINISTIC_PROVIDERS = {
-    "", "none", "not-invoked", "local-filesystem", "security-policy",
-    "internal-memory", "macos-native-tool", "deterministic-ast", "browser", "system",
+    "",
+    "none",
+    "not-invoked",
+    "local-filesystem",
+    "security-policy",
+    "internal-memory",
+    "macos-native-tool",
+    "deterministic-ast",
+    "browser",
+    "system",
 }
 
 
@@ -367,17 +410,16 @@ def save_result(r: Result):
 # Browser fixtures
 # ---------------------------------------------------------------------------
 
+
 class DynamicFixtureHandler(http.server.BaseHTTPRequestHandler):
     title_text = ""
     fields: dict[str, str] = {}
 
     def do_GET(self):
-        body_fields = "\n".join(
-            f'<div class="{cls}">{value}</div>' for cls, value in self.fields.items()
-        )
+        body_fields = "\n".join(f'<div class="{cls}">{value}</div>' for cls, value in self.fields.items())
         body = f"""<!doctype html>
 <html><head><title>{self.title_text}</title></head>
-<body>{body_fields}</body></html>""".encode("utf-8")
+<body>{body_fields}</body></html>""".encode()
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
@@ -389,7 +431,7 @@ class DynamicFixtureHandler(http.server.BaseHTTPRequestHandler):
 
 
 @contextlib.contextmanager
-def web_fixture(fields: dict[str, str], title: Optional[str] = None):
+def web_fixture(fields: dict[str, str], title: str | None = None):
     port = free_port()
     handler = type(
         "FreshV9Fixture",
@@ -410,7 +452,8 @@ def web_fixture(fields: dict[str, str], title: Optional[str] = None):
 # Verification helpers
 # ---------------------------------------------------------------------------
 
-def read_text_if_exists(p: Path) -> Optional[str]:
+
+def read_text_if_exists(p: Path) -> str | None:
     return p.read_text(encoding="utf-8", errors="replace") if p.exists() else None
 
 
@@ -438,7 +481,7 @@ def tree_state(root: Path) -> dict[str, str]:
     return out
 
 
-def file_hashes(paths: list[Path]) -> dict[str, Optional[str]]:
+def file_hashes(paths: list[Path]) -> dict[str, str | None]:
     return {str(p): sha256_file(p) if p.exists() and p.is_file() else None for p in paths}
 
 
@@ -472,7 +515,7 @@ def contains_identifier(text: str, ident_: str) -> bool:
     return re.search(r"(?<![A-Za-z0-9_])" + re.escape(ident_) + r"(?![A-Za-z0-9_])", text) is not None
 
 
-def numeric_text_equals(actual: Optional[str], expected: int | float) -> bool:
+def numeric_text_equals(actual: str | None, expected: int | float) -> bool:
     if actual is None:
         return False
     try:
@@ -485,39 +528,55 @@ def numeric_text_equals(actual: Optional[str], expected: int | float) -> bool:
 # Holdout tests
 # ---------------------------------------------------------------------------
 
+
 def t01_path_first_initialize_arrow():
     target = WORK / unique("packet", ".txt")
-    payload = f"{token()}::{R.randrange(100000,999999)}"
+    payload = f"{token()}::{R.randrange(100000, 999999)}"
     c = chat(f'Initialize "{target}"; contents -> {payload}', unique("v9w1"))
     actual = read_text_if_exists(target)
     ok = actual == payload and "write_file" in tool_names(c) and not service_error(c)
-    return Result("01_path_first_initialize_arrow", PASS if ok else FAIL,
-                  "Destination-first creation with arrow-delimited contents.",
-                  {"expected": payload, "actual": actual, "tools": tool_names(c)}, chat_dict(c))
+    return Result(
+        "01_path_first_initialize_arrow",
+        PASS if ok else FAIL,
+        "Destination-first creation with arrow-delimited contents.",
+        {"expected": payload, "actual": actual, "tools": tool_names(c)},
+        chat_dict(c),
+    )
 
 
 def t02_path_first_should_contain():
     target = WORK / unique("capsule", ".txt")
-    payload = f"{token()}|{token()}|{R.randrange(1000,9999)}"
+    payload = f"{token()}|{token()}|{R.randrange(1000, 9999)}"
     c = chat(f'"{target}" should contain exactly: {payload}', unique("v9w2"))
     actual = read_text_if_exists(target)
     ok = actual == payload and "write_file" in tool_names(c) and not service_error(c)
-    return Result("02_path_first_should_contain", PASS if ok else FAIL,
-                  "Path-first declarative content relation must become a write.",
-                  {"expected": payload, "actual": actual, "tools": tool_names(c)}, chat_dict(c))
+    return Result(
+        "02_path_first_should_contain",
+        PASS if ok else FAIL,
+        "Path-first declarative content relation must become a write.",
+        {"expected": payload, "actual": actual, "tools": tool_names(c)},
+        chat_dict(c),
+    )
 
 
 def t03_file_exact_raw_complete_reply():
     p = WORK / unique("opaque", ".r9q")
-    content = f"{token()}\nwrite screenshot save\n{R.randrange(100000,999999)}\n{token()}"
+    content = f"{token()}\nwrite screenshot save\n{R.randrange(100000, 999999)}\n{token()}"
     p.write_text(content, encoding="utf-8")
     before = sha256_file(p)
-    c = chat(f'Read "{p}" and make the file contents your entire response, byte for byte. No filename, labels, or commentary.', unique("v9read3"))
+    c = chat(
+        f'Read "{p}" and make the file contents your entire response, byte for byte. No filename, labels, or commentary.',
+        unique("v9read3"),
+    )
     after = sha256_file(p)
     ok = c.response_text == content and "read_file" in tool_names(c) and before == after and not service_error(c)
-    return Result("03_file_exact_raw_complete_reply", PASS if ok else FAIL,
-                  "EXACT_RAW must format a real read result rather than echo instructions.",
-                  {"expected": content, "actual": c.response_text, "tools": tool_names(c), "input_intact": before == after}, chat_dict(c))
+    return Result(
+        "03_file_exact_raw_complete_reply",
+        PASS if ok else FAIL,
+        "EXACT_RAW must format a real read result rather than echo instructions.",
+        {"expected": content, "actual": c.response_text, "tools": tool_names(c), "input_intact": before == after},
+        chat_dict(c),
+    )
 
 
 def t04_memory_value_only_recall():
@@ -526,14 +585,25 @@ def t04_memory_value_only_recall():
     other = f"{R.choice(WORDS1).title()} {R.choice(WORDS2).title()} Initiative"
     marker = token()
     distractor = token()
-    s1 = chat(f'Remember that the release marker for {entity} is {marker}.', session)
-    s2 = chat(f'Remember that the release marker for {other} is {distractor}.', session)
-    recall = chat(f'Give only the release marker you remember for {entity}. No explanation.', session)
-    ok = recall.response_text.strip() == marker and distractor not in recall.response_text and not any(service_error(x) for x in (s1, s2, recall))
-    return Result("04_memory_value_only_recall", PASS if ok else FAIL,
-                  "VALUE_ONLY must apply after memory retrieval.",
-                  {"expected": marker, "actual": recall.response_text, "distractor_absent": distractor not in recall.response_text},
-                  {"store_target": chat_dict(s1), "store_distractor": chat_dict(s2), "recall": chat_dict(recall)})
+    s1 = chat(f"Remember that the release marker for {entity} is {marker}.", session)
+    s2 = chat(f"Remember that the release marker for {other} is {distractor}.", session)
+    recall = chat(f"Give only the release marker you remember for {entity}. No explanation.", session)
+    ok = (
+        recall.response_text.strip() == marker
+        and distractor not in recall.response_text
+        and not any(service_error(x) for x in (s1, s2, recall))
+    )
+    return Result(
+        "04_memory_value_only_recall",
+        PASS if ok else FAIL,
+        "VALUE_ONLY must apply after memory retrieval.",
+        {
+            "expected": marker,
+            "actual": recall.response_text,
+            "distractor_absent": distractor not in recall.response_text,
+        },
+        {"store_target": chat_dict(s1), "store_distractor": chat_dict(s2), "recall": chat_dict(recall)},
+    )
 
 
 def t05_browser_single_value_only():
@@ -542,9 +612,13 @@ def t05_browser_single_value_only():
     with web_fixture({cls: value}) as url:
         c = chat(f'Go to {url}. Return only the text from CSS selector ".{cls}".', unique("v9web5"))
     ok = c.response_text.strip() == value and not service_error(c)
-    return Result("05_browser_single_value_only", PASS if ok else FAIL,
-                  "Browser extraction must execute before VALUE_ONLY formatting.",
-                  {"expected": value, "actual": c.response_text, "tools": tool_names(c)}, chat_dict(c))
+    return Result(
+        "05_browser_single_value_only",
+        PASS if ok else FAIL,
+        "Browser extraction must execute before VALUE_ONLY formatting.",
+        {"expected": value, "actual": c.response_text, "tools": tool_names(c)},
+        chat_dict(c),
+    )
 
 
 def t06_browser_action_word_selectors():
@@ -556,26 +630,46 @@ def t06_browser_action_word_selectors():
     }
     with web_fixture(fields) as url:
         selectors = ", ".join(f'".{x}"' for x in fields)
-        c = chat(f'Visit {url} and report the text at these CSS selectors: {selectors}.', unique("v9web6"))
+        c = chat(f"Visit {url} and report the text at these CSS selectors: {selectors}.", unique("v9web6"))
     vals_found = {v: v in c.response_text for v in fields.values()}
     tools = tool_names(c)
     wrong = any("screenshot" in x.lower() or "write_file" == x.lower() for x in tools)
     ok = all(vals_found.values()) and not wrong and not service_error(c)
-    return Result("06_browser_action_word_selectors", PASS if ok else FAIL,
-                  "Action-looking selector names must remain browser arguments.",
-                  {"values_found": vals_found, "tools": tools}, chat_dict(c))
+    return Result(
+        "06_browser_action_word_selectors",
+        PASS if ok else FAIL,
+        "Action-looking selector names must remain browser arguments.",
+        {"values_found": vals_found, "tools": tools},
+        chat_dict(c),
+    )
 
 
 def t07_browser_partial_preserves_successes():
     good1, good2, missing = "read-" + unique("a"), "capture-" + unique("b"), "missing-" + unique("c")
     v1, v2 = token(), token()
     with web_fixture({good1: v1, good2: v2}) as url:
-        c = chat(f'Open {url} and report ".{good1}", ".{missing}", and ".{good2}". If one is absent, keep the successful values and identify the missing selector.', unique("v9web7"))
+        c = chat(
+            f'Open {url} and report ".{good1}", ".{missing}", and ".{good2}". If one is absent, keep the successful values and identify the missing selector.',
+            unique("v9web7"),
+        )
     low = c.response_text.lower()
-    ok = v1 in c.response_text and v2 in c.response_text and (missing.lower() in low or "missing" in low or "not found" in low) and not service_error(c)
-    return Result("07_browser_partial_preserves_successes", PASS if ok else FAIL,
-                  "Partial extraction must preserve successes and expose missing fields.",
-                  {"first_value": v1 in c.response_text, "second_value": v2 in c.response_text, "missing_reported": missing.lower() in low or "missing" in low or "not found" in low}, chat_dict(c))
+    ok = (
+        v1 in c.response_text
+        and v2 in c.response_text
+        and (missing.lower() in low or "missing" in low or "not found" in low)
+        and not service_error(c)
+    )
+    return Result(
+        "07_browser_partial_preserves_successes",
+        PASS if ok else FAIL,
+        "Partial extraction must preserve successes and expose missing fields.",
+        {
+            "first_value": v1 in c.response_text,
+            "second_value": v2 in c.response_text,
+            "missing_reported": missing.lower() in low or "missing" in low or "not found" in low,
+        },
+        chat_dict(c),
+    )
 
 
 def t08_subtract_take_away_roles():
@@ -586,14 +680,22 @@ def t08_subtract_take_away_roles():
     pa.write_text(str(minuend), encoding="utf-8")
     pb.write_text(str(subtrahend), encoding="utf-8")
     before = file_hashes([pa, pb])
-    c = chat(f'Take the value in "{pb}" away from the value in "{pa}" and save only the result to "{out}".', unique("v9arith8"), timeout=150)
+    c = chat(
+        f'Take the value in "{pb}" away from the value in "{pa}" and save only the result to "{out}".',
+        unique("v9arith8"),
+        timeout=150,
+    )
     actual = read_text_if_exists(out)
     after = file_hashes([pa, pb])
     expected = str(minuend - subtrahend)
     ok = actual is not None and actual.strip() == expected and before == after and not service_error(c)
-    return Result("08_subtract_take_away_roles", PASS if ok else FAIL,
-                  "Take-B-away-from-A must preserve minuend/subtrahend roles.",
-                  {"expected": expected, "actual": actual, "inputs_intact": before == after, "tools": tool_names(c)}, chat_dict(c))
+    return Result(
+        "08_subtract_take_away_roles",
+        PASS if ok else FAIL,
+        "Take-B-away-from-A must preserve minuend/subtrahend roles.",
+        {"expected": expected, "actual": actual, "inputs_intact": before == after, "tools": tool_names(c)},
+        chat_dict(c),
+    )
 
 
 def t09_subtract_from_roles():
@@ -603,13 +705,21 @@ def t09_subtract_from_roles():
     out = WORK / unique("difference", ".txt")
     pa.write_text(str(a), encoding="utf-8")
     pb.write_text(str(b), encoding="utf-8")
-    c = chat(f'Subtract the number in "{pb}" from the number in "{pa}"; put just the answer in "{out}".', unique("v9arith9"), timeout=150)
+    c = chat(
+        f'Subtract the number in "{pb}" from the number in "{pa}"; put just the answer in "{out}".',
+        unique("v9arith9"),
+        timeout=150,
+    )
     actual = read_text_if_exists(out)
     expected = str(a - b)
     ok = actual is not None and actual.strip() == expected and not service_error(c)
-    return Result("09_subtract_from_roles", PASS if ok else FAIL,
-                  "Subtract-B-from-A must compute A-B independent of path order.",
-                  {"expected": expected, "actual": actual}, chat_dict(c))
+    return Result(
+        "09_subtract_from_roles",
+        PASS if ok else FAIL,
+        "Subtract-B-from-A must compute A-B independent of path order.",
+        {"expected": expected, "actual": actual},
+        chat_dict(c),
+    )
 
 
 def t10_divide_by_roles():
@@ -621,13 +731,21 @@ def t10_divide_by_roles():
     out = WORK / unique("quotient", ".txt")
     pn.write_text(str(numerator), encoding="utf-8")
     pd.write_text(str(denominator), encoding="utf-8")
-    c = chat(f'Divide the number stored in "{pn}" by the number stored in "{pd}" and write only the quotient to "{out}".', unique("v9arith10"), timeout=150)
+    c = chat(
+        f'Divide the number stored in "{pn}" by the number stored in "{pd}" and write only the quotient to "{out}".',
+        unique("v9arith10"),
+        timeout=150,
+    )
     actual = read_text_if_exists(out)
     expected = str(quotient)
     ok = numeric_text_equals(actual, quotient) and not service_error(c)
-    return Result("10_divide_by_roles", PASS if ok else FAIL,
-                  "Divide-A-by-B must preserve numerator/denominator roles.",
-                  {"expected": expected, "actual": actual}, chat_dict(c))
+    return Result(
+        "10_divide_by_roles",
+        PASS if ok else FAIL,
+        "Divide-A-by-B must preserve numerator/denominator roles.",
+        {"expected": expected, "actual": actual},
+        chat_dict(c),
+    )
 
 
 def t11_divide_into_roles():
@@ -639,13 +757,21 @@ def t11_divide_into_roles():
     out = WORK / unique("division_answer", ".txt")
     pden.write_text(str(denominator), encoding="utf-8")
     pnum.write_text(str(numerator), encoding="utf-8")
-    c = chat(f'Divide the number in "{pden}" into the number in "{pnum}"; save only the answer in "{out}".', unique("v9arith11"), timeout=150)
+    c = chat(
+        f'Divide the number in "{pden}" into the number in "{pnum}"; save only the answer in "{out}".',
+        unique("v9arith11"),
+        timeout=150,
+    )
     actual = read_text_if_exists(out)
     expected = str(quotient)
     ok = numeric_text_equals(actual, quotient) and not service_error(c)
-    return Result("11_divide_into_roles", PASS if ok else FAIL,
-                  "Divide-B-into-A must compute A/B rather than B/A.",
-                  {"expected": expected, "actual": actual}, chat_dict(c))
+    return Result(
+        "11_divide_into_roles",
+        PASS if ok else FAIL,
+        "Divide-B-into-A must compute A/B rather than B/A.",
+        {"expected": expected, "actual": actual},
+        chat_dict(c),
+    )
 
 
 def t12_workflow_number_only_response():
@@ -654,16 +780,24 @@ def t12_workflow_number_only_response():
     py = WORK / unique("factor_b", ".num")
     px.write_text(str(x), encoding="utf-8")
     py.write_text(str(y), encoding="utf-8")
-    c = chat(f'Multiply the number in "{px}" by the number in "{py}". Reply with only the number.', unique("v9arith12"), timeout=150)
+    c = chat(
+        f'Multiply the number in "{px}" by the number in "{py}". Reply with only the number.',
+        unique("v9arith12"),
+        timeout=150,
+    )
     expected = str(x * y)
     ok = c.response_text.strip() == expected and not service_error(c)
-    return Result("12_workflow_number_only_response", PASS if ok else FAIL,
-                  "NUMBER_ONLY must apply after workflow execution.",
-                  {"expected": expected, "actual": c.response_text, "tools": tool_names(c)}, chat_dict(c))
+    return Result(
+        "12_workflow_number_only_response",
+        PASS if ok else FAIL,
+        "NUMBER_ONLY must apply after workflow execution.",
+        {"expected": expected, "actual": c.response_text, "tools": tool_names(c)},
+        chat_dict(c),
+    )
 
 
 def t13_exact_literal_72way():
-    payloads = [f"{token()}::{R.randrange(100000,999999)}" for _ in range(72)]
+    payloads = [f"{token()}::{R.randrange(100000, 999999)}" for _ in range(72)]
     templates = [
         "Return only this literal token: {x}",
         "Set your entire response to {x}",
@@ -681,9 +815,11 @@ def t13_exact_literal_72way():
     root_before = repo_root_entries()
 
     def worker(i: int):
-        return i, chat(templates[i % len(templates)].format(x=payloads[i]), unique(f"v9exact{i}"), timeout=90, poll_seconds=0)
+        return i, chat(
+            templates[i % len(templates)].format(x=payloads[i]), unique(f"v9exact{i}"), timeout=90, poll_seconds=0
+        )
 
-    chats: list[Optional[Chat]] = [None] * 72
+    chats: list[Chat | None] = [None] * 72
     with concurrent.futures.ThreadPoolExecutor(max_workers=72) as ex:
         futs = [ex.submit(worker, i) for i in range(72)]
         for f in concurrent.futures.as_completed(futs):
@@ -705,40 +841,93 @@ def t13_exact_literal_72way():
         svc = service_error(c)
         one = c.http_status == 200 and exact and not cross and not model and not mission and not wrong_tool and not svc
         all_ok = all_ok and one
-        details.append({
-            "i": i, "exact": exact, "crosstalk": cross, "model_invoked": model,
-            "mission_created": mission, "tools": tools, "wrong_tool": wrong_tool,
-            "service_error": svc, "response": c.response_text,
-        })
-    return Result("13_exact_literal_72way", PASS if all_ok else FAIL,
-                  "72-way deterministic exact-literal isolation with unseen grammar.",
-                  {"requests": details, "repo_root_entries_unchanged": root_before == root_after},
-                  [chat_dict(c) for c in chats if c is not None])
+        details.append(
+            {
+                "i": i,
+                "exact": exact,
+                "crosstalk": cross,
+                "model_invoked": model,
+                "mission_created": mission,
+                "tools": tools,
+                "wrong_tool": wrong_tool,
+                "service_error": svc,
+                "response": c.response_text,
+            }
+        )
+    return Result(
+        "13_exact_literal_72way",
+        PASS if all_ok else FAIL,
+        "72-way deterministic exact-literal isolation with unseen grammar.",
+        {"requests": details, "repo_root_entries_unchanged": root_before == root_after},
+        [chat_dict(c) for c in chats if c is not None],
+    )
 
 
 def t14_exact_quoted_punctuation_unicode():
-    payload = f"{token()}::{R.randrange(10000,99999)}?!#;[]{{}}_()Ω"
+    payload = f"{token()}::{R.randrange(10000, 99999)}?!#;[]{{}}_()Ω"
     root_before = repo_root_entries()
-    c = chat(f'Copy only the characters between the quotation marks into your reply: "{payload}". Do not include the quotation marks.', unique("v9exact14"), poll_seconds=0)
+    c = chat(
+        f'Copy only the characters between the quotation marks into your reply: "{payload}". Do not include the quotation marks.',
+        unique("v9exact14"),
+        poll_seconds=0,
+    )
     root_after = repo_root_entries()
     tools = tool_names(c)
-    ok = c.response_text == payload and not model_invoked(c) and not mission_created(c) and not any(t.lower() not in {"echo"} for t in tools) and root_before == root_after and not service_error(c)
-    return Result("14_exact_quoted_punctuation_unicode", PASS if ok else FAIL,
-                  "Quoted exact-literal extraction must preserve punctuation and Unicode locally.",
-                  {"expected": payload, "actual": c.response_text, "model_invoked": model_invoked(c), "tools": tools, "repo_root_unchanged": root_before == root_after}, chat_dict(c))
+    ok = (
+        c.response_text == payload
+        and not model_invoked(c)
+        and not mission_created(c)
+        and not any(t.lower() not in {"echo"} for t in tools)
+        and root_before == root_after
+        and not service_error(c)
+    )
+    return Result(
+        "14_exact_quoted_punctuation_unicode",
+        PASS if ok else FAIL,
+        "Quoted exact-literal extraction must preserve punctuation and Unicode locally.",
+        {
+            "expected": payload,
+            "actual": c.response_text,
+            "model_invoked": model_invoked(c),
+            "tools": tools,
+            "repo_root_unchanged": root_before == root_after,
+        },
+        chat_dict(c),
+    )
 
 
 def t15_exact_literal_action_words_no_side_effect():
-    payload = f"save-screen-write-memory-{R.randrange(10000,99999)}"
+    payload = f"save-screen-write-memory-{R.randrange(10000, 99999)}"
     root_before = repo_root_entries()
-    c = chat(f'Respond with exactly "{payload}" and nothing else. These are just characters, not an action.', unique("v9exact15"), poll_seconds=0)
+    c = chat(
+        f'Respond with exactly "{payload}" and nothing else. These are just characters, not an action.',
+        unique("v9exact15"),
+        poll_seconds=0,
+    )
     root_after = repo_root_entries()
     tools = tool_names(c)
     wrong_tool = any(t.lower() not in {"echo"} for t in tools)
-    ok = c.response_text == payload and not model_invoked(c) and not mission_created(c) and not wrong_tool and root_before == root_after and not service_error(c)
-    return Result("15_exact_literal_action_words_no_side_effect", PASS if ok else FAIL,
-                  "Action-looking literal content must not trigger tools or filesystem mutation.",
-                  {"expected": payload, "actual": c.response_text, "tools": tools, "model_invoked": model_invoked(c), "repo_root_unchanged": root_before == root_after}, chat_dict(c))
+    ok = (
+        c.response_text == payload
+        and not model_invoked(c)
+        and not mission_created(c)
+        and not wrong_tool
+        and root_before == root_after
+        and not service_error(c)
+    )
+    return Result(
+        "15_exact_literal_action_words_no_side_effect",
+        PASS if ok else FAIL,
+        "Action-looking literal content must not trigger tools or filesystem mutation.",
+        {
+            "expected": payload,
+            "actual": c.response_text,
+            "tools": tools,
+            "model_invoked": model_invoked(c),
+            "repo_root_unchanged": root_before == root_after,
+        },
+        chat_dict(c),
+    )
 
 
 def t16_repo_wrong_helper_randomized():
@@ -751,7 +940,7 @@ def t16_repo_wrong_helper_randomized():
     (repo / "logic.py").write_text(
         f"def {good}(x):\n    return x + {delta}\n\n"
         f"def {bad}(x):\n    return x - {delta}\n\n"
-        f"def {fn}(amount):\n    \"\"\"Return amount after adding the required service bonus.\"\"\"\n    return {bad}(amount)\n",
+        f'def {fn}(amount):\n    """Return amount after adding the required service bonus."""\n    return {bad}(amount)\n',
         encoding="utf-8",
     )
     (repo / "test_logic.py").write_text(
@@ -759,13 +948,30 @@ def t16_repo_wrong_helper_randomized():
         encoding="utf-8",
     )
     before = tree_state(repo)
-    c = chat(f'Inspect repository "{repo}" read-only. For function {fn}, identify the helper it calls now and the helper that satisfies the contract.', unique("v9repo16"), timeout=180)
+    c = chat(
+        f'Inspect repository "{repo}" read-only. For function {fn}, identify the helper it calls now and the helper that satisfies the contract.',
+        unique("v9repo16"),
+        timeout=180,
+    )
     after = tree_state(repo)
     low = (c.response_text + "\n" + findings_text(c)).lower()
-    ok = contains_identifier(low, bad.lower()) and contains_identifier(low, good.lower()) and before == after and not service_error(c)
-    return Result("16_repo_wrong_helper_randomized", PASS if ok else FAIL,
-                  "Semantic repository diagnosis must identify actual and expected helper names.",
-                  {"wrong_helper_found": bad.lower() in low, "correct_helper_found": good.lower() in low, "read_only": before == after}, chat_dict(c))
+    ok = (
+        contains_identifier(low, bad.lower())
+        and contains_identifier(low, good.lower())
+        and before == after
+        and not service_error(c)
+    )
+    return Result(
+        "16_repo_wrong_helper_randomized",
+        PASS if ok else FAIL,
+        "Semantic repository diagnosis must identify actual and expected helper names.",
+        {
+            "wrong_helper_found": bad.lower() in low,
+            "correct_helper_found": good.lower() in low,
+            "read_only": before == after,
+        },
+        chat_dict(c),
+    )
 
 
 def t17_repo_wrong_return_randomized():
@@ -777,7 +983,7 @@ def t17_repo_wrong_return_randomized():
     rebate = R.randrange(9, 31)
     (repo / "pricing.py").write_text(
         f"def {fn}(amount):\n"
-        f"    \"\"\"Return amount after subtracting the fixed discount of {rebate}.\"\"\"\n"
+        f'    """Return amount after subtracting the fixed discount of {rebate}."""\n'
         f"    {bad_var} = amount\n"
         f"    {good_var} = amount - {rebate}\n"
         f"    {spare_var} = amount + {rebate}\n"
@@ -789,13 +995,30 @@ def t17_repo_wrong_return_randomized():
         encoding="utf-8",
     )
     before = tree_state(repo)
-    c = chat(f'Analyze "{repo}" without edits. In {fn}, name the variable returned incorrectly and the computed variable that should be returned.', unique("v9repo17"), timeout=180)
+    c = chat(
+        f'Analyze "{repo}" without edits. In {fn}, name the variable returned incorrectly and the computed variable that should be returned.',
+        unique("v9repo17"),
+        timeout=180,
+    )
     after = tree_state(repo)
     low = (c.response_text + "\n" + findings_text(c)).lower()
-    ok = contains_identifier(low, bad_var.lower()) and contains_identifier(low, good_var.lower()) and before == after and not service_error(c)
-    return Result("17_repo_wrong_return_randomized", PASS if ok else FAIL,
-                  "Repository dataflow diagnosis must identify wrong and expected return variables.",
-                  {"wrong_variable_found": bad_var.lower() in low, "correct_variable_found": good_var.lower() in low, "read_only": before == after}, chat_dict(c))
+    ok = (
+        contains_identifier(low, bad_var.lower())
+        and contains_identifier(low, good_var.lower())
+        and before == after
+        and not service_error(c)
+    )
+    return Result(
+        "17_repo_wrong_return_randomized",
+        PASS if ok else FAIL,
+        "Repository dataflow diagnosis must identify wrong and expected return variables.",
+        {
+            "wrong_variable_found": bad_var.lower() in low,
+            "correct_variable_found": good_var.lower() in low,
+            "read_only": before == after,
+        },
+        chat_dict(c),
+    )
 
 
 def t18_repo_comparison_regression():
@@ -803,7 +1026,7 @@ def t18_repo_comparison_regression():
     fn = ident("fits_quota")
     limit = R.randrange(30, 80)
     (repo / "rules.py").write_text(
-        f"def {fn}(value):\n    \"\"\"Return True when value is no greater than {limit}.\"\"\"\n    return value < {limit}\n",
+        f'def {fn}(value):\n    """Return True when value is no greater than {limit}."""\n    return value < {limit}\n',
         encoding="utf-8",
     )
     (repo / "test_rules.py").write_text(
@@ -811,20 +1034,34 @@ def t18_repo_comparison_regression():
         encoding="utf-8",
     )
     before = tree_state(repo)
-    c = chat(f'Review "{repo}" read-only. Diagnose the comparison boundary in {fn}, naming both the current and required operators.', unique("v9repo18"), timeout=180)
+    c = chat(
+        f'Review "{repo}" read-only. Diagnose the comparison boundary in {fn}, naming both the current and required operators.',
+        unique("v9repo18"),
+        timeout=180,
+    )
     after = tree_state(repo)
     low = (c.response_text + "\n" + findings_text(c)).lower().replace("≤", "<=")
-    ok = fn.lower() in low and "<=" in low and ("<" in low or "less than" in low) and before == after and not service_error(c)
-    return Result("18_repo_comparison_regression", PASS if ok else FAIL,
-                  "Comparison-boundary semantic diagnosis regression.",
-                  {"function_found": fn.lower() in low, "required_operator_found": "<=" in low, "read_only": before == after}, chat_dict(c))
+    ok = (
+        fn.lower() in low
+        and "<=" in low
+        and ("<" in low or "less than" in low)
+        and before == after
+        and not service_error(c)
+    )
+    return Result(
+        "18_repo_comparison_regression",
+        PASS if ok else FAIL,
+        "Comparison-boundary semantic diagnosis regression.",
+        {"function_found": fn.lower() in low, "required_operator_found": "<=" in low, "read_only": before == after},
+        chat_dict(c),
+    )
 
 
 def t19_repo_boolean_regression():
     repo = mk_repo("boolean")
     fn = ident("may_release")
     (repo / "policy.py").write_text(
-        f"def {fn}(approved, verified):\n    \"\"\"Return True only if approved and verified are both True.\"\"\"\n    return approved or verified\n",
+        f'def {fn}(approved, verified):\n    """Return True only if approved and verified are both True."""\n    return approved or verified\n',
         encoding="utf-8",
     )
     (repo / "test_policy.py").write_text(
@@ -832,13 +1069,31 @@ def t19_repo_boolean_regression():
         encoding="utf-8",
     )
     before = tree_state(repo)
-    c = chat(f'Inspect "{repo}" without edits. Explain the boolean operator defect in {fn}, including the operator present and the operator required.', unique("v9repo19"), timeout=180)
+    c = chat(
+        f'Inspect "{repo}" without edits. Explain the boolean operator defect in {fn}, including the operator present and the operator required.',
+        unique("v9repo19"),
+        timeout=180,
+    )
     after = tree_state(repo)
     low = (c.response_text + "\n" + findings_text(c)).lower()
-    ok = fn.lower() in low and re.search(r"\bor\b", low) and re.search(r"\band\b", low) and before == after and not service_error(c)
-    return Result("19_repo_boolean_regression", PASS if ok else FAIL,
-                  "Boolean semantic diagnosis regression.",
-                  {"or_found": bool(re.search(r"\bor\b", low)), "and_found": bool(re.search(r"\band\b", low)), "read_only": before == after}, chat_dict(c))
+    ok = (
+        fn.lower() in low
+        and re.search(r"\bor\b", low)
+        and re.search(r"\band\b", low)
+        and before == after
+        and not service_error(c)
+    )
+    return Result(
+        "19_repo_boolean_regression",
+        PASS if ok else FAIL,
+        "Boolean semantic diagnosis regression.",
+        {
+            "or_found": bool(re.search(r"\bor\b", low)),
+            "and_found": bool(re.search(r"\band\b", low)),
+            "read_only": before == after,
+        },
+        chat_dict(c),
+    )
 
 
 def t20_negated_screenshot_literal_write():
@@ -848,9 +1103,13 @@ def t20_negated_screenshot_literal_write():
     actual = read_text_if_exists(target)
     tools = tool_names(c)
     ok = actual == payload and not any("screenshot" in t.lower() for t in tools) and not service_error(c)
-    return Result("20_negated_screenshot_literal_write", PASS if ok else FAIL,
-                  "Negated screenshot intent must not steal an affirmative text write.",
-                  {"actual": actual, "tools": tools}, chat_dict(c))
+    return Result(
+        "20_negated_screenshot_literal_write",
+        PASS if ok else FAIL,
+        "Negated screenshot intent must not steal an affirmative text write.",
+        {"actual": actual, "tools": tools},
+        chat_dict(c),
+    )
 
 
 def t21_real_screenshot_regression():
@@ -860,12 +1119,19 @@ def t21_real_screenshot_regression():
     exists = target.exists()
     valid, w, h = valid_png(target) if exists else (False, 0, 0)
     fresh = exists and target.stat().st_mtime >= started - 1
-    blocked = any(x in (c.response_text or "").lower() for x in ("permission", "screen recording", "not authorized", "access denied"))
+    blocked = any(
+        x in (c.response_text or "").lower()
+        for x in ("permission", "screen recording", "not authorized", "access denied")
+    )
     ok = exists and valid and fresh and any("screenshot" in t.lower() for t in tool_names(c)) and not service_error(c)
     status = PASS if ok else (BLOCKED if blocked and not exists else FAIL)
-    return Result("21_real_screenshot_regression", status,
-                  "Genuine screenshot request must still capture a valid fresh PNG.",
-                  {"exists": exists, "valid_png": valid, "width": w, "height": h, "fresh": fresh, "tools": tool_names(c)}, chat_dict(c))
+    return Result(
+        "21_real_screenshot_regression",
+        status,
+        "Genuine screenshot request must still capture a valid fresh PNG.",
+        {"exists": exists, "valid_png": valid, "width": w, "height": h, "fresh": fresh, "tools": tool_names(c)},
+        chat_dict(c),
+    )
 
 
 def t22_symlink_escape_write_blocked():
@@ -877,11 +1143,17 @@ def t22_symlink_escape_write_blocked():
         c = chat(f'Put "{token()}" into "{bridge / external_target.name}".', unique("v9sec22"))
         escaped = external_target.exists()
         low = (c.response_text or "").lower()
-        explicit = any(x in low for x in ("workspace", "outside", "escape", "blocked", "denied", "not allowed", "refus"))
+        explicit = any(
+            x in low for x in ("workspace", "outside", "escape", "blocked", "denied", "not allowed", "refus")
+        )
         ok = not escaped and explicit and not service_error(c)
-        return Result("22_symlink_escape_write_blocked", PASS if ok else FAIL,
-                      "Symlink workspace escape must remain blocked.",
-                      {"escaped": escaped, "explicit_policy": explicit}, chat_dict(c))
+        return Result(
+            "22_symlink_escape_write_blocked",
+            PASS if ok else FAIL,
+            "Symlink workspace escape must remain blocked.",
+            {"escaped": escaped, "explicit_policy": explicit},
+            chat_dict(c),
+        )
     finally:
         try:
             bridge.unlink(missing_ok=True)
@@ -903,9 +1175,18 @@ def t23_ambiguous_write_fail_closed():
     truthful = any(x in low for x in ("ambiguous", "choose", "which", "clarif", "unclear", "not decided", "need"))
     false_success = "successfully wrote" in low or (created and (c.goal_state or "").lower() == "completed")
     ok = not created and truthful and not false_success and not service_error(c)
-    return Result("23_ambiguous_write_fail_closed", PASS if ok else FAIL,
-                  "Ambiguous write payload must fail closed without mutation.",
-                  {"file_created": created, "truthful_ambiguity": truthful, "false_success": false_success, "tools": tool_names(c)}, chat_dict(c))
+    return Result(
+        "23_ambiguous_write_fail_closed",
+        PASS if ok else FAIL,
+        "Ambiguous write payload must fail closed without mutation.",
+        {
+            "file_created": created,
+            "truthful_ambiguity": truthful,
+            "false_success": false_success,
+            "tools": tool_names(c),
+        },
+        chat_dict(c),
+    )
 
 
 def t24_structured_write_regression():
@@ -919,9 +1200,13 @@ def t24_structured_write_regression():
     c = chat(f'Write this exact JSON text to "{target}": {payload}', unique("v9write24"))
     actual = read_text_if_exists(target)
     ok = actual == payload and not service_error(c)
-    return Result("24_structured_write_regression", PASS if ok else FAIL,
-                  "Nested structured exact write regression.",
-                  {"expected": payload, "actual": actual}, chat_dict(c))
+    return Result(
+        "24_structured_write_regression",
+        PASS if ok else FAIL,
+        "Nested structured exact write regression.",
+        {"expected": payload, "actual": actual},
+        chat_dict(c),
+    )
 
 
 def t25_transform_workflow_regression():
@@ -930,7 +1215,11 @@ def t25_transform_workflow_regression():
     rows = [{"key": token(), "amount": R.randrange(2, 70)} for _ in range(4)]
     src.write_text("key|amount\n" + "\n".join(f"{r['key']}|{r['amount']}" for r in rows) + "\n", encoding="utf-8")
     before = sha256_file(src)
-    c = chat(f'Convert the pipe-delimited table in "{src}" to a JSON array in "{out}" and keep amount numeric.', unique("v9flow25"), timeout=150)
+    c = chat(
+        f'Convert the pipe-delimited table in "{src}" to a JSON array in "{out}" and keep amount numeric.',
+        unique("v9flow25"),
+        timeout=150,
+    )
     after = sha256_file(src)
     actual = None
     if out.exists():
@@ -939,19 +1228,23 @@ def t25_transform_workflow_regression():
         except Exception:
             pass
     ok = actual == rows and before == after and not service_error(c)
-    return Result("25_transform_workflow_regression", PASS if ok else FAIL,
-                  "Deterministic table transformation regression.",
-                  {"expected": rows, "actual": actual, "input_intact": before == after}, chat_dict(c))
+    return Result(
+        "25_transform_workflow_regression",
+        PASS if ok else FAIL,
+        "Deterministic table transformation regression.",
+        {"expected": rows, "actual": actual, "input_intact": before == after},
+        chat_dict(c),
+    )
 
 
 def t26_mixed_concurrency_isolation():
     n_each = 8
-    exact_payloads = [f"{token()}::{R.randrange(10000,99999)}" for _ in range(n_each)]
+    exact_payloads = [f"{token()}::{R.randrange(10000, 99999)}" for _ in range(n_each)]
     raw_files: list[Path] = []
     raw_contents: list[str] = []
     for i in range(n_each):
         p = WORK / unique(f"mixraw{i}", ".q9")
-        content = f"{token()}\n{R.randrange(100000,999999)}"
+        content = f"{token()}\n{R.randrange(100000, 999999)}"
         p.write_text(content, encoding="utf-8")
         raw_files.append(p)
         raw_contents.append(content)
@@ -959,22 +1252,56 @@ def t26_mixed_concurrency_isolation():
     mem_sessions, mem_entities, mem_values = [], [], []
     for i in range(n_each):
         s = unique(f"mixmem{i}")
-        entity = f"{R.choice(WORDS1).title()} {R.choice(WORDS2).title()} Node {R.randrange(100,999)}"
+        entity = f"{R.choice(WORDS1).title()} {R.choice(WORDS2).title()} Node {R.randrange(100, 999)}"
         value = token()
-        stored = chat(f'Remember that the node code for {entity} is {value}.', s)
+        stored = chat(f"Remember that the node code for {entity} is {value}.", s)
         if service_error(stored):
-            return Result("26_mixed_concurrency_isolation", FAIL, "Memory fixture setup failed before mixed concurrency.", {"setup_error": chat_dict(stored)}, None)
-        mem_sessions.append(s); mem_entities.append(entity); mem_values.append(value)
+            return Result(
+                "26_mixed_concurrency_isolation",
+                FAIL,
+                "Memory fixture setup failed before mixed concurrency.",
+                {"setup_error": chat_dict(stored)},
+                None,
+            )
+        mem_sessions.append(s)
+        mem_entities.append(entity)
+        mem_values.append(value)
 
     browser_fields = {"mix-" + unique(f"c{i}"): token() for i in range(n_each)}
     with web_fixture(browser_fields) as url:
         jobs = []
         for i in range(n_each):
-            jobs.append(("exact", i, f'Return just this literal: {exact_payloads[i]}', unique(f"mixexact{i}"), exact_payloads[i]))
-            jobs.append(("raw", i, f'Use the contents of "{raw_files[i]}" as the entire reply with no labels.', unique(f"mixrawsess{i}"), raw_contents[i]))
-            jobs.append(("memory", i, f'Reply with only the node code remembered for {mem_entities[i]}.', mem_sessions[i], mem_values[i]))
+            jobs.append(
+                (
+                    "exact",
+                    i,
+                    f"Return just this literal: {exact_payloads[i]}",
+                    unique(f"mixexact{i}"),
+                    exact_payloads[i],
+                )
+            )
+            jobs.append(
+                (
+                    "raw",
+                    i,
+                    f'Use the contents of "{raw_files[i]}" as the entire reply with no labels.',
+                    unique(f"mixrawsess{i}"),
+                    raw_contents[i],
+                )
+            )
+            jobs.append(
+                (
+                    "memory",
+                    i,
+                    f"Reply with only the node code remembered for {mem_entities[i]}.",
+                    mem_sessions[i],
+                    mem_values[i],
+                )
+            )
         for i, (cls, value) in enumerate(browser_fields.items()):
-            jobs.append(("browser", i, f'Open {url} and return only the value from ".{cls}".', unique(f"mixweb{i}"), value))
+            jobs.append(
+                ("browser", i, f'Open {url} and return only the value from ".{cls}".', unique(f"mixweb{i}"), value)
+            )
 
         def worker(job):
             kind, i, prompt, session, expected = job
@@ -993,18 +1320,31 @@ def t26_mixed_concurrency_isolation():
         exact = c.response_text == expected
         cross = any(v != expected and v in c.response_text for v in all_expected)
         svc = service_error(c)
-        wrong_exact_arch = kind == "exact" and (model_invoked(c) or mission_created(c) or any(t.lower() not in {"echo"} for t in tool_names(c)))
+        wrong_exact_arch = kind == "exact" and (
+            model_invoked(c) or mission_created(c) or any(t.lower() not in {"echo"} for t in tool_names(c))
+        )
         one = c.http_status == 200 and exact and not cross and not svc and not wrong_exact_arch
         all_ok = all_ok and one
-        details.append({
-            "kind": kind, "i": i, "exact": exact, "crosstalk": cross, "service_error": svc,
-            "model_invoked": model_invoked(c), "mission_created": mission_created(c), "tools": tool_names(c),
-            "response": c.response_text,
-        })
-    return Result("26_mixed_concurrency_isolation", PASS if all_ok else FAIL,
-                  "32-way mixed exact/read/memory/browser concurrency must preserve action and session isolation.",
-                  {"request_count": len(results), "requests": sorted(details, key=lambda x: (x['kind'], x['i']))},
-                  [chat_dict(c) for _, _, _, c in results])
+        details.append(
+            {
+                "kind": kind,
+                "i": i,
+                "exact": exact,
+                "crosstalk": cross,
+                "service_error": svc,
+                "model_invoked": model_invoked(c),
+                "mission_created": mission_created(c),
+                "tools": tool_names(c),
+                "response": c.response_text,
+            }
+        )
+    return Result(
+        "26_mixed_concurrency_isolation",
+        PASS if all_ok else FAIL,
+        "32-way mixed exact/read/memory/browser concurrency must preserve action and session isolation.",
+        {"request_count": len(results), "requests": sorted(details, key=lambda x: (x["kind"], x["i"]))},
+        [chat_dict(c) for _, _, _, c in results],
+    )
 
 
 TESTS = [
@@ -1040,6 +1380,7 @@ TESTS = [
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> int:
     pre = source_hashes()

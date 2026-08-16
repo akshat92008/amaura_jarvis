@@ -5,21 +5,46 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import os
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
-
 
 _WORKSPACE: contextvars.ContextVar[Path | None] = contextvars.ContextVar("jarvis_tool_workspace", default=None)
 
-_SENSITIVE_PARTS = frozenset({
-    ".ssh", ".aws", ".azure", ".gnupg", ".kube", "keychains", "secrets",
-    ".audit_keys", "authority_keys", ".config/gcloud", ".docker",
-})
-_SENSITIVE_NAMES = frozenset({
-    "credentials", "credentials.json", "id_rsa", "id_ed25519", "id_ecdsa", "id_dsa", "known_hosts",
-    ".netrc", ".npmrc", ".pypirc", "dockerconfigjson", "service-account.json",
-    "audit_hmac_key", "authority.key", "audit.key", "master.key",
-})
+_SENSITIVE_PARTS = frozenset(
+    {
+        ".ssh",
+        ".aws",
+        ".azure",
+        ".gnupg",
+        ".kube",
+        "keychains",
+        "secrets",
+        ".audit_keys",
+        "authority_keys",
+        ".config/gcloud",
+        ".docker",
+    }
+)
+_SENSITIVE_NAMES = frozenset(
+    {
+        "credentials",
+        "credentials.json",
+        "id_rsa",
+        "id_ed25519",
+        "id_ecdsa",
+        "id_dsa",
+        "known_hosts",
+        ".netrc",
+        ".npmrc",
+        ".pypirc",
+        "dockerconfigjson",
+        "service-account.json",
+        "audit_hmac_key",
+        "authority.key",
+        "audit.key",
+        "master.key",
+    }
+)
 _SAFE_ENV_SUFFIXES = (".example", ".sample", ".template", ".dist")
 _SYSTEM_ROOTS = ("/etc", "/System", "/private/etc", "/var/root")
 
@@ -85,10 +110,21 @@ def resolve_workspace_path(
     return candidate
 
 
-_PATH_ARGUMENTS = frozenset({
-    "path", "file_path", "directory", "cwd", "root_dir", "repo_path",
-    "project_path", "workspace", "source_path", "destination_path", "output_path",
-})
+_PATH_ARGUMENTS = frozenset(
+    {
+        "path",
+        "file_path",
+        "directory",
+        "cwd",
+        "root_dir",
+        "repo_path",
+        "project_path",
+        "workspace",
+        "source_path",
+        "destination_path",
+        "output_path",
+    }
+)
 
 
 def secure_tool_arguments(name: str, args: dict) -> dict:
@@ -103,20 +139,19 @@ def secure_tool_arguments(name: str, args: dict) -> dict:
             secured[key] = str(resolve_workspace_path(value, must_exist=False))
         elif isinstance(value, list):
             secured[key] = [
-                str(resolve_workspace_path(item, must_exist=False))
-                if isinstance(item, str) and item.strip() else item
+                str(resolve_workspace_path(item, must_exist=False)) if isinstance(item, str) and item.strip() else item
                 for item in value
             ]
     # git_commit publishes its path collection as ``files`` rather than a
     # singular path argument, so normalize it explicitly.
     if name == "git_commit" and isinstance(secured.get("files"), list):
-        secured["files"] = [
-            str(resolve_workspace_path(item, must_exist=False))
-            for item in secured["files"]
-        ]
+        secured["files"] = [str(resolve_workspace_path(item, must_exist=False)) for item in secured["files"]]
     return secured
 
 
 __all__ = [
-    "resolve_workspace_path", "secure_tool_arguments", "tool_workspace", "workspace_root",
+    "resolve_workspace_path",
+    "secure_tool_arguments",
+    "tool_workspace",
+    "workspace_root",
 ]

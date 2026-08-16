@@ -34,7 +34,9 @@ class ScanResult:
 def scan_untrusted_text(text: str) -> ScanResult:
     """Flag instruction-shaped or secret-bearing content before it reaches an employee."""
     findings = [f"prompt_injection:{index}" for index, pattern in enumerate(INJECTION_PATTERNS) if pattern.search(text)]
-    findings.extend(f"sensitive_data:{index}" for index, pattern in enumerate(SENSITIVE_DATA_PATTERNS) if pattern.search(text))
+    findings.extend(
+        f"sensitive_data:{index}" for index, pattern in enumerate(SENSITIVE_DATA_PATTERNS) if pattern.search(text)
+    )
     return ScanResult(not findings, tuple(findings), hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest())
 
 
@@ -52,4 +54,3 @@ def redact_sensitive_text(text: str) -> str:
     for pattern in SENSITIVE_DATA_PATTERNS:
         text = pattern.sub("[REDACTED]", text)
     return text
-

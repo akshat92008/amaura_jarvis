@@ -8,12 +8,21 @@ payload are explicitly present but the payload is unquoted, e.g.:
 It does not infer output roles from path order and does not authorize effects by
 itself; authorization remains owned by SemanticRequestGraph/EffectAuthorizer.
 """
+
 from __future__ import annotations
 
 import re
 from typing import Any
 
 _INSTALLED = False
+
+
+def _unwrap_classmethod(value: Any) -> Any:
+    return getattr(value, "__func__", value)
+
+
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
 
 
 def install_semantic_write_compat() -> None:
@@ -23,7 +32,7 @@ def install_semantic_write_compat() -> None:
 
     from jarvis.amaura import semantic_core as core
 
-    current_parse = core.SemanticParser.parse.__func__
+    current_parse = _unwrap_classmethod(core.SemanticParser.parse)
 
     def parse_with_unquoted_create_payload(
         cls: Any,
@@ -48,5 +57,5 @@ def install_semantic_write_compat() -> None:
         graph.original_text = text
         return graph
 
-    core.SemanticParser.parse = classmethod(parse_with_unquoted_create_payload)
+    _install_attr(core.SemanticParser, "parse", classmethod(parse_with_unquoted_create_payload))
     _INSTALLED = True

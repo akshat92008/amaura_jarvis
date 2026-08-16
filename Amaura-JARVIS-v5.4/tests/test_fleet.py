@@ -1,20 +1,22 @@
 import unittest
+
 from jarvis.fleet import (
-    run_nightly_auditor,
-    generate_morning_briefing,
+    DaemonManager,
     check_system_watchdog,
+    generate_morning_briefing,
     manage_daemon,
-    DaemonManager
+    run_nightly_auditor,
 )
+
 
 class TestFleet(unittest.TestCase):
     def test_briefing_and_watchdog(self):
         briefing = generate_morning_briefing()
         self.assertIn("Good morning, sir", briefing)
-        
+
         watchdog = check_system_watchdog()
         self.assertIn("System Watchdog", watchdog)
-        
+
         audit = run_nightly_auditor(".")
         self.assertIn("JARVIS Nightly Code Auditor Report", audit)
 
@@ -30,6 +32,7 @@ class TestFleet(unittest.TestCase):
 
         run_res = manage_daemon("run_once")
         self.assertIn("Daemon execution tick completed", run_res)
+
 
 if __name__ == "__main__":
     unittest.main()

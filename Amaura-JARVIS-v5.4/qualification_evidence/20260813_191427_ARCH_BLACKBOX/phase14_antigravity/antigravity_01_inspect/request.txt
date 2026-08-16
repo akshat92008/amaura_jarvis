@@ -1,1 +1,0 @@
-Inspect the repository at '/Users/ashishsingh/Desktop/amaura_jarivs/qual_antigravity_disposable_repo'. Find one real defect or bug in the code. Explain the defect clearly. Do not modify any files until I explicitly approve.

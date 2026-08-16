@@ -16,7 +16,6 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from jarvis.amaura.models import GovernanceError
 
@@ -82,11 +81,22 @@ class MCPServerSpec:
                 return sandbox, ["-f", str(path), executable, *args], cleanup
             bwrap = shutil.which("bwrap")
             if bwrap:
-                return bwrap, [
-                    "--unshare-net", "--die-with-parent", "--new-session",
-                    "--ro-bind", "/", "/", "--tmpfs", "/tmp",
-                    executable, *args,
-                ], cleanup
+                return (
+                    bwrap,
+                    [
+                        "--unshare-net",
+                        "--die-with-parent",
+                        "--new-session",
+                        "--ro-bind",
+                        "/",
+                        "/",
+                        "--tmpfs",
+                        "/tmp",
+                        executable,
+                        *args,
+                    ],
+                    cleanup,
+                )
             raise GovernanceError("MCP network=none requires sandbox-exec (macOS) or bwrap (Linux)")
         if self.network != "public":
             raise GovernanceError(f"Unsupported MCP network policy: {self.network}")
@@ -162,7 +172,9 @@ def load_server(server_id: str, *, for_ai_list: bool = False) -> MCPServerSpec:
         network=str(raw.get("network", "none")).strip().lower(),
     )
     if for_ai_list and (not spec.ai_list_tools or spec.network != "none"):
-        raise GovernanceError("AI list_tools is allowed only for registry entries with ai_list_tools=true and network=none")
+        raise GovernanceError(
+            "AI list_tools is allowed only for registry entries with ai_list_tools=true and network=none"
+        )
     return spec
 
 

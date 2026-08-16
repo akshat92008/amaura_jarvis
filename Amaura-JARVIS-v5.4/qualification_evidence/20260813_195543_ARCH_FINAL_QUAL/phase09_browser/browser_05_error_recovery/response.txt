@@ -1,3 +1,0 @@
-I'm not capable of directly accessing or browsing external websites, including navigating to 'https://httpbin.org/status/404' in the browser. However, I can guide you on how to do it.
-
-You can visit 'https://httpbin.org/status/404' in your web browser, and you will likely encounter an HTTP 404 status code, which indicates that the requested resource was not found. The exact error message may vary depending on your browser, but it will likely display a "404 Not Found" error page.

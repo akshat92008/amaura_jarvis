@@ -1,2 +1,0 @@
-agy executable: /Users/ashishsingh/.local/bin/agy
-agy version: 1.1.12

@@ -18,24 +18,22 @@ import string
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from jarvis.amaura.direct_action import (
+    BrowserFieldRequest,
+    DivisionIntent,
     ExactLiteralIntent,
     ExactResponseParser,
+    RepositoryDiagnosticEngine,
     RequestPreprocessor,
     ResponseMode,
-    RepositoryDiagnosticEngine,
     SubtractIntent,
-    DivisionIntent,
     TransformationPlan,
-    BrowserFieldRequest,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Helpers
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def _rand_id(prefix="fn", length=6):
     return f"{prefix}_{''.join(random.choices(string.ascii_lowercase, k=length))}"
@@ -106,7 +104,7 @@ def generate_response_mode_composition_cases(count=1000):
         "What is {} divided by {}? Result only.",
         "Sum of {} and {}. Just the result.",
     ]
-    for i in range(count // 3):
+    for _ in range(count // 3):
         a = random.randint(1, 999)
         b = random.randint(1, 999)
         tmpl = random.choice(number_prefixes)
@@ -123,7 +121,7 @@ def generate_response_mode_composition_cases(count=1000):
         "Repeat: {}",
         "Respond with only: {}",
     ]
-    for i, payload in enumerate(echo_payloads):
+    for _, payload in enumerate(echo_payloads):
         tmpl = random.choice(echo_prefixes)
         text = tmpl.format(payload)
         cases.append((text, True, None))
@@ -168,30 +166,28 @@ class TestResponseModeCompositionPhase8:
         assert len(cases) >= 1000
 
         fail_count = 0
-        for text, expect_exact_none, expected_mode in cases:
+        for text, expect_exact_none, _expected_mode in cases:
             result = ExactResponseParser.parse(text)
             if expect_exact_none is False and result is not None:
                 fail_count += 1
             elif expect_exact_none is True and result is None:
                 fail_count += 1
 
-        assert fail_count <= len(cases) * 0.05, (
-            f"Too many response-mode failures: {fail_count}/{len(cases)}"
-        )
+        assert fail_count <= len(cases) * 0.05, f"Too many response-mode failures: {fail_count}/{len(cases)}"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # PART B: EXACT-LITERAL RESPONSE ROUTING
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 def generate_exact_literal_cases(count=500):
     cases = []
     non_parse_count = 6
     valid_target = count - non_parse_count
-    valid_payloads = (
-        [f"TOKEN_{i}" for i in range(valid_target // 2)]
-        + [f"SECRET-{_rand_id()}" for _ in range(valid_target - valid_target // 2)]
-    )
+    valid_payloads = [f"TOKEN_{i}" for i in range(valid_target // 2)] + [
+        f"SECRET-{_rand_id()}" for _ in range(valid_target - valid_target // 2)
+    ]
 
     prefixes = [
         "Return only: {}",
@@ -258,7 +254,7 @@ class TestExactLiteralRoutingPhase8:
             ("Return only: ALPHA_99", "ALPHA_99"),
             ("Echo: beta-token", "beta-token"),
         ]
-        for text, expected_payload in cases:
+        for text, _expected_payload in cases:
             intent = ExactResponseParser.parse_intent(text)
             if intent is not None:
                 start, end = intent.payload_span_start, intent.payload_span_end
@@ -279,22 +275,20 @@ class TestExactLiteralRoutingPhase8:
                 if result is None:
                     failures.append(f"Should have parsed: {text!r}")
                 elif expected_payload and result.output != expected_payload:
-                    failures.append(
-                        f"Payload mismatch: got {result.output!r}, want {expected_payload!r} for: {text!r}"
-                    )
+                    failures.append(f"Payload mismatch: got {result.output!r}, want {expected_payload!r} for: {text!r}")
             else:
                 if result is not None:
                     failures.append(f"Should NOT have parsed: {text!r}")
 
         assert len(failures) <= len(cases) * 0.05, (
-            f"Too many exact-literal failures ({len(failures)}/{len(cases)}):\n"
-            + "\n".join(failures[:10])
+            f"Too many exact-literal failures ({len(failures)}/{len(cases)}):\n" + "\n".join(failures[:10])
         )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # PART C: SEMANTIC ARGUMENT / OPERAND ROLES
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def generate_semantic_role_cases(count=1000):
     cases = []
@@ -333,6 +327,7 @@ class TestSemanticOperandRolesPhase8:
 
     def test_subtract_from_pattern(self):
         from jarvis.amaura.direct_action import DirectActionRouter
+
         text = "subtract /tmp/b.num from /tmp/a.num and save to /tmp/result.txt"
         plan = DirectActionRouter._parse_workflow_plan(text, default_workspace="/tmp")
         if plan is not None and plan.operation == "subtract":
@@ -343,6 +338,7 @@ class TestSemanticOperandRolesPhase8:
 
     def test_take_away_from_pattern(self):
         from jarvis.amaura.direct_action import DirectActionRouter
+
         text = "take /tmp/b.num away from /tmp/a.num and save to /tmp/result.txt"
         plan = DirectActionRouter._parse_workflow_plan(text, default_workspace="/tmp")
         if plan is not None and plan.operation == "subtract":
@@ -353,6 +349,7 @@ class TestSemanticOperandRolesPhase8:
 
     def test_divide_by_pattern(self):
         from jarvis.amaura.direct_action import DirectActionRouter
+
         text = "divide /tmp/numerator.num by /tmp/denominator.num and save to /tmp/result.txt"
         plan = DirectActionRouter._parse_workflow_plan(text, default_workspace="/tmp")
         if plan is not None and plan.operation == "divide":
@@ -363,6 +360,7 @@ class TestSemanticOperandRolesPhase8:
 
     def test_divide_into_pattern(self):
         from jarvis.amaura.direct_action import DirectActionRouter
+
         text = "divide /tmp/denominator.num into /tmp/numerator.num and save to /tmp/result.txt"
         plan = DirectActionRouter._parse_workflow_plan(text, default_workspace="/tmp")
         if plan is not None and plan.operation == "divide":
@@ -373,6 +371,7 @@ class TestSemanticOperandRolesPhase8:
 
     def test_divided_by_passive_pattern(self):
         from jarvis.amaura.direct_action import DirectActionRouter
+
         text = "/tmp/numerator.num divided by /tmp/denominator.num save to /tmp/result.txt"
         plan = DirectActionRouter._parse_workflow_plan(text, default_workspace="/tmp")
         if plan is not None and plan.operation == "divide":
@@ -383,6 +382,7 @@ class TestSemanticOperandRolesPhase8:
 
     def test_subtraction_role_ordering_correctness(self):
         from jarvis.amaura.direct_action import DirectActionRouter
+
         text = "subtract /tmp/small.num from /tmp/large.num and save to /tmp/diff.txt"
         plan = DirectActionRouter._parse_workflow_plan(text, default_workspace="/tmp")
         if plan is not None and plan.operation == "subtract" and len(plan.input_roles) >= 2:
@@ -396,6 +396,7 @@ class TestSemanticOperandRolesPhase8:
 
     def test_all_subtract_forms_have_roles(self):
         from jarvis.amaura.direct_action import DirectActionRouter
+
         forms = [
             "subtract /tmp/b.num from /tmp/a.num and save to /tmp/r.txt",
             "take /tmp/b.num away from /tmp/a.num and save to /tmp/r.txt",
@@ -408,12 +409,13 @@ class TestSemanticOperandRolesPhase8:
 
     def test_1000_generated_semantic_role_cases(self):
         from jarvis.amaura.direct_action import DirectActionRouter
+
         cases = generate_semantic_role_cases(1000)
         assert len(cases) >= 1000
 
         role_populated_count = 0
         arithmetic_count = 0
-        for text, operation, expected_roles in cases:
+        for text, _operation, _expected_roles in cases:
             plan = DirectActionRouter._parse_workflow_plan(text, default_workspace="/tmp")
             if plan is not None and plan.operation in ("subtract", "divide"):
                 arithmetic_count += 1
@@ -429,6 +431,7 @@ class TestSemanticOperandRolesPhase8:
 # ═══════════════════════════════════════════════════════════════════════════
 # PART D: PATH-FIRST WRITE RELATIONS
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def generate_path_first_write_cases(count=500):
     cases = []
@@ -466,6 +469,7 @@ class TestPathFirstWriteRelationsPhase8:
 
     def test_path_first_write_basic(self):
         from jarvis.amaura.direct_action import WriteActionParser
+
         text = "Create /tmp/phase8_test.txt containing: hello-world-phase8"
         action = WriteActionParser.parse(text, default_workspace="/tmp")
         if action is not None:
@@ -473,6 +477,7 @@ class TestPathFirstWriteRelationsPhase8:
 
     def test_path_first_with_content_colon(self):
         from jarvis.amaura.direct_action import WriteActionParser
+
         text = "Write /tmp/phase8_content.txt with content: PHASE8_CONTENT_OK"
         action = WriteActionParser.parse(text, default_workspace="/tmp")
         if action is not None:
@@ -480,6 +485,7 @@ class TestPathFirstWriteRelationsPhase8:
 
     def test_path_does_not_become_content(self):
         from jarvis.amaura.direct_action import WriteActionParser
+
         text = "Write /tmp/test_path_first.txt containing: actual content here"
         action = WriteActionParser.parse(text, default_workspace="/tmp")
         if action is not None:
@@ -488,6 +494,7 @@ class TestPathFirstWriteRelationsPhase8:
 
     def test_500_generated_path_first_cases(self):
         from jarvis.amaura.direct_action import WriteActionParser
+
         cases = generate_path_first_write_cases(500)
         assert len(cases) >= 500
 
@@ -500,9 +507,7 @@ class TestPathFirstWriteRelationsPhase8:
                 parse_count += 1
                 if expected_content_fragment in (action.content or ""):
                     content_correct_count += 1
-                assert action.content != expected_path, (
-                    f"Path became content for: {text!r}"
-                )
+                assert action.content != expected_path, f"Path became content for: {text!r}"
 
         if parse_count > 0:
             assert content_correct_count >= parse_count * 0.60, (
@@ -514,13 +519,21 @@ class TestPathFirstWriteRelationsPhase8:
 # PART E: BROWSER EXTRACTION GRAMMAR
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 def generate_browser_extraction_cases(count=500):
     cases = []
     base_url = "https://example.com/page"
     action_word_selectors = [
-        ".capture-button", ".write-field", ".screen-overlay",
-        ".open-panel", ".read-more", ".screenshot-zone",
-        "#screenshot-btn", ".capture-zone", ".write-output", ".open-dialog",
+        ".capture-button",
+        ".write-field",
+        ".screen-overlay",
+        ".open-panel",
+        ".read-more",
+        ".screenshot-zone",
+        "#screenshot-btn",
+        ".capture-zone",
+        ".write-output",
+        ".open-dialog",
     ]
     explicit_quote_templates = [
         "Extract from {url} using css selector '{sel}'",
@@ -547,9 +560,10 @@ class TestBrowserExtractionGrammarPhase8:
     """Part E: BROWSER EXTRACTION GRAMMAR (500 generated variants)."""
 
     def test_quoted_selector_with_action_word_preserved(self):
-        from jarvis.amaura.direct_action import RequestPreprocessor, ActionType
+        from jarvis.amaura.direct_action import RequestPreprocessor
+
         text = "From https://example.com, get css selector '.capture-button'"
-        parsed = RequestPreprocessor.process(text)
+        RequestPreprocessor.process(text)
         # Should not be claimed by exact-response parser
         result = ExactResponseParser.parse(text)
         assert result is None, "Browser request must not be claimed by ExactResponseParser"
@@ -564,19 +578,18 @@ class TestBrowserExtractionGrammarPhase8:
         assert len(cases) >= 500
 
         failures = []
-        for text, url, expected_selectors in cases[:200]:
+        for text, _url, _expected_selectors in cases[:200]:
             result = ExactResponseParser.parse(text)
             if result is not None:
                 failures.append(f"ExactResponseParser stole browser request: {text!r}")
 
-        assert len(failures) == 0, (
-            "Browser requests stolen by ExactResponseParser:\n" + "\n".join(failures[:5])
-        )
+        assert len(failures) == 0, "Browser requests stolen by ExactResponseParser:\n" + "\n".join(failures[:5])
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # PART F+G: REPOSITORY WRONG-HELPER + WRONG-RETURN-VARIABLE DIAGNOSIS
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def generate_wrong_helper_repos_phase8(count=300):
     repos = []
@@ -642,10 +655,18 @@ def generate_wrong_return_var_repos_phase8(count=300):
 def {test_fn}():
     assert {fn_name}(5, 10) == 20
 """
-        repos.append((
-            f"module_{i}.py", code, f"test_module_{i}.py", test,
-            "wrong_returned_variable", fn_name, wrong_var, correct_var
-        ))
+        repos.append(
+            (
+                f"module_{i}.py",
+                code,
+                f"test_module_{i}.py",
+                test,
+                "wrong_returned_variable",
+                fn_name,
+                wrong_var,
+                correct_var,
+            )
+        )
     return repos
 
 
@@ -657,7 +678,7 @@ class TestRepositoryDiagnosisPhase8:
         assert len(repos) >= 300
 
         diagnosed = 0.0
-        for py_name, code, test_name, test_code, expected_category, fn_under_test in repos:
+        for py_name, code, test_name, test_code, _expected_category, fn_under_test in repos:
             with tempfile.TemporaryDirectory(prefix="phase8_helper_") as td:
                 repo_p = Path(td)
                 (repo_p / py_name).write_text(code)
@@ -680,7 +701,7 @@ class TestRepositoryDiagnosisPhase8:
         assert len(repos) >= 300
 
         diagnosed = 0.0
-        for py_name, code, test_name, test_code, cat, fn_under_test, wrong_var, correct_var in repos:
+        for py_name, code, test_name, test_code, _cat, fn_under_test, wrong_var, correct_var in repos:
             with tempfile.TemporaryDirectory(prefix="phase8_retvar_") as td:
                 repo_p = Path(td)
                 (repo_p / py_name).write_text(code)
@@ -717,6 +738,7 @@ class TestRepositoryDiagnosisPhase8:
 # ═══════════════════════════════════════════════════════════════════════════
 # PART: STRUCTURAL INTEGRITY
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestPhase8Exports:
     """Verify all Phase 8 classes are importable and structurally sound."""

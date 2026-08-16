@@ -5,6 +5,7 @@ for runnable dynamic goals and advances them through the governed Supervisor.
 Transient failures back off; configuration/provider failures enter explicit
 waiting states instead of spinning every polling interval.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -96,8 +97,16 @@ class MissionRunner:
     def _failure_class(exc: Exception) -> tuple[str, int]:
         text = str(exc).lower()
         configuration_terms = (
-            "not configured", "not installed", "invalid command", "requires", "authentication",
-            "sign in", "login", "no isolation runtime", "sandbox", "missing credential",
+            "not configured",
+            "not installed",
+            "invalid command",
+            "requires",
+            "authentication",
+            "sign in",
+            "login",
+            "no isolation runtime",
+            "sandbox",
+            "missing credential",
         )
         provider_terms = ("rate limit", "429", "quota", "overloaded", "provider", "timeout", "temporarily unavailable")
         if any(term in text for term in configuration_terms):
@@ -113,19 +122,27 @@ class MissionRunner:
         state, base = self._failure_class(exc)
         delay = min(base * (2 ** min(failures - 1, 6)), 900)
         next_attempt = datetime.now(UTC) + timedelta(seconds=delay)
-        metadata.update({
-            "runner_status": state,
-            "runner_failure_count": failures,
-            "runner_last_error": str(exc)[:4000],
-            "runner_last_error_at": datetime.now(UTC).isoformat(),
-            "runner_next_attempt_at": next_attempt.isoformat(),
-        })
+        metadata.update(
+            {
+                "runner_status": state,
+                "runner_failure_count": failures,
+                "runner_last_error": str(exc)[:4000],
+                "runner_last_error_at": datetime.now(UTC).isoformat(),
+                "runner_next_attempt_at": next_attempt.isoformat(),
+            }
+        )
         self.control.store.update_work_item(goal_id, metadata=metadata)
         self.control.store.publish_event(
-            "jarvis.mission.runner_error", goal_id,
+            "jarvis.mission.runner_error",
+            goal_id,
             {"error": str(exc)[:4000], "class": state, "retry_in_seconds": delay},
         )
-        return {"error": str(exc), "class": state, "retry_in_seconds": delay, "next_attempt_at": next_attempt.isoformat()}
+        return {
+            "error": str(exc),
+            "class": state,
+            "retry_in_seconds": delay,
+            "next_attempt_at": next_attempt.isoformat(),
+        }
 
     def _clear_failure(self, goal_id: str) -> None:
         goal = self.control.store.get_work_item(goal_id)
@@ -144,7 +161,11 @@ class MissionRunner:
         with self._local_lock:
             with self._leader_lock() as leader:
                 if leader is False:
-                    return {"status": "standby", "missions": [], "reason": "another MissionRunner process holds the leader lease"}
+                    return {
+                        "status": "standby",
+                        "missions": [],
+                        "reason": "another MissionRunner process holds the leader lease",
+                    }
                 # Filtering happens after the store query. A tiny pre-filter
                 # limit lets old completed/cancelled programmes permanently
                 # hide newer runnable missions once enough history exists.
@@ -158,13 +179,19 @@ class MissionRunner:
                             continue
                         execution = JarvisBrain(self.control).run_goal(goal_id, max_ticks=1, auto_replan=True)
                         self._clear_failure(goal_id)
-                        results.append(MissionRunnerResult(goal_id, execution.state, bool(execution.ticks), execution.to_dict()).to_dict())
+                        results.append(
+                            MissionRunnerResult(
+                                goal_id, execution.state, bool(execution.ticks), execution.to_dict()
+                            ).to_dict()
+                        )
                     except (GovernanceError, KeyError, ValueError, RuntimeError, OSError) as exc:
                         detail = self._record_failure(goal_id, exc)
                         results.append(MissionRunnerResult(goal_id, detail["class"], False, detail).to_dict())
         return {"status": "advanced" if results else "idle", "missions": results}
 
-    def run_forever(self, *, poll_seconds: float = 2.0, max_goals: int = 3, stop_event: threading.Event | None = None) -> None:
+    def run_forever(
+        self, *, poll_seconds: float = 2.0, max_goals: int = 3, stop_event: threading.Event | None = None
+    ) -> None:
         stop = stop_event or threading.Event()
         delay = max(0.25, min(float(poll_seconds), 60.0))
         while not stop.is_set():

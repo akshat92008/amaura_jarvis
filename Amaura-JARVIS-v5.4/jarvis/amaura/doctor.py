@@ -9,7 +9,6 @@ relying on repository-only helper scripts.
 from __future__ import annotations
 
 import hashlib
-from contextlib import closing
 import json
 import os
 import re
@@ -17,8 +16,9 @@ import sqlite3
 import subprocess
 import tempfile
 from collections.abc import Iterable
+from contextlib import closing
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.evaluation import (
@@ -39,11 +39,11 @@ SECRET_PATTERNS = {
     "stripe_live_key": re.compile(rb"\bsk_live_[A-Za-z0-9]{20,}\b"),
     "telegram_bot_token": re.compile(rb"\b[0-9]{8,12}:[A-Za-z0-9_-]{30,}\b"),
     "aws_access_key": re.compile(rb"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
-    "private_key": re.compile(
-        rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
-    ),
+    "private_key": re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     "jwt": re.compile(rb"\beyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\b"),
-    "credentialed_url": re.compile(rb"\b(?:https?|postgres(?:ql)?|mysql|mongodb(?:\+srv)?)://[^\s/:@]{2,}:[^\s/@]{8,}@"),
+    "credentialed_url": re.compile(
+        rb"\b(?:https?|postgres(?:ql)?|mysql|mongodb(?:\+srv)?)://[^\s/:@]{2,}:[^\s/@]{8,}@"
+    ),
     "generic_secret_assignment": re.compile(
         rb"(?i)\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|password|secret)"
         rb"\s*[:=]\s*[\"'][A-Za-z0-9_./+=:-]{24,}[\"']"
@@ -159,12 +159,24 @@ def scan_repository(root: str | Path) -> dict[str, Any]:
             for unsafe_name in ("git_diff", "git_log"):
                 read_only_section = governance.split("READ_ONLY_TOOLS", 1)[-1].split("GOVERNED_ONLY_TOOLS", 1)[0]
                 if f'"{unsafe_name}"' in read_only_section:
-                    findings.append({"path": str(governance_path.relative_to(repository)), "kind": f"unsafe_read_only_{unsafe_name}"})
+                    findings.append(
+                        {
+                            "path": str(governance_path.relative_to(repository)),
+                            "kind": f"unsafe_read_only_{unsafe_name}",
+                        }
+                    )
         registry_path = jarvis_root / "tools" / "registry.py"
         if registry_path.is_file():
             registry = registry_path.read_text(encoding="utf-8", errors="ignore")
-            if "validate_tool_arguments" not in registry or registry.find("validate_tool_arguments") > registry.find("ALL_DISPATCH[name]"):
-                findings.append({"path": str(registry_path.relative_to(repository)), "kind": "missing_pre_dispatch_schema_validation"})
+            if "validate_tool_arguments" not in registry or registry.find("validate_tool_arguments") > registry.find(
+                "ALL_DISPATCH[name]"
+            ):
+                findings.append(
+                    {
+                        "path": str(registry_path.relative_to(repository)),
+                        "kind": "missing_pre_dispatch_schema_validation",
+                    }
+                )
 
     unique = sorted({(item["path"], item["kind"]) for item in findings})
     normalized_findings = [{"path": path, "kind": kind} for path, kind in unique]
@@ -175,7 +187,11 @@ def scan_repository(root: str | Path) -> dict[str, Any]:
         "bytes_scanned": bytes_scanned,
         "patterns_checked": sorted(SECRET_PATTERNS),
         "code_contracts_checked": [
-            "no_shell_true", "no_os_system", "no_hard_coded_wildcard_bind", "safe_read_only_allowlist", "pre_dispatch_schema_validation"
+            "no_shell_true",
+            "no_os_system",
+            "no_hard_coded_wildcard_bind",
+            "safe_read_only_allowlist",
+            "pre_dispatch_schema_validation",
         ],
         "findings": normalized_findings,
     }
@@ -189,9 +205,7 @@ def _backup_restore_probe(control: AmauraControlPlane, directory: Path) -> dict[
         schema_rows = restored.execute(
             "SELECT name, sql FROM sqlite_master WHERE type IN ('table', 'index') ORDER BY name"
         ).fetchall()
-    schema_digest = hashlib.sha256(
-        json.dumps(schema_rows, sort_keys=True, default=str).encode("utf-8")
-    ).hexdigest()
+    schema_digest = hashlib.sha256(json.dumps(schema_rows, sort_keys=True, default=str).encode("utf-8")).hexdigest()
     return {
         "ok": integrity == "ok" and not foreign_keys,
         "path": str(backup_path),
@@ -236,9 +250,7 @@ def certify_release(
     expected_routes: list[dict[str, str]] = []
     if not static_only:
         try:
-            cases, evaluation_pack = load_evaluation_cases(
-                require_private=require_private_pack
-            )
+            cases, evaluation_pack = load_evaluation_cases(require_private=require_private_pack)
         except Exception as exc:
             cases = ()
             evaluation_status = "invalid_evaluation_pack"
@@ -251,12 +263,22 @@ def certify_release(
             }
         else:
             model_provider = os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower()
-            omniroute_key = (os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip())
-            omniroute_url = (os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip())
-            omniroute_model = (os.environ.get("AMAURA_OMNIROUTE_MODEL", "").strip() or os.environ.get("OMNIROUTE_MODEL", "").strip())
+            omniroute_key = (
+                os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip()
+                or os.environ.get("OMNIROUTE_API_KEY", "").strip()
+            )
+            omniroute_url = (
+                os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
+                or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+            )
+            omniroute_model = (
+                os.environ.get("AMAURA_OMNIROUTE_MODEL", "").strip() or os.environ.get("OMNIROUTE_MODEL", "").strip()
+            )
 
             if model_provider == "omniroute" or bool(omniroute_key and omniroute_url and omniroute_model):
-                expected_routes.append({"role": "worker", "provider": "omniroute", "model": omniroute_model or "omniroute"})
+                expected_routes.append(
+                    {"role": "worker", "provider": "omniroute", "model": omniroute_model or "omniroute"}
+                )
             else:
                 model_mode = os.environ.get("AMAURA_MODEL_MODE", "local").strip().lower()
                 review_mode = os.environ.get("AMAURA_REVIEW_MODE", "local").strip().lower()
@@ -282,9 +304,14 @@ def certify_release(
                     unique_routes.append(route)
             expected_routes = unique_routes
 
-            installed_local_models = set(
-                readiness.get("details", {}).get("live", {}).get("ollama", {}).get("models", [])
-            )
+            details = readiness.get("details")
+            details_map = cast(dict[str, Any], details) if isinstance(details, dict) else {}
+            live = details_map.get("live")
+            live_map = cast(dict[str, Any], live) if isinstance(live, dict) else {}
+            ollama = live_map.get("ollama")
+            ollama_map = cast(dict[str, Any], ollama) if isinstance(ollama, dict) else {}
+            models = ollama_map.get("models")
+            installed_local_models = {str(model) for model in models} if isinstance(models, list) else set()
             missing_routes: list[str] = []
             for route in expected_routes:
                 if route["provider"] == "omniroute":
@@ -309,17 +336,13 @@ def certify_release(
                     if route["provider"] == "omniroute":
                         result = evaluate_omniroute_model(route["model"], cases=cases)
                     elif route["provider"] == "ollama":
-                        result = evaluate_model(
-                            route["model"], base_url=ollama_url, cases=cases
-                        )
+                        result = evaluate_model(route["model"], base_url=ollama_url, cases=cases)
                     else:
                         key_name = "NVIDIA_REVIEW_API_KEY" if route["role"] == "reviewer" else "NVIDIA_API_KEY"
                         api_key = os.environ.get(key_name, "").strip()
                         if route["role"] == "reviewer" and not api_key:
                             api_key = os.environ.get("NVIDIA_API_KEY", "").strip()
-                        result = evaluate_cloud_model(
-                            route["model"], api_key=api_key, cases=cases
-                        )
+                        result = evaluate_cloud_model(route["model"], api_key=api_key, cases=cases)
                     evaluations.append({**result.to_dict(), "role": route["role"]})
 
     model_gate = (
@@ -333,11 +356,7 @@ def certify_release(
             and (not require_private_pack or bool(evaluation_pack.get("authenticated")))
         )
     )
-    source_certified = (
-        bool(readiness["source_certified"])
-        and bool(security["ok"])
-        and bool(backup_restore["ok"])
-    )
+    source_certified = bool(readiness["source_certified"]) and bool(security["ok"]) and bool(backup_restore["ok"])
     if os.environ.get("AMAURA_RELEASE_GATE_DEBUG") == "1" and not source_certified:
         print(
             "AMAURA_RELEASE_GATE_DEBUG",
@@ -349,13 +368,9 @@ def certify_release(
             },
             flush=True,
         )
-    production_ready = (
-        source_certified
-        and not static_only
-        and bool(readiness["ready"])
-        and model_gate
-    )
-    blockers = list(readiness.get("blockers", []))
+    production_ready = source_certified and not static_only and bool(readiness["ready"]) and model_gate
+    raw_blockers = readiness.get("blockers")
+    blockers = [str(item) for item in raw_blockers] if isinstance(raw_blockers, list) else []
     if not security["ok"]:
         blockers.append("repository_secret_scan")
     if not backup_restore["ok"]:

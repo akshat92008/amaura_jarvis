@@ -5,6 +5,7 @@ Unknown fields and incorrect types are rejected before path normalization or
 handler dispatch.  This intentionally implements the small JSON-Schema subset
 used by Jarvis tool definitions without introducing another runtime dependency.
 """
+
 from __future__ import annotations
 
 import math
@@ -107,9 +108,7 @@ def _validate(value: Any, schema: Mapping[str, Any], path: str) -> None:
 def validate_tool_arguments(name: str, args: Any, schema: Mapping[str, Any]) -> dict[str, Any]:
     """Return a validated shallow copy of *args* or raise fail-closed."""
     if not isinstance(args, dict):
-        raise ToolArgumentValidationError(
-            f"tool {name!r} arguments must be a JSON object, got {type(args).__name__}"
-        )
+        raise ToolArgumentValidationError(f"tool {name!r} arguments must be a JSON object, got {type(args).__name__}")
     _validate(args, schema, f"tool {name}")
     return dict(args)
 

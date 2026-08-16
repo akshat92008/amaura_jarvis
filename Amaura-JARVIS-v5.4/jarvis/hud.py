@@ -20,11 +20,11 @@ HUD_TOOL_DEFINITIONS = [
                     "action": {
                         "type": "string",
                         "description": "Action: 'show', 'hide', or 'toggle'.",
-                        "default": "toggle"
+                        "default": "toggle",
                     }
-                }
-            }
-        }
+                },
+            },
+        },
     }
 ]
 
@@ -42,7 +42,7 @@ class JarvisHUDManager:
             self.is_visible = not self.is_visible
 
         state_str = "VISIBLE (Active Overlay)" if self.is_visible else "HIDDEN (System Tray)"
-        
+
         # Trigger macOS Notification
         try:
             script = f'display notification "JARVIS HUD Overlay is now {state_str}" with title "JARVIS Sci-Fi HUD"'
@@ -60,6 +60,4 @@ def toggle_hud_overlay(action: str = "toggle") -> str:
     return _hud_instance.toggle(action)
 
 
-HUD_DISPATCH = {
-    "toggle_hud_overlay": toggle_hud_overlay
-}
+HUD_DISPATCH = {"toggle_hud_overlay": toggle_hud_overlay}

@@ -1,6 +1,0 @@
-[
-  {
-    "type": "error",
-    "error": "Audit history integrity failure at sequence 1: signature_missing"
-  }
-]

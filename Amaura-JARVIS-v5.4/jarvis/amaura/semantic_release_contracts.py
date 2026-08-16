@@ -11,6 +11,7 @@ Transformation writes remain guarded by the semantic effect scope. An output is
 accepted only when mutation language explicitly binds that exact path; path
 position never authorizes a side effect.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -22,6 +23,14 @@ from typing import Any
 _INSTALLED = False
 
 
+def _unwrap_classmethod(value: Any) -> Any:
+    return getattr(value, "__func__", value)
+
+
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
+
+
 def install_semantic_release_contracts() -> None:
     global _INSTALLED
     if _INSTALLED:
@@ -30,7 +39,7 @@ def install_semantic_release_contracts() -> None:
     from jarvis.amaura import direct_action as da
     from jarvis.amaura import semantic_core as core
 
-    current_parse = core.SemanticParser.parse.__func__
+    current_parse = _unwrap_classmethod(core.SemanticParser.parse)
 
     def _explicit_transform_output(text: str, paths: list[str]) -> str:
         lower = text.lower()
@@ -47,12 +56,14 @@ def install_semantic_release_contracts() -> None:
     def _transform_contract(text: str, known_extensions: tuple[str, ...]) -> tuple[str, str] | None:
         paths = core.extract_paths(text, known_extensions)
         output = _explicit_transform_output(text, paths)
-        has_transform = bool(re.search(
-            r"\b(?:read|load|fetch)\b.*\b(?:extract|convert|transform)\b|"
-            r"\b(?:extract|convert|transform)\b.*\b(?:save|write|create|export)\b",
-            text,
-            re.IGNORECASE | re.DOTALL,
-        ))
+        has_transform = bool(
+            re.search(
+                r"\b(?:read|load|fetch)\b.*\b(?:extract|convert|transform)\b|"
+                r"\b(?:extract|convert|transform)\b.*\b(?:save|write|create|export)\b",
+                text,
+                re.IGNORECASE | re.DOTALL,
+            )
+        )
         inputs = [path for path in paths if path != output]
         if not has_transform or not output or len(inputs) != 1:
             return None
@@ -73,7 +84,7 @@ def install_semantic_release_contracts() -> None:
             )
         return graph
 
-    core.SemanticParser.parse = classmethod(parse_with_workflow_precedence)
+    _install_attr(core.SemanticParser, "parse", classmethod(parse_with_workflow_precedence))
 
     def _parse_scalar(value: str) -> Any:
         stripped = value.strip()
@@ -242,7 +253,7 @@ def install_semantic_release_contracts() -> None:
             core._OUTPUT_SCOPE.reset(output_token)
             core._EFFECT_SCOPE.reset(effect_token)
 
-    current_router_execute = da.DirectActionRouter.execute.__func__
+    current_router_execute = _unwrap_classmethod(da.DirectActionRouter.execute)
 
     def execute_with_release_contracts(
         cls: Any,
@@ -274,9 +285,8 @@ def install_semantic_release_contracts() -> None:
             result.tool_name = "echo"
         return result
 
-    da.DirectActionRouter.execute = classmethod(execute_with_release_contracts)
-
-    current_exact_parse = da.ExactResponseParser.parse.__func__
+    _install_attr(da.DirectActionRouter, "execute", classmethod(execute_with_release_contracts))
+    current_exact_parse = _unwrap_classmethod(da.ExactResponseParser.parse)
 
     def exact_with_public_provenance(cls: Any, text: str, workspace: str = "") -> Any:
         result = current_exact_parse(cls, text, workspace=workspace)
@@ -284,5 +294,5 @@ def install_semantic_release_contracts() -> None:
             result.tool_name = "echo"
         return result
 
-    da.ExactResponseParser.parse = classmethod(exact_with_public_provenance)
+    _install_attr(da.ExactResponseParser, "parse", classmethod(exact_with_public_provenance))
     _INSTALLED = True

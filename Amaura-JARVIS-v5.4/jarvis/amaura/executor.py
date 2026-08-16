@@ -25,12 +25,12 @@ from jarvis.amaura.gitops import (
 from jarvis.amaura.models import GovernanceError, TaskState
 from jarvis.amaura.network import fetch_public_text
 from jarvis.amaura.policy import PATH_ARGUMENTS
+from jarvis.amaura.registry import get_agent
+from jarvis.amaura.sandbox import StatefulDockerSandbox, run_governed_command
+from jarvis.amaura.security import redact_sensitive_text
+from jarvis.models import resolve_model
 from jarvis.tools.result import parse_tool_result
 from jarvis.tools.security import tool_workspace
-from jarvis.amaura.registry import get_agent
-from jarvis.amaura.security import redact_sensitive_text
-from jarvis.amaura.sandbox import run_governed_command, StatefulDockerSandbox
-from jarvis.models import DEFAULT_MODEL, MODELS, resolve_model
 
 
 class _LocalOllamaClient:
@@ -59,7 +59,9 @@ class _LocalOllamaClient:
             }
             return response
         except Exception as exc:
-            raise GovernanceError("Device-only inference failed; no cloud fallback was attempted. Start Ollama and configure AMAURA_LOCAL_MODEL.") from exc
+            raise GovernanceError(
+                "Device-only inference failed; no cloud fallback was attempted. Start Ollama and configure AMAURA_LOCAL_MODEL."
+            ) from exc
 
 
 class _OmniRouteClient:
@@ -69,12 +71,10 @@ class _OmniRouteClient:
         from openai import OpenAI
 
         raw_base = (
-            os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
-            or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+            os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
         ).rstrip("/")
         api_key = (
-            os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip()
-            or os.environ.get("OMNIROUTE_API_KEY", "").strip()
+            os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
         )
         if not raw_base or not api_key:
             raise GovernanceError("OmniRoute worker execution requires its base URL and API key")
@@ -107,7 +107,9 @@ class _OmniRouteClient:
                 if not getattr(response, "choices", None):
                     raise GovernanceError("OmniRoute returned no completion choices")
                 message = response.choices[0].message
-                if not str(getattr(message, "content", "") or "").strip() and not (getattr(message, "tool_calls", None) or []):
+                if not str(getattr(message, "content", "") or "").strip() and not (
+                    getattr(message, "tool_calls", None) or []
+                ):
                     raise GovernanceError("OmniRoute returned an empty worker completion")
                 actual_model = str(getattr(response, "model", "") or model)
                 self.last_execution_metadata = {
@@ -156,9 +158,7 @@ class GovernedTaskRunner:
         if route["provider"] == "omniroute":
             return _OmniRouteClient()
         if os.environ.get("AMAURA_DISABLE_CLOUD") == "1":
-            raise GovernanceError(
-                "Cloud model access is disabled for this execution"
-            )
+            raise GovernanceError("Cloud model access is disabled for this execution")
         from jarvis.api import NvidiaClient
 
         agent_key = os.getenv(f"NVIDIA_API_KEY_{employee.agent_id.upper()}")
@@ -197,7 +197,9 @@ class GovernedTaskRunner:
             )
             if result.startswith("❌"):
                 return json.dumps({"ok": False, "data": {}, "error": result, "external_id": "", "retryable": False})
-            return json.dumps({"ok": True, "data": {"output": result}, "error": None, "external_id": "", "retryable": False})
+            return json.dumps(
+                {"ok": True, "data": {"output": result}, "error": None, "external_id": "", "retryable": False}
+            )
         if tool_name not in {"run_command", "run_tests", "lint_code"}:
             with tool_workspace(workspace or Path.cwd()):
                 return execute_tool(tool_name, args)
@@ -256,19 +258,39 @@ class GovernedTaskRunner:
                     timeout=timeout,
                 )
         except GovernanceError as exc:
-            return json.dumps({"ok": False, "data": {}, "error": f"Cannot execute command: {exc}", "external_id": "", "retryable": False})
+            return json.dumps(
+                {
+                    "ok": False,
+                    "data": {},
+                    "error": f"Cannot execute command: {exc}",
+                    "external_id": "",
+                    "retryable": False,
+                }
+            )
         output = completed.stdout
         if completed.stderr:
             output += ("\n" if output else "") + completed.stderr
         output = output.strip() or "(no output)"
         if completed.returncode != 0:
-            return json.dumps({"ok": False, "data": {}, "error": f"Command failed (exit code {completed.returncode}):\n{output}", "external_id": "", "retryable": False})
-        return json.dumps({"ok": True, "data": {"output": output}, "error": None, "external_id": "", "retryable": False})
+            return json.dumps(
+                {
+                    "ok": False,
+                    "data": {},
+                    "error": f"Command failed (exit code {completed.returncode}):\n{output}",
+                    "external_id": "",
+                    "retryable": False,
+                }
+            )
+        return json.dumps(
+            {"ok": True, "data": {"output": output}, "error": None, "external_id": "", "retryable": False}
+        )
 
     def _ensure_task_active(self, task_id: str) -> dict[str, Any]:
         current = self.control.store.get_work_item(task_id)
         if current.get("state") == TaskState.CANCELLED.value:
-            raise GovernanceError("Mission/task was cancelled while execution was in progress; late worker output is discarded")
+            raise GovernanceError(
+                "Mission/task was cancelled while execution was in progress; late worker output is discarded"
+            )
         metadata = dict(current.get("metadata") or {})
         if metadata.get("mission_pause_requested"):
             raise GovernanceError("Mission was paused while execution was in progress; late worker output is discarded")
@@ -282,14 +304,21 @@ class GovernedTaskRunner:
                 pmeta.get("mission_runnable") is not True
                 or pmeta.get("mission_paused") is True
                 or pmeta.get("cancel_requested") is True
-                or programme.get("state") in {TaskState.DRAFT.value, TaskState.CANCELLED.value, TaskState.COMPLETED.value}
+                or programme.get("state")
+                in {TaskState.DRAFT.value, TaskState.CANCELLED.value, TaskState.COMPLETED.value}
             ):
-                raise GovernanceError("Mission authority changed while execution was in progress; stale worker output is discarded")
+                raise GovernanceError(
+                    "Mission authority changed while execution was in progress; stale worker output is discarded"
+                )
             if int(metadata.get("mission_generation", 1) or 1) != int(pmeta.get("mission_generation", 1) or 1):
-                raise GovernanceError("Mission generation changed while execution was in progress; stale worker output is discarded")
+                raise GovernanceError(
+                    "Mission generation changed while execution was in progress; stale worker output is discarded"
+                )
         return current
 
-    def _run_antigravity_delivery(self, task_id: str, task: dict[str, Any], packet_dict: dict[str, Any]) -> dict[str, Any]:
+    def _run_antigravity_delivery(
+        self, task_id: str, task: dict[str, Any], packet_dict: dict[str, Any]
+    ) -> dict[str, Any]:
         """Execute repository engineering through the official Antigravity CLI."""
         from jarvis.amaura.antigravity_bridge import AntigravityDeliveryAdapter
         from jarvis.amaura.gitops import WorktreeRecord
@@ -297,7 +326,9 @@ class GovernedTaskRunner:
         workspace = str(packet_dict.get("_workspace") or "")
         adapter = AntigravityDeliveryAdapter()
         if not adapter.configured:
-            raise GovernanceError("coding_backend=antigravity was requested but the Antigravity CLI (`agy`) is not configured")
+            raise GovernanceError(
+                "coding_backend=antigravity was requested but the Antigravity CLI (`agy`) is not configured"
+            )
 
         def should_cancel() -> bool:
             try:
@@ -309,12 +340,14 @@ class GovernedTaskRunner:
         def phase_callback(phase: str, payload: dict[str, Any]) -> None:
             current = self.control.store.get_work_item(task_id)
             metadata = dict(current.get("metadata") or {})
-            metadata.update({
-                "engineering_phase": phase,
-                "engineering_phase_at": time.time(),
-                "engineering_executor": "antigravity",
-                "engineering_idempotency_key": f"amaura:{task_id}",
-            })
+            metadata.update(
+                {
+                    "engineering_phase": phase,
+                    "engineering_phase_at": time.time(),
+                    "engineering_executor": "antigravity",
+                    "engineering_idempotency_key": f"amaura:{task_id}",
+                }
+            )
             if payload.get("pid"):
                 metadata["antigravity_pid"] = int(payload["pid"])
             if payload.get("base_commit"):
@@ -344,14 +377,17 @@ class GovernedTaskRunner:
             last_progress_write[0] = now
             try:
                 from jarvis.security import redact_sensitive_text
+
                 raw = json.dumps(event, ensure_ascii=False, sort_keys=True, default=str)
                 summary = redact_sensitive_text(raw)[:1800]
                 current = self.control.store.get_work_item(task_id)
                 metadata = dict(current.get("metadata") or {})
-                metadata.update({
-                    "antigravity_progress": summary,
-                    "antigravity_progress_at": time.time(),
-                })
+                metadata.update(
+                    {
+                        "antigravity_progress": summary,
+                        "antigravity_progress_at": time.time(),
+                    }
+                )
                 self.control.store.update_work_item(task_id, metadata=metadata)
             except Exception:
                 # Progress telemetry must never be able to break execution.
@@ -369,76 +405,123 @@ class GovernedTaskRunner:
         )
         self._ensure_task_active(task_id)
         evidence: list[dict[str, Any]] = []
-        execution_record = self.control.evidence.put_json(result.to_dict(), source=f"task:{task_id}:antigravity_execution")
-        evidence.append({
-            "type": "antigravity_execution", "reference": execution_record.reference,
-            "sha256": execution_record.sha256, "byte_length": execution_record.byte_length, "success": True,
-            "excerpt": str(result.result.get("summary") or "Antigravity completed the engineering task")[:500],
-        })
-        verify_record = self.control.evidence.put_json(result.verification, source=f"task:{task_id}:antigravity_verification")
-        evidence.append({
-            "type": "antigravity_verification", "reference": verify_record.reference,
-            "sha256": verify_record.sha256, "byte_length": verify_record.byte_length, "success": True,
-            "excerpt": f"diff={str(result.verification.get('diff_hash') or '')[:12]} files={len(result.verification.get('changed_files') or [])} independent_tests={len(result.verification.get('independent_tests') or [])}",
-        })
+        execution_record = self.control.evidence.put_json(
+            result.to_dict(), source=f"task:{task_id}:antigravity_execution"
+        )
+        evidence.append(
+            {
+                "type": "antigravity_execution",
+                "reference": execution_record.reference,
+                "sha256": execution_record.sha256,
+                "byte_length": execution_record.byte_length,
+                "success": True,
+                "excerpt": str(result.result.get("summary") or "Antigravity completed the engineering task")[:500],
+            }
+        )
+        verify_record = self.control.evidence.put_json(
+            result.verification, source=f"task:{task_id}:antigravity_verification"
+        )
+        evidence.append(
+            {
+                "type": "antigravity_verification",
+                "reference": verify_record.reference,
+                "sha256": verify_record.sha256,
+                "byte_length": verify_record.byte_length,
+                "success": True,
+                "excerpt": f"diff={str(result.verification.get('diff_hash') or '')[:12]} files={len(result.verification.get('changed_files') or [])} independent_tests={len(result.verification.get('independent_tests') or [])}",
+            }
+        )
         for index, test_result in enumerate(result.verification.get("independent_tests") or []):
-            record = self.control.evidence.put_json(test_result, source=f"task:{task_id}:amaura_antigravity_test:{index}")
-            evidence.append({
-                "type": "independent_test", "reference": record.reference, "sha256": record.sha256,
-                "byte_length": record.byte_length, "success": bool(test_result.get("passed")),
-                "excerpt": f"Amaura verifier exit={test_result.get('exit_code')} command={str(test_result.get('command') or '')[:320]}",
-            })
+            record = self.control.evidence.put_json(
+                test_result, source=f"task:{task_id}:amaura_antigravity_test:{index}"
+            )
+            evidence.append(
+                {
+                    "type": "independent_test",
+                    "reference": record.reference,
+                    "sha256": record.sha256,
+                    "byte_length": record.byte_length,
+                    "success": bool(test_result.get("passed")),
+                    "excerpt": f"Amaura verifier exit={test_result.get('exit_code')} command={str(test_result.get('command') or '')[:320]}",
+                }
+            )
         executor_receipt = {
-            "backend": "antigravity", "external_id": result.receipt.external_id,
+            "backend": "antigravity",
+            "external_id": result.receipt.external_id,
             "models_used": list(result.verification.get("executor_models") or []),
             "actual_model": str((result.verification.get("executor_models") or [""])[0]),
-            "provider": "antigravity", "cli_version": result.cli_version,
+            "provider": "antigravity",
+            "cli_version": result.cli_version,
             "diff_hash": str(result.verification.get("diff_hash") or ""),
         }
-        ext_record = self.control.evidence.put_json(executor_receipt, source=f"task:{task_id}:external_executor_receipt")
-        evidence.append({
-            "type": "external_executor_receipt", "reference": ext_record.reference, "sha256": ext_record.sha256,
-            "byte_length": ext_record.byte_length, "success": True,
-            "excerpt": f"backend=antigravity cli={result.cli_version} models={','.join(executor_receipt['models_used'][:5]) or 'not-declared'}",
-        })
+        ext_record = self.control.evidence.put_json(
+            executor_receipt, source=f"task:{task_id}:external_executor_receipt"
+        )
+        evidence.append(
+            {
+                "type": "external_executor_receipt",
+                "reference": ext_record.reference,
+                "sha256": ext_record.sha256,
+                "byte_length": ext_record.byte_length,
+                "success": True,
+                "excerpt": f"backend=antigravity cli={result.cli_version} models={','.join(executor_receipt['models_used'][:5]) or 'not-declared'}",
+            }
+        )
         metadata = dict(task.get("metadata") or {})
-        metadata.update({
-            "coding_backend_used": "antigravity", "antigravity_external_id": result.receipt.external_id,
-            "antigravity_cli_version": result.cli_version, "antigravity_diff_hash": result.verification.get("diff_hash"),
-            "antigravity_changed_files": list(result.verification.get("changed_files") or []),
-            "antigravity_independent_tests": list(result.verification.get("independent_tests") or []),
-            "antigravity_executor_models": list(result.verification.get("executor_models") or []),
-            "engineering_phase": "verified",
-            "engineering_phase_at": time.time(),
-        })
+        metadata.update(
+            {
+                "coding_backend_used": "antigravity",
+                "antigravity_external_id": result.receipt.external_id,
+                "antigravity_cli_version": result.cli_version,
+                "antigravity_diff_hash": result.verification.get("diff_hash"),
+                "antigravity_changed_files": list(result.verification.get("changed_files") or []),
+                "antigravity_independent_tests": list(result.verification.get("independent_tests") or []),
+                "antigravity_executor_models": list(result.verification.get("executor_models") or []),
+                "engineering_phase": "verified",
+                "engineering_phase_at": time.time(),
+            }
+        )
         if metadata.get("git_worktree_path"):
             self._ensure_task_active(task_id)
             worktree = WorktreeRecord(
-                repository_root=str(metadata.get("git_repository_root", "")), worktree_path=str(metadata.get("git_worktree_path", "")),
-                branch=str(metadata.get("git_branch", "")), base_branch=str(metadata.get("git_base_branch", "")),
+                repository_root=str(metadata.get("git_repository_root", "")),
+                worktree_path=str(metadata.get("git_worktree_path", "")),
+                branch=str(metadata.get("git_branch", "")),
+                base_branch=str(metadata.get("git_base_branch", "")),
                 base_commit=str(metadata.get("git_base_commit", "")),
                 isolation_mode=str(metadata.get("git_isolation_mode", "linked_worktree")),
             )
-            commit = finalize_task_commit(worktree, task_id=task_id, title=str(task.get("title", "Antigravity engineering update")))
+            commit = finalize_task_commit(
+                worktree, task_id=task_id, title=str(task.get("title", "Antigravity engineering update"))
+            )
             observed, committed = set(result.verification.get("changed_files") or []), set(commit.changed_files)
             if observed != committed:
-                raise GovernanceError(f"Antigravity verification delta does not match finalized commit: verified={sorted(observed)!r} committed={sorted(committed)!r}")
+                raise GovernanceError(
+                    f"Antigravity verification delta does not match finalized commit: verified={sorted(observed)!r} committed={sorted(committed)!r}"
+                )
             verification_commands = list(result.verification.get("verification_commands") or [])
-            metadata.update({
-                "git_commit": commit.commit,
-                "git_changed_files": list(commit.changed_files),
-                "verification_commands": verification_commands,
-            })
+            metadata.update(
+                {
+                    "git_commit": commit.commit,
+                    "git_changed_files": list(commit.changed_files),
+                    "verification_commands": verification_commands,
+                }
+            )
             if verification_commands and not metadata.get("post_merge_validation"):
                 metadata["post_merge_validation"] = str(verification_commands[0])
             metadata.update({"engineering_phase": "commit_created", "engineering_phase_at": time.time()})
             self.control.store.update_work_item(task_id, metadata=metadata)
             commit_record = self.control.evidence.put_json(commit.to_dict(), source=f"task:{task_id}:git_commit")
-            evidence.append({
-                "type": "git_commit", "reference": commit_record.reference, "sha256": commit_record.sha256,
-                "byte_length": commit_record.byte_length, "success": True,
-                "excerpt": f"commit={commit.commit[:12]} files={len(commit.changed_files)} backend=antigravity",
-            })
+            evidence.append(
+                {
+                    "type": "git_commit",
+                    "reference": commit_record.reference,
+                    "sha256": commit_record.sha256,
+                    "byte_length": commit_record.byte_length,
+                    "success": True,
+                    "excerpt": f"commit={commit.commit[:12]} files={len(commit.changed_files)} backend=antigravity",
+                }
+            )
         self._ensure_task_active(task_id)
         summary = str(result.result["summary"]).strip()
         submitted = self.control.submit_task(task_id, task["owner_id"], summary, evidence)
@@ -446,8 +529,13 @@ class GovernedTaskRunner:
         final_meta.update({"engineering_phase": "submitted_for_review", "engineering_phase_at": time.time()})
         self.control.store.update_work_item(task_id, metadata=final_meta)
         return {
-            "status": submitted["state"], "task_id": task_id, "employee": get_agent(task["owner_id"]).name,
-            "iterations": 1, "summary": summary, "evidence": evidence, "coding_backend": "antigravity",
+            "status": submitted["state"],
+            "task_id": task_id,
+            "employee": get_agent(task["owner_id"]).name,
+            "iterations": 1,
+            "summary": summary,
+            "evidence": evidence,
+            "coding_backend": "antigravity",
             "reviewer": submitted["reviewer_id"],
         }
 
@@ -473,61 +561,69 @@ class GovernedTaskRunner:
             result.to_dict(),
             source=f"task:{task_id}:noryx_execution",
         )
-        evidence.append({
-            "type": "noryx_execution",
-            "reference": execution_record.reference,
-            "sha256": execution_record.sha256,
-            "byte_length": execution_record.byte_length,
-            "success": True,
-            "excerpt": str(result.result.get("summary") or "Noryx completed the engineering task")[:500],
-        })
+        evidence.append(
+            {
+                "type": "noryx_execution",
+                "reference": execution_record.reference,
+                "sha256": execution_record.sha256,
+                "byte_length": execution_record.byte_length,
+                "success": True,
+                "excerpt": str(result.result.get("summary") or "Noryx completed the engineering task")[:500],
+            }
+        )
         verification_record = self.control.evidence.put_json(
             result.verification,
             source=f"task:{task_id}:noryx_verification",
         )
-        evidence.append({
-            "type": "noryx_verification",
-            "reference": verification_record.reference,
-            "sha256": verification_record.sha256,
-            "byte_length": verification_record.byte_length,
-            "success": True,
-            "excerpt": (
-                f"diff={str(result.verification.get('diff_hash') or '')[:12]} "
-                f"files={len(result.verification.get('changed_files') or [])} "
-                f"tests={len(result.verification.get('tests') or [])}"
-            ),
-        })
+        evidence.append(
+            {
+                "type": "noryx_verification",
+                "reference": verification_record.reference,
+                "sha256": verification_record.sha256,
+                "byte_length": verification_record.byte_length,
+                "success": True,
+                "excerpt": (
+                    f"diff={str(result.verification.get('diff_hash') or '')[:12]} "
+                    f"files={len(result.verification.get('changed_files') or [])} "
+                    f"tests={len(result.verification.get('tests') or [])}"
+                ),
+            }
+        )
         for index, test_result in enumerate(result.verification.get("tests") or []):
             test_record = self.control.evidence.put_json(
                 test_result,
                 source=f"task:{task_id}:noryx_test:{index}",
             )
-            evidence.append({
-                "type": "noryx_test",
-                "reference": test_record.reference,
-                "sha256": test_record.sha256,
-                "byte_length": test_record.byte_length,
-                "success": bool(test_result.get("passed")) and int(test_result.get("exit_code", 1)) == 0,
-                "excerpt": (
-                    f"exit={test_result.get('exit_code')} command={str(test_result.get('command') or '')[:320]}"
-                ),
-            })
+            evidence.append(
+                {
+                    "type": "noryx_test",
+                    "reference": test_record.reference,
+                    "sha256": test_record.sha256,
+                    "byte_length": test_record.byte_length,
+                    "success": bool(test_result.get("passed")) and int(test_result.get("exit_code", 1)) == 0,
+                    "excerpt": (
+                        f"exit={test_result.get('exit_code')} command={str(test_result.get('command') or '')[:320]}"
+                    ),
+                }
+            )
 
         for index, test_result in enumerate(result.verification.get("independent_tests") or []):
             test_record = self.control.evidence.put_json(
                 test_result,
                 source=f"task:{task_id}:amaura_independent_test:{index}",
             )
-            evidence.append({
-                "type": "independent_test",
-                "reference": test_record.reference,
-                "sha256": test_record.sha256,
-                "byte_length": test_record.byte_length,
-                "success": bool(test_result.get("passed")) and int(test_result.get("exit_code", 1)) == 0,
-                "excerpt": (
-                    f"Amaura verifier exit={test_result.get('exit_code')} command={str(test_result.get('command') or '')[:320]}"
-                ),
-            })
+            evidence.append(
+                {
+                    "type": "independent_test",
+                    "reference": test_record.reference,
+                    "sha256": test_record.sha256,
+                    "byte_length": test_record.byte_length,
+                    "success": bool(test_result.get("passed")) and int(test_result.get("exit_code", 1)) == 0,
+                    "excerpt": (
+                        f"Amaura verifier exit={test_result.get('exit_code')} command={str(test_result.get('command') or '')[:320]}"
+                    ),
+                }
+            )
 
         executor_receipt = {
             "backend": "noryx",
@@ -541,28 +637,33 @@ class GovernedTaskRunner:
             executor_receipt,
             source=f"task:{task_id}:external_executor_receipt",
         )
-        evidence.append({
-            "type": "external_executor_receipt",
-            "reference": external_record.reference,
-            "sha256": external_record.sha256,
-            "byte_length": external_record.byte_length,
-            "success": True,
-            "excerpt": (
-                "backend=noryx models=" + ",".join(executor_receipt["models_used"][:5])
-                if executor_receipt["models_used"] else "backend=noryx model-provenance=not-declared"
-            ),
-        })
+        evidence.append(
+            {
+                "type": "external_executor_receipt",
+                "reference": external_record.reference,
+                "sha256": external_record.sha256,
+                "byte_length": external_record.byte_length,
+                "success": True,
+                "excerpt": (
+                    "backend=noryx models=" + ",".join(executor_receipt["models_used"][:5])
+                    if executor_receipt["models_used"]
+                    else "backend=noryx model-provenance=not-declared"
+                ),
+            }
+        )
 
         metadata = dict(task.get("metadata") or {})
-        metadata.update({
-            "coding_backend_used": "noryx",
-            "noryx_external_id": getattr(result.receipt, "external_id", ""),
-            "noryx_diff_hash": str(result.verification.get("diff_hash") or ""),
-            "noryx_changed_files": list(result.verification.get("changed_files") or []),
-            "noryx_tests": list(result.verification.get("tests") or []),
-            "noryx_independent_tests": list(result.verification.get("independent_tests") or []),
-            "noryx_executor_models": list(result.verification.get("executor_models") or []),
-        })
+        metadata.update(
+            {
+                "coding_backend_used": "noryx",
+                "noryx_external_id": getattr(result.receipt, "external_id", ""),
+                "noryx_diff_hash": str(result.verification.get("diff_hash") or ""),
+                "noryx_changed_files": list(result.verification.get("changed_files") or []),
+                "noryx_tests": list(result.verification.get("tests") or []),
+                "noryx_independent_tests": list(result.verification.get("independent_tests") or []),
+                "noryx_executor_models": list(result.verification.get("executor_models") or []),
+            }
+        )
         if metadata.get("git_worktree_path"):
             self._ensure_task_active(task_id)
             worktree = WorktreeRecord(
@@ -585,23 +686,27 @@ class GovernedTaskRunner:
                     "Noryx verification delta does not match Amaura's finalized task commit: "
                     f"verified={sorted(observed_files)!r} committed={sorted(committed_files)!r}"
                 )
-            metadata.update({
-                "git_commit": commit.commit,
-                "git_changed_files": list(commit.changed_files),
-            })
+            metadata.update(
+                {
+                    "git_commit": commit.commit,
+                    "git_changed_files": list(commit.changed_files),
+                }
+            )
             self.control.store.update_work_item(task_id, metadata=metadata)
             commit_record = self.control.evidence.put_json(
                 commit.to_dict(),
                 source=f"task:{task_id}:git_commit",
             )
-            evidence.append({
-                "type": "git_commit",
-                "reference": commit_record.reference,
-                "sha256": commit_record.sha256,
-                "byte_length": commit_record.byte_length,
-                "success": True,
-                "excerpt": f"commit={commit.commit[:12]} files={len(commit.changed_files)} backend=noryx",
-            })
+            evidence.append(
+                {
+                    "type": "git_commit",
+                    "reference": commit_record.reference,
+                    "sha256": commit_record.sha256,
+                    "byte_length": commit_record.byte_length,
+                    "success": True,
+                    "excerpt": f"commit={commit.commit[:12]} files={len(commit.changed_files)} backend=noryx",
+                }
+            )
 
         self._ensure_task_active(task_id)
         summary = str(result.result["summary"]).strip()
@@ -629,11 +734,7 @@ class GovernedTaskRunner:
             raise GovernanceError(f"Task runner cannot execute state '{task['state']}'")
 
         packet_dict = self.control.task_packet(task_id, actor="jarvis")
-        if (
-            is_software_task(task)
-            and packet_dict.get("_workspace")
-            and is_git_repository(packet_dict["_workspace"])
-        ):
+        if is_software_task(task) and packet_dict.get("_workspace") and is_git_repository(packet_dict["_workspace"]):
             worktree = prepare_task_worktree(packet_dict["_workspace"], task_id)
             metadata = {
                 **dict(task.get("metadata") or {}),
@@ -651,7 +752,12 @@ class GovernedTaskRunner:
             raise GovernanceError("Repository-writing tasks require a clean Git repository in strict launch mode")
 
         coding_backend = str((task.get("metadata") or {}).get("coding_backend") or "antigravity").strip().lower()
-        if task.get("action_type") == "repository_write" and coding_backend not in {"internal", "noryx", "antigravity", "auto"}:
+        if task.get("action_type") == "repository_write" and coding_backend not in {
+            "internal",
+            "noryx",
+            "antigravity",
+            "auto",
+        }:
             raise GovernanceError(f"Unknown repository coding backend: {coding_backend}")
         if task.get("action_type") == "repository_write":
             # Antigravity is the primary production coding worker while Noryx
@@ -660,18 +766,25 @@ class GovernedTaskRunner:
             # only for legacy/internal compatibility.
             if coding_backend in {"antigravity", "auto"}:
                 from jarvis.amaura.antigravity_bridge import AntigravityDeliveryAdapter
+
                 antigravity = AntigravityDeliveryAdapter()
                 if antigravity.configured:
                     return self._run_antigravity_delivery(task_id, task, packet_dict)
                 if coding_backend == "antigravity":
                     raise GovernanceError("Antigravity CLI (`agy`) is required for coding_backend=antigravity")
             if coding_backend == "noryx":
-                if os.environ.get("AMAURA_ENABLE_EXPERIMENTAL_NORYX", "0").strip().lower() not in {"1", "true", "yes", "on"}:
+                if os.environ.get("AMAURA_ENABLE_EXPERIMENTAL_NORYX", "0").strip().lower() not in {
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                }:
                     raise GovernanceError(
                         "Noryx is experimental and disabled by default. Set "
                         "AMAURA_ENABLE_EXPERIMENTAL_NORYX=1 only when you intentionally qualify it."
                     )
                 from jarvis.amaura.noryx_bridge import NoryxDeliveryAdapter
+
                 noryx = NoryxDeliveryAdapter()
                 if not noryx.configured:
                     raise GovernanceError("Noryx was explicitly requested but is not configured")
@@ -679,14 +792,13 @@ class GovernedTaskRunner:
 
         if task.get("action_type") == "direct_action":
             from jarvis.amaura.direct_action import DirectActionRouter
+
             desc = task.get("description", "")
             workspace = packet_dict.pop("_workspace", "")
             approved_names = set(packet_dict.pop("_approved_tools", []))
-            evidence = []
+            direct_evidence: list[dict[str, Any]] = []
 
-            direct_result = DirectActionRouter.execute(
-                desc, context="", control=self.control, workspace=workspace
-            )
+            direct_result = DirectActionRouter.execute(desc, context="", control=self.control, workspace=workspace)
 
             if direct_result:
                 record = self.control.evidence.put_json(
@@ -702,24 +814,26 @@ class GovernedTaskRunner:
                     },
                     source=f"task:{task_id}:direct_action",
                 )
-                evidence.append({
-                    "type": "direct_action",
-                    "reference": record.reference,
-                    "sha256": record.sha256,
-                    "byte_length": record.byte_length,
-                    "success": direct_result.success,
-                    "excerpt": direct_result.output[:500],
-                })
+                direct_evidence.append(
+                    {
+                        "type": "direct_action",
+                        "reference": record.reference,
+                        "sha256": record.sha256,
+                        "byte_length": record.byte_length,
+                        "success": direct_result.success,
+                        "excerpt": direct_result.output[:500],
+                    }
+                )
                 metadata = dict(task.get("metadata") or {})
                 self.control.store.update_work_item(task_id, metadata=metadata)
-                submitted = self.control.submit_task(task_id, "builder", direct_result.output, evidence)
+                submitted = self.control.submit_task(task_id, "builder", direct_result.output, direct_evidence)
                 return {
                     "status": submitted["state"],
                     "task_id": task_id,
                     "employee": "builder",
                     "iterations": 1,
                     "summary": direct_result.output,
-                    "evidence": evidence,
+                    "evidence": direct_evidence,
                     "model_execution_receipt": {
                         "requested_route": "deterministic-direct-action",
                         "actual_model": direct_result.model or direct_result.tool_name,
@@ -733,6 +847,7 @@ class GovernedTaskRunner:
         approved_names = set(packet_dict.pop("_approved_tools"))
 
         from jarvis.amaura.models import CanonicalTaskPacket
+
         packet_model = CanonicalTaskPacket.model_validate(packet_dict)
         clean_packet = packet_model.model_dump(mode="json")
 
@@ -750,7 +865,11 @@ class GovernedTaskRunner:
             }
         tools = [definition for definition in ALL_TOOL_DEFINITIONS if definition["function"]["name"] in approved_names]
         messages: list[dict[str, Any]] = [
-            {"role": "system", "content": employee.system_prompt + "\n\nReturn a concise completion summary. Do not claim success unless tool results support it."},
+            {
+                "role": "system",
+                "content": employee.system_prompt
+                + "\n\nReturn a concise completion summary. Do not claim success unless tool results support it.",
+            },
             {"role": "user", "content": "JARVIS TASK PACKET:\n" + json.dumps(clean_packet, indent=2)},
         ]
         client = self._client(route, employee)
@@ -771,28 +890,32 @@ class GovernedTaskRunner:
             except GovernanceError as exc:
                 sandbox_error = str(exc)
                 record = self.control.evidence.put_text(sandbox_error, source=f"task:{task_id}:sandbox_init_failure")
-                evidence.append({
-                    "type": "sandbox_init_failure",
-                    "reference": record.reference,
-                    "sha256": record.sha256,
-                    "byte_length": record.byte_length,
-                    "success": False,
-                    "excerpt": sandbox_error[:500],
-                })
-        
+                evidence.append(
+                    {
+                        "type": "sandbox_init_failure",
+                        "reference": record.reference,
+                        "sha256": record.sha256,
+                        "byte_length": record.byte_length,
+                        "success": False,
+                        "excerpt": sandbox_error[:500],
+                    }
+                )
+
         try:
             for iteration in range(1, max_iterations + 1):
                 iterations = iteration
                 self._ensure_task_active(task_id)
-                response = client.chat_sync(model_id=model_cfg["id"], messages=messages, tools=tools if model_cfg.get("supports_tools") and tools else None)
+                response = client.chat_sync(
+                    model_id=model_cfg["id"],
+                    messages=messages,
+                    tools=tools if model_cfg.get("supports_tools") and tools else None,
+                )
                 usage = getattr(response, "usage", None)
                 total_input_tokens += int(getattr(usage, "prompt_tokens", 0) or 0)
                 total_output_tokens += int(getattr(usage, "completion_tokens", 0) or 0)
                 metadata = dict(getattr(client, "last_execution_metadata", {}) or {})
                 actual_model = str(
-                    metadata.get("actual_model")
-                    or getattr(response, "model", route["model_key"])
-                    or route["model_key"]
+                    metadata.get("actual_model") or getattr(response, "model", route["model_key"]) or route["model_key"]
                 )
                 if actual_model not in actual_models:
                     actual_models.append(actual_model)
@@ -815,7 +938,14 @@ class GovernedTaskRunner:
                     {
                         "role": "assistant",
                         "content": content or None,
-                        "tool_calls": [{"id": call.id, "type": "function", "function": {"name": call.function.name, "arguments": call.function.arguments}} for call in tool_calls],
+                        "tool_calls": [
+                            {
+                                "id": call.id,
+                                "type": "function",
+                                "function": {"name": call.function.name, "arguments": call.function.arguments},
+                            }
+                            for call in tool_calls
+                        ],
                     }
                 )
                 for call in tool_calls:
@@ -912,7 +1042,9 @@ class GovernedTaskRunner:
 
         if not evidence:
             if task.get("acceptance_criteria"):
-                raise GovernanceError("Employee submitted no verifiable evidence to satisfy acceptance criteria. Agent prose is insufficient.")
+                raise GovernanceError(
+                    "Employee submitted no verifiable evidence to satisfy acceptance criteria. Agent prose is insufficient."
+                )
             record = self.control.evidence.put_text(
                 final_response,
                 source=f"task:{task_id}:agent_output",
@@ -932,9 +1064,7 @@ class GovernedTaskRunner:
         # P0-8: record the actual model and provider for every inference, not just the route name.
         # The provider may have remapped the requested model to a fallback.
         final_provider = (
-            str(provider_executions[-1].get("actual_provider"))
-            if provider_executions
-            else route["provider"]
+            str(provider_executions[-1].get("actual_provider")) if provider_executions else route["provider"]
         )
         model_execution_receipt = {
             "requested_route": route["model_key"],
@@ -943,9 +1073,9 @@ class GovernedTaskRunner:
             "models_used": actual_models,
             "provider": final_provider,
             "providers_used": [
-                item.get("actual_provider") for item in provider_executions
-                if item.get("actual_provider")
-            ] or [route["provider"]],
+                item.get("actual_provider") for item in provider_executions if item.get("actual_provider")
+            ]
+            or [route["provider"]],
             "provider_executions": provider_executions,
             "fallback_model_key": route.get("fallback_model_key"),
             "sandbox_mode": sandbox_mode,
@@ -970,7 +1100,9 @@ class GovernedTaskRunner:
             }
         )
         if estimated_cost:
-            self.control.record_cost(task_id, employee.agent_id, estimated_cost, "model_inference", metadata=model_execution_receipt)
+            self.control.record_cost(
+                task_id, employee.agent_id, estimated_cost, "model_inference", metadata=model_execution_receipt
+            )
         submitted = self.control.submit_task(task_id, employee.agent_id, final_response, evidence)
         return {
             "status": submitted["state"],
@@ -1056,15 +1188,33 @@ class GovernedReviewRunner:
         self.control._ensure_agent_enabled(reviewer_id)
         reviewer = get_agent(reviewer_id)
 
-        if task.get("action_type") == "direct_action" or (task.get("metadata") or {}).get("goal_plan", {}).get("domain") == "direct_action":
+        if (
+            task.get("action_type") == "direct_action"
+            or (task.get("metadata") or {}).get("goal_plan", {}).get("domain") == "direct_action"
+        ):
             deterministic = deterministic_evidence_review(task, self.control.evidence)
             approve = bool(deterministic.get("approve"))
-            findings = "Direct action verified via deterministic evidence." if approve else ("Direct action verification failed: " + "; ".join(deterministic.get("findings") or ["evidence check failed"]))
+            findings = (
+                "Direct action verified via deterministic evidence."
+                if approve
+                else (
+                    "Direct action verification failed: "
+                    + "; ".join(deterministic.get("findings") or ["evidence check failed"])
+                )
+            )
             evidence_refs = [ref["reference"] for ref in (task.get("evidence") or []) if ref.get("reference")]
             decision = {
                 "approve": approve,
                 "findings": findings,
-                "criteria": [{"criterion_index": 1, "criterion": "Action completed successfully", "passed": approve, "evidence_refs": evidence_refs if approve else [], "notes": "Verified" if approve else "Verification failed"}],
+                "criteria": [
+                    {
+                        "criterion_index": 1,
+                        "criterion": "Action completed successfully",
+                        "passed": approve,
+                        "evidence_refs": evidence_refs if approve else [],
+                        "notes": "Verified" if approve else "Verification failed",
+                    }
+                ],
             }
             attestation = create_review_attestation(
                 task_id=task_id,
@@ -1075,25 +1225,22 @@ class GovernedReviewRunner:
                 decision=decision,
                 deterministic_review=deterministic,
             )
-            updated = self.control.review_task(task_id, actor=reviewer_id, approve=approve, findings=findings, attestation=attestation)
+            updated = self.control.review_task(
+                task_id, actor=reviewer_id, approve=approve, findings=findings, attestation=attestation
+            )
             self.control.store.record_review_attestation(attestation)
             return updated
 
         review_mode = os.environ.get("AMAURA_REVIEW_MODE", "auto").strip().lower()
         if review_mode == "auto":
             review_mode = (
-                "omniroute"
-                if os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower() == "omniroute"
-                else "local"
+                "omniroute" if os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower() == "omniroute" else "local"
             )
         if review_mode not in {"local", "cloud", "omniroute"}:
             raise GovernanceError("AMAURA_REVIEW_MODE must be auto, local, cloud, or omniroute")
         worker_model = os.environ.get("AMAURA_LOCAL_MODEL", "nova:3b").strip()
         if review_mode == "omniroute":
-            model_id = (
-                os.environ.get("AMAURA_OMNIROUTE_REVIEW_MODEL", "").strip()
-                or "auto/best-reasoning"
-            )
+            model_id = os.environ.get("AMAURA_OMNIROUTE_REVIEW_MODEL", "").strip() or "auto/best-reasoning"
             if not (
                 os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
                 or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
@@ -1111,41 +1258,26 @@ class GovernedReviewRunner:
         elif review_mode == "cloud":
             model_id = os.environ.get("AMAURA_CLOUD_REVIEW_MODEL", "").strip()
             if not model_id:
-                raise GovernanceError(
-                    "AMAURA_CLOUD_REVIEW_MODEL is required when AMAURA_REVIEW_MODE=cloud"
-                )
+                raise GovernanceError("AMAURA_CLOUD_REVIEW_MODEL is required when AMAURA_REVIEW_MODE=cloud")
             if not (
-                os.environ.get("NVIDIA_REVIEW_API_KEY", "").strip()
-                or os.environ.get("NVIDIA_API_KEY", "").strip()
+                os.environ.get("NVIDIA_REVIEW_API_KEY", "").strip() or os.environ.get("NVIDIA_API_KEY", "").strip()
             ):
-                raise GovernanceError(
-                    "Cloud review requires NVIDIA_REVIEW_API_KEY or NVIDIA_API_KEY"
-                )
+                raise GovernanceError("Cloud review requires NVIDIA_REVIEW_API_KEY or NVIDIA_API_KEY")
             worker_models = self._worker_models_from_evidence(task)
             if model_id in worker_models:
                 raise GovernanceError(
                     "Independent reviewer model must differ from every worker model used for the task"
                 )
             if not worker_models and os.environ.get("AMAURA_STRICT_REVIEW", "0") == "1":
-                raise GovernanceError(
-                    "Strict cloud review requires worker/external-executor model provenance"
-                )
+                raise GovernanceError("Strict cloud review requires worker/external-executor model provenance")
             review_provider = "nvidia"
         else:
-            model_id = (
-                os.environ.get("AMAURA_LOCAL_REVIEW_MODEL", "").strip()
-                or worker_model
-            )
+            model_id = os.environ.get("AMAURA_LOCAL_REVIEW_MODEL", "").strip() or worker_model
             if model_id == worker_model:
-                raise GovernanceError(
-                    "Independent automated review requires a model distinct from "
-                    "AMAURA_LOCAL_MODEL"
-                )
+                raise GovernanceError("Independent automated review requires a model distinct from AMAURA_LOCAL_MODEL")
             review_provider = "local"
         deterministic = deterministic_evidence_review(task, self.control.evidence)
-        failed_evidence = [
-            item for item in task["evidence"] if item.get("success") is False
-        ]
+        failed_evidence = [item for item in task["evidence"] if item.get("success") is False]
         review_packet = {
             "task_id": task["id"],
             "title": task["title"],
@@ -1155,7 +1287,12 @@ class GovernedReviewRunner:
             "evidence": task["evidence"],
             "risk": task["risk"],
             "action_type": task["action_type"],
-            "rules": ["Reject unsupported completion claims.", "Reject when any acceptance criterion lacks evidence.", "Never infer that a tool or test succeeded.", "Return JSON only."],
+            "rules": [
+                "Reject unsupported completion claims.",
+                "Reject when any acceptance criterion lacks evidence.",
+                "Never infer that a tool or test succeeded.",
+                "Return JSON only.",
+            ],
         }
         messages = [
             {
@@ -1170,9 +1307,7 @@ class GovernedReviewRunner:
             },
             {"role": "user", "content": "INDEPENDENT REVIEW PACKET:\n" + json.dumps(review_packet, indent=2)},
         ]
-        review_client = self._client(
-            reviewer, provider=review_provider, model_key=model_id
-        )
+        review_client = self._client(reviewer, provider=review_provider, model_key=model_id)
         response = review_client.chat_sync(model_id=model_id, messages=messages, tools=None)
         route_metadata = dict(getattr(review_client, "last_execution_metadata", {}) or {})
         actual_provider = str(route_metadata.get("actual_provider") or review_provider).strip()
@@ -1180,39 +1315,36 @@ class GovernedReviewRunner:
         if review_mode in {"cloud", "omniroute"}:
             expected_provider = "nvidia" if review_mode == "cloud" else "omniroute"
             if actual_provider != expected_provider:
-                raise GovernanceError(
-                    f"{expected_provider} independent review may not fall back to another provider"
-                )
+                raise GovernanceError(f"{expected_provider} independent review may not fall back to another provider")
             worker_models = self._worker_models_from_evidence(task)
             if actual_model in worker_models:
-                raise GovernanceError(
-                    "Actual reviewer model must differ from every worker model used for the task"
-                )
+                raise GovernanceError("Actual reviewer model must differ from every worker model used for the task")
         content = response.choices[0].message.content or ""
         decision = _extract_json_object(content)
-        approve = decision.get("approve")
-        findings = decision.get("findings")
-        if not isinstance(approve, bool) or not isinstance(findings, str) or not findings.strip():
+        approve_value = decision.get("approve")
+        findings_value = decision.get("findings")
+        if not isinstance(approve_value, bool) or not isinstance(findings_value, str) or not findings_value.strip():
             raise GovernanceError("Reviewer decision is missing approve/findings")
+        review_approve = approve_value
+        review_findings = findings_value
         criterion_review = validate_criterion_review(task, decision, self.control.evidence)
         if not deterministic["approve"]:
-            approve = False
+            review_approve = False
             deterministic_findings = "; ".join(deterministic["findings"])
-            findings = (
-                "Rejected by deterministic evidence verification: "
-                f"{deterministic_findings}. {findings.strip()}"
+            review_findings = (
+                f"Rejected by deterministic evidence verification: {deterministic_findings}. {review_findings.strip()}"
             )
         if not criterion_review["ok"]:
-            approve = False
-            findings = (
+            review_approve = False
+            review_findings = (
                 "Rejected by criterion coverage verification: "
                 + "; ".join(criterion_review["findings"])
                 + ". "
-                + findings.strip()
+                + review_findings.strip()
             )
         decision = {
-            "approve": approve,
-            "findings": findings.strip(),
+            "approve": review_approve,
+            "findings": review_findings.strip(),
             "criteria": criterion_review["criteria"],
         }
         attestation = create_review_attestation(
@@ -1224,14 +1356,20 @@ class GovernedReviewRunner:
             decision=decision,
             deterministic_review=deterministic,
         )
-        updated = self.control.review_task(task_id, actor=reviewer_id, approve=approve, findings=findings.strip(), attestation=attestation)
+        updated = self.control.review_task(
+            task_id,
+            actor=reviewer_id,
+            approve=review_approve,
+            findings=review_findings.strip(),
+            attestation=attestation,
+        )
         self.control.store.record_review_attestation(attestation)
         self.control.store.audit(
             reviewer_id,
             "automated_independent_review",
             "task",
             task_id,
-            "approved" if approve else "rejected",
+            "approved" if review_approve else "rejected",
             {
                 "requested_model": model_id,
                 "actual_model": actual_model,
@@ -1249,8 +1387,8 @@ class GovernedReviewRunner:
             "reviewer_model": actual_model,
             "requested_reviewer_model": model_id,
             "reviewer_provider": actual_provider,
-            "approve": approve,
-            "findings": findings.strip(),
+            "approve": review_approve,
+            "findings": review_findings.strip(),
             "state": updated["state"],
             "criteria": decision.get("criteria", []),
             "criterion_review": criterion_review,

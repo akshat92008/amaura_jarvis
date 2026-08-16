@@ -1,8 +1,10 @@
-from typing import Literal, Annotated, Any
 import operator
-from langgraph.graph import StateGraph, END
-from typing import TypedDict
+from typing import Annotated, Any, Literal, TypedDict
+
+from langgraph.graph import END, StateGraph
+
 from jarvis.amaura.actions import AmauraActions
+
 
 class SoftwareWorkflowState(TypedDict):
     task_id: str
@@ -12,6 +14,7 @@ class SoftwareWorkflowState(TypedDict):
     test_results: dict[str, Any]
     status: str
     errors: Annotated[list[str], operator.add]
+
 
 class SoftwareWorkflowGraph:
     def __init__(self, actions: AmauraActions):
@@ -29,19 +32,13 @@ class SoftwareWorkflowGraph:
         self.graph.set_entry_point("setup_workspace")
         self.graph.add_edge("setup_workspace", "implement")
         self.graph.add_edge("implement", "test")
-        
+
+        self.graph.add_conditional_edges("test", self.route_after_test, {"implement": "implement", "review": "review"})
+
         self.graph.add_conditional_edges(
-            "test",
-            self.route_after_test,
-            {"implement": "implement", "review": "review"}
+            "review", self.route_after_review, {"implement": "implement", "merge": "merge"}
         )
-        
-        self.graph.add_conditional_edges(
-            "review",
-            self.route_after_review,
-            {"implement": "implement", "merge": "merge"}
-        )
-        
+
         self.graph.add_edge("merge", END)
         self.compiled = self.graph.compile()
 

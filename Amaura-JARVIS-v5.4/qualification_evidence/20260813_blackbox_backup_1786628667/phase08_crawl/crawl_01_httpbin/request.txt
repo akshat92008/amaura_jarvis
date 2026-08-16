@@ -1,1 +1,0 @@
-Fetch the content of 'https://httpbin.org/get' and tell me what 'url' field contains.

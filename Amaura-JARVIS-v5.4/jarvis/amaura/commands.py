@@ -9,16 +9,17 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class Command(BaseModel):
     """Base class for all Amaura commands."""
-    
+
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 # --- Control Plane Commands ---
 
+
 class CreateProgramCommand(Command):
     domain: ClassVar[Literal["control_plane"]] = "control_plane"
     handler: ClassVar[str] = "create_program"
-    
+
     objective: str
     success_metric: str
     workflow_key: str
@@ -32,7 +33,7 @@ class CreateProgramCommand(Command):
 class StartTaskCommand(Command):
     domain: ClassVar[Literal["control_plane"]] = "control_plane"
     handler: ClassVar[str] = "start_task"
-    
+
     task_id: str
     actor: str = "jarvis"
 
@@ -40,7 +41,7 @@ class StartTaskCommand(Command):
 class SubmitTaskCommand(Command):
     domain: ClassVar[Literal["control_plane"]] = "control_plane"
     handler: ClassVar[str] = "submit_task"
-    
+
     task_id: str
     actor: str
     summary: str
@@ -50,7 +51,7 @@ class SubmitTaskCommand(Command):
 class ReviewTaskCommand(Command):
     domain: ClassVar[Literal["control_plane"]] = "control_plane"
     handler: ClassVar[str] = "review_task"
-    
+
     task_id: str
     actor: str
     approve: bool
@@ -61,7 +62,7 @@ class ReviewTaskCommand(Command):
 class DecideApprovalCommand(Command):
     domain: ClassVar[Literal["control_plane"]] = "control_plane"
     handler: ClassVar[str] = "decide_approval"
-    
+
     approval_id: str
     actor: str
     decision: Literal["approved", "rejected", "changes_requested"]
@@ -71,7 +72,7 @@ class DecideApprovalCommand(Command):
 class RecordCostCommand(Command):
     domain: ClassVar[Literal["control_plane"]] = "control_plane"
     handler: ClassVar[str] = "record_cost"
-    
+
     task_id: str
     agent_id: str
     amount_cents: int
@@ -84,7 +85,7 @@ class RecordCostCommand(Command):
 class PauseAgentCommand(Command):
     domain: ClassVar[Literal["control_plane"]] = "control_plane"
     handler: ClassVar[str] = "pause_agent"
-    
+
     agent_id: str
     reason: str
     actor: str = "jarvis"
@@ -93,7 +94,7 @@ class PauseAgentCommand(Command):
 class ResumeAgentCommand(Command):
     domain: ClassVar[Literal["control_plane"]] = "control_plane"
     handler: ClassVar[str] = "resume_agent"
-    
+
     agent_id: str
     reason: str
     actor: str
@@ -102,7 +103,7 @@ class ResumeAgentCommand(Command):
 class RecordDecisionCommand(Command):
     domain: ClassVar[Literal["control_plane"]] = "control_plane"
     handler: ClassVar[str] = "record_decision"
-    
+
     decision: str
     context: str
     options: list[str]
@@ -114,10 +115,11 @@ class RecordDecisionCommand(Command):
 
 # --- Acquisition Pipeline Commands ---
 
+
 class CreateCampaignCommand(Command):
     domain: ClassVar[Literal["acquisition"]] = "acquisition"
     handler: ClassVar[str] = "create_campaign"
-    
+
     campaign_id: str
     name: str
     target_segment: str
@@ -133,7 +135,7 @@ class CreateCampaignCommand(Command):
 class DiscoverLeadCommand(Command):
     domain: ClassVar[Literal["acquisition"]] = "acquisition"
     handler: ClassVar[str] = "discover_lead"
-    
+
     campaign_id: str
     company_name: str
     domain_name: str = Field(alias="domain")
@@ -146,7 +148,7 @@ class DiscoverLeadCommand(Command):
 class AddEvidenceCommand(Command):
     domain: ClassVar[Literal["acquisition"]] = "acquisition"
     handler: ClassVar[str] = "add_evidence"
-    
+
     lead_id: str
     claim_type: str
     claim: str
@@ -159,7 +161,7 @@ class AddEvidenceCommand(Command):
 class ScoreLeadCommand(Command):
     domain: ClassVar[Literal["acquisition"]] = "acquisition"
     handler: ClassVar[str] = "score_lead"
-    
+
     lead_id: str
     components: dict[str, int]
     actor: str = "qualification_bot"
@@ -168,7 +170,7 @@ class ScoreLeadCommand(Command):
 class TransitionLeadCommand(Command):
     domain: ClassVar[Literal["acquisition"]] = "acquisition"
     handler: ClassVar[str] = "transition"
-    
+
     lead_id: str
     to_stage: str
     actor: str
@@ -178,7 +180,7 @@ class TransitionLeadCommand(Command):
 class StageMessageCommand(Command):
     domain: ClassVar[Literal["acquisition"]] = "acquisition"
     handler: ClassVar[str] = "stage_message"
-    
+
     lead_id: str
     recipient: str
     channel: str
@@ -191,7 +193,7 @@ class StageMessageCommand(Command):
 class DecideMessageCommand(Command):
     domain: ClassVar[Literal["acquisition"]] = "acquisition"
     handler: ClassVar[str] = "decide_message"
-    
+
     message_id: str
     actor: str
     approve: bool
@@ -201,7 +203,7 @@ class DecideMessageCommand(Command):
 class ConfirmExternalSendCommand(Command):
     domain: ClassVar[Literal["acquisition"]] = "acquisition"
     handler: ClassVar[str] = "confirm_external_send"
-    
+
     message_id: str
     provider_receipt: dict[str, Any]
     thread_id: str | None = None
@@ -212,7 +214,7 @@ class ConfirmExternalSendCommand(Command):
 class DeliverApprovedMessageCommand(Command):
     domain: ClassVar[Literal["acquisition"]] = "acquisition"
     handler: ClassVar[str] = "deliver_approved_message"
-    
+
     message_id: str
     recipient: str
     actor: str
@@ -231,7 +233,7 @@ class UpdateCRMCommand(Command):
 class SetKillSwitchCommand(Command):
     domain: ClassVar[Literal["acquisition"]] = "acquisition"
     handler: ClassVar[str] = "set_kill_switch"
-    
+
     enabled: bool
     actor: str
     reason: str
@@ -239,10 +241,11 @@ class SetKillSwitchCommand(Command):
 
 # --- Content Factory Commands ---
 
+
 class ContentCreateCampaignCommand(Command):
     domain: ClassVar[Literal["content_factory"]] = "content_factory"
     handler: ClassVar[str] = "create_campaign"
-    
+
     campaign_id: str
     title: str
     audience: str
@@ -253,7 +256,7 @@ class ContentCreateCampaignCommand(Command):
 class RegisterAssetCommand(Command):
     domain: ClassVar[Literal["content_factory"]] = "content_factory"
     handler: ClassVar[str] = "register_asset"
-    
+
     campaign_id: str
     asset_type: str
     uri: str
@@ -269,7 +272,7 @@ class RegisterAssetCommand(Command):
 class RecordMetricsCommand(Command):
     domain: ClassVar[Literal["content_factory"]] = "content_factory"
     handler: ClassVar[str] = "record_metrics"
-    
+
     campaign_id: str
     platform: str
     window: str

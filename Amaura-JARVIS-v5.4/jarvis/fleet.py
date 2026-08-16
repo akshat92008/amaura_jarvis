@@ -4,16 +4,17 @@ Manages macOS launchd integration, background daemons, morning briefings,
 nightly repo audits, health monitoring, log rotation, watchdog recovery, and scheduled jobs.
 """
 
+import ast
+import json
 import os
+import shutil
+import subprocess
 import sys
 import time
-import json
-import ast
-import subprocess
-import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
 from jarvis.paths import get_data_dir
 
 LAUNCHD_LABEL = "com.jarvis.daemon"
@@ -55,33 +56,27 @@ FLEET_TOOL_DEFINITIONS = [
                     "repo_path": {
                         "type": "string",
                         "description": "Target workspace repo directory (defaults to current directory).",
-                        "default": "."
+                        "default": ".",
                     }
-                }
-            }
-        }
+                },
+            },
+        },
     },
     {
         "type": "function",
         "function": {
             "name": "generate_morning_briefing",
             "description": "Generate daily morning briefing report with real Mac system telemetry (CPU, RAM, Disk).",
-            "parameters": {
-                "type": "object",
-                "properties": {}
-            }
-        }
+            "parameters": {"type": "object", "properties": {}},
+        },
     },
     {
         "type": "function",
         "function": {
             "name": "check_system_watchdog",
             "description": "Inspect Mac CPU/RAM telemetry, disk space, and daemon status using real system metrics.",
-            "parameters": {
-                "type": "object",
-                "properties": {}
-            }
-        }
+            "parameters": {"type": "object", "properties": {}},
+        },
     },
     {
         "type": "function",
@@ -94,13 +89,13 @@ FLEET_TOOL_DEFINITIONS = [
                     "action": {
                         "type": "string",
                         "description": "Action to execute: 'status', 'install', 'start', 'stop', 'uninstall', 'run_once'.",
-                        "default": "status"
+                        "default": "status",
                     }
                 },
-                "required": ["action"]
-            }
-        }
-    }
+                "required": ["action"],
+            },
+        },
+    },
 ]
 
 
@@ -210,7 +205,7 @@ class DaemonManager:
     def read_state(self) -> dict:
         if DAEMON_STATE_FILE.exists():
             try:
-                with open(DAEMON_STATE_FILE, "r", encoding="utf-8") as f:
+                with open(DAEMON_STATE_FILE, encoding="utf-8") as f:
                     return json.load(f)
             except Exception:
                 return {}
@@ -287,14 +282,14 @@ def run_nightly_auditor(repo_path: str = ".") -> str:
     py_files = []
     syntax_errors = []
     for root, _, files in os.walk(target_path):
-        if any(ignored in root for ignored in ['.venv', 'node_modules', '.git', '__pycache__']):
+        if any(ignored in root for ignored in [".venv", "node_modules", ".git", "__pycache__"]):
             continue
         for file in files:
-            if file.endswith('.py'):
+            if file.endswith(".py"):
                 full_path = os.path.join(root, file)
                 py_files.append(full_path)
                 try:
-                    with open(full_path, 'r', encoding='utf-8') as f:
+                    with open(full_path, encoding="utf-8") as f:
                         ast.parse(f.read(), filename=full_path)
                 except SyntaxError as se:
                     syntax_errors.append(f"{os.path.basename(full_path)}: L{se.lineno} {se.msg}")
@@ -311,7 +306,7 @@ def run_nightly_auditor(repo_path: str = ".") -> str:
     in_pytest = bool(os.environ.get("PYTEST_CURRENT_TEST"))
     for root, dirs, _ in os.walk(target_path):
         for d in list(dirs):
-            if d == '__pycache__' or (d in ['.pytest_cache', '.mypy_cache'] and not in_pytest):
+            if d == "__pycache__" or (d in [".pytest_cache", ".mypy_cache"] and not in_pytest):
                 full_d = os.path.join(root, d)
                 try:
                     shutil.rmtree(full_d)
@@ -338,10 +333,11 @@ def get_mac_telemetry() -> dict:
     }
     try:
         import psutil
+
         cpu_pct = psutil.cpu_percent(interval=0.2)
         cpu_cnt = psutil.cpu_count(logical=True)
         mem = psutil.virtual_memory()
-        disk = psutil.disk_usage('/')
+        disk = psutil.disk_usage("/")
 
         telemetry["cpu_percent"] = f"{cpu_pct}%"
         telemetry["cpu_count"] = str(cpu_cnt)
@@ -352,7 +348,7 @@ def get_mac_telemetry() -> dict:
         telemetry["disk_total_gb"] = f"{disk.total / (1024**3):.1f} GB"
     except ImportError:
         try:
-            total, used, free = shutil.disk_usage('/')
+            total, used, free = shutil.disk_usage("/")
             telemetry["disk_free_gb"] = f"{free / (1024**3):.1f} GB"
             telemetry["disk_total_gb"] = f"{total / (1024**3):.1f} GB"
         except Exception:
@@ -369,9 +365,9 @@ def generate_morning_briefing() -> str:
 📅 **Date:** {curr_time}
 
 💻 **Real Mac System Telemetry:**
-  - CPU Usage: {tel['cpu_percent']} ({tel['cpu_count']} logical cores)
-  - RAM Load: {tel['ram_used_gb']} / {tel['ram_total_gb']} ({tel['ram_percent']} active load)
-  - Disk Storage: {tel['disk_free_gb']} Available / {tel['disk_total_gb']} Total
+  - CPU Usage: {tel["cpu_percent"]} ({tel["cpu_count"]} logical cores)
+  - RAM Load: {tel["ram_used_gb"]} / {tel["ram_total_gb"]} ({tel["ram_percent"]} active load)
+  - Disk Storage: {tel["disk_free_gb"]} Available / {tel["disk_total_gb"]} Total
 
 🚀 **JARVIS Fleet Status:**
   - Background daemons: inspect current measured status before relying on them
@@ -390,9 +386,9 @@ def check_system_watchdog() -> str:
     d_status = daemon_mgr.get_status()
 
     return f"""🛡️ **System Watchdog Telemetry:**
-- **CPU Load:** {tel['cpu_percent']} ({tel['cpu_count']} Cores)
-- **RAM Utilization:** {tel['ram_used_gb']} / {tel['ram_total_gb']} ({tel['ram_percent']})
-- **Root Disk Space:** {tel['disk_free_gb']} free of {tel['disk_total_gb']}
+- **CPU Load:** {tel["cpu_percent"]} ({tel["cpu_count"]} Cores)
+- **RAM Utilization:** {tel["ram_used_gb"]} / {tel["ram_total_gb"]} ({tel["ram_percent"]})
+- **Root Disk Space:** {tel["disk_free_gb"]} free of {tel["disk_total_gb"]}
 - **Daemon Status:** launchd integrated & monitored.
 
 {d_status}

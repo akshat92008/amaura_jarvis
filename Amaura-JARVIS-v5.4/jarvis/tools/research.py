@@ -3,16 +3,14 @@ Research Tools — deep web research, page summarization, and study aids.
 Gives Jarvis the ability to research topics autonomously.
 """
 
+import html
 import os
 import re
-import html
-import urllib.request
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 from jarvis.amaura.models import GovernanceError
 from jarvis.amaura.network import fetch_public_text
-
 
 # ── Tool Definitions ─────────────────────────────────────────────────────────
 
@@ -26,7 +24,10 @@ RESEARCH_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "topic": {"type": "string", "description": "The topic to research."},
-                    "num_queries": {"type": "integer", "description": "Number of search queries to generate (default: 3)."},
+                    "num_queries": {
+                        "type": "integer",
+                        "description": "Number of search queries to generate (default: 3).",
+                    },
                 },
                 "required": ["topic"],
             },
@@ -71,7 +72,10 @@ RESEARCH_TOOL_DEFINITIONS = [
                 "properties": {
                     "title": {"type": "string", "description": "Title of the research document."},
                     "content": {"type": "string", "description": "Research content in markdown format."},
-                    "output_path": {"type": "string", "description": "Where to save the file (default: ~/Desktop/research/)."},
+                    "output_path": {
+                        "type": "string",
+                        "description": "Where to save the file (default: ~/Desktop/research/).",
+                    },
                 },
                 "required": ["title", "content"],
             },
@@ -81,6 +85,7 @@ RESEARCH_TOOL_DEFINITIONS = [
 
 
 # ── Tool Implementations ─────────────────────────────────────────────────────
+
 
 def _fetch_url_text(url: str, max_length: int = 8000) -> str:
     """Fetch a public URL through the governed, redirect-free network layer."""
@@ -121,12 +126,14 @@ def tool_deep_research(topic: str, num_queries: int = 3) -> str:
                 url = r.get("href", "")
                 if url not in seen_urls:
                     seen_urls.add(url)
-                    all_results.append({
-                        "title": r.get("title", ""),
-                        "url": url,
-                        "snippet": r.get("body", ""),
-                        "query": query,
-                    })
+                    all_results.append(
+                        {
+                            "title": r.get("title", ""),
+                            "url": url,
+                            "snippet": r.get("body", ""),
+                            "query": query,
+                        }
+                    )
         except Exception:
             continue
 
@@ -138,10 +145,12 @@ def tool_deep_research(topic: str, num_queries: int = 3) -> str:
     for r in all_results[:5]:
         url = r["url"]
         content = _fetch_url_text(url, max_length=3000)
-        detailed.append({
-            **r,
-            "content": content,
-        })
+        detailed.append(
+            {
+                **r,
+                "content": content,
+            }
+        )
 
     # Compile research report
     report_lines = [
@@ -160,7 +169,7 @@ def tool_deep_research(topic: str, num_queries: int = 3) -> str:
         report_lines.append(f"**Snippet:** {item['snippet']}")
         report_lines.append("")
         report_lines.append("### Extracted Content")
-        report_lines.append(item['content'][:2000])
+        report_lines.append(item["content"][:2000])
         report_lines.append("")
         report_lines.append("---")
         report_lines.append("")
@@ -179,7 +188,7 @@ def tool_summarize_url(url: str) -> str:
 def _find_candidate_pdfs(requested_path: str) -> list[tuple[Path, float]]:
     """Find candidate PDF files matching the requested path query."""
     clean_name = Path(requested_path).stem.lower()
-    keywords = [w for w in re.findall(r'\w+', clean_name) if w not in ('the', 'a', 'an', 'pdf')]
+    keywords = [w for w in re.findall(r"\w+", clean_name) if w not in ("the", "a", "an", "pdf")]
     if not keywords:
         keywords = [clean_name]
 
@@ -209,8 +218,8 @@ def _find_candidate_pdfs(requested_path: str) -> list[tuple[Path, float]]:
                             continue
                         seen.add(full_p)
                         fname_lower = f.lower()
-                        fname_words = set(re.findall(r'\w+', fname_lower))
-                        
+                        fname_words = set(re.findall(r"\w+", fname_lower))
+
                         matches = sum(1 for kw in keywords if kw in fname_lower or kw in fname_words)
                         if matches > 0:
                             score = matches / len(keywords)
@@ -244,6 +253,7 @@ def tool_read_pdf(path: str, max_pages: int | None = None) -> str:
     # Engine 1: pdftotext (poppler)
     try:
         import subprocess
+
         cmd = ["pdftotext", str(p), "-"]
         if max_pages:
             cmd = ["pdftotext", "-l", str(max_pages), str(p), "-"]
@@ -257,6 +267,7 @@ def tool_read_pdf(path: str, max_pages: int | None = None) -> str:
     if not text:
         try:
             from pypdf import PdfReader
+
             reader = PdfReader(str(p))
             target_page_count = max_pages if max_pages else len(reader.pages)
             extracted = []
@@ -275,6 +286,7 @@ def tool_read_pdf(path: str, max_pages: int | None = None) -> str:
     if not text:
         try:
             import fitz
+
             doc = fitz.open(str(p))
             target_page_count = max_pages if max_pages else len(doc)
             extracted = []
@@ -293,6 +305,7 @@ def tool_read_pdf(path: str, max_pages: int | None = None) -> str:
     if not text:
         try:
             from pdfminer.high_level import extract_text as pdfminer_extract
+
             text = pdfminer_extract(str(p), maxpages=max_pages or 0)
         except Exception:
             pass
@@ -307,12 +320,11 @@ def tool_read_pdf(path: str, max_pages: int | None = None) -> str:
     return f"{resolved_note}PDF Content ({p.name}):\n\n{text}"
 
 
-
 def tool_save_research(title: str, content: str, output_path: str = "") -> str:
     """Save research to a markdown file."""
     if not output_path:
         research_dir = Path.home() / "Desktop" / "research"
-        safe_title = re.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')[:50]
+        safe_title = re.sub(r"[^\w\s-]", "", title).strip().replace(" ", "_")[:50]
         output_path = str(research_dir / f"{safe_title}_{datetime.now().strftime('%Y%m%d')}.md")
 
     p = Path(output_path).expanduser().resolve()
@@ -330,5 +342,7 @@ RESEARCH_DISPATCH = {
     "deep_research": lambda **kw: tool_deep_research(kw.get("topic", ""), kw.get("num_queries", 3)),
     "summarize_url": lambda **kw: tool_summarize_url(kw.get("url", "")),
     "read_pdf": lambda **kw: tool_read_pdf(kw.get("path", ""), kw.get("max_pages")),
-    "save_research": lambda **kw: tool_save_research(kw.get("title", ""), kw.get("content", ""), kw.get("output_path", "")),
+    "save_research": lambda **kw: tool_save_research(
+        kw.get("title", ""), kw.get("content", ""), kw.get("output_path", "")
+    ),
 }

@@ -47,9 +47,12 @@ def main() -> int:
 
     if args.check or args.deep_check:
         from jarvis.amaura.capability_runtime import CapabilityRuntime
+
         for row in CapabilityRuntime().inventory(deep=bool(args.deep_check)):
             state = "READY" if row["execution_ready"] else "CONF" if row["configured"] else "MISS"
-            print(f"{row['key']:<20} {state:<5} installed={row['installed']} configured={row['configured']} ready={row['execution_ready']} {row['reason']}")
+            print(
+                f"{row['key']:<20} {state:<5} installed={row['installed']} configured={row['configured']} ready={row['execution_ready']} {row['reason']}"
+            )
         return 0
 
     groups = args.groups or ["browser", "memory", "media", "observability"]
@@ -82,9 +85,12 @@ def main() -> int:
                 print("crawl4ai-setup failed; the core adapter remains installed and will report health explicitly")
 
     if sys.platform == "darwin" and os.uname().machine == "arm64" and "documents" in groups:
-        print("NOTE: PaddleOCR/Paddle inference support varies by release on Apple Silicon. Amaura will fall back to Docling/PyMuPDF if PaddleOCR is unavailable.")
+        print(
+            "NOTE: PaddleOCR/Paddle inference support varies by release on Apple Silicon. Amaura will fall back to Docling/PyMuPDF if PaddleOCR is unavailable."
+        )
 
     from jarvis.amaura.capability_runtime import CapabilityRuntime
+
     print("\nCapability health:")
     for row in CapabilityRuntime().inventory():
         state = "READY" if row["execution_ready"] else "CONF" if row["configured"] else "MISS"

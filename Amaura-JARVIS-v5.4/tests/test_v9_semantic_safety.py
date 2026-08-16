@@ -1,4 +1,5 @@
 """Regression tests for defects exposed by the independent V9 qualification."""
+
 from __future__ import annotations
 
 from pathlib import Path

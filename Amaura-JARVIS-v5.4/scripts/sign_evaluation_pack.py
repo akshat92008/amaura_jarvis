@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Sign a private Amaura model-evaluation pack with HMAC-SHA256."""
+
 from __future__ import annotations
 
 import argparse

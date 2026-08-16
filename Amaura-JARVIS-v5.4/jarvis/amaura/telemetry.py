@@ -127,8 +127,7 @@ class OperationalTelemetry:
             rendered_labels = ""
             if labels:
                 pairs = ",".join(
-                    f'{key}="{str(value).replace(chr(34), chr(92) + chr(34))}"'
-                    for key, value in sorted(labels.items())
+                    f'{key}="{str(value).replace(chr(34), chr(92) + chr(34))}"' for key, value in sorted(labels.items())
                 )
                 rendered_labels = "{" + pairs + "}"
             lines.append(f"{name}{rendered_labels} {metric['value']}")

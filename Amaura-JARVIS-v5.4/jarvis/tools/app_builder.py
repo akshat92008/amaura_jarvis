@@ -4,7 +4,6 @@ Scaffolds, creates fullstack frontend & backend code, database connections, depe
 """
 
 import os
-from typing import Optional
 
 APP_BUILDER_TOOL_DEFINITIONS = [
     {
@@ -17,41 +16,38 @@ APP_BUILDER_TOOL_DEFINITIONS = [
                 "properties": {
                     "project_name": {
                         "type": "string",
-                        "description": "Directory name for the new application (e.g. 'my_awesome_app')."
+                        "description": "Directory name for the new application (e.g. 'my_awesome_app').",
                     },
                     "stack": {
                         "type": "string",
                         "description": "Stack type: 'vite-react-fastapi', 'nextjs', 'express-react', 'fastapi-vanilla'",
-                        "default": "vite-react-fastapi"
+                        "default": "vite-react-fastapi",
                     },
                     "description": {
                         "type": "string",
-                        "description": "Detailed description of the application features and purpose."
+                        "description": "Detailed description of the application features and purpose.",
                     },
                     "target_dir": {
                         "type": "string",
-                        "description": "Parent directory path where the app directory will be created. Defaults to current working directory."
-                    }
+                        "description": "Parent directory path where the app directory will be created. Defaults to current working directory.",
+                    },
                 },
-                "required": ["project_name", "description"]
-            }
-        }
+                "required": ["project_name", "description"],
+            },
+        },
     }
 ]
 
 
 def create_fullstack_app(
-    project_name: str,
-    description: str,
-    stack: str = "vite-react-fastapi",
-    target_dir: Optional[str] = None
+    project_name: str, description: str, stack: str = "vite-react-fastapi", target_dir: str | None = None
 ) -> str:
     """
     Creates a complete fullstack application boilerplate with code files, dependencies, and launch instructions.
     """
     if not target_dir:
         target_dir = os.getcwd()
-        
+
     app_dir = os.path.abspath(os.path.join(target_dir, project_name))
     os.makedirs(app_dir, exist_ok=True)
 
@@ -61,7 +57,7 @@ def create_fullstack_app(
         # ── 1. Backend: FastAPI main.py ───────────────────────────────────
         backend_dir = os.path.join(app_dir, "backend")
         os.makedirs(backend_dir, exist_ok=True)
-        
+
         main_py = os.path.join(backend_dir, "main.py")
         main_py_code = f'''"""
 Backend API for {project_name}
@@ -142,7 +138,7 @@ def create_item(item: ItemCreate):
         os.makedirs(frontend_dir, exist_ok=True)
 
         index_html = os.path.join(frontend_dir, "index.html")
-        html_code = f'''<!DOCTYPE html>
+        html_code = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -254,7 +250,7 @@ def create_item(item: ItemCreate):
     </script>
 </body>
 </html>
-'''
+"""
         with open(index_html, "w", encoding="utf-8") as f:
             f.write(html_code.strip())
         created_files.append(index_html)
@@ -289,7 +285,12 @@ Then open http://localhost:3000 in your browser.
         f.write(readme_code.strip())
     created_files.append(readme_md)
 
-    file_tree = "\n".join([f"  - {os.path.relative_path if hasattr(os.path, 'relative_path') else os.path.relpath(f, target_dir)}" for f in created_files])
+    file_tree = "\n".join(
+        [
+            f"  - {os.path.relative_path if hasattr(os.path, 'relative_path') else os.path.relpath(f, target_dir)}"
+            for f in created_files
+        ]
+    )
 
     return f"""✅ **Fullstack Application '{project_name}' Successfully Created!**
 
@@ -305,6 +306,4 @@ Then open http://localhost:3000 in your browser.
 """
 
 
-APP_BUILDER_DISPATCH = {
-    "create_fullstack_app": create_fullstack_app
-}
+APP_BUILDER_DISPATCH = {"create_fullstack_app": create_fullstack_app}

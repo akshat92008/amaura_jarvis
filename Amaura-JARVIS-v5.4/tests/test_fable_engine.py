@@ -67,10 +67,16 @@ class TestFableEngineIntegration(unittest.TestCase):
         router = MultiProviderRouter()
         # Routing fallback is covered here; network/local-model availability is
         # not.  Never load an Ollama model or contact a provider in unit tests.
-        router.config.update({
-            "nvidia_api_key": "", "nvidia_api_keys": [], "groq_api_key": "",
-            "gemini_api_key": "", "cerebras_api_key": "", "openrouter_api_key": "",
-        })
+        router.config.update(
+            {
+                "nvidia_api_key": "",
+                "nvidia_api_keys": [],
+                "groq_api_key": "",
+                "gemini_api_key": "",
+                "cerebras_api_key": "",
+                "openrouter_api_key": "",
+            }
+        )
         with patch.object(router, "call_ollama", return_value={"content": "fixture", "provider": "test"}):
             res = router.generate("Test prompt for autonomous fallback")
         self.assertIn("content", res)

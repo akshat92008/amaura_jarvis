@@ -6,20 +6,20 @@ Includes Unsloth fine-tuning configuration guide and adaptive reasoning pipeline
 """
 
 import os
-import json
+from typing import Any
+
 import httpx
-from typing import Dict, Any, Optional
 
 GCP_VM_DEFAULT_ENDPOINT = os.getenv("JARVIS_GCP_ENDPOINT", "http://34.123.45.67:8000/v1")
 VERTEX_API_KEY = os.getenv("VERTEX_API_KEY", os.getenv("GEMINI_API_KEY", ""))
 
 
 class GCPModelClient:
-    def __init__(self, endpoint_url: str = GCP_VM_DEFAULT_ENDPOINT, api_key: Optional[str] = None):
+    def __init__(self, endpoint_url: str = GCP_VM_DEFAULT_ENDPOINT, api_key: str | None = None):
         self.endpoint_url = endpoint_url
         self.api_key = api_key or VERTEX_API_KEY
 
-    def check_health(self) -> Dict[str, Any]:
+    def check_health(self) -> dict[str, Any]:
         """Check if GCP Compute Engine GPU VM or Vertex AI endpoint is online."""
         # 1. Check custom GPU VM endpoint
         if self.endpoint_url and not self.endpoint_url.startswith("http://34.123.45.67"):
@@ -32,7 +32,7 @@ class GCPModelClient:
                         "provider": "gcp_vllm",
                         "endpoint": self.endpoint_url,
                         "model": "jarvis-coder-32b (vLLM on GCP GPU VM)",
-                        "ram_load": "0 MB (Hosted on GCP GPU VM)"
+                        "ram_load": "0 MB (Hosted on GCP GPU VM)",
                     }
             except Exception:
                 pass
@@ -45,7 +45,7 @@ class GCPModelClient:
                 "provider": "gcp_vertex",
                 "endpoint": "https://generativelanguage.googleapis.com/v1beta",
                 "model": "fable-5-reasoning (Vertex AI Gemini 2.0 Flash Thinking)",
-                "ram_load": "0 MB (GCP Cloud)"
+                "ram_load": "0 MB (GCP Cloud)",
             }
 
         return {
@@ -53,13 +53,13 @@ class GCPModelClient:
             "status": "offline",
             "endpoint": self.endpoint_url,
             "model": "fable-5-reasoning (Fallback to Groq / Local)",
-            "ram_load": "0 MB"
+            "ram_load": "0 MB",
         }
 
-    def generate_reasoning_trace(self, prompt: str, system_prompt: str = "") -> Dict[str, str]:
+    def generate_reasoning_trace(self, prompt: str, system_prompt: str = "") -> dict[str, str]:
         """Generates an adaptive CoT reasoning trace followed by code solution (Claude Fable 5 style)."""
         health = self.check_health()
-        
+
         # Vertex AI / Gemini API Path
         if health.get("provider") == "gcp_vertex" and self.api_key:
             try:
@@ -69,8 +69,10 @@ class GCPModelClient:
                         {
                             "role": "user",
                             "parts": [
-                                {"text": f"System: {system_prompt}\n\nTask: Perform deep adaptive thinking and architectural planning before outputting your solution.\n\nUser Request: {prompt}"}
-                            ]
+                                {
+                                    "text": f"System: {system_prompt}\n\nTask: Perform deep adaptive thinking and architectural planning before outputting your solution.\n\nUser Request: {prompt}"
+                                }
+                            ],
                         }
                     ]
                 }
@@ -81,7 +83,7 @@ class GCPModelClient:
                     return {
                         "thinking": "Gemini 2.0 Flash Thinking adaptive reasoning trace generated via GCP Vertex AI.",
                         "content": text,
-                        "provider": "gcp_vertex"
+                        "provider": "gcp_vertex",
                     }
             except Exception as e:
                 print(f"[GCP Client] Vertex AI call failed: {e}")
@@ -92,10 +94,14 @@ class GCPModelClient:
             payload = {
                 "model": "jarvis-coder-32b",
                 "messages": [
-                    {"role": "system", "content": system_prompt or "You are JARVIS operating with Claude Fable 5 level adaptive reasoning."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": system_prompt
+                        or "You are JARVIS operating with Claude Fable 5 level adaptive reasoning.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
-                "temperature": 0.2
+                "temperature": 0.2,
             }
             resp = httpx.post(url, json=payload, timeout=60.0)
             if resp.status_code == 200:
@@ -104,7 +110,7 @@ class GCPModelClient:
                 return {
                     "thinking": "DeepSeek R1 CoT trace executed via GCP Compute Engine vLLM GPU.",
                     "content": content,
-                    "provider": "gcp_vllm"
+                    "provider": "gcp_vllm",
                 }
         except Exception as e:
             print(f"[GCP Client] vLLM endpoint call failed: {e}")
@@ -112,13 +118,13 @@ class GCPModelClient:
         return {
             "thinking": "Offline reasoning fallback.",
             "content": f"[Offline Fallback] Processing prompt: {prompt}",
-            "provider": "fallback"
+            "provider": "fallback",
         }
 
     @staticmethod
     def generate_unsloth_finetune_script() -> str:
         """Returns the Unsloth fine-tuning Python script for Colab / GCP GPU VM."""
-        return '''# Unsloth Qwen 2.5 Coder 32B Fine-Tuning Script for JARVIS
+        return """# Unsloth Qwen 2.5 Coder 32B Fine-Tuning Script for JARVIS
 # Runs on Google Colab (Free T4/A100) or GCP Compute Engine
 
 from unsloth import FastLanguageModel
@@ -146,5 +152,4 @@ model = FastLanguageModel.get_peft_model(
 )
 
 print("🚀 jarvis-fable5-32b fine-tuning pipeline initialized on GCP!")
-'''
-
+"""

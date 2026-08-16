@@ -11,11 +11,10 @@ Provides:
 """
 
 import ast
-import http.server
 import hmac
+import http.server
 import json
 import os
-import re
 import shlex
 import socketserver
 import ssl
@@ -23,9 +22,10 @@ import subprocess
 import urllib.error
 import urllib.parse
 import urllib.request
-import certifi
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+import certifi
 
 # Base Paths
 JARVIS_DIR = Path(__file__).parent.parent.resolve()
@@ -50,6 +50,7 @@ DEFAULT_CONFIG = {
 def load_config() -> dict:
     """Load configuration from config.json or environment, merging all API keys."""
     from jarvis.api import _load_env_file
+
     _load_env_file()
 
     config = DEFAULT_CONFIG.copy()
@@ -57,7 +58,7 @@ def load_config() -> dict:
     # Read config.json if present
     if CONFIG_FILE.exists():
         try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            with open(CONFIG_FILE, encoding="utf-8") as f:
                 user_conf = json.load(f)
                 config.update(user_conf)
         except Exception as e:
@@ -70,7 +71,9 @@ def load_config() -> dict:
         all_keys.insert(0, primary_key)
 
     for k in sorted(os.environ.keys()):
-        if (k.startswith("NVIDIA_API_KEY") or k.startswith("NVIDIA_FALLBACK_API_KEY") or k.startswith("NVIDIA_KEY")) and os.environ[k]:
+        if (
+            k.startswith("NVIDIA_API_KEY") or k.startswith("NVIDIA_FALLBACK_API_KEY") or k.startswith("NVIDIA_KEY")
+        ) and os.environ[k]:
             if os.environ[k] not in all_keys:
                 all_keys.append(os.environ[k])
 
@@ -107,13 +110,14 @@ def _get_ssl_context():
 
 # ── MultiProviderRouter ───────────────────────────────────────────────────────
 
+
 class MultiProviderRouter:
     """Multi-provider zero-cost priority fallback router."""
 
     def __init__(self):
         self.config = load_config()
 
-    def get_available_providers(self) -> List[str]:
+    def get_available_providers(self) -> list[str]:
         providers = []
         if self.config.get("nvidia_api_key"):
             providers.append("nvidia_nim")
@@ -129,7 +133,9 @@ class MultiProviderRouter:
         providers.append("mlx_local")
         return providers
 
-    def call_nvidia(self, prompt: str, system_prompt: str = "", model_name: str = "meta/llama-3.3-70b-instruct") -> dict:
+    def call_nvidia(
+        self, prompt: str, system_prompt: str = "", model_name: str = "meta/llama-3.3-70b-instruct"
+    ) -> dict:
         keys = self.config.get("nvidia_api_keys", [])
         primary_key = self.config.get("nvidia_api_key", "")
         if primary_key and primary_key not in keys:
@@ -143,7 +149,10 @@ class MultiProviderRouter:
         payload = {
             "model": model_name,
             "messages": [
-                {"role": "system", "content": system_prompt or "You are an elite autonomous coding AI engine powered by NVIDIA NIM."},
+                {
+                    "role": "system",
+                    "content": system_prompt or "You are an elite autonomous coding AI engine powered by NVIDIA NIM.",
+                },
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.2,
@@ -154,17 +163,21 @@ class MultiProviderRouter:
         for idx, key in enumerate(keys[:2]):  # Try max 2 keys to avoid delay accumulation
             try:
                 data = json.dumps(payload).encode("utf-8")
-                req = urllib.request.Request(url, data=data, headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {key}",
-                })
+                req = urllib.request.Request(
+                    url,
+                    data=data,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {key}",
+                    },
+                )
                 with urllib.request.urlopen(req, context=ctx, timeout=10.0) as response:
                     res_data = json.loads(response.read().decode("utf-8"))
                     content = res_data["choices"][0]["message"]["content"]
-                    key_tag = f"Key #{idx+1}"
+                    key_tag = f"Key #{idx + 1}"
                     return {"content": content, "provider": f"NVIDIA NIM ({model_name} via {key_tag})"}
             except Exception as e:
-                errors.append(f"Key #{idx+1} Error: {e}")
+                errors.append(f"Key #{idx + 1} Error: {e}")
                 # If network timeout or SSL error occurred, break early to proceed to instant Groq fallback
                 if "timed out" in str(e).lower() or "certificate" in str(e).lower() or "ssl" in str(e).lower():
                     break
@@ -209,10 +222,14 @@ class MultiProviderRouter:
             "temperature": 0.2,
         }
         data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(url, data=data, headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        })
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            },
+        )
 
         ctx = _get_ssl_context()
         with urllib.request.urlopen(req, context=ctx, timeout=5) as response:
@@ -273,8 +290,8 @@ class MultiProviderRouter:
         # 5. Synthetic Fallback Engine Output
         return {
             "content": f"[Autonomous Local Harness Mode]\n\n"
-                       f"Task Received: {prompt[:100]}...\n\n"
-                       f"System Note: Provide your NVIDIA API key in config.json or start Ollama (`ollama run qwen2.5-coder:1.5b`) for full autonomous generation.",
+            f"Task Received: {prompt[:100]}...\n\n"
+            f"System Note: Provide your NVIDIA API key in config.json or start Ollama (`ollama run qwen2.5-coder:1.5b`) for full autonomous generation.",
             "provider": "Local Autonomous Engine",
             "warnings": errors,
         }
@@ -282,13 +299,14 @@ class MultiProviderRouter:
 
 # ── FablePlanner ─────────────────────────────────────────────────────────────
 
+
 class FablePlanner:
     """Claude Fable 5 Mythos-Class Adaptive Reasoning Planner Engine."""
 
-    def __init__(self, router: Optional[MultiProviderRouter] = None):
+    def __init__(self, router: MultiProviderRouter | None = None):
         self.router = router or MultiProviderRouter()
 
-    def generate_plan_and_code(self, task_prompt: str, workspace_files: Optional[dict] = None) -> dict:
+    def generate_plan_and_code(self, task_prompt: str, workspace_files: dict | None = None) -> dict:
         system_prompt = (
             "You are the Claude Fable 5 Mythos-Class Autonomous Software Engineering Engine.\n"
             "Your objective is to produce production-grade, long-horizon, zero-bug code.\n\n"
@@ -336,7 +354,9 @@ class FablePlanner:
                 files_to_create = [{"path": "main.py", "action": "write", "content": code_block}]
 
         if not files_to_create:
-            files_to_create = [{"path": "main.py", "action": "write", "content": raw_output or "# Generated Application"}]
+            files_to_create = [
+                {"path": "main.py", "action": "write", "content": raw_output or "# Generated Application"}
+            ]
 
         if not test_command or "\n" in test_command or test_command.startswith("*") or len(test_command) > 200:
             test_command = "python3 main.py"
@@ -352,41 +372,46 @@ class FablePlanner:
 
 # ── ASTIndexer ───────────────────────────────────────────────────────────────
 
+
 class ASTIndexer:
     """Surgical AST Indexer Module for Python/JS/TS codebases."""
 
-    def __init__(self, workspace_dir: Optional[str] = None):
+    def __init__(self, workspace_dir: str | None = None):
         self.workspace_dir = Path(workspace_dir or os.getcwd()).resolve()
 
-    def parse_file(self, relative_path: str) -> Optional[dict]:
+    def parse_file(self, relative_path: str) -> dict | None:
         full_path = self.workspace_dir / relative_path
         if not full_path.exists() or not relative_path.endswith(".py"):
             return None
 
         try:
-            with open(full_path, "r", encoding="utf-8") as f:
+            with open(full_path, encoding="utf-8") as f:
                 code = f.read()
             tree = ast.parse(code)
         except Exception as e:
             return {"error": f"Failed to parse AST: {e}"}
 
-        symbols: Dict[str, List[Any]] = {"classes": [], "functions": [], "imports": []}
+        symbols: dict[str, list[Any]] = {"classes": [], "functions": [], "imports": []}
 
         for node in ast.iter_child_nodes(tree):
             if isinstance(node, ast.ClassDef):
                 methods = [m.name for m in node.body if isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef))]
-                symbols["classes"].append({
-                    "name": node.name,
-                    "methods": methods,
-                    "line": node.lineno,
-                })
+                symbols["classes"].append(
+                    {
+                        "name": node.name,
+                        "methods": methods,
+                        "line": node.lineno,
+                    }
+                )
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 args = [a.arg for a in node.args.args]
-                symbols["functions"].append({
-                    "name": node.name,
-                    "args": args,
-                    "line": node.lineno,
-                })
+                symbols["functions"].append(
+                    {
+                        "name": node.name,
+                        "args": args,
+                        "line": node.lineno,
+                    }
+                )
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     symbols["imports"].append(alias.name)
@@ -411,16 +436,26 @@ class ASTIndexer:
 
 # ── WorkspaceExecutor ─────────────────────────────────────────────────────────
 
+
 class WorkspaceExecutor:
     """Constrained legacy workspace executor. Prefer Amaura sandbox execution."""
 
     _ALLOWED_EXECUTABLES = {
-        "python", "python3", "pytest", "ruff", "mypy", "npm", "npx", "node",
-        "pnpm", "yarn", "git",
+        "python",
+        "python3",
+        "pytest",
+        "ruff",
+        "mypy",
+        "npm",
+        "npx",
+        "node",
+        "pnpm",
+        "yarn",
+        "git",
     }
     _SHELL_META = {";", "&&", "||", "|", ">", "<", "`", "$(", "${"}
 
-    def __init__(self, workspace_dir: Optional[str] = None):
+    def __init__(self, workspace_dir: str | None = None):
         self.workspace_dir = Path(workspace_dir or os.getcwd()).resolve()
 
     def _resolve(self, relative_path: str) -> Path:
@@ -442,14 +477,14 @@ class WorkspaceExecutor:
             f.write(content)
         return str(target_path)
 
-    def read_file(self, relative_path: str) -> Optional[str]:
+    def read_file(self, relative_path: str) -> str | None:
         target_path = self._resolve(relative_path)
         if not target_path.exists() or not target_path.is_file():
             return None
-        with open(target_path, "r", encoding="utf-8") as f:
+        with open(target_path, encoding="utf-8") as f:
             return f.read()
 
-    def list_workspace(self) -> List[str]:
+    def list_workspace(self) -> list[str]:
         items = []
         for root, dirs, files in os.walk(self.workspace_dir, followlinks=False):
             dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", "venv", ".venv"}]
@@ -464,7 +499,7 @@ class WorkspaceExecutor:
                     items.append(rel)
         return sorted(items)
 
-    def _parse_command(self, command_str: str) -> List[str]:
+    def _parse_command(self, command_str: str) -> list[str]:
         if not isinstance(command_str, str) or not command_str.strip():
             raise ValueError("Command must be a non-empty string")
         if any(token in command_str for token in self._SHELL_META):
@@ -512,10 +547,11 @@ class WorkspaceExecutor:
 
 # ── SelfHealingDebugger ───────────────────────────────────────────────────────
 
+
 class SelfHealingDebugger:
     """Autonomous Self-Healing Verification & Debugger Engine."""
 
-    def __init__(self, workspace_dir: Optional[str] = None, max_attempts: int = 5):
+    def __init__(self, workspace_dir: str | None = None, max_attempts: int = 5):
         self.executor = WorkspaceExecutor(workspace_dir)
         self.planner = FablePlanner()
         self.max_attempts = max_attempts
@@ -523,7 +559,11 @@ class SelfHealingDebugger:
     def extract_error_summary(self, stderr: str, stdout: str) -> str:
         full_log = f"{stdout}\n{stderr}"
         lines = full_log.strip().split("\n")
-        relevant_lines = [l for l in lines if any(k in l.lower() for k in ["error", "exception", "failed", "assert", "traceback"])]
+        relevant_lines = [
+            line
+            for line in lines
+            if any(k in line.lower() for k in ["error", "exception", "failed", "assert", "traceback"])
+        ]
         if not relevant_lines:
             relevant_lines = lines[-15:]
         return "\n".join(relevant_lines)
@@ -531,7 +571,9 @@ class SelfHealingDebugger:
     def run_and_repair(self, test_command: str = "python3 -m unittest discover") -> dict:
         error_log = ""
         for attempt in range(1, self.max_attempts + 1):
-            print(f"[Self-Healer] Execution Verification Attempt {attempt}/{self.max_attempts}: running '{test_command}'...")
+            print(
+                f"[Self-Healer] Execution Verification Attempt {attempt}/{self.max_attempts}: running '{test_command}'..."
+            )
             res = self.executor.run_command(test_command)
 
             if res["success"]:
@@ -577,6 +619,7 @@ class SelfHealingDebugger:
 
 
 # ── FableControlCenter Dashboard Handler ───────────────────────────────────────
+
 
 class FableEngineHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -658,12 +701,14 @@ class FableEngineHandler(http.server.SimpleHTTPRequestHandler):
             test_cmd = plan.get("test_command", "python3 -m unittest discover")
             verification = debugger.run_and_repair(test_cmd)
 
-            self.send_json({
-                "thinking": plan.get("thinking", ""),
-                "applied_files": applied_files,
-                "verification": verification,
-                "provider": plan.get("provider", "Engine"),
-            })
+            self.send_json(
+                {
+                    "thinking": plan.get("thinking", ""),
+                    "applied_files": applied_files,
+                    "verification": verification,
+                    "provider": plan.get("provider", "Engine"),
+                }
+            )
 
         elif parsed.path == "/api/config/save":
             if os.environ.get("FABLE_ALLOW_CONFIG_WRITE", "0") != "1":
@@ -691,9 +736,11 @@ def run_fable_dashboard(start_port: int = 8085):
     port = start_port
     max_attempts = 10
 
-    for attempt in range(max_attempts):
+    for _attempt in range(max_attempts):
         try:
-            with socketserver.TCPServer((os.environ.get("FABLE_BIND_HOST", "127.0.0.1"), port), FableEngineHandler) as httpd:
+            with socketserver.TCPServer(
+                (os.environ.get("FABLE_BIND_HOST", "127.0.0.1"), port), FableEngineHandler
+            ) as httpd:
                 print(f"🚀 Fable-5 Engine Web Dashboard running at http://localhost:{port}")
                 httpd.serve_forever()
                 break

@@ -83,7 +83,9 @@ class CompanyAutonomyEngine:
                 "success_metric": "Founder receives an evidence-backed research direction decision",
                 "workflow_key": "research_intelligence_cycle",
                 "cadence": "weekly",
-                "inputs": {"research_theme": "Affordable AI, efficient models, autonomous agents and India-first AI infrastructure"},
+                "inputs": {
+                    "research_theme": "Affordable AI, efficient models, autonomous agents and India-first AI infrastructure"
+                },
                 "priority": 2,
                 "target_value": 52,
                 "unit": "research direction decisions",
@@ -285,9 +287,7 @@ class CompanyAutonomyEngine:
         repository = Path(repository_path).expanduser().resolve()
         if not repository.exists() or not repository.is_dir():
             raise GovernanceError("Company repository path must be an existing directory")
-        existing_titles = {
-            item["title"]: item for item in self.control.store.list_objectives(limit=2000)
-        }
+        existing_titles = {item["title"]: item for item in self.control.store.list_objectives(limit=2000)}
         created: list[dict[str, Any]] = []
         existing: list[dict[str, Any]] = []
         for definition in self.objective_definitions(
@@ -374,8 +374,7 @@ class CompanyAutonomyEngine:
         now = now or datetime.now(UTC)
         detected: list[dict[str, Any]] = []
         existing_keys = {
-            str(signal["idempotency_key"])
-            for signal in self.control.store.list_company_signals(limit=5000)
+            str(signal["idempotency_key"]) for signal in self.control.store.list_company_signals(limit=5000)
         }
 
         def create_once(
@@ -416,9 +415,7 @@ class CompanyAutonomyEngine:
             )
 
         today = now.date().isoformat()
-        for task in self.control.store.list_work_items(
-            item_type="task", state="failed", limit=1000
-        ):
+        for task in self.control.store.list_work_items(item_type="task", state="failed", limit=1000):
             if not str(task.get("updated_at") or "").startswith(today):
                 continue
             workspace = (task.get("metadata") or {}).get("workspace")
@@ -431,36 +428,31 @@ class CompanyAutonomyEngine:
                     "summary": task.get("summary") or task.get("title") or "Task failed",
                     "task_id": task["id"],
                     "workflow_id": task.get("workflow_id"),
-                    "repository_path": workspace or self.control.store.get_control(
-                        "company_repository_path", ""
-                    ),
+                    "repository_path": workspace or self.control.store.get_control("company_repository_path", ""),
                     "evidence": task.get("evidence") or [],
                 },
             )
 
         min_ctr = float(os.environ.get("AMAURA_CONTENT_MIN_CTR_PERCENT", "2.0"))
-        min_retention = float(
-            os.environ.get("AMAURA_CONTENT_MIN_RETENTION_PERCENT", "25.0")
-        )
+        min_retention = float(os.environ.get("AMAURA_CONTENT_MIN_RETENTION_PERCENT", "25.0"))
         for entry in self.control.store.list_content_metrics(limit=2000):
             metrics = {str(key).lower(): value for key, value in (entry.get("metrics") or {}).items()}
             ctr = metrics.get("ctr", metrics.get("click_through_rate"))
             retention = metrics.get("retention", metrics.get("average_percentage_viewed"))
             normalised_ctr = None if ctr is None else float(ctr) * (100.0 if float(ctr) <= 1.0 else 1.0)
-            normalised_retention = None if retention is None else float(retention) * (100.0 if float(retention) <= 1.0 else 1.0)
+            normalised_retention = (
+                None if retention is None else float(retention) * (100.0 if float(retention) <= 1.0 else 1.0)
+            )
             weak_reasons: list[str] = []
             if normalised_ctr is not None and normalised_ctr < min_ctr:
                 weak_reasons.append(f"CTR {normalised_ctr:.2f}% below {min_ctr:.2f}%")
             if normalised_retention is not None and normalised_retention < min_retention:
-                weak_reasons.append(
-                    f"Retention {normalised_retention:.2f}% below {min_retention:.2f}%"
-                )
+                weak_reasons.append(f"Retention {normalised_retention:.2f}% below {min_retention:.2f}%")
             if not weak_reasons:
                 continue
             create_once(
                 key=(
-                    f"auto:content:{entry['campaign_id']}:{entry['platform']}:"
-                    f"{entry['window']}:{entry['captured_at']}"
+                    f"auto:content:{entry['campaign_id']}:{entry['platform']}:{entry['window']}:{entry['captured_at']}"
                 ),
                 signal_type="content_underperformance",
                 source="content_analytics",
@@ -476,9 +468,7 @@ class CompanyAutonomyEngine:
                 },
             )
 
-        monthly_cost_cap = max(
-            0, int(os.environ.get("AMAURA_MONTHLY_COST_ALERT_CENTS", "0"))
-        )
+        monthly_cost_cap = max(0, int(os.environ.get("AMAURA_MONTHLY_COST_ALERT_CENTS", "0")))
         if monthly_cost_cap:
             month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             total = self.control.store.cost_total_since(month_start.isoformat())
@@ -526,7 +516,11 @@ class CompanyAutonomyEngine:
                 "incident_response",
                 "Respond to detected security or reliability incident",
                 "Incident is contained, repaired, independently verified and ready for restoration decision",
-                {"incident_summary": str(payload.get("summary") or payload.get("incident_summary") or "Automated security signal")},
+                {
+                    "incident_summary": str(
+                        payload.get("summary") or payload.get("incident_summary") or "Automated security signal"
+                    )
+                },
             ),
             "build_failure": (
                 "engineering_reliability_cycle",
@@ -544,7 +538,11 @@ class CompanyAutonomyEngine:
                 "distribution_optimization_cycle",
                 "Diagnose and improve an underperforming distribution asset",
                 "One measured distribution experiment reaches founder approval",
-                {"channel": str(payload.get("channel") or "owned channels"), "audience": str(payload.get("audience") or "Amaura audience"), "performance_signal": payload},
+                {
+                    "channel": str(payload.get("channel") or "owned channels"),
+                    "audience": str(payload.get("audience") or "Amaura audience"),
+                    "performance_signal": payload,
+                },
             ),
             "runway_risk": (
                 "financial_control_cycle",
@@ -556,32 +554,49 @@ class CompanyAutonomyEngine:
                 "product_discovery",
                 "Validate a research-derived product opportunity",
                 "Evidence supports a build, test or kill decision",
-                {"problem_space": str(payload.get("problem_space") or payload.get("summary") or "AI opportunity"), "target_user": str(payload.get("target_user") or "resource-constrained AI users")},
+                {
+                    "problem_space": str(payload.get("problem_space") or payload.get("summary") or "AI opportunity"),
+                    "target_user": str(payload.get("target_user") or "resource-constrained AI users"),
+                },
             ),
             "community_request": (
                 "community_growth_cycle",
                 "Respond to a recurring community need",
                 "One useful community response reaches founder approval",
-                {"community_name": str(payload.get("community_name") or "Amaura AI Community"), "audience": str(payload.get("audience") or "Amaura community"), "request_signal": payload},
+                {
+                    "community_name": str(payload.get("community_name") or "Amaura AI Community"),
+                    "audience": str(payload.get("audience") or "Amaura community"),
+                    "request_signal": payload,
+                },
             ),
             "release_ready": (
                 "open_source_release_cycle",
                 "Verify and prepare a candidate open-source release",
                 "Exact release artefacts pass verification and reach founder approval",
-                {"repository_path": repository, "project_name": str(payload.get("project_name") or "Amaura project"), "release_signal": payload},
+                {
+                    "repository_path": repository,
+                    "project_name": str(payload.get("project_name") or "Amaura project"),
+                    "release_signal": payload,
+                },
             ),
             "revenue_signal": (
                 "product_revenue_cycle",
                 "Evaluate a product-led revenue signal",
                 "A bounded monetisation decision reaches founder approval",
-                {"product_name": str(payload.get("product_name") or "Amaura product"), "target_user": str(payload.get("target_user") or "Amaura users"), "revenue_signal": payload},
+                {
+                    "product_name": str(payload.get("product_name") or "Amaura product"),
+                    "target_user": str(payload.get("target_user") or "Amaura users"),
+                    "revenue_signal": payload,
+                },
             ),
             "venture_opportunity": (
                 "venture_opportunity_cycle",
                 "Evaluate a possible Amaura Ventures product opportunity",
                 "One evidence-backed opportunity is rejected or reaches founder validation approval",
                 {
-                    "venture_theme": str(payload.get("venture_theme") or payload.get("summary") or "Focused revenue product"),
+                    "venture_theme": str(
+                        payload.get("venture_theme") or payload.get("summary") or "Focused revenue product"
+                    ),
                     "founder_time_budget_minutes": str(payload.get("founder_time_budget_minutes") or "20"),
                     "opportunity_signal": payload,
                 },
@@ -654,7 +669,9 @@ class CompanyAutonomyEngine:
             try:
                 programme = self._signal_programme(signal, now)
                 if programme is None:
-                    self.control.store.release_company_signal(signal["id"], error="department circuit breaker is paused")
+                    self.control.store.release_company_signal(
+                        signal["id"], error="department circuit breaker is paused"
+                    )
                     continue
                 completed = self.control.store.complete_company_signal(
                     signal["id"], programme_id=programme["programme"]["id"]
@@ -721,9 +738,7 @@ class CompanyAutonomyEngine:
         for department, failures in failed_by_department.items():
             if failures < threshold or self.department_paused(department):
                 continue
-            self.control.store.set_control(
-                f"autonomy.department.{department}", "paused", "jarvis"
-            )
+            self.control.store.set_control(f"autonomy.department.{department}", "paused", "jarvis")
             alert = self.control.store.create_alert(
                 {
                     "id": _id("alert"),
@@ -749,8 +764,7 @@ class CompanyAutonomyEngine:
             "autopilot_enabled": self.control.store.get_control("autopilot_enabled", "1") == "1",
             "repository_path": self.control.store.get_control("company_repository_path", ""),
             "department_autonomy": {
-                department: "paused" if self.department_paused(department) else "enabled"
-                for department in departments
+                department: "paused" if self.department_paused(department) else "enabled" for department in departments
             },
             "signals": {
                 status: len(self.control.store.list_company_signals(status=status, limit=5000))

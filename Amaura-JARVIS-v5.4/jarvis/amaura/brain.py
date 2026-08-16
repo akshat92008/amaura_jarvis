@@ -19,10 +19,11 @@ import os
 import re
 import subprocess
 import uuid
-from datetime import datetime
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -31,7 +32,6 @@ from jarvis.amaura.handoffs import create_antigravity_packet
 from jarvis.amaura.models import GovernanceError, RiskLevel, TaskState
 from jarvis.amaura.registry import AGENTS_BY_ID, ALL_AGENTS
 from jarvis.amaura.supervisor import AmauraSupervisor
-
 
 GoalDomain = Literal[
     "software",
@@ -106,7 +106,7 @@ class GoalTaskSpec(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def _validate_roles(self) -> "GoalTaskSpec":
+    def _validate_roles(self) -> GoalTaskSpec:
         if self.owner_id not in AGENTS_BY_ID:
             raise ValueError(f"unknown owner_id: {self.owner_id}")
         if self.reviewer_id != "founder" and self.reviewer_id not in AGENTS_BY_ID:
@@ -134,7 +134,7 @@ class GoalPlan(BaseModel):
     workspace: str = ""
 
     @model_validator(mode="after")
-    def _validate_graph(self) -> "GoalPlan":
+    def _validate_graph(self) -> GoalPlan:
         keys = [task.key for task in self.tasks]
         if len(keys) != len(set(keys)):
             raise ValueError("task keys must be unique")
@@ -142,9 +142,7 @@ class GoalPlan(BaseModel):
         for task in self.tasks:
             missing = set(task.depends_on) - key_set
             if missing:
-                raise ValueError(
-                    f"task {task.key} depends on unknown keys: {', '.join(sorted(missing))}"
-                )
+                raise ValueError(f"task {task.key} depends on unknown keys: {', '.join(sorted(missing))}")
         # DAG cycle check.
         graph = {task.key: list(task.depends_on) for task in self.tasks}
         visiting: set[str] = set()
@@ -179,7 +177,7 @@ class GoalMutation(BaseModel):
     planner: str = "deterministic-replan"
 
     @model_validator(mode="after")
-    def _validate_mutation(self) -> "GoalMutation":
+    def _validate_mutation(self) -> GoalMutation:
         keys = {task.key for task in self.add_tasks}
         if len(keys) != len(self.add_tasks):
             raise ValueError("replan task keys must be unique")
@@ -221,37 +219,128 @@ class GoalCompiler:
     """Translate ordinary founder intent into a bounded, governed task graph."""
 
     _SOFTWARE_TERMS = {
-        "build", "code", "coding", "app", "website", "software", "repository", "repo",
-        "bug", "fix", "debug", "refactor", "implement", "feature", "api", "frontend",
-        "backend", "test", "tests", "cli", "deploy", "release", "package", "migration",
-        "game", "games", "platformer", "webapp", "web-app", "tool", "plugin", "extension",
-        "noryx", "antigravity",
+        "build",
+        "code",
+        "coding",
+        "app",
+        "website",
+        "software",
+        "repository",
+        "repo",
+        "bug",
+        "fix",
+        "debug",
+        "refactor",
+        "implement",
+        "feature",
+        "api",
+        "frontend",
+        "backend",
+        "test",
+        "tests",
+        "cli",
+        "deploy",
+        "release",
+        "package",
+        "migration",
+        "game",
+        "games",
+        "platformer",
+        "webapp",
+        "web-app",
+        "tool",
+        "plugin",
+        "extension",
+        "noryx",
+        "antigravity",
     }
     _NEW_PROJECT_VERBS = {"build", "create", "develop", "make", "generate", "start", "scaffold"}
     _NEW_PROJECT_NOUNS = {
-        "app", "application", "website", "webapp", "web-app", "software", "game", "games",
-        "platformer", "api", "cli", "tool", "plugin", "extension",
+        "app",
+        "application",
+        "website",
+        "webapp",
+        "web-app",
+        "software",
+        "game",
+        "games",
+        "platformer",
+        "api",
+        "cli",
+        "tool",
+        "plugin",
+        "extension",
     }
     _VENTURE_TERMS = {
-        "venture", "ventures", "side hustle", "side hustles", "cashflow", "cash flow", "kdp",
-        "digital product", "digital products", "template pack", "affiliate", "micro-saas",
-        "passive income", "income stream", "income streams", "make money", "monetize", "monetise",
+        "venture",
+        "ventures",
+        "side hustle",
+        "side hustles",
+        "cashflow",
+        "cash flow",
+        "kdp",
+        "digital product",
+        "digital products",
+        "template pack",
+        "affiliate",
+        "micro-saas",
+        "passive income",
+        "income stream",
+        "income streams",
+        "make money",
+        "monetize",
+        "monetise",
     }
     _REVENUE_TERMS = {
-        "lead", "leads", "client", "clients", "prospect", "prospects", "sales", "outreach",
-        "proposal", "revenue", "crm", "customer",
+        "lead",
+        "leads",
+        "client",
+        "clients",
+        "prospect",
+        "prospects",
+        "sales",
+        "outreach",
+        "proposal",
+        "revenue",
+        "crm",
+        "customer",
     }
     _CONTENT_TERMS = {
-        "content", "video", "youtube", "instagram", "linkedin", "post", "marketing",
-        "campaign", "thumbnail", "script",
+        "content",
+        "video",
+        "youtube",
+        "instagram",
+        "linkedin",
+        "post",
+        "marketing",
+        "campaign",
+        "thumbnail",
+        "script",
     }
     _RESEARCH_TERMS = {
-        "research", "paper", "papers", "benchmark", "compare", "investigate", "study",
-        "analyze", "analyse", "market research",
+        "research",
+        "paper",
+        "papers",
+        "benchmark",
+        "compare",
+        "investigate",
+        "study",
+        "analyze",
+        "analyse",
+        "market research",
     }
     _COMPANY_TERMS = {
-        "company", "amaura", "department", "team", "employee", "operations", "strategy",
-        "business", "finance", "legal", "security",
+        "company",
+        "amaura",
+        "department",
+        "team",
+        "employee",
+        "operations",
+        "strategy",
+        "business",
+        "finance",
+        "legal",
+        "security",
     }
 
     # Planner models may only create actions inside this bounded vocabulary.  External
@@ -272,6 +361,7 @@ class GoalCompiler:
     @staticmethod
     def _configured_model_available() -> bool:
         from jarvis.amaura.model_gateway import CognitiveModelGateway
+
         return CognitiveModelGateway.available(purpose="planner")
 
     def llm_planning_enabled(self) -> bool:
@@ -295,9 +385,10 @@ class GoalCompiler:
 
     def classify(self, request: GoalRequest) -> GoalDomain:
         from jarvis.amaura.direct_action import DirectActionRouter
+
         if DirectActionRouter.can_handle(request.objective):
             return "direct_action"
-            
+
         text = request.objective.lower()
         tokens = set(re.findall(r"[a-z0-9_+-]+", text))
         if any(term in text for term in self._VENTURE_TERMS):
@@ -307,7 +398,13 @@ class GoalCompiler:
         # "API". An explicit workspace still makes repository context primary.
         if not request.workspace and tokens & self._RESEARCH_TERMS:
             return "research"
-        if request.workspace or tokens & self._SOFTWARE_TERMS or "repo" in text or "repository" in text or "codebase" in text:
+        if (
+            request.workspace
+            or tokens & self._SOFTWARE_TERMS
+            or "repo" in text
+            or "repository" in text
+            or "codebase" in text
+        ):
             return "software"
         if tokens & self._REVENUE_TERMS:
             return "revenue"
@@ -655,7 +752,9 @@ class GoalCompiler:
         raw.setdefault("planner", f"llm:{execution.provider}:{execution.model}")
         return raw
 
-    def _validate_model_plan(self, raw: dict[str, Any], request: GoalRequest, domain: GoalDomain, workspace: str) -> GoalPlan:
+    def _validate_model_plan(
+        self, raw: dict[str, Any], request: GoalRequest, domain: GoalDomain, workspace: str
+    ) -> GoalPlan:
         raw = dict(raw)
         raw.setdefault("domain", domain)
         raw["objective"] = request.objective
@@ -688,6 +787,7 @@ class GoalCompiler:
         workspace = self._normalise_workspace(request.workspace)
         if not workspace:
             from jarvis.amaura.direct_action import PathExtractor
+
             args = PathExtractor.extract_structured_arguments(request.objective)
             repo_cand = args.get("repo_path") or args.get("directory") or args.get("input_path")
             if not repo_cand:
@@ -705,8 +805,10 @@ class GoalCompiler:
         domain = self.classify(request)
         if domain == "direct_action":
             return self._direct_action_plan(request, workspace)
-        if domain == "software" and self.is_new_software_project(request) and (
-            not workspace or request.metadata.get("managed_new_project") is True
+        if (
+            domain == "software"
+            and self.is_new_software_project(request)
+            and (not workspace or request.metadata.get("managed_new_project") is True)
         ):
             return self._software_plan(request, workspace)
         use_llm = self.llm_planning_enabled()
@@ -730,7 +832,6 @@ class GoalCompiler:
         if domain == "software":
             return self._software_plan(request, workspace)
         return self._domain_plan(request, domain, workspace)
-
 
     def _replan_prompt(
         self,
@@ -783,11 +884,20 @@ class GoalCompiler:
         suffix = f"r{attempt}"
         if self.llm_planning_enabled():
             prompt = self._replan_prompt(
-                request=request, plan=plan, failed_task=failed_task, existing_keys=existing_keys,
-                original_dependency_keys=original_dependency_keys, context=context, attempt=attempt,
+                request=request,
+                plan=plan,
+                failed_task=failed_task,
+                existing_keys=existing_keys,
+                original_dependency_keys=original_dependency_keys,
+                context=context,
+                attempt=attempt,
             )
             try:
-                raw = self.planner(request, prompt) if self.planner is not None else self._call_default_llm(request, prompt)
+                raw = (
+                    self.planner(request, prompt)
+                    if self.planner is not None
+                    else self._call_default_llm(request, prompt)
+                )
                 if isinstance(raw, GoalPlan):
                     raise GovernanceError("Replanner must return a plan mutation, not a full GoalPlan")
                 data = dict(raw)
@@ -837,12 +947,14 @@ class GoalCompiler:
         repair_owner = "patch_engineer" if repository_task and "patch_engineer" in AGENTS_BY_ID else original_owner
         repair_reviewer = original_reviewer if original_reviewer != repair_owner else "qa"
         repair_meta = dict(failed_task.get("metadata") or {})
-        repair_meta.update({
-            "original_dependency_keys": [diagnose_key],
-            "replan_attempt": attempt,
-            "supersedes_key": failed_key,
-            "recovery_strategy": "diagnose_then_replace",
-        })
+        repair_meta.update(
+            {
+                "original_dependency_keys": [diagnose_key],
+                "replan_attempt": attempt,
+                "supersedes_key": failed_key,
+                "recovery_strategy": "diagnose_then_replace",
+            }
+        )
         if repository_task and str(repair_meta.get("coding_backend") or "antigravity") == "internal":
             repair_meta["coding_backend"] = "antigravity"
         diagnose = GoalTaskSpec(
@@ -861,7 +973,10 @@ class GoalCompiler:
             ],
             depends_on=original_dependency_keys,
             action_type="analysis",
-            budget_cents=min(350, AGENTS_BY_ID["technical_architect"].cost_limit_cents if "technical_architect" in AGENTS_BY_ID else 300),
+            budget_cents=min(
+                350,
+                AGENTS_BY_ID["technical_architect"].cost_limit_cents if "technical_architect" in AGENTS_BY_ID else 300,
+            ),
             metadata={
                 "original_dependency_keys": original_dependency_keys,
                 "replan_attempt": attempt,
@@ -877,7 +992,9 @@ class GoalCompiler:
             ),
             owner_id=repair_owner,
             reviewer_id=repair_reviewer,
-            acceptance_criteria=list(failed_task.get("acceptance_criteria") or ["Recovery satisfies the original objective"]),
+            acceptance_criteria=list(
+                failed_task.get("acceptance_criteria") or ["Recovery satisfies the original objective"]
+            ),
             depends_on=[diagnose_key],
             risk=RiskLevel(str(failed_task.get("risk") or RiskLevel.LOW.value)),
             budget_cents=min(
@@ -910,11 +1027,17 @@ class JarvisMemory:
 
     def _service(self):
         from jarvis.amaura.cognition import UnifiedMemoryService
+
         return UnifiedMemoryService(self.control)
 
     def remember(
-        self, *, key: str, value: Any, scope: Literal["personal", "project"] = "project",
-        sensitivity: str = "internal", actor: str = "founder",
+        self,
+        *,
+        key: str,
+        value: Any,
+        scope: Literal["personal", "project"] = "project",
+        sensitivity: str = "internal",
+        actor: str = "founder",
     ) -> dict[str, Any]:
         stored = self._service().remember(
             key=key, value=value, scope=scope, sensitivity=sensitivity, actor=actor, source="jarvis_memory_compat"
@@ -926,9 +1049,7 @@ class JarvisMemory:
         legacy_view["value"] = value
         return legacy_view
 
-    def forget(
-        self, *, key: str, scope: Literal["personal", "project"] = "project", actor: str = "founder"
-    ) -> bool:
+    def forget(self, *, key: str, scope: Literal["personal", "project"] = "project", actor: str = "founder") -> bool:
         return self._service().forget(key=key, scope=scope, actor=actor)
 
     def list(self, *, scope: Literal["personal", "project", "all"] = "all", limit: int = 200) -> list[dict[str, Any]]:
@@ -957,14 +1078,17 @@ class JarvisBrain:
     @staticmethod
     def _provision_project_workspace(request: GoalRequest, plan: GoalPlan) -> str:
         """Create a clean, isolated Git repository for an explicitly new project."""
-        root = Path(
-            os.environ.get("AMAURA_PROJECTS_ROOT", "").strip()
-            or (Path.home() / "Desktop" / "Amaura Projects")
-        ).expanduser().resolve()
+        root = (
+            Path(os.environ.get("AMAURA_PROJECTS_ROOT", "").strip() or (Path.home() / "Desktop" / "Amaura Projects"))
+            .expanduser()
+            .resolve()
+        )
         root.mkdir(parents=True, exist_ok=True)
         words = [
-            word for word in re.findall(r"[a-z0-9]+", request.objective.lower())
-            if word not in {"a", "an", "the", "create", "build", "make", "develop", "generate", "in", "on", "for", "desktop"}
+            word
+            for word in re.findall(r"[a-z0-9]+", request.objective.lower())
+            if word
+            not in {"a", "an", "the", "create", "build", "make", "develop", "generate", "in", "on", "for", "desktop"}
         ]
         slug = "-".join(words[:6]).strip("-")[:56] or "amaura-project"
         workspace = root / slug
@@ -980,7 +1104,8 @@ class JarvisBrain:
             encoding="utf-8",
         )
         environment = {
-            key: value for key, value in os.environ.items()
+            key: value
+            for key, value in os.environ.items()
             if key in {"PATH", "HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "TMPDIR", "TEMP", "TMP"}
         }
         environment.update({"GIT_TERMINAL_PROMPT": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull})
@@ -988,13 +1113,21 @@ class JarvisBrain:
             ["git", "init", "-q"],
             ["git", "add", "README.md", ".gitignore"],
             [
-                "git", "-c", "user.name=Amaura JARVIS", "-c", "user.email=amaura@local.invalid",
-                "commit", "-qm", "chore: initialize Amaura project",
+                "git",
+                "-c",
+                "user.name=Amaura JARVIS",
+                "-c",
+                "user.email=amaura@local.invalid",
+                "commit",
+                "-qm",
+                "chore: initialize Amaura project",
             ],
         )
         try:
             for command in commands:
-                subprocess.run(command, cwd=workspace, env=environment, check=True, capture_output=True, text=True, timeout=30)
+                subprocess.run(
+                    command, cwd=workspace, env=environment, check=True, capture_output=True, text=True, timeout=30
+                )
         except (OSError, subprocess.SubprocessError) as exc:
             raise GovernanceError(f"Unable to initialize managed project workspace: {workspace}") from exc
         return str(workspace)
@@ -1005,7 +1138,10 @@ class JarvisBrain:
         project_id = _id("proj")
         milestone_id = _id("mile")
         workspace = plan.workspace or str(Path.cwd().resolve())
-        handoff_mode = request.coding_backend == "antigravity" and os.environ.get("AMAURA_ANTIGRAVITY_MODE", "cli").strip().lower() == "handoff"
+        handoff_mode = (
+            request.coding_backend == "antigravity"
+            and os.environ.get("AMAURA_ANTIGRAVITY_MODE", "cli").strip().lower() == "handoff"
+        )
         held = request.autonomy == "plan_only" or handoff_mode
         initial_state = TaskState.DRAFT.value if held else TaskState.ASSIGNED.value
         base_metadata = {
@@ -1131,7 +1267,13 @@ class JarvisBrain:
             "allowed",
             {"workflow_id": workflow_id, "domain": plan.domain, "planner": plan.planner},
         )
-        return {"goal": programme, "project_id": project_id if not skip_hierarchy else None, "milestone_id": milestone_id if not skip_hierarchy else None, "tasks": created_tasks, "plan": plan.model_dump(mode="json")}
+        return {
+            "goal": programme,
+            "project_id": project_id if not skip_hierarchy else None,
+            "milestone_id": milestone_id if not skip_hierarchy else None,
+            "tasks": created_tasks,
+            "plan": plan.model_dump(mode="json"),
+        }
 
     def submit(self, request: GoalRequest, *, external_context: str = "") -> dict[str, Any]:
         memory_context = self.memory.context(request.objective)
@@ -1142,6 +1284,7 @@ class JarvisBrain:
                 plan = plan.model_copy(update={"workspace": request.workspace})
             else:
                 from jarvis.amaura.direct_action import PathExtractor
+
                 args = PathExtractor.extract_structured_arguments(request.objective)
                 repo_cand = args.get("repo_path") or args.get("directory") or args.get("input_path")
                 if not repo_cand:
@@ -1165,7 +1308,10 @@ class JarvisBrain:
             request = request.model_copy(update={"workspace": workspace})
             plan = plan.model_copy(update={"workspace": workspace})
         result = self._materialize(request, plan)
-        if request.coding_backend == "antigravity" and os.environ.get("AMAURA_ANTIGRAVITY_MODE", "cli").strip().lower() == "handoff":
+        if (
+            request.coding_backend == "antigravity"
+            and os.environ.get("AMAURA_ANTIGRAVITY_MODE", "cli").strip().lower() == "handoff"
+        ):
             if not plan.workspace:
                 raise GovernanceError("Antigravity handoff requires an explicit repository workspace")
             packet = create_antigravity_packet(
@@ -1211,8 +1357,7 @@ class JarvisBrain:
         goal = self.control.store.get_work_item(goal_id)
         workflow_id = str(goal.get("workflow_id") or "")
         return [
-            item for item in self.control.store.list_work_items(limit=1000)
-            if item.get("workflow_id") == workflow_id
+            item for item in self.control.store.list_work_items(limit=1000) if item.get("workflow_id") == workflow_id
         ]
 
     def activate(self, goal_id: str, *, actor: str = "founder") -> dict[str, Any]:
@@ -1222,7 +1367,9 @@ class JarvisBrain:
         if not metadata.get("dynamic_goal"):
             raise GovernanceError("Unknown JARVIS dynamic goal")
         if metadata.get("antigravity_handoff") is True:
-            raise GovernanceError("Manual Antigravity handoff missions cannot be activated; submit a CLI-mode mission instead")
+            raise GovernanceError(
+                "Manual Antigravity handoff missions cannot be activated; submit a CLI-mode mission instead"
+            )
         if goal.get("state") in {TaskState.COMPLETED.value, TaskState.CANCELLED.value}:
             raise GovernanceError(f"Cannot activate terminal mission state '{goal.get('state')}'")
         generation = int(metadata.get("mission_generation", 1) or 1) + 1
@@ -1241,9 +1388,17 @@ class JarvisBrain:
                 item_metadata.pop("mission_pause_requested", None)
                 previous = item_metadata.pop("mission_pause_previous_state", "")
                 if item.get("state") == TaskState.DRAFT.value:
-                    restored = previous if previous in {
-                        TaskState.ASSIGNED.value, TaskState.BLOCKED.value, TaskState.AWAITING_REVIEW.value, TaskState.AWAITING_APPROVAL.value
-                    } else TaskState.ASSIGNED.value
+                    restored = (
+                        previous
+                        if previous
+                        in {
+                            TaskState.ASSIGNED.value,
+                            TaskState.BLOCKED.value,
+                            TaskState.AWAITING_REVIEW.value,
+                            TaskState.AWAITING_APPROVAL.value,
+                        }
+                        else TaskState.ASSIGNED.value
+                    )
                     self.control.store.update_work_item(item["id"], state=restored, metadata=item_metadata)
                 else:
                     self.control.store.update_work_item(item["id"], metadata=item_metadata)
@@ -1267,8 +1422,10 @@ class JarvisBrain:
                 if item["id"] == goal_id:
                     continue
                 if item.get("state") in {
-                    TaskState.ASSIGNED.value, TaskState.BLOCKED.value,
-                    TaskState.AWAITING_REVIEW.value, TaskState.AWAITING_APPROVAL.value,
+                    TaskState.ASSIGNED.value,
+                    TaskState.BLOCKED.value,
+                    TaskState.AWAITING_REVIEW.value,
+                    TaskState.AWAITING_APPROVAL.value,
                 }:
                     item_metadata = dict(item.get("metadata") or {})
                     item_metadata["mission_pause_previous_state"] = item.get("state")
@@ -1280,7 +1437,9 @@ class JarvisBrain:
         self.control.store.publish_event("jarvis.goal.paused", goal_id, {"actor": actor, "reason": reason[:1000]})
         return self.status(goal_id)
 
-    def cancel(self, goal_id: str, *, actor: str = "founder", reason: str = "Founder cancelled mission") -> dict[str, Any]:
+    def cancel(
+        self, goal_id: str, *, actor: str = "founder", reason: str = "Founder cancelled mission"
+    ) -> dict[str, Any]:
         goal = self.control.store.get_work_item(goal_id)
         metadata = dict(goal.get("metadata") or {})
         if not metadata.get("dynamic_goal"):
@@ -1297,11 +1456,13 @@ class JarvisBrain:
                     self.control.store.update_work_item(item["id"], state=TaskState.CANCELLED.value)
             self.control.store.update_work_item(goal_id, state=TaskState.CANCELLED.value, metadata=metadata)
         self.control.store.publish_event("jarvis.goal.cancelled", goal_id, {"actor": actor, "reason": reason[:1000]})
-        self.control.store.audit(actor, "cancel_dynamic_goal", "programme", goal_id, "allowed", {"reason": reason[:1000]})
+        self.control.store.audit(
+            actor, "cancel_dynamic_goal", "programme", goal_id, "allowed", {"reason": reason[:1000]}
+        )
         return self.status(goal_id)
 
     def _rollup_hierarchy(self, goal_id: str, *, completed: bool = False, failed: bool = False) -> None:
-        goal = self.control.store.get_work_item(goal_id)
+        self.control.store.get_work_item(goal_id)
         if not completed and not failed:
             return
         target_state = TaskState.COMPLETED.value if completed else TaskState.FAILED.value
@@ -1322,7 +1483,8 @@ class JarvisBrain:
             raise GovernanceError("Unknown JARVIS dynamic goal")
         workflow_id = str(goal.get("workflow_id") or "")
         return [
-            task for task in self.control.store.list_work_items(item_type="task", limit=1000)
+            task
+            for task in self.control.store.list_work_items(item_type="task", limit=1000)
             if task.get("workflow_id") == workflow_id
         ]
 
@@ -1337,7 +1499,8 @@ class JarvisBrain:
             states[task["state"]] = states.get(task["state"], 0) + 1
         active_ids = {task["id"] for task in active_tasks}
         pending = [
-            approval for approval in self.control.store.list_approvals("pending", limit=500)
+            approval
+            for approval in self.control.store.list_approvals("pending", limit=500)
             if approval["task_id"] in active_ids
         ]
         metadata = dict(goal.get("metadata") or {})
@@ -1364,7 +1527,9 @@ class JarvisBrain:
             self._rollup_hierarchy(goal_id, failed=True)
             goal = self.control.store.get_work_item(goal_id)
             metadata = dict(goal.get("metadata") or metadata)
-        elif any(task["state"] in {TaskState.IN_PROGRESS.value, TaskState.AWAITING_REVIEW.value} for task in active_tasks):
+        elif any(
+            task["state"] in {TaskState.IN_PROGRESS.value, TaskState.AWAITING_REVIEW.value} for task in active_tasks
+        ):
             state = "running"
         else:
             state = "queued"
@@ -1372,10 +1537,14 @@ class JarvisBrain:
             "goal": goal,
             "state": state,
             "lifecycle_state": (
-                "handoff_required" if metadata.get("antigravity_handoff") is True and not metadata.get("mission_runnable")
-                else "held" if metadata.get("mission_paused") is True
-                else "planned" if not metadata.get("mission_runnable") and goal.get("state") == TaskState.DRAFT.value
-                else "runnable" if metadata.get("mission_runnable") is True and state in {"queued", "running", "awaiting_approval"}
+                "handoff_required"
+                if metadata.get("antigravity_handoff") is True and not metadata.get("mission_runnable")
+                else "held"
+                if metadata.get("mission_paused") is True
+                else "planned"
+                if not metadata.get("mission_runnable") and goal.get("state") == TaskState.DRAFT.value
+                else "runnable"
+                if metadata.get("mission_runnable") is True and state in {"queued", "running", "awaiting_approval"}
                 else state
             ),
             "states": states,
@@ -1397,7 +1566,8 @@ class JarvisBrain:
             return []
         tasks = self._goal_tasks(goal_id)
         failed = [
-            task for task in tasks
+            task
+            for task in tasks
             if task["state"] == TaskState.FAILED.value and not (task.get("metadata") or {}).get("superseded_by")
         ]
         if not failed:
@@ -1413,7 +1583,7 @@ class JarvisBrain:
         # One structural mutation per replan attempt keeps recovery bounded and
         # allows a new failure to be reasoned about on the next iteration.
         failed_task = failed[0]
-        failed_key = str((failed_task.get("metadata") or {}).get("step_key") or failed_task["id"])
+        str((failed_task.get("metadata") or {}).get("step_key") or failed_task["id"])
         original_dependency_keys = [id_to_key.get(dep, dep) for dep in failed_task.get("dependencies", [])]
         context = (
             f"FAILED SUMMARY: {str(failed_task.get('summary') or '')[-6000:]}\n"
@@ -1431,6 +1601,7 @@ class JarvisBrain:
         parent_id = str(failed_task.get("parent_id") or "")
         workflow_id = str(failed_task.get("workflow_id") or goal.get("workflow_id") or "")
         new_ids = {spec.key: _id("task") for spec in mutation.add_tasks}
+
         # Resolve dependencies against existing keys + newly created keys.
         def resolve_dependency(key: str) -> str:
             if key in new_ids:
@@ -1446,7 +1617,8 @@ class JarvisBrain:
                 int(current_meta.get("mission_generation", 1) or 1) != expected_generation
                 or current_meta.get("mission_runnable") is not True
                 or current_meta.get("mission_paused") is True
-                or current_goal.get("state") in {TaskState.DRAFT.value, TaskState.CANCELLED.value, TaskState.COMPLETED.value}
+                or current_goal.get("state")
+                in {TaskState.DRAFT.value, TaskState.CANCELLED.value, TaskState.COMPLETED.value}
             ):
                 raise GovernanceError("Mission lifecycle changed while replanning; stale DAG mutation discarded")
             for spec in mutation.add_tasks:

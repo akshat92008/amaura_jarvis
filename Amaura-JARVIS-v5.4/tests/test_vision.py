@@ -1,19 +1,21 @@
 import unittest
 from unittest.mock import MagicMock, patch
+
 from jarvis.tools.vision import (
-    see_user,
-    inspect_visual_ui,
+    MediaPipeVisionEngine,
     check_desk_presence,
+    detect_faces,
     detect_gestures,
     detect_hand_landmarks,
-    detect_faces,
+    inspect_visual_ui,
+    see_user,
     track_desk_arrival_departure,
-    MediaPipeVisionEngine
 )
 
+
 class TestVision(unittest.TestCase):
-    @patch('subprocess.run')
-    @patch('cv2.VideoCapture')
+    @patch("subprocess.run")
+    @patch("cv2.VideoCapture")
     def test_basic_vision(self, mock_cap, mock_subproc):
         mock_instance = MagicMock()
         mock_instance.isOpened.return_value = False
@@ -56,6 +58,7 @@ class TestVision(unittest.TestCase):
         tracker_res = track_desk_arrival_departure()
         self.assertIn("Desk Presence Event Tracker", tracker_res)
         self.assertIn("OCCUPIED", tracker_res)
+
 
 if __name__ == "__main__":
     unittest.main()

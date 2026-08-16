@@ -1,9 +1,0 @@
-{
-  "status": "VERIFIED_UNCHANGED",
-  "pre_file_count": 118,
-  "post_file_count": 118,
-  "union_file_count": 118,
-  "mismatch_count": 0,
-  "modified_or_added_or_deleted_files": [],
-  "verification_method": "independent_pre_post_sha256_union_comparison"
-}

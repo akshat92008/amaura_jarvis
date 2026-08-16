@@ -14,17 +14,15 @@ import tempfile
 import threading
 import uuid
 from pathlib import Path
-from typing import Any
 from unittest.mock import patch
 
 import pytest
 
-from jarvis.amaura.cognition import ExecutiveKernel, ExecutiveRequest, UnifiedMemoryService
-from jarvis.amaura.control_plane import AmauraControlPlane
-from jarvis.amaura.direct_action import DirectActionRouter, DirectActionResult
-from jarvis.amaura.store import CompanyStore
 from jarvis.agent import JarvisAgent
-from jarvis.tools.security import tool_workspace, workspace_root
+from jarvis.amaura.cognition import UnifiedMemoryService
+from jarvis.amaura.control_plane import AmauraControlPlane
+from jarvis.amaura.direct_action import DirectActionRouter
+from jarvis.tools.security import tool_workspace
 
 
 @pytest.fixture
@@ -44,6 +42,7 @@ def test_env():
 
 
 # ── 1. Filesystem Tests with Randomized Content ───────────────────────────────
+
 
 def test_filesystem_write_and_read_randomized(test_env):
     workspace = test_env["dir"]
@@ -120,6 +119,7 @@ def test_filesystem_list_randomized(test_env):
 
 # ── 2. Filesystem Security Boundary Tests ─────────────────────────────────────
 
+
 def test_filesystem_security_sensitive_paths(test_env):
     workspace = test_env["dir"]
     with tool_workspace(workspace):
@@ -148,6 +148,7 @@ def test_filesystem_security_sensitive_paths(test_env):
 
 
 # ── 3. Browser Execution Tests with Local Server ──────────────────────────────
+
 
 class _MockHttpHandler(http.server.BaseHTTPRequestHandler):
     title = "Test Page Title"
@@ -219,6 +220,7 @@ def test_browser_execution_randomized(test_env):
 
 # ── 4. Real Memory Retrieval Tests ───────────────────────────────────────────
 
+
 def test_memory_retrieval_randomized(test_env):
     control = test_env["control"]
     mem_service = UnifiedMemoryService(control)
@@ -262,6 +264,7 @@ def test_memory_retrieval_randomized(test_env):
 
 
 # ── 5. Repository Inspection Tests with Arbitrary Bug Classes ─────────────────
+
 
 def test_repository_inspection_operator_mismatch(test_env):
     workspace = test_env["dir"]
@@ -321,6 +324,7 @@ def {fn_name}(a: int, b: int) -> int:
 
 
 # ── 6. Multi-Step Workflows with Random Schemas ───────────────────────────────
+
 
 def test_multi_step_workflow_schema_a(test_env):
     workspace = test_env["dir"]
@@ -384,6 +388,7 @@ def test_multi_step_workflow_schema_b(test_env):
 
 # ── 7. Exact Response & Concurrency Isolation ─────────────────────────────────
 
+
 def test_exact_response_randomized():
     # Test random strings with various phrasing
     token_1 = f"BANANA-{uuid.uuid4().hex[:6]}"
@@ -432,7 +437,7 @@ def test_concurrency_isolation(test_env):
         t.join()
 
     assert not errors, f"Concurrent threads had errors: {errors}"
-    for thread_id, (expected_token, response_dict) in results.items():
+    for _thread_id, (expected_token, response_dict) in results.items():
         assert response_dict["message"] == expected_token
         prov = response_dict["model_provenance"]
         assert prov.get("execution_type") == "exact_response"
@@ -440,6 +445,7 @@ def test_concurrency_isolation(test_env):
 
 
 # ── 8. Phase 9 Specific Verification & Truthfulness Regression Tests ─────────
+
 
 def test_write_tool_failure_reports_false(test_env):
     """1. Write tool says failure -> DirectActionResult.success == False."""
@@ -459,10 +465,12 @@ def test_write_content_mismatch_reports_false(test_env):
     target_file = Path(workspace) / "mismatch_file.txt"
     with tool_workspace(workspace):
         with patch("jarvis.amaura.direct_action.execute_tool") as mock_exec:
+
             def _fake_write(tool_name, args):
                 # Writes different content than requested
                 target_file.write_text("corrupted content", encoding="utf-8")
                 return json.dumps({"ok": True, "data": {"output": "Wrote file"}})
+
             mock_exec.side_effect = _fake_write
 
             res = DirectActionRouter.execute(f"Save 'expected content' to {target_file.name}", workspace=workspace)
@@ -528,6 +536,7 @@ def test_workflow_wrong_output_reports_false(test_env):
 
     with tool_workspace(workspace):
         with patch("jarvis.amaura.direct_action.execute_tool") as mock_exec:
+
             def _mock_workflow_dispatch(tool_name, args):
                 if tool_name == "read_file":
                     return json.dumps({"ok": True, "data": {"output": in_file.read_text(encoding="utf-8")}})
@@ -536,6 +545,7 @@ def test_workflow_wrong_output_reports_false(test_env):
                     out_file.write_text(json.dumps({"key": "wrong_value"}), encoding="utf-8")
                     return json.dumps({"ok": True, "data": {"output": "Wrote"}})
                 return json.dumps({"ok": False})
+
             mock_exec.side_effect = _mock_workflow_dispatch
 
             prompt = f"Read input file at '{in_file}', extract data, and create json file at '{out_file}'"

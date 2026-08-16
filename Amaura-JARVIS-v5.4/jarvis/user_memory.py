@@ -5,11 +5,10 @@ Extended from Nexus with personal assistant capabilities.
 """
 
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from pathlib import Path
-from jarvis.paths import get_data_dir
 
+from jarvis.paths import get_data_dir
 
 PREFS_FILE = get_data_dir() / "personal.json"
 
@@ -17,6 +16,7 @@ PREFS_FILE = get_data_dir() / "personal.json"
 @dataclass
 class PersonalMemory:
     """Persistent personal knowledge about the user."""
+
     # Identity
     name: str = ""
     nickname: str = ""
@@ -110,12 +110,11 @@ class UserMemory:
 
         if PREFS_FILE.exists():
             try:
-                with open(PREFS_FILE, "r", encoding="utf-8") as f:
+                with open(PREFS_FILE, encoding="utf-8") as f:
                     data = json.load(f)
-                self._prefs = PersonalMemory(**{
-                    k: v for k, v in data.items()
-                    if k in PersonalMemory.__dataclass_fields__
-                })
+                self._prefs = PersonalMemory(
+                    **{k: v for k, v in data.items() if k in PersonalMemory.__dataclass_fields__}
+                )
             except (json.JSONDecodeError, OSError, TypeError):
                 self._prefs = PersonalMemory()
         else:
@@ -147,6 +146,7 @@ class UserMemory:
             self.save()
             try:
                 from jarvis.tools.vector_memory import remember_fact
+
                 remember_fact(fact, category="preference", importance=8.0, source="personal_memory")
             except Exception:
                 pass
@@ -161,6 +161,7 @@ class UserMemory:
             self.save()
             try:
                 from jarvis.tools.vector_memory import remember_fact
+
                 remember_fact(convention, category="convention", importance=8.5, source="personal_memory")
             except Exception:
                 pass
@@ -168,16 +169,19 @@ class UserMemory:
     def record_correction(self, lesson: str, context: str = ""):
         """Record something the user corrected."""
         prefs = self.load()
-        prefs.corrections.append({
-            "lesson": lesson,
-            "context": context,
-            "timestamp": datetime.now().isoformat(),
-        })
+        prefs.corrections.append(
+            {
+                "lesson": lesson,
+                "context": context,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         if len(prefs.corrections) > 100:
             prefs.corrections = prefs.corrections[-100:]
         self.save()
         try:
             from jarvis.tools.vector_memory import remember_fact
+
             corr_text = f"Correction: {lesson}. Context: {context}" if context else f"Correction: {lesson}"
             remember_fact(corr_text, category="correction", importance=9.0, source="personal_memory")
         except Exception:

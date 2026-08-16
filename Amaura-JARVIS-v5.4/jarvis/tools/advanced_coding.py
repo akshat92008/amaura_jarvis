@@ -6,18 +6,18 @@ code analysis, refactoring, project scaffolding, debugging, testing,
 formatting, multi-file editing, Docker, API scaffolding, and more.
 """
 
+import ast
+import json
 import os
 import re
-import json
-import subprocess
 import shutil
 import socket
+import subprocess
 import sys
-import ast
 from pathlib import Path
 from textwrap import dedent
-from jarvis.tools.process import ensure_safe_tokens, repo_relative_path
 
+from jarvis.tools.process import ensure_safe_tokens, repo_relative_path
 
 # ── Tool Definitions ─────────────────────────────────────────────────────────
 
@@ -31,8 +31,14 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "path": {"type": "string", "description": "Path to the file or directory to analyze."},
-                    "language": {"type": "string", "description": "Force language (auto-detected if omitted). Options: python, javascript, typescript, go, rust, java, cpp, c, ruby, php, swift, kotlin."},
-                    "include_metrics": {"type": "boolean", "description": "Include complexity metrics (default: true)."},
+                    "language": {
+                        "type": "string",
+                        "description": "Force language (auto-detected if omitted). Options: python, javascript, typescript, go, rust, java, cpp, c, ruby, php, swift, kotlin.",
+                    },
+                    "include_metrics": {
+                        "type": "boolean",
+                        "description": "Include complexity metrics (default: true).",
+                    },
                 },
                 "required": ["path"],
             },
@@ -47,7 +53,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "path": {"type": "string", "description": "File or directory to refactor in."},
-                    "operation": {"type": "string", "description": "Refactoring operation: rename, extract_function, inline, convert_to_class, add_type_hints, remove_dead_code."},
+                    "operation": {
+                        "type": "string",
+                        "description": "Refactoring operation: rename, extract_function, inline, convert_to_class, add_type_hints, remove_dead_code.",
+                    },
                     "old_name": {"type": "string", "description": "Current symbol name (for rename)."},
                     "new_name": {"type": "string", "description": "New symbol name (for rename)."},
                     "file_pattern": {"type": "string", "description": "Glob pattern to filter files (e.g., '*.py')."},
@@ -64,11 +73,21 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "template": {"type": "string", "description": "Project template to use (e.g., python-api, react-app, nextjs-app, go-api, rust-cli, django-app, fullstack)."},
+                    "template": {
+                        "type": "string",
+                        "description": "Project template to use (e.g., python-api, react-app, nextjs-app, go-api, rust-cli, django-app, fullstack).",
+                    },
                     "name": {"type": "string", "description": "Project name."},
-                    "path": {"type": "string", "description": "Directory to create the project in (default: current directory)."},
+                    "path": {
+                        "type": "string",
+                        "description": "Directory to create the project in (default: current directory).",
+                    },
                     "description": {"type": "string", "description": "Short project description."},
-                    "features": {"type": "array", "items": {"type": "string"}, "description": "Optional features to include (e.g., docker, auth, database, testing, ci)."},
+                    "features": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional features to include (e.g., docker, auth, database, testing, ci).",
+                    },
                 },
                 "required": ["template", "name"],
             },
@@ -83,7 +102,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "packages": {"type": "array", "items": {"type": "string"}, "description": "Packages to install."},
-                    "manager": {"type": "string", "description": "Force a specific package manager (auto-detected if omitted)."},
+                    "manager": {
+                        "type": "string",
+                        "description": "Force a specific package manager (auto-detected if omitted).",
+                    },
                     "dev": {"type": "boolean", "description": "Install as dev dependency (default: false)."},
                     "cwd": {"type": "string", "description": "Working directory."},
                 },
@@ -134,7 +156,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "path": {"type": "string", "description": "File or directory to format."},
-                    "formatter": {"type": "string", "description": "Force specific formatter (auto-detected if omitted)."},
+                    "formatter": {
+                        "type": "string",
+                        "description": "Force specific formatter (auto-detected if omitted).",
+                    },
                     "check_only": {"type": "boolean", "description": "Only check, don't modify (default: false)."},
                     "cwd": {"type": "string", "description": "Working directory."},
                 },
@@ -152,7 +177,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                 "properties": {
                     "error": {"type": "string", "description": "The error message or stack trace to debug."},
                     "context_path": {"type": "string", "description": "Path to the project or file for context."},
-                    "language": {"type": "string", "description": "Language hint (auto-detected from stack trace if omitted)."},
+                    "language": {
+                        "type": "string",
+                        "description": "Language hint (auto-detected from stack trace if omitted).",
+                    },
                 },
                 "required": ["error"],
             },
@@ -169,7 +197,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                     "path": {"type": "string", "description": "Path to the file to explain."},
                     "start_line": {"type": "integer", "description": "Start line (optional)."},
                     "end_line": {"type": "integer", "description": "End line (optional)."},
-                    "detail_level": {"type": "string", "description": "Detail level: brief, normal, deep (default: normal)."},
+                    "detail_level": {
+                        "type": "string",
+                        "description": "Detail level: brief, normal, deep (default: normal).",
+                    },
                 },
                 "required": ["path"],
             },
@@ -184,8 +215,14 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "source_path": {"type": "string", "description": "Path to the source file to create tests for."},
-                    "output_path": {"type": "string", "description": "Where to save the test file (auto-generated if omitted)."},
-                    "framework": {"type": "string", "description": "Test framework: pytest, unittest, jest, mocha, go (auto-detected if omitted)."},
+                    "output_path": {
+                        "type": "string",
+                        "description": "Where to save the test file (auto-generated if omitted).",
+                    },
+                    "framework": {
+                        "type": "string",
+                        "description": "Test framework: pytest, unittest, jest, mocha, go (auto-detected if omitted).",
+                    },
                     "style": {"type": "string", "description": "Test style: unit, integration, both (default: unit)."},
                 },
                 "required": ["source_path"],
@@ -202,7 +239,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                 "properties": {
                     "file_a": {"type": "string", "description": "First file path."},
                     "file_b": {"type": "string", "description": "Second file path."},
-                    "context_lines": {"type": "integer", "description": "Number of context lines around changes (default: 3)."},
+                    "context_lines": {
+                        "type": "integer",
+                        "description": "Number of context lines around changes (default: 3).",
+                    },
                 },
                 "required": ["file_a", "file_b"],
             },
@@ -221,7 +261,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                     "find": {"type": "string", "description": "Text or regex pattern to find."},
                     "replace": {"type": "string", "description": "Replacement text."},
                     "is_regex": {"type": "boolean", "description": "Treat find as regex (default: false)."},
-                    "dry_run": {"type": "boolean", "description": "Preview changes without modifying files (default: false)."},
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": "Preview changes without modifying files (default: false).",
+                    },
                 },
                 "required": ["directory", "file_pattern", "find", "replace"],
             },
@@ -236,7 +279,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "action": {"type": "string", "description": "Action: create, activate, install, list, delete."},
-                    "env_type": {"type": "string", "description": "Environment type: python, node, go (default: python)."},
+                    "env_type": {
+                        "type": "string",
+                        "description": "Environment type: python, node, go (default: python).",
+                    },
                     "name": {"type": "string", "description": "Environment name (default: .venv)."},
                     "python_version": {"type": "string", "description": "Python version to use (for create)."},
                     "cwd": {"type": "string", "description": "Working directory."},
@@ -254,7 +300,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "ports": {"type": "array", "items": {"type": "integer"}, "description": "Ports to check."},
-                    "find_available": {"type": "boolean", "description": "Find an available port near the requested ones (default: false)."},
+                    "find_available": {
+                        "type": "boolean",
+                        "description": "Find an available port near the requested ones (default: false).",
+                    },
                     "range_start": {"type": "integer", "description": "Start of port range to scan (default: 3000)."},
                     "range_end": {"type": "integer", "description": "End of port range to scan (default: 9999)."},
                 },
@@ -269,9 +318,19 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "project_path": {"type": "string", "description": "Path to the project (default: current directory)."},
-                    "services": {"type": "array", "items": {"type": "string"}, "description": "Additional services to include (e.g., postgres, redis, mongodb, nginx, rabbitmq)."},
-                    "output_path": {"type": "string", "description": "Where to save the files (default: project root)."},
+                    "project_path": {
+                        "type": "string",
+                        "description": "Path to the project (default: current directory).",
+                    },
+                    "services": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Additional services to include (e.g., postgres, redis, mongodb, nginx, rabbitmq).",
+                    },
+                    "output_path": {
+                        "type": "string",
+                        "description": "Where to save the files (default: project root).",
+                    },
                 },
             },
         },
@@ -284,7 +343,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "framework": {"type": "string", "description": "API framework: fastapi, express, flask, django-rest, gin, actix."},
+                    "framework": {
+                        "type": "string",
+                        "description": "API framework: fastapi, express, flask, django-rest, gin, actix.",
+                    },
                     "name": {"type": "string", "description": "API project name."},
                     "models": {
                         "type": "array",
@@ -292,12 +354,22 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                             "type": "object",
                             "properties": {
                                 "name": {"type": "string"},
-                                "fields": {"type": "array", "items": {"type": "object", "properties": {"name": {"type": "string"}, "type": {"type": "string"}}}}
+                                "fields": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {"name": {"type": "string"}, "type": {"type": "string"}},
+                                    },
+                                },
                             },
                         },
                         "description": "Data models to generate CRUD endpoints for.",
                     },
-                    "features": {"type": "array", "items": {"type": "string"}, "description": "Features: auth, cors, rate-limit, swagger, websockets, database."},
+                    "features": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Features: auth, cors, rate-limit, swagger, websockets, database.",
+                    },
                     "output_path": {"type": "string", "description": "Where to create the API project."},
                 },
                 "required": ["framework", "name"],
@@ -313,7 +385,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "name": {"type": "string", "description": "Name of the application."},
-                    "template": {"type": "string", "description": "Template to use: fullstack (React+FastAPI), nextjs-app, react-app, python-api, node-express, django-app, vue-app. Default: fullstack."},
+                    "template": {
+                        "type": "string",
+                        "description": "Template to use: fullstack (React+FastAPI), nextjs-app, react-app, python-api, node-express, django-app, vue-app. Default: fullstack.",
+                    },
                     "description": {"type": "string", "description": "Detailed description of what the app does."},
                     "path": {"type": "string", "description": "Directory to create the application in."},
                 },
@@ -330,7 +405,10 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "path": {"type": "string", "description": "Path to project root."},
-                    "framework": {"type": "string", "description": "Test framework (pytest, jest, vitest, go test, cargo test). Auto-detected if omitted."},
+                    "framework": {
+                        "type": "string",
+                        "description": "Test framework (pytest, jest, vitest, go test, cargo test). Auto-detected if omitted.",
+                    },
                     "max_attempts": {"type": "integer", "description": "Maximum fix attempts (default: 3)."},
                 },
             },
@@ -342,31 +420,51 @@ ADVANCED_CODING_TOOL_DEFINITIONS = [
 # ── Language Detection ───────────────────────────────────────────────────────
 
 EXTENSION_LANG_MAP = {
-    ".py": "python", ".pyw": "python",
-    ".js": "javascript", ".mjs": "javascript", ".cjs": "javascript",
-    ".ts": "typescript", ".tsx": "typescript", ".jsx": "javascript",
+    ".py": "python",
+    ".pyw": "python",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".cjs": "javascript",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".jsx": "javascript",
     ".go": "go",
     ".rs": "rust",
     ".java": "java",
-    ".kt": "kotlin", ".kts": "kotlin",
+    ".kt": "kotlin",
+    ".kts": "kotlin",
     ".swift": "swift",
-    ".c": "c", ".h": "c",
-    ".cpp": "cpp", ".cc": "cpp", ".cxx": "cpp", ".hpp": "cpp",
+    ".c": "c",
+    ".h": "c",
+    ".cpp": "cpp",
+    ".cc": "cpp",
+    ".cxx": "cpp",
+    ".hpp": "cpp",
     ".cs": "csharp",
     ".rb": "ruby",
     ".php": "php",
     ".dart": "dart",
     ".lua": "lua",
-    ".r": "r", ".R": "r",
+    ".r": "r",
+    ".R": "r",
     ".scala": "scala",
     ".hs": "haskell",
-    ".sh": "bash", ".bash": "bash", ".zsh": "bash",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".zsh": "bash",
     ".sql": "sql",
-    ".html": "html", ".htm": "html",
-    ".css": "css", ".scss": "css", ".sass": "css",
-    ".json": "json", ".yaml": "yaml", ".yml": "yaml",
-    ".toml": "toml", ".xml": "xml",
-    ".md": "markdown", ".rst": "rst",
+    ".html": "html",
+    ".htm": "html",
+    ".css": "css",
+    ".scss": "css",
+    ".sass": "css",
+    ".json": "json",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".toml": "toml",
+    ".xml": "xml",
+    ".md": "markdown",
+    ".rst": "rst",
 }
 
 
@@ -377,6 +475,7 @@ def _detect_language(path: str) -> str:
 
 
 # ── Tool Implementations ─────────────────────────────────────────────────────
+
 
 def tool_analyze_code(path: str, language: str = "", include_metrics: bool = True) -> str:
     """Deep code analysis — complexity, structure, issues."""
@@ -391,7 +490,7 @@ def tool_analyze_code(path: str, language: str = "", include_metrics: bool = Tru
     lang = language or _detect_language(str(p))
 
     try:
-        with open(p, "r", encoding="utf-8", errors="replace") as f:
+        with open(p, encoding="utf-8", errors="replace") as f:
             content = f.read()
             lines = content.split("\n")
     except OSError as e:
@@ -400,9 +499,11 @@ def tool_analyze_code(path: str, language: str = "", include_metrics: bool = Tru
     report = [f"# Code Analysis: {p.name}", f"**Language:** {lang}", f"**Lines:** {len(lines)}", ""]
 
     # Basic metrics
-    code_lines = sum(1 for l in lines if l.strip() and not l.strip().startswith(("#", "//", "/*", "*", "<!--")))
-    comment_lines = sum(1 for l in lines if l.strip().startswith(("#", "//", "/*", "*")))
-    blank_lines = sum(1 for l in lines if not l.strip())
+    code_lines = sum(
+        1 for line in lines if line.strip() and not line.strip().startswith(("#", "//", "/*", "*", "<!--"))
+    )
+    comment_lines = sum(1 for line in lines if line.strip().startswith(("#", "//", "/*", "*")))
+    blank_lines = sum(1 for line in lines if not line.strip())
 
     report.append(f"**Code lines:** {code_lines}")
     report.append(f"**Comment lines:** {comment_lines}")
@@ -439,7 +540,11 @@ def _analyze_directory(p: Path) -> str:
     """Analyze a full directory/project."""
     stats = {"files": 0, "lines": 0, "languages": {}}
     for root, dirs, files in os.walk(p):
-        dirs[:] = [d for d in dirs if d not in (".git", "node_modules", "__pycache__", ".venv", "venv", ".tox", "dist", "build")]
+        dirs[:] = [
+            d
+            for d in dirs
+            if d not in (".git", "node_modules", "__pycache__", ".venv", "venv", ".tox", "dist", "build")
+        ]
         for fname in files:
             fpath = Path(root) / fname
             lang = _detect_language(fname)
@@ -448,7 +553,7 @@ def _analyze_directory(p: Path) -> str:
             stats["files"] += 1
             stats["languages"][lang] = stats["languages"].get(lang, 0) + 1
             try:
-                with open(fpath, "r", encoding="utf-8", errors="replace") as f:
+                with open(fpath, encoding="utf-8", errors="replace") as f:
                     stats["lines"] += sum(1 for _ in f)
             except OSError:
                 pass
@@ -479,11 +584,16 @@ def _detect_project_type(p: Path) -> str:
         try:
             pkg = json.loads((p / "package.json").read_text())
             deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
-            if "react" in deps: indicators.append("React app")
-            if "next" in deps: indicators.append("Next.js app")
-            if "vue" in deps: indicators.append("Vue.js app")
-            if "express" in deps: indicators.append("Express server")
-            if "typescript" in deps: indicators.append("TypeScript")
+            if "react" in deps:
+                indicators.append("React app")
+            if "next" in deps:
+                indicators.append("Next.js app")
+            if "vue" in deps:
+                indicators.append("Vue.js app")
+            if "express" in deps:
+                indicators.append("Express server")
+            if "typescript" in deps:
+                indicators.append("TypeScript")
         except Exception:
             pass
     if (p / "pyproject.toml").exists() or (p / "setup.py").exists():
@@ -583,7 +693,9 @@ def _analyze_js_ts(content: str, path: Path) -> list[str]:
     report = ["\n## JS/TS Structure"]
 
     # Extract exports
-    exports = re.findall(r'export\s+(?:default\s+)?(?:async\s+)?(?:function|class|const|let|var|interface|type|enum)\s+(\w+)', content)
+    exports = re.findall(
+        r"export\s+(?:default\s+)?(?:async\s+)?(?:function|class|const|let|var|interface|type|enum)\s+(\w+)", content
+    )
     if exports:
         report.append(f"\n### Exports ({len(exports)})")
         for exp in exports:
@@ -597,8 +709,8 @@ def _analyze_js_ts(content: str, path: Path) -> list[str]:
             report.append(f"- `{imp}`")
 
     # Functions
-    fns = re.findall(r'(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)', content)
-    arrow_fns = re.findall(r'(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\([^)]*\)\s*=>', content)
+    fns = re.findall(r"(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)", content)
+    arrow_fns = re.findall(r"(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\([^)]*\)\s*=>", content)
     all_fns = [f[0] for f in fns] + list(arrow_fns)
     if all_fns:
         report.append(f"\n### Functions ({len(all_fns)})")
@@ -606,7 +718,7 @@ def _analyze_js_ts(content: str, path: Path) -> list[str]:
             report.append(f"- `{fn}()`")
 
     # Classes
-    classes = re.findall(r'class\s+(\w+)(?:\s+extends\s+(\w+))?', content)
+    classes = re.findall(r"class\s+(\w+)(?:\s+extends\s+(\w+))?", content)
     if classes:
         report.append(f"\n### Classes ({len(classes)})")
         for cls in classes:
@@ -622,16 +734,16 @@ def _analyze_generic(content: str, lang: str) -> list[str]:
 
     # Function patterns per language
     fn_patterns = {
-        "go": r'func\s+(?:\([^)]+\)\s+)?(\w+)\s*\(',
-        "rust": r'(?:pub\s+)?fn\s+(\w+)\s*[<(]',
-        "java": r'(?:public|private|protected)\s+\w+\s+(\w+)\s*\(',
-        "kotlin": r'fun\s+(\w+)\s*[<(]',
-        "swift": r'func\s+(\w+)\s*[<(]',
-        "c": r'(?:static\s+)?\w+[\s*]+(\w+)\s*\([^)]*\)\s*\{',
-        "cpp": r'(?:\w+::)?(\w+)\s*\([^)]*\)\s*(?:const\s*)?\{',
-        "ruby": r'def\s+(\w+)',
-        "php": r'function\s+(\w+)\s*\(',
-        "csharp": r'(?:public|private|protected|internal)\s+\w+\s+(\w+)\s*\(',
+        "go": r"func\s+(?:\([^)]+\)\s+)?(\w+)\s*\(",
+        "rust": r"(?:pub\s+)?fn\s+(\w+)\s*[<(]",
+        "java": r"(?:public|private|protected)\s+\w+\s+(\w+)\s*\(",
+        "kotlin": r"fun\s+(\w+)\s*[<(]",
+        "swift": r"func\s+(\w+)\s*[<(]",
+        "c": r"(?:static\s+)?\w+[\s*]+(\w+)\s*\([^)]*\)\s*\{",
+        "cpp": r"(?:\w+::)?(\w+)\s*\([^)]*\)\s*(?:const\s*)?\{",
+        "ruby": r"def\s+(\w+)",
+        "php": r"function\s+(\w+)\s*\(",
+        "csharp": r"(?:public|private|protected|internal)\s+\w+\s+(\w+)\s*\(",
     }
 
     pattern = fn_patterns.get(lang)
@@ -658,7 +770,11 @@ def _find_common_issues(content: str, lang: str) -> list[str]:
                 break
 
     # TODO/FIXME/HACK comments
-    todos = [(i, l.strip()) for i, l in enumerate(lines, 1) if re.search(r'\b(TODO|FIXME|HACK|XXX|BUG)\b', l, re.IGNORECASE)]
+    todos = [
+        (i, line_text.strip())
+        for i, line_text in enumerate(lines, 1)
+        if re.search(r"\b(TODO|FIXME|HACK|XXX|BUG)\b", line_text, re.IGNORECASE)
+    ]
     for line_no, text in todos[:5]:
         issues.append(f"Line {line_no}: {text[:80]}")
 
@@ -666,7 +782,7 @@ def _find_common_issues(content: str, lang: str) -> list[str]:
     if lang == "python":
         if "import *" in content:
             issues.append("Wildcard import (`import *`) — can cause namespace pollution")
-        if re.search(r'except\s*:', content):
+        if re.search(r"except\s*:", content):
             issues.append("Bare `except:` clause — should specify exception type")
         if "eval(" in content:
             issues.append("`eval()` usage — potential security risk")
@@ -683,7 +799,9 @@ def _find_common_issues(content: str, lang: str) -> list[str]:
     return issues[:10]
 
 
-def tool_refactor_code(path: str, operation: str, old_name: str = "", new_name: str = "", file_pattern: str = "*.py") -> str:
+def tool_refactor_code(
+    path: str, operation: str, old_name: str = "", new_name: str = "", file_pattern: str = "*.py"
+) -> str:
     """Intelligent refactoring across files."""
     p = Path(path).expanduser().resolve()
     if not p.exists():
@@ -698,7 +816,9 @@ def tool_refactor_code(path: str, operation: str, old_name: str = "", new_name: 
     elif operation == "add_type_hints":
         return _add_type_hints(p)
     else:
-        return f"❌ Unsupported refactoring operation: {operation}. Supported: rename, remove_dead_code, add_type_hints."
+        return (
+            f"❌ Unsupported refactoring operation: {operation}. Supported: rename, remove_dead_code, add_type_hints."
+        )
 
 
 def _refactor_rename(p: Path, old_name: str, new_name: str, file_pattern: str) -> str:
@@ -707,7 +827,11 @@ def _refactor_rename(p: Path, old_name: str, new_name: str, file_pattern: str) -
         files = [p]
     else:
         files = list(p.rglob(file_pattern))
-        files = [f for f in files if not any(part.startswith(".") or part in ("node_modules", "__pycache__") for part in f.parts)]
+        files = [
+            f
+            for f in files
+            if not any(part.startswith(".") or part in ("node_modules", "__pycache__") for part in f.parts)
+        ]
 
     modified = []
     total_replacements = 0
@@ -719,7 +843,7 @@ def _refactor_rename(p: Path, old_name: str, new_name: str, file_pattern: str) -
             continue
 
         # Use word-boundary matching to avoid partial replacements
-        pattern = rf'\b{re.escape(old_name)}\b'
+        pattern = rf"\b{re.escape(old_name)}\b"
         new_content, count = re.subn(pattern, new_name, content)
         if count > 0:
             f.write_text(new_content, encoding="utf-8")
@@ -786,7 +910,9 @@ def _add_type_hints(p: Path) -> str:
             # Check args
             for arg in node.args.args:
                 if arg.annotation is None and arg.arg != "self":
-                    suggestions.append(f"  - `{node.name}({arg.arg})` (line {node.lineno}): parameter `{arg.arg}` has no type hint")
+                    suggestions.append(
+                        f"  - `{node.name}({arg.arg})` (line {node.lineno}): parameter `{arg.arg}` has no type hint"
+                    )
 
     if not suggestions:
         return "✅ All functions already have type hints."
@@ -794,7 +920,9 @@ def _add_type_hints(p: Path) -> str:
     return f"⚠️ Missing type hints in {p.name}:\n" + "\n".join(suggestions[:30])
 
 
-def tool_generate_project(template: str, name: str, path: str = ".", description: str = "", features: list = None) -> str:
+def tool_generate_project(
+    template: str, name: str, path: str = ".", description: str = "", features: list = None
+) -> str:
     """Scaffold a complete project from a template."""
     features = features or []
     base = Path(path).expanduser().resolve() / name
@@ -847,9 +975,12 @@ def _write_project_file(base: Path, rel_path: str, content: str):
 
 def _gen_python_cli(base: Path, name: str, desc: str, features: list) -> str:
     """Generate a Python CLI project."""
-    safe_name = re.sub(r'[^a-z0-9_]', '_', name.lower())
+    safe_name = re.sub(r"[^a-z0-9_]", "_", name.lower())
 
-    _write_project_file(base, "pyproject.toml", f"""
+    _write_project_file(
+        base,
+        "pyproject.toml",
+        f"""
         [build-system]
         requires = ["setuptools>=68.0", "wheel"]
         build-backend = "setuptools.backends._legacy:_Backend"
@@ -857,16 +988,20 @@ def _gen_python_cli(base: Path, name: str, desc: str, features: list) -> str:
         [project]
         name = "{safe_name}"
         version = "0.1.0"
-        description = "{desc or f'{name} CLI application'}"
+        description = "{desc or f"{name} CLI application"}"
         requires-python = ">=3.11"
 
         [project.scripts]
         {safe_name} = "{safe_name}.cli:main"
-    """)
+    """,
+    )
 
-    _write_project_file(base, f"{safe_name}/__init__.py", f'"""{ name }."""\n__version__ = "0.1.0"')
+    _write_project_file(base, f"{safe_name}/__init__.py", f'"""{name}."""\n__version__ = "0.1.0"')
 
-    _write_project_file(base, f"{safe_name}/cli.py", f"""
+    _write_project_file(
+        base,
+        f"{safe_name}/cli.py",
+        f"""
         \"\"\"CLI entry point for {name}.\"\"\"
         import argparse
         import sys
@@ -890,10 +1025,14 @@ def _gen_python_cli(base: Path, name: str, desc: str, features: list) -> str:
 
         if __name__ == "__main__":
             sys.exit(main())
-    """)
+    """,
+    )
 
     _write_project_file(base, "tests/__init__.py", "")
-    _write_project_file(base, "tests/test_cli.py", f"""
+    _write_project_file(
+        base,
+        "tests/test_cli.py",
+        f"""
         \"\"\"Tests for {name} CLI.\"\"\"
         import subprocess
         import sys
@@ -910,9 +1049,14 @@ def _gen_python_cli(base: Path, name: str, desc: str, features: list) -> str:
         def test_main():
             from {safe_name}.cli import main
             assert main() == 0
-    """)
+    """,
+    )
 
-    _write_project_file(base, "README.md", f"# {name}\n\n{desc or 'A Python CLI application.'}\n\n## Install\n```bash\npip install -e .\n```\n\n## Usage\n```bash\n{safe_name} --help\n```")
+    _write_project_file(
+        base,
+        "README.md",
+        f"# {name}\n\n{desc or 'A Python CLI application.'}\n\n## Install\n```bash\npip install -e .\n```\n\n## Usage\n```bash\n{safe_name} --help\n```",
+    )
     _write_project_file(base, ".gitignore", "__pycache__/\n*.pyc\n.venv/\ndist/\n*.egg-info/\n.pytest_cache/")
 
     return f"Structure:\n  {safe_name}/cli.py — CLI entry point\n  tests/test_cli.py — Tests\n  pyproject.toml — Config\n\nNext: `cd {name} && python -m venv .venv && source .venv/bin/activate && pip install -e .`"
@@ -920,12 +1064,15 @@ def _gen_python_cli(base: Path, name: str, desc: str, features: list) -> str:
 
 def _gen_python_api(base: Path, name: str, desc: str, features: list) -> str:
     """Generate a FastAPI project."""
-    re.sub(r'[^a-z0-9_]', '_', name.lower())
+    re.sub(r"[^a-z0-9_]", "_", name.lower())
 
     _write_project_file(base, "requirements.txt", "fastapi>=0.109.0\nuvicorn>=0.27.0\npydantic>=2.0\nhttpx>=0.27.0")
 
     _write_project_file(base, "app/__init__.py", "")
-    _write_project_file(base, "app/main.py", f"""
+    _write_project_file(
+        base,
+        "app/main.py",
+        f"""
         \"\"\"FastAPI application for {name}.\"\"\"
         from fastapi import FastAPI
         from fastapi.middleware.cors import CORSMiddleware
@@ -933,7 +1080,7 @@ def _gen_python_api(base: Path, name: str, desc: str, features: list) -> str:
 
         app = FastAPI(
             title="{name}",
-            description="{desc or 'API built with FastAPI'}",
+            description="{desc or "API built with FastAPI"}",
             version="0.1.0",
         )
 
@@ -956,9 +1103,13 @@ def _gen_python_api(base: Path, name: str, desc: str, features: list) -> str:
         @app.get("/health")
         async def health():
             return {{"status": "healthy"}}
-    """)
+    """,
+    )
 
-    _write_project_file(base, "app/routes.py", f"""
+    _write_project_file(
+        base,
+        "app/routes.py",
+        f"""
         \"\"\"API routes for {name}.\"\"\"
         from fastapi import APIRouter, HTTPException
         from app.models import Item, ItemCreate
@@ -995,9 +1146,13 @@ def _gen_python_api(base: Path, name: str, desc: str, features: list) -> str:
                 raise HTTPException(status_code=404, detail="Item not found")
             del items_db[item_id]
             return {{"deleted": item_id}}
-    """)
+    """,
+    )
 
-    _write_project_file(base, "app/models.py", f"""
+    _write_project_file(
+        base,
+        "app/models.py",
+        f"""
         \"\"\"Data models for {name}.\"\"\"
         from pydantic import BaseModel
 
@@ -1010,9 +1165,13 @@ def _gen_python_api(base: Path, name: str, desc: str, features: list) -> str:
 
         class Item(ItemCreate):
             id: int
-    """)
+    """,
+    )
 
-    _write_project_file(base, "tests/test_api.py", f"""
+    _write_project_file(
+        base,
+        "tests/test_api.py",
+        f"""
         \"\"\"API tests for {name}.\"\"\"
         from fastapi.testclient import TestClient
         from app.main import app
@@ -1038,21 +1197,33 @@ def _gen_python_api(base: Path, name: str, desc: str, features: list) -> str:
             r = client.get(f"/api/v1/items/{{item_id}}")
             assert r.status_code == 200
             assert r.json()["name"] == "Test"
-    """)
+    """,
+    )
 
-    _write_project_file(base, "README.md", f"# {name}\n\n{desc or 'A FastAPI application.'}\n\n## Run\n```bash\npip install -r requirements.txt\nuvicorn app.main:app --reload\n```\n\n## Docs\nOpen http://localhost:8000/docs")
+    _write_project_file(
+        base,
+        "README.md",
+        f"# {name}\n\n{desc or 'A FastAPI application.'}\n\n## Run\n```bash\npip install -r requirements.txt\nuvicorn app.main:app --reload\n```\n\n## Docs\nOpen http://localhost:8000/docs",
+    )
     _write_project_file(base, ".gitignore", "__pycache__/\n*.pyc\n.venv/\n.env")
 
     if "docker" in features:
-        _write_project_file(base, "Dockerfile", "FROM python:3.12-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nCMD [\"uvicorn\", \"app.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]")
+        _write_project_file(
+            base,
+            "Dockerfile",
+            'FROM python:3.12-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nCMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]',
+        )
 
     return f"FastAPI project with CRUD routes, models, tests.\n\nNext: `cd {name} && pip install -r requirements.txt && uvicorn app.main:app --reload`"
 
 
 def _gen_python_flask(base, name, desc, features):
-    re.sub(r'[^a-z0-9_]', '_', name.lower())
+    re.sub(r"[^a-z0-9_]", "_", name.lower())
     _write_project_file(base, "requirements.txt", "flask>=3.0\nflask-cors>=4.0\ngunicorn>=21.2")
-    _write_project_file(base, "app.py", f"""
+    _write_project_file(
+        base,
+        "app.py",
+        f"""
         \"\"\"Flask application for {name}.\"\"\"
         from flask import Flask, jsonify, request
         from flask_cors import CORS
@@ -1073,22 +1244,41 @@ def _gen_python_flask(base, name, desc, features):
 
         if __name__ == "__main__":
             app.run(debug=True, port=5000)
-    """)
-    _write_project_file(base, "README.md", f"# {name}\n\n{desc or 'Flask app.'}\n\n## Run\n```bash\npip install -r requirements.txt\npython app.py\n```")
+    """,
+    )
+    _write_project_file(
+        base,
+        "README.md",
+        f"# {name}\n\n{desc or 'Flask app.'}\n\n## Run\n```bash\npip install -r requirements.txt\npython app.py\n```",
+    )
     _write_project_file(base, ".gitignore", "__pycache__/\n.venv/\n.env\ninstance/")
     return f"Flask project created.\n\nNext: `cd {name} && pip install -r requirements.txt && python app.py`"
 
 
 def _gen_node_express(base, name, desc, features):
-    _write_project_file(base, "package.json", json.dumps({
-        "name": name.lower().replace(" ", "-"),
-        "version": "0.1.0",
-        "description": desc or f"{name} API",
-        "main": "src/index.js",
-        "scripts": {"start": "node src/index.js", "dev": "node --watch src/index.js", "test": "node --test tests/"},
-        "dependencies": {"express": "^4.18.0", "cors": "^2.8.5"},
-    }, indent=2))
-    _write_project_file(base, "src/index.js", f"""
+    _write_project_file(
+        base,
+        "package.json",
+        json.dumps(
+            {
+                "name": name.lower().replace(" ", "-"),
+                "version": "0.1.0",
+                "description": desc or f"{name} API",
+                "main": "src/index.js",
+                "scripts": {
+                    "start": "node src/index.js",
+                    "dev": "node --watch src/index.js",
+                    "test": "node --test tests/",
+                },
+                "dependencies": {"express": "^4.18.0", "cors": "^2.8.5"},
+            },
+            indent=2,
+        ),
+    )
+    _write_project_file(
+        base,
+        "src/index.js",
+        f"""
         const express = require('express');
         const cors = require('cors');
         const app = express();
@@ -1117,41 +1307,86 @@ def _gen_node_express(base, name, desc, features):
         }});
 
         app.listen(PORT, () => console.log(`🚀 {name} running on port ${{PORT}}`));
-    """)
+    """,
+    )
     _write_project_file(base, ".gitignore", "node_modules/\n.env\ndist/")
-    _write_project_file(base, "README.md", f"# {name}\n\n{desc or 'Express API.'}\n\n## Run\n```bash\nnpm install && npm run dev\n```")
+    _write_project_file(
+        base, "README.md", f"# {name}\n\n{desc or 'Express API.'}\n\n## Run\n```bash\nnpm install && npm run dev\n```"
+    )
     return f"Express project created.\n\nNext: `cd {name} && npm install && npm run dev`"
 
 
 def _gen_react_app(base, name, desc, features):
-    _write_project_file(base, "package.json", json.dumps({
-        "name": name.lower().replace(" ", "-"),
-        "version": "0.1.0",
-        "private": True,
-        "type": "module",
-        "scripts": {"dev": "vite", "build": "vite build", "preview": "vite preview"},
-        "dependencies": {"react": "^18.2.0", "react-dom": "^18.2.0"},
-        "devDependencies": {"@vitejs/plugin-react": "^4.2.0", "vite": "^5.0.0"},
-    }, indent=2))
-    _write_project_file(base, "vite.config.js", 'import { defineConfig } from "vite";\nimport react from "@vitejs/plugin-react";\n\nexport default defineConfig({ plugins: [react()] });')
-    _write_project_file(base, "index.html", f'<!DOCTYPE html>\n<html lang="en">\n<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{name}</title></head>\n<body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body>\n</html>')
-    _write_project_file(base, "src/main.jsx", 'import React from "react";\nimport ReactDOM from "react-dom/client";\nimport App from "./App";\nimport "./index.css";\n\nReactDOM.createRoot(document.getElementById("root")).render(<React.StrictMode><App /></React.StrictMode>);')
-    _write_project_file(base, "src/App.jsx", f'export default function App() {{\n  return (\n    <div style={{{{ textAlign: "center", padding: "2rem" }}}}>\n      <h1>🚀 {name}</h1>\n      <p>{desc or "Built with React + Vite"}</p>\n    </div>\n  );\n}}')
-    _write_project_file(base, "src/index.css", "* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { font-family: system-ui, sans-serif; background: #0a0a0a; color: #ededed; }")
+    _write_project_file(
+        base,
+        "package.json",
+        json.dumps(
+            {
+                "name": name.lower().replace(" ", "-"),
+                "version": "0.1.0",
+                "private": True,
+                "type": "module",
+                "scripts": {"dev": "vite", "build": "vite build", "preview": "vite preview"},
+                "dependencies": {"react": "^18.2.0", "react-dom": "^18.2.0"},
+                "devDependencies": {"@vitejs/plugin-react": "^4.2.0", "vite": "^5.0.0"},
+            },
+            indent=2,
+        ),
+    )
+    _write_project_file(
+        base,
+        "vite.config.js",
+        'import { defineConfig } from "vite";\nimport react from "@vitejs/plugin-react";\n\nexport default defineConfig({ plugins: [react()] });',
+    )
+    _write_project_file(
+        base,
+        "index.html",
+        f'<!DOCTYPE html>\n<html lang="en">\n<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{name}</title></head>\n<body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body>\n</html>',
+    )
+    _write_project_file(
+        base,
+        "src/main.jsx",
+        'import React from "react";\nimport ReactDOM from "react-dom/client";\nimport App from "./App";\nimport "./index.css";\n\nReactDOM.createRoot(document.getElementById("root")).render(<React.StrictMode><App /></React.StrictMode>);',
+    )
+    _write_project_file(
+        base,
+        "src/App.jsx",
+        f'export default function App() {{\n  return (\n    <div style={{{{ textAlign: "center", padding: "2rem" }}}}>\n      <h1>🚀 {name}</h1>\n      <p>{desc or "Built with React + Vite"}</p>\n    </div>\n  );\n}}',
+    )
+    _write_project_file(
+        base,
+        "src/index.css",
+        "* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { font-family: system-ui, sans-serif; background: #0a0a0a; color: #ededed; }",
+    )
     _write_project_file(base, ".gitignore", "node_modules/\ndist/\n.env")
     return f"React + Vite project created.\n\nNext: `cd {name} && npm install && npm run dev`"
 
 
 def _gen_nextjs_app(base, name, desc, features):
-    _write_project_file(base, "package.json", json.dumps({
-        "name": name.lower().replace(" ", "-"),
-        "version": "0.1.0",
-        "private": True,
-        "scripts": {"dev": "next dev", "build": "next build", "start": "next start"},
-        "dependencies": {"next": "^14.0.0", "react": "^18.2.0", "react-dom": "^18.2.0"},
-    }, indent=2))
-    _write_project_file(base, "app/layout.js", f'export const metadata = {{ title: "{name}", description: "{desc or name}" }};\n\nexport default function RootLayout({{ children }}) {{\n  return <html lang="en"><body>{{children}}</body></html>;\n}}')
-    _write_project_file(base, "app/page.js", f'export default function Home() {{\n  return <main style={{{{ padding: "2rem", textAlign: "center" }}}}><h1>{name}</h1><p>{desc or "Built with Next.js"}</p></main>;\n}}')
+    _write_project_file(
+        base,
+        "package.json",
+        json.dumps(
+            {
+                "name": name.lower().replace(" ", "-"),
+                "version": "0.1.0",
+                "private": True,
+                "scripts": {"dev": "next dev", "build": "next build", "start": "next start"},
+                "dependencies": {"next": "^14.0.0", "react": "^18.2.0", "react-dom": "^18.2.0"},
+            },
+            indent=2,
+        ),
+    )
+    _write_project_file(
+        base,
+        "app/layout.js",
+        f'export const metadata = {{ title: "{name}", description: "{desc or name}" }};\n\nexport default function RootLayout({{ children }}) {{\n  return <html lang="en"><body>{{children}}</body></html>;\n}}',
+    )
+    _write_project_file(
+        base,
+        "app/page.js",
+        f'export default function Home() {{\n  return <main style={{{{ padding: "2rem", textAlign: "center" }}}}><h1>{name}</h1><p>{desc or "Built with Next.js"}</p></main>;\n}}',
+    )
     _write_project_file(base, ".gitignore", "node_modules/\n.next/\n.env")
     return f"Next.js project created.\n\nNext: `cd {name} && npm install && npm run dev`"
 
@@ -1159,7 +1394,10 @@ def _gen_nextjs_app(base, name, desc, features):
 def _gen_go_api(base, name, desc, features):
     mod_name = name.lower().replace(" ", "-").replace("_", "-")
     _write_project_file(base, "go.mod", f"module {mod_name}\n\ngo 1.21")
-    _write_project_file(base, "main.go", f"""
+    _write_project_file(
+        base,
+        "main.go",
+        f"""
         package main
 
         import (
@@ -1179,7 +1417,8 @@ def _gen_go_api(base, name, desc, features):
             fmt.Println("🚀 {name} running on :8080")
             log.Fatal(http.ListenAndServe(":8080", nil))
         }}
-    """)
+    """,
+    )
     _write_project_file(base, ".gitignore", f"{mod_name}\n*.exe")
     _write_project_file(base, "README.md", f"# {name}\n\n{desc or 'Go API.'}\n\n## Run\n```bash\ngo run main.go\n```")
     return f"Go API project created.\n\nNext: `cd {name} && go run main.go`"
@@ -1187,26 +1426,39 @@ def _gen_go_api(base, name, desc, features):
 
 def _gen_rust_cli(base, name, desc, features):
     crate = name.lower().replace(" ", "_").replace("-", "_")
-    _write_project_file(base, "Cargo.toml", f'[package]\nname = "{crate}"\nversion = "0.1.0"\nedition = "2021"\ndescription = "{desc or name}"')
+    _write_project_file(
+        base,
+        "Cargo.toml",
+        f'[package]\nname = "{crate}"\nversion = "0.1.0"\nedition = "2021"\ndescription = "{desc or name}"',
+    )
     _write_project_file(base, "src/main.rs", f'fn main() {{\n    println!("Hello from {name}!");\n}}')
     _write_project_file(base, ".gitignore", "target/\nCargo.lock")
-    _write_project_file(base, "README.md", f"# {name}\n\n{desc or 'Rust CLI.'}\n\n## Build & Run\n```bash\ncargo run\n```")
+    _write_project_file(
+        base, "README.md", f"# {name}\n\n{desc or 'Rust CLI.'}\n\n## Build & Run\n```bash\ncargo run\n```"
+    )
     return f"Rust CLI project created.\n\nNext: `cd {name} && cargo run`"
 
 
 def _gen_django_app(base, name, desc, features):
-    safe = re.sub(r'[^a-z0-9_]', '_', name.lower())
+    safe = re.sub(r"[^a-z0-9_]", "_", name.lower())
     _write_project_file(base, "requirements.txt", "django>=5.0\ndjangorestframework>=3.14\ndjango-cors-headers>=4.3")
-    _write_project_file(base, "manage.py", f"""
+    _write_project_file(
+        base,
+        "manage.py",
+        f"""
         #!/usr/bin/env python
         import os, sys
         if __name__ == "__main__":
             os.environ.setdefault("DJANGO_SETTINGS_MODULE", "{safe}.settings")
             from django.core.management import execute_from_command_line
             execute_from_command_line(sys.argv)
-    """)
+    """,
+    )
     _write_project_file(base, f"{safe}/__init__.py", "")
-    _write_project_file(base, f"{safe}/settings.py", f"""
+    _write_project_file(
+        base,
+        f"{safe}/settings.py",
+        f"""
         from pathlib import Path
         BASE_DIR = Path(__file__).resolve().parent.parent
         SECRET_KEY = "change-me-in-production"
@@ -1225,31 +1477,63 @@ def _gen_django_app(base, name, desc, features):
         DATABASES = {{"default": {{"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}}}
         STATIC_URL = "/static/"
         CORS_ALLOW_ALL_ORIGINS = True
-    """)
-    _write_project_file(base, f"{safe}/urls.py", """
+    """,
+    )
+    _write_project_file(
+        base,
+        f"{safe}/urls.py",
+        """
         from django.contrib import admin
         from django.urls import path
         urlpatterns = [path("admin/", admin.site.urls)]
-    """)
-    _write_project_file(base, "README.md", f"# {name}\n\n{desc or 'Django app.'}\n\n## Run\n```bash\npip install -r requirements.txt\npython manage.py migrate\npython manage.py runserver\n```")
+    """,
+    )
+    _write_project_file(
+        base,
+        "README.md",
+        f"# {name}\n\n{desc or 'Django app.'}\n\n## Run\n```bash\npip install -r requirements.txt\npython manage.py migrate\npython manage.py runserver\n```",
+    )
     _write_project_file(base, ".gitignore", "__pycache__/\ndb.sqlite3\n.venv/\n.env\nmedia/")
     return f"Django project created.\n\nNext: `cd {name} && pip install -r requirements.txt && python manage.py migrate && python manage.py runserver`"
 
 
 def _gen_vue_app(base, name, desc, features):
-    _write_project_file(base, "package.json", json.dumps({
-        "name": name.lower().replace(" ", "-"),
-        "version": "0.1.0",
-        "private": True,
-        "type": "module",
-        "scripts": {"dev": "vite", "build": "vite build"},
-        "dependencies": {"vue": "^3.4.0"},
-        "devDependencies": {"@vitejs/plugin-vue": "^5.0.0", "vite": "^5.0.0"},
-    }, indent=2))
-    _write_project_file(base, "vite.config.js", 'import { defineConfig } from "vite";\nimport vue from "@vitejs/plugin-vue";\n\nexport default defineConfig({ plugins: [vue()] });')
-    _write_project_file(base, "index.html", f'<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>{name}</title></head>\n<body><div id="app"></div><script type="module" src="/src/main.js"></script></body></html>')
-    _write_project_file(base, "src/main.js", 'import { createApp } from "vue";\nimport App from "./App.vue";\ncreateApp(App).mount("#app");')
-    _write_project_file(base, "src/App.vue", f'<template><div style="text-align:center;padding:2rem"><h1>🚀 {name}</h1><p>{desc or "Built with Vue + Vite"}</p></div></template>')
+    _write_project_file(
+        base,
+        "package.json",
+        json.dumps(
+            {
+                "name": name.lower().replace(" ", "-"),
+                "version": "0.1.0",
+                "private": True,
+                "type": "module",
+                "scripts": {"dev": "vite", "build": "vite build"},
+                "dependencies": {"vue": "^3.4.0"},
+                "devDependencies": {"@vitejs/plugin-vue": "^5.0.0", "vite": "^5.0.0"},
+            },
+            indent=2,
+        ),
+    )
+    _write_project_file(
+        base,
+        "vite.config.js",
+        'import { defineConfig } from "vite";\nimport vue from "@vitejs/plugin-vue";\n\nexport default defineConfig({ plugins: [vue()] });',
+    )
+    _write_project_file(
+        base,
+        "index.html",
+        f'<!DOCTYPE html>\n<html><head><meta charset="UTF-8"><title>{name}</title></head>\n<body><div id="app"></div><script type="module" src="/src/main.js"></script></body></html>',
+    )
+    _write_project_file(
+        base,
+        "src/main.js",
+        'import { createApp } from "vue";\nimport App from "./App.vue";\ncreateApp(App).mount("#app");',
+    )
+    _write_project_file(
+        base,
+        "src/App.vue",
+        f'<template><div style="text-align:center;padding:2rem"><h1>🚀 {name}</h1><p>{desc or "Built with Vue + Vite"}</p></div></template>',
+    )
     _write_project_file(base, ".gitignore", "node_modules/\ndist/")
     return f"Vue + Vite project created.\n\nNext: `cd {name} && npm install && npm run dev`"
 
@@ -1258,10 +1542,15 @@ def _gen_fullstack(base, name, desc, features):
     """Generate a fullstack project with React frontend + FastAPI backend."""
     _gen_python_api(base / "backend", f"{name}-backend", f"{name} API backend", features)
     _gen_react_app(base / "frontend", f"{name}-frontend", f"{name} React frontend", features)
-    _write_project_file(base, "README.md", f"# {name}\n\nFullstack: React (frontend) + FastAPI (backend).\n\n## Run Backend\n```bash\ncd backend && pip install -r requirements.txt && uvicorn app.main:app --reload\n```\n\n## Run Frontend\n```bash\ncd frontend && npm install && npm run dev\n```")
+    _write_project_file(
+        base,
+        "README.md",
+        f"# {name}\n\nFullstack: React (frontend) + FastAPI (backend).\n\n## Run Backend\n```bash\ncd backend && pip install -r requirements.txt && uvicorn app.main:app --reload\n```\n\n## Run Frontend\n```bash\ncd frontend && npm install && npm run dev\n```",
+    )
     _write_project_file(base, ".gitignore", "__pycache__/\nnode_modules/\n.venv/\n.env\ndist/")
-    return "Fullstack project created:\n  backend/ — FastAPI API\n  frontend/ — React + Vite\n\nStart both servers to run."
-
+    return (
+        "Fullstack project created:\n  backend/ — FastAPI API\n  frontend/ — React + Vite\n\nStart both servers to run."
+    )
 
 
 def tool_install_dependencies(packages: list, manager: str = "", dev: bool = False, cwd: str = "") -> str:
@@ -1276,13 +1565,13 @@ def tool_install_dependencies(packages: list, manager: str = "", dev: bool = Fal
     commands = {
         "pip": [sys.executable, "-m", "pip", "install", *safe_packages],
         "pip3": ["pip3", "install", *safe_packages],
-        "npm": ["npm", "install", *( ["--save-dev"] if dev else []), *safe_packages],
-        "yarn": ["yarn", "add", *( ["--dev"] if dev else []), *safe_packages],
-        "pnpm": ["pnpm", "add", *( ["--save-dev"] if dev else []), *safe_packages],
+        "npm": ["npm", "install", *(["--save-dev"] if dev else []), *safe_packages],
+        "yarn": ["yarn", "add", *(["--dev"] if dev else []), *safe_packages],
+        "pnpm": ["pnpm", "add", *(["--save-dev"] if dev else []), *safe_packages],
         "cargo": ["cargo", "add", *safe_packages],
         "go": ["go", "get", *safe_packages],
         "brew": ["brew", "install", *safe_packages],
-        "composer": ["composer", "require", *( ["--dev"] if dev else []), *safe_packages],
+        "composer": ["composer", "require", *(["--dev"] if dev else []), *safe_packages],
     }
     argv = commands.get(manager)
     if not argv:
@@ -1298,20 +1587,26 @@ def tool_install_dependencies(packages: list, manager: str = "", dev: bool = Fal
         return f"❌ Install error: {exc}"
 
 
-
 def _detect_package_manager(path: str) -> str:
     """Auto-detect the project's package manager."""
     p = Path(path)
-    if (p / "package-lock.json").exists(): return "npm"
-    if (p / "yarn.lock").exists(): return "yarn"
-    if (p / "pnpm-lock.yaml").exists(): return "pnpm"
-    if (p / "package.json").exists(): return "npm"
-    if (p / "Cargo.toml").exists(): return "cargo"
-    if (p / "go.mod").exists(): return "go"
-    if (p / "composer.json").exists(): return "composer"
-    if (p / "Gemfile").exists(): return "gem"
+    if (p / "package-lock.json").exists():
+        return "npm"
+    if (p / "yarn.lock").exists():
+        return "yarn"
+    if (p / "pnpm-lock.yaml").exists():
+        return "pnpm"
+    if (p / "package.json").exists():
+        return "npm"
+    if (p / "Cargo.toml").exists():
+        return "cargo"
+    if (p / "go.mod").exists():
+        return "go"
+    if (p / "composer.json").exists():
+        return "composer"
+    if (p / "Gemfile").exists():
+        return "gem"
     return "pip"
-
 
 
 def tool_run_tests(path: str = ".", framework: str = "", filter: str = "", verbose: bool = True, cwd: str = "") -> str:
@@ -1324,13 +1619,32 @@ def tool_run_tests(path: str = ".", framework: str = "", filter: str = "", verbo
     if not framework:
         framework = _detect_test_framework(work_dir)
     commands = {
-        "pytest": [sys.executable, "-m", "pytest", safe_path, *( ["-v"] if verbose else []), *( ["-k", filter] if filter else [])],
-        "unittest": [sys.executable, "-m", "unittest", "discover", safe_path, *( ["-v"] if verbose else [])],
-        "jest": ["npx", "jest", safe_path, *( ["--verbose"] if verbose else []), *( [f"--testNamePattern={filter}"] if filter else [])],
+        "pytest": [
+            sys.executable,
+            "-m",
+            "pytest",
+            safe_path,
+            *(["-v"] if verbose else []),
+            *(["-k", filter] if filter else []),
+        ],
+        "unittest": [sys.executable, "-m", "unittest", "discover", safe_path, *(["-v"] if verbose else [])],
+        "jest": [
+            "npx",
+            "jest",
+            safe_path,
+            *(["--verbose"] if verbose else []),
+            *([f"--testNamePattern={filter}"] if filter else []),
+        ],
         "vitest": ["npx", "vitest", "run", safe_path],
         "mocha": ["npx", "mocha", safe_path],
-        "go": ["go", "test", "./..." if safe_path == "." else safe_path, *( ["-v"] if verbose else []), *( ["-run", filter] if filter else [])],
-        "cargo": ["cargo", "test", *( [filter] if filter else [])],
+        "go": [
+            "go",
+            "test",
+            "./..." if safe_path == "." else safe_path,
+            *(["-v"] if verbose else []),
+            *(["-run", filter] if filter else []),
+        ],
+        "cargo": ["cargo", "test", *([filter] if filter else [])],
         "rspec": ["bundle", "exec", "rspec", safe_path],
         "phpunit": ["./vendor/bin/phpunit", safe_path],
     }
@@ -1346,7 +1660,6 @@ def tool_run_tests(path: str = ".", framework: str = "", filter: str = "", verbo
         return "❌ Tests timed out after 300s."
     except OSError as exc:
         return f"❌ Test error: {exc}"
-
 
 
 def _detect_test_framework(path: str) -> str:
@@ -1366,14 +1679,16 @@ def _detect_test_framework(path: str) -> str:
         try:
             pkg = json.loads((p / "package.json").read_text())
             deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
-            if "jest" in deps: return "jest"
-            if "vitest" in deps: return "vitest"
-            if "mocha" in deps: return "mocha"
+            if "jest" in deps:
+                return "jest"
+            if "vitest" in deps:
+                return "vitest"
+            if "mocha" in deps:
+                return "mocha"
         except Exception:
             pass
         return "jest"
     return "pytest"
-
 
 
 def tool_lint_code(path: str, fix: bool = False, linter: str = "", cwd: str = "") -> str:
@@ -1397,9 +1712,9 @@ def tool_lint_code(path: str, fix: bool = False, linter: str = "", cwd: str = ""
         else:
             linter = "ruff"
     commands = {
-        "ruff": [sys.executable, "-m", "ruff", "check", safe_path, *( ["--fix"] if fix else [])],
+        "ruff": [sys.executable, "-m", "ruff", "check", safe_path, *(["--fix"] if fix else [])],
         "flake8": [sys.executable, "-m", "flake8", safe_path],
-        "eslint": ["npx", "eslint", safe_path, *( ["--fix"] if fix else [])],
+        "eslint": ["npx", "eslint", safe_path, *(["--fix"] if fix else [])],
         "golangci-lint": ["golangci-lint", "run", safe_path],
         "clippy": ["cargo", "clippy"],
     }
@@ -1416,8 +1731,6 @@ def tool_lint_code(path: str, fix: bool = False, linter: str = "", cwd: str = ""
         return f"❌ Lint error: {exc}. Is {linter} installed?"
 
 
-
-
 def tool_format_code(path: str, formatter: str = "", check_only: bool = False, cwd: str = "") -> str:
     """Run a supported formatter through a shell-free argv."""
     work_dir = cwd or os.getcwd()
@@ -1428,14 +1741,22 @@ def tool_format_code(path: str, formatter: str = "", check_only: bool = False, c
     p = Path(work_dir) / safe_path
     lang = _detect_language(str(p)) if p.is_file() else ""
     if not formatter:
-        fmt_map = {"python": "black", "javascript": "prettier", "typescript": "prettier", "go": "gofmt", "rust": "rustfmt", "c": "clang-format", "cpp": "clang-format"}
+        fmt_map = {
+            "python": "black",
+            "javascript": "prettier",
+            "typescript": "prettier",
+            "go": "gofmt",
+            "rust": "rustfmt",
+            "c": "clang-format",
+            "cpp": "clang-format",
+        }
         formatter = fmt_map.get(lang, "black")
     commands = {
-        "black": [sys.executable, "-m", "black", safe_path, *( ["--check"] if check_only else [])],
-        "ruff": [sys.executable, "-m", "ruff", "format", safe_path, *( ["--check"] if check_only else [])],
+        "black": [sys.executable, "-m", "black", safe_path, *(["--check"] if check_only else [])],
+        "ruff": [sys.executable, "-m", "ruff", "format", safe_path, *(["--check"] if check_only else [])],
         "prettier": ["npx", "prettier", "--check" if check_only else "--write", safe_path],
         "gofmt": ["gofmt", "-l" if check_only else "-w", safe_path],
-        "rustfmt": ["rustfmt", safe_path, *( ["--check"] if check_only else [])],
+        "rustfmt": ["rustfmt", safe_path, *(["--check"] if check_only else [])],
         "clang-format": ["clang-format", "-n" if check_only else "-i", safe_path],
     }
     argv = commands.get(formatter)
@@ -1450,7 +1771,6 @@ def tool_format_code(path: str, formatter: str = "", check_only: bool = False, c
         return f"❌ Format error: {exc}. Is {formatter} installed?"
 
 
-
 def tool_debug_error(error: str, context_path: str = "", language: str = "") -> str:
     """Parse stack traces and locate bugs."""
     report = ["# Error Debug Report\n"]
@@ -1458,28 +1778,42 @@ def tool_debug_error(error: str, context_path: str = "", language: str = "") -> 
     # Parse file:line references from the stack trace
     file_refs = re.findall(r'File "([^"]+)", line (\d+)', error)  # Python
     if not file_refs:
-        file_refs = re.findall(r'at\s+(?:\S+\s+\()?([^:()]+):(\d+)(?::\d+)?\)?', error)  # JS/TS
+        file_refs = re.findall(r"at\s+(?:\S+\s+\()?([^:()]+):(\d+)(?::\d+)?\)?", error)  # JS/TS
     if not file_refs:
-        file_refs = re.findall(r'(\S+\.(?:go|rs|java|cpp|c)):(\d+)', error)  # Go/Rust/Java/C
+        file_refs = re.findall(r"(\S+\.(?:go|rs|java|cpp|c)):(\d+)", error)  # Go/Rust/Java/C
 
     report.append(f"**Error excerpt:**\n```\n{error[:1000]}\n```\n")
 
     # Identify error type
     error_type = ""
-    if "TypeError" in error: error_type = "TypeError"
-    elif "SyntaxError" in error: error_type = "SyntaxError"
-    elif "ImportError" in error or "ModuleNotFoundError" in error: error_type = "ImportError"
-    elif "AttributeError" in error: error_type = "AttributeError"
-    elif "KeyError" in error: error_type = "KeyError"
-    elif "IndexError" in error: error_type = "IndexError"
-    elif "ValueError" in error: error_type = "ValueError"
-    elif "FileNotFoundError" in error: error_type = "FileNotFoundError"
-    elif "PermissionError" in error: error_type = "PermissionError"
-    elif "ConnectionError" in error or "ConnectionRefused" in error: error_type = "ConnectionError"
-    elif "TimeoutError" in error or "Timeout" in error: error_type = "TimeoutError"
-    elif "ReferenceError" in error: error_type = "ReferenceError (JS)"
-    elif "NullPointerException" in error: error_type = "NullPointerException (Java)"
-    elif "segfault" in error.lower() or "segmentation fault" in error.lower(): error_type = "Segmentation Fault"
+    if "TypeError" in error:
+        error_type = "TypeError"
+    elif "SyntaxError" in error:
+        error_type = "SyntaxError"
+    elif "ImportError" in error or "ModuleNotFoundError" in error:
+        error_type = "ImportError"
+    elif "AttributeError" in error:
+        error_type = "AttributeError"
+    elif "KeyError" in error:
+        error_type = "KeyError"
+    elif "IndexError" in error:
+        error_type = "IndexError"
+    elif "ValueError" in error:
+        error_type = "ValueError"
+    elif "FileNotFoundError" in error:
+        error_type = "FileNotFoundError"
+    elif "PermissionError" in error:
+        error_type = "PermissionError"
+    elif "ConnectionError" in error or "ConnectionRefused" in error:
+        error_type = "ConnectionError"
+    elif "TimeoutError" in error or "Timeout" in error:
+        error_type = "TimeoutError"
+    elif "ReferenceError" in error:
+        error_type = "ReferenceError (JS)"
+    elif "NullPointerException" in error:
+        error_type = "NullPointerException (Java)"
+    elif "segfault" in error.lower() or "segmentation fault" in error.lower():
+        error_type = "Segmentation Fault"
 
     if error_type:
         report.append(f"**Error Type:** `{error_type}`\n")
@@ -1494,7 +1828,7 @@ def tool_debug_error(error: str, context_path: str = "", language: str = "") -> 
                 fp = Path(context_path) / filepath
             if fp.exists():
                 try:
-                    with open(fp, "r", encoding="utf-8", errors="replace") as f:
+                    with open(fp, encoding="utf-8", errors="replace") as f:
                         lines = f.readlines()
                     start = max(0, lineno - 4)
                     end = min(len(lines), lineno + 3)
@@ -1531,7 +1865,7 @@ def tool_explain_code(path: str, start_line: int = None, end_line: int = None, d
         return f"❌ File not found: {path}"
 
     try:
-        with open(p, "r", encoding="utf-8", errors="replace") as f:
+        with open(p, encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
     except OSError as err:
         return f"❌ Cannot read: {err}"
@@ -1539,7 +1873,7 @@ def tool_explain_code(path: str, start_line: int = None, end_line: int = None, d
     total = len(lines)
     s = max(1, start_line or 1)
     end_idx = min(total, end_line or total)
-    selected = lines[s - 1: end_idx]
+    selected = lines[s - 1 : end_idx]
     code = "".join(selected)
     lang = _detect_language(str(p))
 
@@ -1559,17 +1893,18 @@ def tool_explain_code(path: str, start_line: int = None, end_line: int = None, d
 
     # Basic structural analysis
     if lang == "python":
-        funcs = re.findall(r'def\s+(\w+)\s*\(', code)
-        classes = re.findall(r'class\s+(\w+)', code)
+        funcs = re.findall(r"def\s+(\w+)\s*\(", code)
+        classes = re.findall(r"class\s+(\w+)", code)
         if classes:
             report.append(f"\n**Classes defined:** {', '.join(classes)}")
         if funcs:
             report.append(f"**Functions defined:** {', '.join(funcs)}")
 
-    report.append("\n*Use this analysis with the LLM's understanding to get a full explanation. The code is provided above for reference.*")
+    report.append(
+        "\n*Use this analysis with the LLM's understanding to get a full explanation. The code is provided above for reference.*"
+    )
 
     return "\n".join(report)
-
 
 
 def tool_create_tests(source_path: str, output_path: str = "", framework: str = "", style: str = "unit") -> str:
@@ -1608,8 +1943,6 @@ def tool_create_tests(source_path: str, output_path: str = "", framework: str = 
     return f"✅ Executable structural test file created: {out}\nFramework: {framework}\nSource: {p.name}"
 
 
-
-
 def _generate_python_tests(content: str, path: Path, framework: str) -> str:
     """Generate deterministic import and public-interface contract tests."""
     try:
@@ -1620,11 +1953,14 @@ def _generate_python_tests(content: str, path: Path, framework: str) -> str:
     classes: list[tuple[str, list[str]]] = []
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not node.name.startswith("_"):
-            args = [arg.arg for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs) if arg.arg != "self"]
+            args = [
+                arg.arg for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs) if arg.arg != "self"
+            ]
             functions.append((node.name, args))
         elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
             methods = [
-                child.name for child in node.body
+                child.name
+                for child in node.body
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) and not child.name.startswith("_")
             ]
             classes.append((node.name, methods))
@@ -1646,59 +1982,73 @@ def _generate_python_tests(content: str, path: Path, framework: str) -> str:
         "",
     ]
     for name, args in functions:
-        lines.extend([
-            f"def test_function_{name}_contract():",
-            f"    target = getattr(MODULE, {name!r})",
-            "    assert callable(target)",
-            f"    assert list(inspect.signature(target).parameters) == {args!r}",
-            "",
-        ])
+        lines.extend(
+            [
+                f"def test_function_{name}_contract():",
+                f"    target = getattr(MODULE, {name!r})",
+                "    assert callable(target)",
+                f"    assert list(inspect.signature(target).parameters) == {args!r}",
+                "",
+            ]
+        )
     for name, methods in classes:
-        lines.extend([
-            f"def test_class_{name}_contract():",
-            f"    target = getattr(MODULE, {name!r})",
-            "    assert inspect.isclass(target)",
-            f"    assert all(callable(getattr(target, method)) for method in {methods!r})",
-            "",
-        ])
+        lines.extend(
+            [
+                f"def test_class_{name}_contract():",
+                f"    target = getattr(MODULE, {name!r})",
+                "    assert inspect.isclass(target)",
+                f"    assert all(callable(getattr(target, method)) for method in {methods!r})",
+                "",
+            ]
+        )
     return "\n".join(lines).rstrip() + "\n"
-
-
 
 
 def _generate_js_tests(content: str, path: Path, framework: str) -> str:
     """Generate public-export contract tests without fabricated behaviour."""
-    functions = sorted(set(
-        re.findall(r'(?:export\s+)?(?:async\s+)?function\s+(\w+)', content)
-        + re.findall(r'(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*(?:async\s+)?\(', content)
-    ))
+    functions = sorted(
+        set(
+            re.findall(r"(?:export\s+)?(?:async\s+)?function\s+(\w+)", content)
+            + re.findall(r"(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*(?:async\s+)?\(", content)
+        )
+    )
     module = f"./{path.stem}"
-    lines = [f"// Generated public-interface contract tests for {path.name}", f"const target = require('{module}');", ""]
-    lines.extend([
-        "test('module loads', () => {",
-        "  expect(target).toBeDefined();",
-        "});",
+    lines = [
+        f"// Generated public-interface contract tests for {path.name}",
+        f"const target = require('{module}');",
         "",
-    ])
-    for name in functions:
-        lines.extend([
-            f"test('{name} is exported as a function', () => {{",
-            f"  expect(typeof target.{name}).toBe('function');",
+    ]
+    lines.extend(
+        [
+            "test('module loads', () => {",
+            "  expect(target).toBeDefined();",
             "});",
             "",
-        ])
+        ]
+    )
+    for name in functions:
+        lines.extend(
+            [
+                f"test('{name} is exported as a function', () => {{",
+                f"  expect(typeof target.{name}).toBe('function');",
+                "});",
+                "",
+            ]
+        )
     return "\n".join(lines).rstrip() + "\n"
-
 
 
 def tool_diff_files(file_a: str, file_b: str, context_lines: int = 3) -> str:
     """Unified diff between two files."""
     import difflib
+
     pa = Path(file_a).expanduser().resolve()
     pb = Path(file_b).expanduser().resolve()
 
-    if not pa.exists(): return f"❌ File not found: {file_a}"
-    if not pb.exists(): return f"❌ File not found: {file_b}"
+    if not pa.exists():
+        return f"❌ File not found: {file_a}"
+    if not pb.exists():
+        return f"❌ File not found: {file_b}"
 
     try:
         a_lines = pa.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
@@ -1714,14 +2064,20 @@ def tool_diff_files(file_a: str, file_b: str, context_lines: int = 3) -> str:
     return f"Diff:\n```diff\n{result}\n```"
 
 
-def tool_batch_edit(directory: str, file_pattern: str, find: str, replace: str, is_regex: bool = False, dry_run: bool = False) -> str:
+def tool_batch_edit(
+    directory: str, file_pattern: str, find: str, replace: str, is_regex: bool = False, dry_run: bool = False
+) -> str:
     """Find and replace across multiple files."""
     p = Path(directory).expanduser().resolve()
     if not p.exists():
         return f"❌ Directory not found: {directory}"
 
     files = list(p.rglob(file_pattern))
-    files = [f for f in files if f.is_file() and not any(part.startswith(".") or part in ("node_modules", "__pycache__") for part in f.parts)]
+    files = [
+        f
+        for f in files
+        if f.is_file() and not any(part.startswith(".") or part in ("node_modules", "__pycache__") for part in f.parts)
+    ]
 
     modified = []
     total_replacements = 0
@@ -1748,11 +2104,15 @@ def tool_batch_edit(directory: str, file_pattern: str, find: str, replace: str, 
         return f"No matches for '{find}' in {file_pattern} files."
 
     mode = "[DRY RUN] " if dry_run else ""
-    return f"{mode}{'Would modify' if dry_run else 'Modified'} {len(modified)} file(s), {total_replacements} replacement(s):\n" + "\n".join(modified)
+    return (
+        f"{mode}{'Would modify' if dry_run else 'Modified'} {len(modified)} file(s), {total_replacements} replacement(s):\n"
+        + "\n".join(modified)
+    )
 
 
-
-def tool_manage_env(action: str, env_type: str = "python", name: str = ".venv", python_version: str = "", cwd: str = "") -> str:
+def tool_manage_env(
+    action: str, env_type: str = "python", name: str = ".venv", python_version: str = "", cwd: str = ""
+) -> str:
     """Manage virtual environments without shell interpolation."""
     work_dir = cwd or os.getcwd()
     try:
@@ -1767,8 +2127,12 @@ def tool_manage_env(action: str, env_type: str = "python", name: str = ".venv", 
                 return "❌ Invalid Python version token."
             try:
                 result = subprocess.run(
-                    [python_cmd, "-m", "venv", safe_name], shell=False, cwd=work_dir,
-                    capture_output=True, text=True, timeout=30,
+                    [python_cmd, "-m", "venv", safe_name],
+                    shell=False,
+                    cwd=work_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
                 )
                 if result.returncode != 0:
                     return f"❌ Failed to create venv: {result.stderr}"
@@ -1783,8 +2147,12 @@ def tool_manage_env(action: str, env_type: str = "python", name: str = ".venv", 
                     pip_path = env_path / "bin" / "pip3"
                 try:
                     result = subprocess.run(
-                        [str(pip_path), "install", "-r", "requirements.txt"], shell=False, cwd=work_dir,
-                        capture_output=True, text=True, timeout=120,
+                        [str(pip_path), "install", "-r", "requirements.txt"],
+                        shell=False,
+                        cwd=work_dir,
+                        capture_output=True,
+                        text=True,
+                        timeout=120,
                     )
                     if result.returncode == 0:
                         return f"✅ Dependencies installed in {safe_name}"
@@ -1805,8 +2173,9 @@ def tool_manage_env(action: str, env_type: str = "python", name: str = ".venv", 
     return f"❌ Unsupported environment type/action: {env_type}/{action}"
 
 
-
-def tool_port_check(ports: list = None, find_available: bool = False, range_start: int = 3000, range_end: int = 9999) -> str:
+def tool_port_check(
+    ports: list = None, find_available: bool = False, range_start: int = 3000, range_end: int = 9999
+) -> str:
     """Check port availability."""
     results = []
 
@@ -1856,23 +2225,35 @@ def tool_docker_compose(project_path: str = ".", services: list = None, output_p
 
     # Generate Dockerfile
     dockerfiles = {
-        "python": "FROM python:3.12-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nEXPOSE 8000\nCMD [\"python\", \"-m\", \"uvicorn\", \"app.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]",
-        "node": "FROM node:20-slim\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --production\nCOPY . .\nEXPOSE 3000\nCMD [\"node\", \"src/index.js\"]",
-        "go": "FROM golang:1.21-alpine AS builder\nWORKDIR /app\nCOPY go.* ./\nRUN go mod download\nCOPY . .\nRUN CGO_ENABLED=0 go build -o server .\n\nFROM alpine:latest\nCOPY --from=builder /app/server /server\nEXPOSE 8080\nCMD [\"/server\"]",
-        "rust": "FROM rust:1.75 AS builder\nWORKDIR /app\nCOPY . .\nRUN cargo build --release\n\nFROM debian:bookworm-slim\nCOPY --from=builder /app/target/release/app /app\nCMD [\"/app\"]",
+        "python": 'FROM python:3.12-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nEXPOSE 8000\nCMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]',
+        "node": 'FROM node:20-slim\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --production\nCOPY . .\nEXPOSE 3000\nCMD ["node", "src/index.js"]',
+        "go": 'FROM golang:1.21-alpine AS builder\nWORKDIR /app\nCOPY go.* ./\nRUN go mod download\nCOPY . .\nRUN CGO_ENABLED=0 go build -o server .\n\nFROM alpine:latest\nCOPY --from=builder /app/server /server\nEXPOSE 8080\nCMD ["/server"]',
+        "rust": 'FROM rust:1.75 AS builder\nWORKDIR /app\nCOPY . .\nRUN cargo build --release\n\nFROM debian:bookworm-slim\nCOPY --from=builder /app/target/release/app /app\nCMD ["/app"]',
     }
 
     dockerfile = dockerfiles.get(lang, dockerfiles["python"])
     (out / "Dockerfile").write_text(dockerfile + "\n", encoding="utf-8")
 
     # Generate docker-compose.yml
-    compose = {"version": "3.8", "services": {"app": {"build": ".", "ports": ["8000:8000"], "environment": [], "volumes": [".:/app"]}}}
+    compose = {
+        "version": "3.8",
+        "services": {"app": {"build": ".", "ports": ["8000:8000"], "environment": [], "volumes": [".:/app"]}},
+    }
 
     service_configs = {
-        "postgres": {"image": "postgres:16-alpine", "ports": ["5432:5432"], "environment": ["POSTGRES_DB=app", "POSTGRES_USER=app", "POSTGRES_PASSWORD=secret"], "volumes": ["pgdata:/var/lib/postgresql/data"]},
+        "postgres": {
+            "image": "postgres:16-alpine",
+            "ports": ["5432:5432"],
+            "environment": ["POSTGRES_DB=app", "POSTGRES_USER=app", "POSTGRES_PASSWORD=secret"],
+            "volumes": ["pgdata:/var/lib/postgresql/data"],
+        },
         "redis": {"image": "redis:7-alpine", "ports": ["6379:6379"]},
         "mongodb": {"image": "mongo:7", "ports": ["27017:27017"], "volumes": ["mongodata:/data/db"]},
-        "mysql": {"image": "mysql:8", "ports": ["3306:3306"], "environment": ["MYSQL_ROOT_PASSWORD=secret", "MYSQL_DATABASE=app"]},
+        "mysql": {
+            "image": "mysql:8",
+            "ports": ["3306:3306"],
+            "environment": ["MYSQL_ROOT_PASSWORD=secret", "MYSQL_DATABASE=app"],
+        },
         "nginx": {"image": "nginx:alpine", "ports": ["80:80"], "volumes": ["./nginx.conf:/etc/nginx/nginx.conf"]},
         "rabbitmq": {"image": "rabbitmq:3-management-alpine", "ports": ["5672:5672", "15672:15672"]},
     }
@@ -1922,7 +2303,9 @@ def _dict_to_yaml(d: dict, indent: int = 0) -> str:
     return "\n".join(lines)
 
 
-def tool_api_scaffold(framework: str, name: str, models: list = None, features: list = None, output_path: str = "") -> str:
+def tool_api_scaffold(
+    framework: str, name: str, models: list = None, features: list = None, output_path: str = ""
+) -> str:
     """Generate API boilerplate."""
     models = models or []
     features = features or []
@@ -1952,10 +2335,10 @@ def tool_test_and_auto_fix(path: str = ".", framework: str = "", max_attempts: i
     """Autonomous TDD loop tool: runs tests, diagnoses stack traces on failure, and reports status."""
     target_dir = Path(path).resolve()
     test_output = tool_run_tests(str(target_dir), framework)
-    
+
     if "FAIL" not in test_output and "FAILED" not in test_output and "Error" not in test_output:
         return f"✅ All tests passed cleanly!\n\n{test_output}"
-        
+
     debug_analysis = tool_debug_error(test_output, str(target_dir))
     return f"⚠️ Tests failed. Diagnostic analysis:\n{debug_analysis}\n\nOriginal Test Output:\n{test_output}"
 
@@ -1963,22 +2346,69 @@ def tool_test_and_auto_fix(path: str = ".", framework: str = "", max_attempts: i
 # ── Dispatch ─────────────────────────────────────────────────────────────────
 
 ADVANCED_CODING_DISPATCH = {
-    "analyze_code": lambda **kw: tool_analyze_code(kw.get("path", "."), kw.get("language", ""), kw.get("include_metrics", True)),
-    "refactor_code": lambda **kw: tool_refactor_code(kw.get("path", "."), kw.get("operation", ""), kw.get("old_name", ""), kw.get("new_name", ""), kw.get("file_pattern", "*.py")),
-    "generate_project": lambda **kw: tool_generate_project(kw.get("template", ""), kw.get("name", ""), kw.get("path", "."), kw.get("description", ""), kw.get("features")),
-    "install_dependencies": lambda **kw: tool_install_dependencies(kw.get("packages", []), kw.get("manager", ""), kw.get("dev", False), kw.get("cwd", "")),
-    "run_tests": lambda **kw: tool_run_tests(kw.get("path", "."), kw.get("framework", ""), kw.get("filter", ""), kw.get("verbose", True), kw.get("cwd", "")),
-    "lint_code": lambda **kw: tool_lint_code(kw.get("path", "."), kw.get("fix", False), kw.get("linter", ""), kw.get("cwd", "")),
-    "format_code": lambda **kw: tool_format_code(kw.get("path", "."), kw.get("formatter", ""), kw.get("check_only", False), kw.get("cwd", "")),
-    "debug_error": lambda **kw: tool_debug_error(kw.get("error", ""), kw.get("context_path", ""), kw.get("language", "")),
-    "explain_code": lambda **kw: tool_explain_code(kw.get("path", ""), kw.get("start_line"), kw.get("end_line"), kw.get("detail_level", "normal")),
-    "create_tests": lambda **kw: tool_create_tests(kw.get("source_path", ""), kw.get("output_path", ""), kw.get("framework", ""), kw.get("style", "unit")),
+    "analyze_code": lambda **kw: tool_analyze_code(
+        kw.get("path", "."), kw.get("language", ""), kw.get("include_metrics", True)
+    ),
+    "refactor_code": lambda **kw: tool_refactor_code(
+        kw.get("path", "."),
+        kw.get("operation", ""),
+        kw.get("old_name", ""),
+        kw.get("new_name", ""),
+        kw.get("file_pattern", "*.py"),
+    ),
+    "generate_project": lambda **kw: tool_generate_project(
+        kw.get("template", ""), kw.get("name", ""), kw.get("path", "."), kw.get("description", ""), kw.get("features")
+    ),
+    "install_dependencies": lambda **kw: tool_install_dependencies(
+        kw.get("packages", []), kw.get("manager", ""), kw.get("dev", False), kw.get("cwd", "")
+    ),
+    "run_tests": lambda **kw: tool_run_tests(
+        kw.get("path", "."), kw.get("framework", ""), kw.get("filter", ""), kw.get("verbose", True), kw.get("cwd", "")
+    ),
+    "lint_code": lambda **kw: tool_lint_code(
+        kw.get("path", "."), kw.get("fix", False), kw.get("linter", ""), kw.get("cwd", "")
+    ),
+    "format_code": lambda **kw: tool_format_code(
+        kw.get("path", "."), kw.get("formatter", ""), kw.get("check_only", False), kw.get("cwd", "")
+    ),
+    "debug_error": lambda **kw: tool_debug_error(
+        kw.get("error", ""), kw.get("context_path", ""), kw.get("language", "")
+    ),
+    "explain_code": lambda **kw: tool_explain_code(
+        kw.get("path", ""), kw.get("start_line"), kw.get("end_line"), kw.get("detail_level", "normal")
+    ),
+    "create_tests": lambda **kw: tool_create_tests(
+        kw.get("source_path", ""), kw.get("output_path", ""), kw.get("framework", ""), kw.get("style", "unit")
+    ),
     "diff_files": lambda **kw: tool_diff_files(kw.get("file_a", ""), kw.get("file_b", ""), kw.get("context_lines", 3)),
-    "batch_edit": lambda **kw: tool_batch_edit(kw.get("directory", "."), kw.get("file_pattern", ""), kw.get("find", ""), kw.get("replace", ""), kw.get("is_regex", False), kw.get("dry_run", False)),
-    "manage_env": lambda **kw: tool_manage_env(kw.get("action", ""), kw.get("env_type", "python"), kw.get("name", ".venv"), kw.get("python_version", ""), kw.get("cwd", "")),
-    "port_check": lambda **kw: tool_port_check(kw.get("ports"), kw.get("find_available", False), kw.get("range_start", 3000), kw.get("range_end", 9999)),
-    "docker_compose": lambda **kw: tool_docker_compose(kw.get("project_path", "."), kw.get("services"), kw.get("output_path", "")),
-    "api_scaffold": lambda **kw: tool_api_scaffold(kw.get("framework", ""), kw.get("name", ""), kw.get("models"), kw.get("features"), kw.get("output_path", "")),
-    "create_fullstack_app": lambda **kw: tool_create_fullstack_app(kw.get("name", ""), kw.get("template", "fullstack"), kw.get("description", ""), kw.get("path", ".")),
-    "test_and_auto_fix": lambda **kw: tool_test_and_auto_fix(kw.get("path", "."), kw.get("framework", ""), kw.get("max_attempts", 3)),
+    "batch_edit": lambda **kw: tool_batch_edit(
+        kw.get("directory", "."),
+        kw.get("file_pattern", ""),
+        kw.get("find", ""),
+        kw.get("replace", ""),
+        kw.get("is_regex", False),
+        kw.get("dry_run", False),
+    ),
+    "manage_env": lambda **kw: tool_manage_env(
+        kw.get("action", ""),
+        kw.get("env_type", "python"),
+        kw.get("name", ".venv"),
+        kw.get("python_version", ""),
+        kw.get("cwd", ""),
+    ),
+    "port_check": lambda **kw: tool_port_check(
+        kw.get("ports"), kw.get("find_available", False), kw.get("range_start", 3000), kw.get("range_end", 9999)
+    ),
+    "docker_compose": lambda **kw: tool_docker_compose(
+        kw.get("project_path", "."), kw.get("services"), kw.get("output_path", "")
+    ),
+    "api_scaffold": lambda **kw: tool_api_scaffold(
+        kw.get("framework", ""), kw.get("name", ""), kw.get("models"), kw.get("features"), kw.get("output_path", "")
+    ),
+    "create_fullstack_app": lambda **kw: tool_create_fullstack_app(
+        kw.get("name", ""), kw.get("template", "fullstack"), kw.get("description", ""), kw.get("path", ".")
+    ),
+    "test_and_auto_fix": lambda **kw: tool_test_and_auto_fix(
+        kw.get("path", "."), kw.get("framework", ""), kw.get("max_attempts", 3)
+    ),
 }

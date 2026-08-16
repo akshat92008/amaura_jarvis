@@ -103,8 +103,12 @@ class EvidenceVault:
         captured_at: str | None = None,
     ) -> EvidenceRecord:
         return self.put_bytes(
-            text.encode("utf-8", errors="replace"), source=source, media_type=media_type,
-            worker_id=worker_id, task_id=task_id, retrieval_metadata=retrieval_metadata,
+            text.encode("utf-8", errors="replace"),
+            source=source,
+            media_type=media_type,
+            worker_id=worker_id,
+            task_id=task_id,
+            retrieval_metadata=retrieval_metadata,
             captured_at=captured_at,
         )
 
@@ -119,8 +123,12 @@ class EvidenceVault:
         captured_at: str | None = None,
     ) -> EvidenceRecord:
         return self.put_bytes(
-            _canonical_bytes(value), source=source, media_type="application/json",
-            worker_id=worker_id, task_id=task_id, retrieval_metadata=retrieval_metadata,
+            _canonical_bytes(value),
+            source=source,
+            media_type="application/json",
+            worker_id=worker_id,
+            task_id=task_id,
+            retrieval_metadata=retrieval_metadata,
             captured_at=captured_at,
         )
 
@@ -130,7 +138,7 @@ class EvidenceVault:
             return "manifest", reference.removeprefix("evidence://manifest/")
         for prefix in ("evidence://sha256/", "ev:"):
             if reference.startswith(prefix):
-                return "blob", reference[len(prefix):]
+                return "blob", reference[len(prefix) :]
         return "blob", reference
 
     def _load_manifest(self, digest: str) -> dict[str, Any]:
@@ -228,10 +236,21 @@ class EvidenceVault:
                 manifest = json.loads(raw_manifest)
             except json.JSONDecodeError:
                 return {"ok": False, "reference": reference, "reason": "manifest_invalid"}
-            unsigned = {key: manifest[key] for key in (
-                "version", "payload_sha256", "byte_length", "media_type", "source",
-                "captured_at", "worker_id", "task_id", "retrieval_metadata"
-            ) if key in manifest}
+            unsigned = {
+                key: manifest[key]
+                for key in (
+                    "version",
+                    "payload_sha256",
+                    "byte_length",
+                    "media_type",
+                    "source",
+                    "captured_at",
+                    "worker_id",
+                    "task_id",
+                    "retrieval_metadata",
+                )
+                if key in manifest
+            }
             signature = str(manifest.get("signature", ""))
             key = self._evidence_key()
             if signature:
@@ -289,9 +308,7 @@ def validate_criterion_review(
     if not isinstance(raw_results, list):
         raw_results = []
     if strict and criteria and len(raw_results) != len(criteria):
-        findings.append(
-            f"Reviewer covered {len(raw_results)} of {len(criteria)} acceptance criteria"
-        )
+        findings.append(f"Reviewer covered {len(raw_results)} of {len(criteria)} acceptance criteria")
 
     covered: set[int] = set()
     for position, raw in enumerate(raw_results, start=1):
@@ -328,9 +345,7 @@ def validate_criterion_review(
         refs = [str(ref).strip() for ref in refs if str(ref).strip()]
         invalid_refs = [ref for ref in refs if ref not in successful_refs]
         if invalid_refs:
-            findings.append(
-                f"Acceptance criterion {index + 1} cites evidence outside the approved submission"
-            )
+            findings.append(f"Acceptance criterion {index + 1} cites evidence outside the approved submission")
         if strict and not refs:
             findings.append(f"Acceptance criterion {index + 1} has no evidence reference")
         if strict:
@@ -393,10 +408,7 @@ def deterministic_evidence_review(
             )
             verified.append(result)
             if not result["ok"]:
-                findings.append(
-                    f"Evidence {index + 1} failed integrity verification: "
-                    f"{result['reason']}"
-                )
+                findings.append(f"Evidence {index + 1} failed integrity verification: {result['reason']}")
             else:
                 # Inspect structured verification receipt fields
                 try:
@@ -410,23 +422,37 @@ def deterministic_evidence_review(
                             if receipt_data.get("content_match") is False:
                                 findings.append(f"Evidence {index + 1} write content mismatch")
                             exp_size = int(receipt_data.get("expected_size", 0) or 0)
-                            act_size = int(receipt_data.get("actual_size", receipt_data.get("size_bytes", receipt_data.get("bytes", 0))) or 0)
+                            act_size = int(
+                                receipt_data.get(
+                                    "actual_size", receipt_data.get("size_bytes", receipt_data.get("bytes", 0))
+                                )
+                                or 0
+                            )
                             if exp_size > 0 and act_size == 0:
-                                findings.append(f"Evidence {index + 1} produced 0-byte file for non-empty write request ({exp_size} chars expected)")
+                                findings.append(
+                                    f"Evidence {index + 1} produced 0-byte file for non-empty write request ({exp_size} chars expected)"
+                                )
                         # Workflow verification
-                        elif receipt_data.get("tool_name") == "multi_step_workflow" or receipt_data.get("execution_type") == "workflow":
+                        elif (
+                            receipt_data.get("tool_name") == "multi_step_workflow"
+                            or receipt_data.get("execution_type") == "workflow"
+                        ):
                             if receipt_data.get("verification_passed") is False:
                                 findings.append(f"Evidence {index + 1} workflow verification failed")
                         # Browser compound verification
-                        elif "browser" in str(receipt_data.get("tool_name", "")).lower() or receipt_data.get("execution_type") == "browser":
-                            if receipt_data.get("verification_passed") is False or receipt_data.get("status") in {"partial_failure", "total_failure"}:
+                        elif (
+                            "browser" in str(receipt_data.get("tool_name", "")).lower()
+                            or receipt_data.get("execution_type") == "browser"
+                        ):
+                            if receipt_data.get("verification_passed") is False or receipt_data.get("status") in {
+                                "partial_failure",
+                                "total_failure",
+                            }:
                                 findings.append(f"Evidence {index + 1} browser extraction failed required fields")
                 except Exception:
                     pass
         elif strict or item.get("type") == "tool_result":
-            findings.append(
-                f"Evidence {index + 1} is not stored in the content-addressed evidence vault"
-            )
+            findings.append(f"Evidence {index + 1} is not stored in the content-addressed evidence vault")
     criteria = task.get("acceptance_criteria") or []
     if criteria and not evidence:
         findings.append("Acceptance criteria have no supporting evidence")
@@ -461,13 +487,9 @@ def create_review_attestation(
     requested_reviewer_model: str = "",
     key: str | None = None,
 ) -> dict[str, Any]:
-    secret = (key if key is not None else os.environ.get(
-        "AMAURA_REVIEW_ATTESTATION_KEY", ""
-    )).encode()
+    secret = (key if key is not None else os.environ.get("AMAURA_REVIEW_ATTESTATION_KEY", "")).encode()
     if len(secret) < 32:
-        raise GovernanceError(
-            "AMAURA_REVIEW_ATTESTATION_KEY must contain at least 32 bytes"
-        )
+        raise GovernanceError("AMAURA_REVIEW_ATTESTATION_KEY must contain at least 32 bytes")
     payload = {
         "task_id": task_id,
         "reviewer_id": reviewer_id,
@@ -491,9 +513,7 @@ def verify_review_attestation(
     *,
     key: str | None = None,
 ) -> bool:
-    secret = (key if key is not None else os.environ.get(
-        "AMAURA_REVIEW_ATTESTATION_KEY", ""
-    )).encode()
+    secret = (key if key is not None else os.environ.get("AMAURA_REVIEW_ATTESTATION_KEY", "")).encode()
     if len(secret) < 32:
         return False
     payload = {

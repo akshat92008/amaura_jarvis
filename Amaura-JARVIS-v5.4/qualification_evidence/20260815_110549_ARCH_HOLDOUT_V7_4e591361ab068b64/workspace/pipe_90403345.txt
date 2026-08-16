@@ -1,5 +1,0 @@
-label|qty
-dahlia-harbor-7056|16
-iris-spring-4060|12
-granite-meadow-3409|12
-ember-cove-9964|16

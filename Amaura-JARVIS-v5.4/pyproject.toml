@@ -93,6 +93,7 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "jarvis/amaura/semantic_core.py" = ["F401"]
+"jarvis/tools/registry.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.11"

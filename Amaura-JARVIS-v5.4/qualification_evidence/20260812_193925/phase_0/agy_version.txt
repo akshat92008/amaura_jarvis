@@ -1,8 +1,0 @@
-COMMAND: agy --version
-EXIT_CODE: 0
-
-STDOUT:
-1.1.12
-
-STDERR:
-

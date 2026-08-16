@@ -1,8 +1,0 @@
-COMMAND: ps aux | grep -i jarvis | grep -v grep
-EXIT_CODE: 0
-
-STDOUT:
-ashishsingh      65809   0.1  0.3 435466688  25776   ??  SN    5:55PM   1:03.93 /Library/Frameworks/Python.framework/Versions/3.13/Resources/Python.app/Contents/MacOS/Python -m jarvis.server
-
-STDERR:
-

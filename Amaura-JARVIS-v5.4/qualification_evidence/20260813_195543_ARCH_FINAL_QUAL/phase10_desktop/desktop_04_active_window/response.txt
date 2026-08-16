@@ -1,9 +1,0 @@
-I don’t have the ability to see your screen, so I can’t tell you the title or name of the window that’s currently active.  
-
-**If you’d like to check it yourself:**
-
-- **macOS:** Look at the left side of the menu bar (the app’s icon) or the title bar of the window itself. You can also press **⌘ Tab** to see the list of open apps and which one is active.  
-- **Windows:** The active window’s title appears in the center of the taskbar, and the app’s icon is highlighted on the taskbar. Press **Alt + Tab** to cycle through open windows and see their titles.  
-- **Linux (most desktop environments):** The title bar of the active window shows its name, and the panel/taskbar usually highlights the active application. You can also use **Alt + Tab** to view the list.
-
-If you need help extracting that information programmatically (e.g., via a script), just let me know which operating system you’re on and I can suggest a quick command or snippet.

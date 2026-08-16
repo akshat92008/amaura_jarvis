@@ -31,16 +31,16 @@ import sys
 import tempfile
 import threading
 import time
-from dataclasses import dataclass, asdict, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import httpx
-
 
 # ---------------------------------------------------------------------------
 # Repo / freeze
 # ---------------------------------------------------------------------------
+
 
 def find_repo_root() -> Path:
     here = Path(__file__).resolve()
@@ -55,6 +55,7 @@ sys.path.insert(0, str(ROOT))
 
 try:
     from jarvis.amaura.runtime import load_amaura_env
+
     load_amaura_env()
 except Exception:
     pass
@@ -78,17 +79,45 @@ WORK.mkdir(parents=True, exist_ok=True)
 PASS, FAIL, BLOCKED = "PASS", "FAIL", "BLOCKED"
 
 WORDS1 = [
-    "aurora","banyan","cobalt","dahlia","ember","falcon","granite","harbor",
-    "iris","juniper","lotus","marble","nectar","opal","quartz","river"
+    "aurora",
+    "banyan",
+    "cobalt",
+    "dahlia",
+    "ember",
+    "falcon",
+    "granite",
+    "harbor",
+    "iris",
+    "juniper",
+    "lotus",
+    "marble",
+    "nectar",
+    "opal",
+    "quartz",
+    "river",
 ]
 WORDS2 = [
-    "arch","basin","cove","delta","field","grove","harbor","junction",
-    "lane","meadow","nook","ridge","spring","trail","valley","wharf"
+    "arch",
+    "basin",
+    "cove",
+    "delta",
+    "field",
+    "grove",
+    "harbor",
+    "junction",
+    "lane",
+    "meadow",
+    "nook",
+    "ridge",
+    "spring",
+    "trail",
+    "valley",
+    "wharf",
 ]
 
 
 def token() -> str:
-    return f"{R.choice(WORDS1)}-{R.choice(WORDS2)}-{R.randrange(1000,9999)}"
+    return f"{R.choice(WORDS1)}-{R.choice(WORDS2)}-{R.randrange(1000, 9999)}"
 
 
 def unique(prefix: str, suffix: str = "") -> str:
@@ -111,7 +140,7 @@ def normalize_manifest_key(k: str) -> str:
         except Exception:
             parts = p.parts
             if "jarvis" in parts:
-                return Path(*parts[parts.index("jarvis"):]).as_posix()
+                return Path(*parts[parts.index("jarvis") :]).as_posix()
     return p.as_posix().lstrip("./")
 
 
@@ -157,6 +186,7 @@ def compare_hashes(expected: dict[str, str], actual: dict[str, str]) -> dict[str
 # ---------------------------------------------------------------------------
 # Server / API
 # ---------------------------------------------------------------------------
+
 
 def free_port() -> int:
     s = socket.socket()
@@ -222,12 +252,12 @@ def start_server() -> subprocess.Popen:
 class Chat:
     prompt: str
     session_id: str
-    http_status: Optional[int] = None
+    http_status: int | None = None
     response_text: str = ""
-    error: Optional[str] = None
+    error: str | None = None
     events: list[dict[str, Any]] = field(default_factory=list)
-    goal_id: Optional[str] = None
-    goal_state: Optional[str] = None
+    goal_id: str | None = None
+    goal_state: str | None = None
 
 
 def chat(prompt: str, session_id: str, timeout: int = 120, poll_seconds: int = 35) -> Chat:
@@ -325,21 +355,32 @@ def event_haystack(c: Chat) -> str:
 
 def service_error(c: Chat) -> bool:
     text = ((c.response_text or "") + " " + (c.error or "")).lower()
-    return (
-        c.http_status in (500, 502, 503, 504)
-        or "temporarily unavailable" in text
-        or "service unavailable" in text
-    )
+    return c.http_status in (500, 502, 503, 504) or "temporarily unavailable" in text or "service unavailable" in text
 
 
 REMOTE_PROVIDERS = {
-    "openai", "anthropic", "groq", "openrouter", "cerebras", "sambanova",
-    "gemini", "google", "omniroute", "nvidia"
+    "openai",
+    "anthropic",
+    "groq",
+    "openrouter",
+    "cerebras",
+    "sambanova",
+    "gemini",
+    "google",
+    "omniroute",
+    "nvidia",
 }
 
 DETERMINISTIC_PROVIDERS = {
-    "", "none", "not-invoked", "local-filesystem", "security-policy",
-    "internal-memory", "macos-native-tool", "deterministic-ast", "browser"
+    "",
+    "none",
+    "not-invoked",
+    "local-filesystem",
+    "security-policy",
+    "internal-memory",
+    "macos-native-tool",
+    "deterministic-ast",
+    "browser",
 }
 
 
@@ -399,6 +440,7 @@ def save_result(r: Result):
 # Web fixture
 # ---------------------------------------------------------------------------
 
+
 class FixtureHandler(http.server.BaseHTTPRequestHandler):
     title_text = ""
     c1 = ""
@@ -417,7 +459,7 @@ class FixtureHandler(http.server.BaseHTTPRequestHandler):
 <span class="{self.c2}">{self.v2}</span>
 <p class="{self.c3}">{self.v3}</p>
 </body>
-</html>""".encode("utf-8")
+</html>""".encode()
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
@@ -457,6 +499,7 @@ def web_fixture(title: str, c1: str, c2: str, c3: str, v1: str, v2: str, v3: str
 # ---------------------------------------------------------------------------
 # Verification helpers
 # ---------------------------------------------------------------------------
+
 
 def valid_png(p: Path):
     try:
@@ -501,9 +544,10 @@ def findings_text(c: Chat) -> str:
 # Tests
 # ---------------------------------------------------------------------------
 
+
 def t01_write_target_then_semicolon_payload():
     target = WORK / unique("record")
-    payload = f"{token()}::{R.randrange(100000,999999)}"
+    payload = f"{token()}::{R.randrange(100000, 999999)}"
     prompt = f'Create file "{target}"; its complete contents must be {payload}'
     c = chat(prompt, unique("v7s1"))
     actual = target.read_text(errors="replace") if target.exists() else None
@@ -519,7 +563,7 @@ def t01_write_target_then_semicolon_payload():
 
 def t02_write_payload_before_target_with_modifier():
     target = WORK / unique("vault", ".dat")
-    payload = f"{token()} {R.randrange(100,999)}"
+    payload = f"{token()} {R.randrange(100, 999)}"
     prompt = f'Put precisely "{payload}" as the entire contents of "{target}".'
     c = chat(prompt, unique("v7s2"))
     actual = target.read_text(errors="replace") if target.exists() else None
@@ -535,7 +579,7 @@ def t02_write_payload_before_target_with_modifier():
 
 def t03_write_multiline_after_arrow():
     target = WORK / unique("notes", ".txt")
-    payload = "\n".join([token(), f"{R.randrange(1000,9999)} {token()}", token()])
+    payload = "\n".join([token(), f"{R.randrange(1000, 9999)} {token()}", token()])
     prompt = f'Write "{target}". The body is exactly ->\n{payload}'
     c = chat(prompt, unique("v7s3"))
     actual = target.read_text(errors="replace") if target.exists() else None
@@ -578,8 +622,7 @@ def t05_screenshot_paraphrase_precedence():
     valid, w, h = valid_png(target) if exists else (False, 0, 0)
     names = tool_names(c)
     blocked = any(
-        x in c.response_text.lower()
-        for x in ("screen recording", "permission", "not authorized", "access denied")
+        x in c.response_text.lower() for x in ("screen recording", "permission", "not authorized", "access denied")
     )
     routed_as_write = "write_file" in names
     ok = exists and fresh and valid and not routed_as_write and not service_error(c)
@@ -644,7 +687,7 @@ def t07_directory_unseen_paraphrase():
 
 def t08_raw_read_unknown_extension():
     p = WORK / unique("opaque", ".xyzq")
-    content = f"{token()}\n{R.randrange(100000,999999)}\n{token()}"
+    content = f"{token()}\n{R.randrange(100000, 999999)}\n{token()}"
     p.write_text(content)
     c = chat(
         f'Give me exactly the bytes-as-text stored in "{p}" as your whole reply.',
@@ -711,9 +754,9 @@ def t11_memory_three_way_distractor():
     names = [f"{R.choice(WORDS1).title()} {R.choice(WORDS2).title()} unit" for _ in range(3)]
     values = [token(), token(), token()]
     chats = []
-    for n, v in zip(names, values):
-        chats.append(chat(f'Remember: the launch marker for {n} is {v}.', session))
-    recall = chat(f'What launch marker did I assign to {names[1]}?', session)
+    for n, v in zip(names, values, strict=False):
+        chats.append(chat(f"Remember: the launch marker for {n} is {v}.", session))
+    recall = chat(f"What launch marker did I assign to {names[1]}?", session)
 
     ok = (
         values[1] in recall.response_text
@@ -725,7 +768,10 @@ def t11_memory_three_way_distractor():
         "11_memory_three_way_distractor",
         PASS if ok else FAIL,
         "Memory retrieval with two distractors.",
-        {"correct": values[1] in recall.response_text, "distractors_absent": values[0] not in recall.response_text and values[2] not in recall.response_text},
+        {
+            "correct": values[1] in recall.response_text,
+            "distractors_absent": values[0] not in recall.response_text and values[2] not in recall.response_text,
+        },
         {"stores": [chat_dict(x) for x in chats], "recall": chat_dict(recall)},
     )
 
@@ -744,7 +790,9 @@ def t12_workspace_symlink_escape_regression():
         )
         escaped = external_target.exists()
         low = c.response_text.lower()
-        explicit = any(x in low for x in ("workspace", "outside", "escape", "blocked", "refus", "denied", "not allowed"))
+        explicit = any(
+            x in low for x in ("workspace", "outside", "escape", "blocked", "refus", "denied", "not allowed")
+        )
         ok = not escaped and explicit and not service_error(c)
         return Result(
             "12_workspace_symlink_escape_regression",
@@ -773,14 +821,12 @@ def t13_repo_wrong_constant_semantic():
     correct = wrong + R.randrange(2, 6)
 
     (repo / "logic.py").write_text(
-        f'def {fn}(value):\n'
+        f"def {fn}(value):\n"
         f'    """Return value after subtracting the fixed adjustment {correct}."""\n'
-        f'    return value - {wrong}\n'
+        f"    return value - {wrong}\n"
     )
     (repo / "test_logic.py").write_text(
-        f'from logic import {fn}\n\n'
-        f'def test_adjustment():\n'
-        f'    assert {fn}(100) == {100 - correct}\n'
+        f"from logic import {fn}\n\ndef test_adjustment():\n    assert {fn}(100) == {100 - correct}\n"
     )
 
     before = tree_state(repo)
@@ -792,14 +838,23 @@ def t13_repo_wrong_constant_semantic():
     after = tree_state(repo)
 
     low = (c.response_text + "\n" + findings_text(c)).lower()
-    semantic = str(wrong) in low and str(correct) in low and any(x in low for x in ("constant", "subtract", "adjustment", "expected"))
+    semantic = (
+        str(wrong) in low
+        and str(correct) in low
+        and any(x in low for x in ("constant", "subtract", "adjustment", "expected"))
+    )
     ok = fn.lower() in low and semantic and before == after and not service_error(c)
 
     return Result(
         "13_repo_wrong_constant_semantic",
         PASS if ok else FAIL,
         "Repository diagnosis must explain wrong constant.",
-        {"function_named": fn.lower() in low, "wrong_constant_named": str(wrong) in low, "correct_constant_named": str(correct) in low, "tree_unchanged": before == after},
+        {
+            "function_named": fn.lower() in low,
+            "wrong_constant_named": str(wrong) in low,
+            "correct_constant_named": str(correct) in low,
+            "tree_unchanged": before == after,
+        },
         chat_dict(c),
     )
 
@@ -813,18 +868,16 @@ def t14_repo_wrong_helper_semantic():
     delta = R.randrange(3, 15)
 
     (repo / "calc.py").write_text(
-        f'def {good}(x):\n'
-        f'    return x + {delta}\n\n'
-        f'def {bad}(x):\n'
-        f'    return x - {delta}\n\n'
-        f'def {fn}(base):\n'
+        f"def {good}(x):\n"
+        f"    return x + {delta}\n\n"
+        f"def {bad}(x):\n"
+        f"    return x - {delta}\n\n"
+        f"def {fn}(base):\n"
         f'    """Return base with the service increment added."""\n'
-        f'    return {bad}(base)\n'
+        f"    return {bad}(base)\n"
     )
     (repo / "test_calc.py").write_text(
-        f'from calc import {fn}\n\n'
-        f'def test_increment():\n'
-        f'    assert {fn}(50) == {50 + delta}\n'
+        f"from calc import {fn}\n\ndef test_increment():\n    assert {fn}(50) == {50 + delta}\n"
     )
 
     before = tree_state(repo)
@@ -843,7 +896,12 @@ def t14_repo_wrong_helper_semantic():
         "14_repo_wrong_helper_semantic",
         PASS if ok else FAIL,
         "Repository diagnosis must name wrong and correct helpers.",
-        {"function_named": fn.lower() in low, "wrong_helper_named": bad.lower() in low, "correct_helper_named": good.lower() in low, "tree_unchanged": before == after},
+        {
+            "function_named": fn.lower() in low,
+            "wrong_helper_named": bad.lower() in low,
+            "correct_helper_named": good.lower() in low,
+            "tree_unchanged": before == after,
+        },
         chat_dict(c),
     )
 
@@ -854,14 +912,10 @@ def t15_repo_wrong_comparison_operator():
     fn = unique("eligible")
 
     (repo / "rules.py").write_text(
-        f'def {fn}(score):\n'
-        f'    """Return True when score is at least 70."""\n'
-        f'    return score > 70\n'
+        f'def {fn}(score):\n    """Return True when score is at least 70."""\n    return score > 70\n'
     )
     (repo / "test_rules.py").write_text(
-        f'from rules import {fn}\n\n'
-        f'def test_boundary():\n'
-        f'    assert {fn}(70) is True\n'
+        f"from rules import {fn}\n\ndef test_boundary():\n    assert {fn}(70) is True\n"
     )
 
     before = tree_state(repo)
@@ -884,7 +938,11 @@ def t15_repo_wrong_comparison_operator():
         "15_repo_wrong_comparison_operator",
         PASS if ok else FAIL,
         "Repository diagnosis for comparison-boundary bug.",
-        {"function_named": fn.lower() in low, "semantic_comparison_diagnosis": semantic, "tree_unchanged": before == after},
+        {
+            "function_named": fn.lower() in low,
+            "semantic_comparison_diagnosis": semantic,
+            "tree_unchanged": before == after,
+        },
         chat_dict(c),
     )
 
@@ -965,32 +1023,32 @@ def t18_missing_file_truth_regression():
 
 
 def t19_exact_response_48way():
-    payloads = [f"{token()}::{R.randrange(100000,999999)}" for _ in range(48)]
+    payloads = [f"{token()}::{R.randrange(100000, 999999)}" for _ in range(48)]
 
     templates = [
-        'Your entire answer must be {x} and no other text.',
-        'Send back only {x}',
-        'Echo this exactly: {x}',
-        'Return just this value — {x}',
-        'Nothing except {x} should appear in your reply.',
-        'Use the following as your whole response: {x}',
-        'Answer solely with the token {x}.',
-        'Reply verbatim: {x}; nothing else.',
-        'Give back {x} with zero commentary.',
-        'Output only this string -> {x}',
-        'The complete response is to be {x}',
-        'Respond with {x}, and do not add anything.',
-        'Say this value only: {x}',
-        'Make your reply exactly the following: {x}',
-        'No explanation; return {x}',
-        'Print {x} and nothing more.',
+        "Your entire answer must be {x} and no other text.",
+        "Send back only {x}",
+        "Echo this exactly: {x}",
+        "Return just this value — {x}",
+        "Nothing except {x} should appear in your reply.",
+        "Use the following as your whole response: {x}",
+        "Answer solely with the token {x}.",
+        "Reply verbatim: {x}; nothing else.",
+        "Give back {x} with zero commentary.",
+        "Output only this string -> {x}",
+        "The complete response is to be {x}",
+        "Respond with {x}, and do not add anything.",
+        "Say this value only: {x}",
+        "Make your reply exactly the following: {x}",
+        "No explanation; return {x}",
+        "Print {x} and nothing more.",
     ]
 
     def worker(i: int):
         prompt = templates[i % len(templates)].format(x=payloads[i])
         return i, chat(prompt, unique(f"v7exact{i}"), timeout=90, poll_seconds=0)
 
-    results: list[Optional[Chat]] = [None] * len(payloads)
+    results: list[Chat | None] = [None] * len(payloads)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=48) as ex:
         futs = [ex.submit(worker, i) for i in range(len(payloads))]
@@ -1005,34 +1063,25 @@ def t19_exact_response_48way():
         assert c is not None
 
         exact = c.response_text == payloads[i]
-        crosstalk = any(
-            payloads[j] in c.response_text
-            for j in range(len(payloads))
-            if j != i
-        )
+        crosstalk = any(payloads[j] in c.response_text for j in range(len(payloads)) if j != i)
         svc = service_error(c)
         mission_created = bool(c.goal_id) or "mission goal_" in c.response_text.lower()
         model_used = model_invoked(c)
 
-        one_ok = (
-            c.http_status == 200
-            and exact
-            and not crosstalk
-            and not svc
-            and not mission_created
-            and not model_used
-        )
+        one_ok = c.http_status == 200 and exact and not crosstalk and not svc and not mission_created and not model_used
         all_ok = all_ok and one_ok
 
-        details.append({
-            "i": i,
-            "exact": exact,
-            "crosstalk": crosstalk,
-            "service_error": svc,
-            "mission_created": mission_created,
-            "model_invoked": model_used,
-            "response": c.response_text[:180],
-        })
+        details.append(
+            {
+                "i": i,
+                "exact": exact,
+                "crosstalk": crosstalk,
+                "service_error": svc,
+                "mission_created": mission_created,
+                "model_invoked": model_used,
+                "response": c.response_text[:180],
+            }
+        )
 
     return Result(
         "19_exact_response_48way",
@@ -1044,7 +1093,7 @@ def t19_exact_response_48way():
 
 
 def t20_exact_response_quoted_punctuation():
-    payload = f"{token()}::{R.randrange(10000,99999)}!?"
+    payload = f"{token()}::{R.randrange(10000, 99999)}!?"
     c = chat(
         f'Reply with the quoted text "{payload}" exactly, without the quotation marks or any extra words.',
         unique("v7s20"),
@@ -1096,6 +1145,7 @@ TESTS = [
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main() -> int:
     if not FREEZE_HASHES.exists():
         print(f"ABORT: missing Phase 6 V2 freeze hashes: {FREEZE_HASHES}")
@@ -1115,7 +1165,7 @@ def main() -> int:
         print(json.dumps(precheck, indent=2))
         return 3
 
-    proc: Optional[subprocess.Popen] = None
+    proc: subprocess.Popen | None = None
 
     try:
         proc = start_server()
@@ -1168,11 +1218,14 @@ def main() -> int:
         source_ok = pre_post["ok"] and frozen_post["ok"]
 
         (EVIDENCE / "SOURCE_POSTCHECK.json").write_text(
-            json.dumps({
-                "pre_vs_post": pre_post,
-                "frozen_vs_post": frozen_post,
-                "production_source_unchanged": source_ok,
-            }, indent=2),
+            json.dumps(
+                {
+                    "pre_vs_post": pre_post,
+                    "frozen_vs_post": frozen_post,
+                    "production_source_unchanged": source_ok,
+                },
+                indent=2,
+            ),
             encoding="utf-8",
         )
 

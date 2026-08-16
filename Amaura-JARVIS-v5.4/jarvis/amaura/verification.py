@@ -6,6 +6,7 @@ backend's own test result is evidence, not truth.  On macOS the verifier uses
 assigned worktree/temp directory.  On other platforms the default is Docker.
 Host execution exists only as an explicit break-glass/testing mode.
 """
+
 from __future__ import annotations
 
 import os
@@ -15,20 +16,41 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable
 
 from jarvis.amaura.models import GovernanceError
 from jarvis.amaura.security import redact_sensitive_text
 
-
-_DEFAULT_EXECUTABLES = frozenset({
-    "python", "python3", "pytest", "uv", "npm", "pnpm", "yarn", "bun",
-    "cargo", "go", "mvn", "mvnw", "gradle", "gradlew", "dotnet", "make",
-    "cmake", "swift", "ruby", "bundle", "rspec", "tox",
-    "ruff", "mypy",
-})
+_DEFAULT_EXECUTABLES = frozenset(
+    {
+        "python",
+        "python3",
+        "pytest",
+        "uv",
+        "npm",
+        "pnpm",
+        "yarn",
+        "bun",
+        "cargo",
+        "go",
+        "mvn",
+        "mvnw",
+        "gradle",
+        "gradlew",
+        "dotnet",
+        "make",
+        "cmake",
+        "swift",
+        "ruby",
+        "bundle",
+        "rspec",
+        "tox",
+        "ruff",
+        "mypy",
+    }
+)
 _SHELL_OPERATORS = frozenset({"&&", "||", ";", "|", ">", ">>", "<", "2>", "2>>", "&"})
 
 
@@ -87,8 +109,16 @@ class SecureVerifierRunner:
     @staticmethod
     def _clean_environment(temp_home: str) -> dict[str, str]:
         allowed = {
-            "PATH", "LANG", "LC_ALL", "TERM", "COLORTERM", "SSL_CERT_FILE", "SSL_CERT_DIR",
-            "REQUESTS_CA_BUNDLE", "SYSTEMROOT", "WINDIR",
+            "PATH",
+            "LANG",
+            "LC_ALL",
+            "TERM",
+            "COLORTERM",
+            "SSL_CERT_FILE",
+            "SSL_CERT_DIR",
+            "REQUESTS_CA_BUNDLE",
+            "SYSTEMROOT",
+            "WINDIR",
         }
         env = {k: v for k, v in os.environ.items() if k in allowed}
         # Keep only the trusted executable directory of the interpreter running
@@ -103,19 +133,21 @@ class SecureVerifierRunner:
         env["PATH"] = runtime_bin + (os.pathsep + inherited_path if inherited_path else "")
         env.update({"HOME": temp_home, "TMPDIR": temp_home, "TEMP": temp_home, "TMP": temp_home})
         # Prevent common language tooling from inheriting user-global config.
-        env.update({
-            "PYTHONNOUSERSITE": "1",
-            "PYTHONDONTWRITEBYTECODE": "1",
-            "PYTHONPYCACHEPREFIX": str(Path(temp_home) / "pycache"),
-            "PIP_DISABLE_PIP_VERSION_CHECK": "1",
-            # GUI/game test suites must remain headless inside the verifier.
-            "SDL_VIDEODRIVER": "dummy",
-            "SDL_AUDIODRIVER": "dummy",
-            "SDL_RENDER_DRIVER": "software",
-            "PYGAME_HIDE_SUPPORT_PROMPT": "1",
-            "npm_config_update_notifier": "false",
-            "GIT_CONFIG_NOSYSTEM": "1",
-        })
+        env.update(
+            {
+                "PYTHONNOUSERSITE": "1",
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "PYTHONPYCACHEPREFIX": str(Path(temp_home) / "pycache"),
+                "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+                # GUI/game test suites must remain headless inside the verifier.
+                "SDL_VIDEODRIVER": "dummy",
+                "SDL_AUDIODRIVER": "dummy",
+                "SDL_RENDER_DRIVER": "software",
+                "PYGAME_HIDE_SUPPORT_PROMPT": "1",
+                "npm_config_update_notifier": "false",
+                "GIT_CONFIG_NOSYSTEM": "1",
+            }
+        )
         return env
 
     def _resolve_mode(self) -> str:
@@ -213,9 +245,21 @@ class SecureVerifierRunner:
                     raise GovernanceError("Docker verifier mode requested but docker is unavailable")
                 image = os.environ.get("AMAURA_VERIFIER_IMAGE", "python:3.11-slim").strip() or "python:3.11-slim"
                 launch = [
-                    "docker", "run", "--rm", "--network=none", "--cpus=2", "--memory=2g", "--pids-limit=256",
-                    "--security-opt", "no-new-privileges", "-v", f"{repo}:/workspace:rw", "-w", "/workspace",
-                    image, *argv,
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--network=none",
+                    "--cpus=2",
+                    "--memory=2g",
+                    "--pids-limit=256",
+                    "--security-opt",
+                    "no-new-privileges",
+                    "-v",
+                    f"{repo}:/workspace:rw",
+                    "-w",
+                    "/workspace",
+                    image,
+                    *argv,
                 ]
                 cwd = repo
                 isolation = f"docker:{image}"
@@ -299,7 +343,5 @@ class SecureVerifierRunner:
             evidence.append(payload)
             if not result.passed:
                 detail = result.stderr_tail or result.stdout_tail or f"exit code {result.exit_code}"
-                raise GovernanceError(
-                    f"Command failed independent verification: {command!r}: {detail[-1200:]}"
-                )
+                raise GovernanceError(f"Command failed independent verification: {command!r}: {detail[-1200:]}")
         return evidence

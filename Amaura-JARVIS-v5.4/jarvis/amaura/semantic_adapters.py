@@ -4,6 +4,7 @@ The adapters in this module do not create a second routing system.  They only
 normalize established public phrasings into typed graph intents/roles and keep a
 small set of mature transformations behind the graph's effect firewall.
 """
+
 from __future__ import annotations
 
 import json
@@ -14,6 +15,14 @@ from typing import Any
 _INSTALLED = False
 
 
+def _unwrap_classmethod(value: Any) -> Any:
+    return getattr(value, "__func__", value)
+
+
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
+
+
 def install_semantic_adapters() -> None:
     global _INSTALLED
     if _INSTALLED:
@@ -22,7 +31,7 @@ def install_semantic_adapters() -> None:
     from jarvis.amaura import direct_action as da
     from jarvis.amaura import semantic_core as core
 
-    original_parse = core.SemanticParser.parse.__func__
+    original_parse = _unwrap_classmethod(core.SemanticParser.parse)
 
     def explicit_transform_output(text: str, paths: list[str]) -> str:
         """Recognize only language-explicit transformation destinations."""
@@ -75,20 +84,26 @@ def install_semantic_adapters() -> None:
 
     def _read_semantics(text: str) -> bool:
         lower = text.lower()
-        return bool(re.search(
-            r"\b(?:read|open|display|show|cat|load|fetch|view|print|examine|inspect|retrieve)\b",
-            lower,
-        )) or bool(re.search(
-            r"\b(?:get\s+text|what\s+is\s+inside|what\s+does\b.+\bcontain|content\s+of|contents\s+of|text\s+inside|stored\s+in|what(?:'s|\s+is)\s+written)\b",
-            lower,
-        ))
+        return bool(
+            re.search(
+                r"\b(?:read|open|display|show|cat|load|fetch|view|print|examine|inspect|retrieve)\b",
+                lower,
+            )
+        ) or bool(
+            re.search(
+                r"\b(?:get\s+text|what\s+is\s+inside|what\s+does\b.+\bcontain|content\s+of|contents\s+of|text\s+inside|stored\s+in|what(?:'s|\s+is)\s+written)\b",
+                lower,
+            )
+        )
 
     def _list_semantics(text: str) -> bool:
         lower = text.lower()
-        return bool(re.search(
-            r"\b(?:list\s+(?:all\s+)?(?:files|directory|folder|entries|items)|show\s+(?:me\s+)?(?:files|entries)|give\s+filenames|what\s+(?:files|entries)\b|directory\s+contents|folder\s+contents|files\s+exist)\b",
-            lower,
-        ))
+        return bool(
+            re.search(
+                r"\b(?:list\s+(?:all\s+)?(?:files|directory|folder|entries|items)|show\s+(?:me\s+)?(?:files|entries)|give\s+filenames|what\s+(?:files|entries)\b|directory\s+contents|folder\s+contents|files\s+exist)\b",
+                lower,
+            )
+        )
 
     def normalized_parse(cls: Any, text: str, known_extensions: tuple[str, ...]) -> Any:
         # Syntax-only normalization before the one central semantic parse.
@@ -164,7 +179,13 @@ def install_semantic_adapters() -> None:
         has_transform_shape = (
             len(transform_paths) >= 2
             and bool(transform_output)
-            and bool(re.search(r"\b(?:read|extract|convert|transform|prefix|suffix|replace|concatenate)\b", normalized, re.IGNORECASE))
+            and bool(
+                re.search(
+                    r"\b(?:read|extract|convert|transform|prefix|suffix|replace|concatenate)\b",
+                    normalized,
+                    re.IGNORECASE,
+                )
+            )
         )
         if graph.action == core.SemanticAction.FILE_WRITE and graph.errors and has_transform_shape:
             graph = core.SemanticRequestGraph(
@@ -179,26 +200,39 @@ def install_semantic_adapters() -> None:
         if graph.action == core.SemanticAction.ARITHMETIC and graph.arithmetic is not None:
             plan = graph.arithmetic
             lower = normalized.lower()
-            if plan.operation == "subtract" and plan.provenance == "positional" and re.search(r"\b(?:subtract|take|deduct)\b.+?\b(?:from|away\s+from)\b", lower):
+            if (
+                plan.operation == "subtract"
+                and plan.provenance == "positional"
+                and re.search(r"\b(?:subtract|take|deduct)\b.+?\b(?:from|away\s+from)\b", lower)
+            ):
                 plan.left_path, plan.right_path = plan.right_path, plan.left_path
                 plan.left_role, plan.right_role = "minuend", "subtrahend"
                 plan.provenance = "subtract_from_unquoted"
                 if len(graph.paths) >= 2:
                     graph.paths[0] = core.PathBinding(plan.left_path, core.SemanticPathRole.INPUT, "minuend")
-                    graph.paths[1] = core.PathBinding(plan.right_path, core.SemanticPathRole.SECONDARY_INPUT, "subtrahend")
-            elif plan.operation == "divide" and plan.provenance == "positional" and re.search(r"\bdivide\b.+?\binto\b", lower):
+                    graph.paths[1] = core.PathBinding(
+                        plan.right_path, core.SemanticPathRole.SECONDARY_INPUT, "subtrahend"
+                    )
+            elif (
+                plan.operation == "divide"
+                and plan.provenance == "positional"
+                and re.search(r"\bdivide\b.+?\binto\b", lower)
+            ):
                 plan.left_path, plan.right_path = plan.right_path, plan.left_path
                 plan.left_role, plan.right_role = "numerator", "denominator"
                 plan.provenance = "divide_into_unquoted"
                 if len(graph.paths) >= 2:
                     graph.paths[0] = core.PathBinding(plan.left_path, core.SemanticPathRole.INPUT, "numerator")
-                    graph.paths[1] = core.PathBinding(plan.right_path, core.SemanticPathRole.SECONDARY_INPUT, "denominator")
+                    graph.paths[1] = core.PathBinding(
+                        plan.right_path, core.SemanticPathRole.SECONDARY_INPUT, "denominator"
+                    )
         return graph
 
-    core.SemanticParser.parse = classmethod(normalized_parse)
-
+    _install_attr(core.SemanticParser, "parse", classmethod(normalized_parse))
     # Extend structured arguments only with language-proven transformation roles.
-    base_structured_args = da.PathExtractor.extract_structured_arguments.__func__
+    base_structured_args: Any = getattr(
+        da.PathExtractor.extract_structured_arguments, "__func__", da.PathExtractor.extract_structured_arguments
+    )
 
     def structured_args_with_explicit_transforms(cls: Any, text: str, *, default_workspace: str = "") -> dict[str, Any]:
         args = dict(base_structured_args(cls, text, default_workspace=default_workspace))
@@ -213,7 +247,9 @@ def install_semantic_adapters() -> None:
                 args["secondary_input_path"] = inputs[1]
         return args
 
-    da.PathExtractor.extract_structured_arguments = classmethod(structured_args_with_explicit_transforms)
+    _install_attr(
+        da.PathExtractor, "extract_structured_arguments", classmethod(structured_args_with_explicit_transforms)
+    )
 
     # Collapse cognition.py's direct exact fast path onto the same graph while
     # retaining the public provenance contract expected by callers.
@@ -236,25 +272,25 @@ def install_semantic_adapters() -> None:
             },
         )
 
-    da.ExactResponseParser.parse = classmethod(exact_via_graph)
-
+    _install_attr(da.ExactResponseParser, "parse", classmethod(exact_via_graph))
     # Repository execution is invoked only after the graph classified REPOSITORY;
     # the legacy adapter must not re-veto that already-typed action.
-    original_repo_try = da.DirectActionRouter._try_repository_inspection.__func__
+    original_repo_try: Any = getattr(
+        da.DirectActionRouter._try_repository_inspection, "__func__", da.DirectActionRouter._try_repository_inspection
+    )
 
     def graph_authorized_repo_try(cls: Any, text: str, workspace: str = "") -> Any:
         original_descriptor = cls.__dict__.get("_is_repository_inspection_request")
-        cls._is_repository_inspection_request = classmethod(lambda _cls, _text: True)
+        _install_attr(cls, "_is_repository_inspection_request", classmethod(lambda _cls, _text: True))
         try:
             return original_repo_try(cls, text, workspace=workspace)
         finally:
             if original_descriptor is not None:
-                cls._is_repository_inspection_request = original_descriptor
+                _install_attr(cls, "_is_repository_inspection_request", original_descriptor)
 
-    da.DirectActionRouter._try_repository_inspection = classmethod(graph_authorized_repo_try)
-
-    core_can_handle = da.DirectActionRouter.can_handle.__func__
-    core_execute = da.DirectActionRouter.execute.__func__
+    _install_attr(da.DirectActionRouter, "_try_repository_inspection", classmethod(graph_authorized_repo_try))
+    core_can_handle = _unwrap_classmethod(da.DirectActionRouter.can_handle)
+    core_execute = _unwrap_classmethod(da.DirectActionRouter.execute)
 
     def safe_legacy_workflow(cls: Any, text: str) -> tuple[bool, str]:
         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
@@ -333,7 +369,9 @@ def install_semantic_adapters() -> None:
                 )
             payload = json.dumps(parsed, ensure_ascii=False, indent=2)
             with da.tool_workspace(ws):
-                write_result = da.parse_tool_result(da.execute_tool("write_file", {"path": str(resolved_output), "content": payload}))
+                write_result = da.parse_tool_result(
+                    da.execute_tool("write_file", {"path": str(resolved_output), "content": payload})
+                )
             if not write_result.ok:
                 return da.DirectActionResult(
                     False,
@@ -361,7 +399,12 @@ def install_semantic_adapters() -> None:
                     execution_type="workflow",
                     tool_name="multi_step_workflow",
                     provider="local-filesystem",
-                    telemetry={"reason": "content_mismatch", "verification_passed": False, "expected": parsed, "observed": observed},
+                    telemetry={
+                        "reason": "content_mismatch",
+                        "verification_passed": False,
+                        "expected": parsed,
+                        "observed": observed,
+                    },
                 )
             return da.DirectActionResult(
                 True,
@@ -439,14 +482,24 @@ def install_semantic_adapters() -> None:
                 result.output = f"Policy refusal: {result.output}"
 
             error_text = str((result.telemetry or {}).get("error", result.output)).lower()
-            policy_error = any(marker in error_text for marker in ("permission", "sensitive", "blocked", "outside workspace", "escape", "symlink"))
-            if graph.action in {core.SemanticAction.FILE_READ, core.SemanticAction.FILE_WRITE, core.SemanticAction.DIRECTORY_LIST} and not result.success and policy_error:
+            policy_error = any(
+                marker in error_text
+                for marker in ("permission", "sensitive", "blocked", "outside workspace", "escape", "symlink")
+            )
+            if (
+                graph.action
+                in {core.SemanticAction.FILE_READ, core.SemanticAction.FILE_WRITE, core.SemanticAction.DIRECTORY_LIST}
+                and not result.success
+                and policy_error
+            ):
                 result.provider = "security-policy"
                 result.policy_decision = "refused"
 
             if graph.action == core.SemanticAction.FILE_WRITE and not result.success:
                 target = graph.output_path.lower()
-                sensitive_target = any(marker in target for marker in ("~/.ssh", "~/.aws", "~/.gnupg", "/.ssh/", "/.aws/"))
+                sensitive_target = any(
+                    marker in target for marker in ("~/.ssh", "~/.aws", "~/.gnupg", "/.ssh/", "/.aws/")
+                )
                 if sensitive_target:
                     result.provider = "security-policy"
                     result.policy_decision = "refused"
@@ -482,6 +535,6 @@ def install_semantic_adapters() -> None:
         )
         return core._render(da, render_graph, result)
 
-    da.DirectActionRouter.can_handle = classmethod(compat_can_handle)
-    da.DirectActionRouter.execute = classmethod(compat_execute)
+    _install_attr(da.DirectActionRouter, "can_handle", classmethod(compat_can_handle))
+    _install_attr(da.DirectActionRouter, "execute", classmethod(compat_execute))
     _INSTALLED = True

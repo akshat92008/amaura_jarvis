@@ -1,11 +1,12 @@
 """Shell-free process helpers for legacy local tools."""
+
 from __future__ import annotations
 
 import os
 import re
 import shlex
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 _SHELL_META = re.compile(r"[\x00-\x1f;&|<>`$]")
 _GIT_REV = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/@{}~^:+-]{0,255}")

@@ -1,8 +1,0 @@
-{
-  "host_interruption": false,
-  "source_modified_during_test": false,
-  "harness_modified_during_test": false,
-  "unexpected_server_restart": false,
-  "unexpected_worker_restart": false,
-  "valid": true
-}

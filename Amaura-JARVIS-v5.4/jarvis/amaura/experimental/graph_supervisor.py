@@ -1,13 +1,15 @@
-from typing import Any, Literal, TypedDict
 import os
-from langgraph.graph import StateGraph, END
+from typing import Any, Literal, TypedDict
 
-from jarvis.amaura.control_plane import AmauraControlPlane
+from langgraph.graph import END, StateGraph
+
 from jarvis.amaura.actions import AmauraActions
-from jarvis.amaura.models import GovernanceError
+from jarvis.amaura.control_plane import AmauraControlPlane
+from jarvis.amaura.experimental.graphs.content import ContentWorkflowGraph
 from jarvis.amaura.experimental.graphs.lead import LeadWorkflowGraph
 from jarvis.amaura.experimental.graphs.software import SoftwareWorkflowGraph
-from jarvis.amaura.experimental.graphs.content import ContentWorkflowGraph
+from jarvis.amaura.models import GovernanceError
+
 
 class SupervisorState(TypedDict):
     worker_id: str
@@ -18,6 +20,7 @@ class SupervisorState(TypedDict):
     result: dict[str, Any] | None
     error: str | None
     status: str
+
 
 class LangGraphSupervisor:
     def __init__(self, control: AmauraControlPlane, worker_id: str, lease_seconds: int = 900, max_attempts: int = 2):
@@ -31,13 +34,13 @@ class LangGraphSupervisor:
         self.lease_seconds = lease_seconds
         self.max_attempts = max_attempts
         self.actions = AmauraActions(control, worker_id)
-        
+
         self.graphs = {
             "client_acquisition": LeadWorkflowGraph(self.actions).compiled,
             "software_delivery": SoftwareWorkflowGraph(self.actions).compiled,
             "content_campaign": ContentWorkflowGraph(self.actions).compiled,
         }
-        
+
         self.graph = StateGraph(SupervisorState)
         self._build_graph()
 
@@ -49,13 +52,9 @@ class LangGraphSupervisor:
 
         self.graph.set_entry_point("recover")
         self.graph.add_edge("recover", "claim")
-        
-        self.graph.add_conditional_edges(
-            "claim",
-            self.route_claim,
-            {"execute": "execute", "END": END}
-        )
-        
+
+        self.graph.add_conditional_edges("claim", self.route_claim, {"execute": "execute", "END": END})
+
         self.graph.add_edge("execute", "finish")
         self.graph.add_edge("finish", END)
 
@@ -72,11 +71,11 @@ class LangGraphSupervisor:
             worker_id=self.worker_id,
             lease_seconds=self.lease_seconds,
             max_attempts=self.max_attempts,
-            workflow_id=state.get("workflow_id")
+            workflow_id=state.get("workflow_id"),
         )
         if not claim:
             return {"status": "idle", "claimed_task": None, "run_info": None}
-            
+
         run = claim["run"]
         task = claim["task"]
         self.control.store.publish_event(
@@ -92,7 +91,9 @@ class LangGraphSupervisor:
         return "END"
 
     def execute(self, state: SupervisorState) -> dict:
-        task = state["claimed_task"]
+        task = state.get("claimed_task")
+        if task is None:
+            return {"status": "failed", "error": "No claimed task is available for execution"}
         workflow_type = str(task.get("workflow_id", ""))
         target_graph = self.graphs.get(workflow_type)
         if target_graph is None:
@@ -114,13 +115,15 @@ class LangGraphSupervisor:
             return {"status": "failed", "error": str(e)}
 
     def finish(self, state: SupervisorState) -> dict:
-        run = state["run_info"]
+        run = state.get("run_info")
+        if run is None:
+            return {"status": "failed", "error": "No execution run is available to finish"}
         if state["status"] == "executed":
             self.control.store.finish_execution(
                 run["id"],
                 worker_id=self.worker_id,
                 succeeded=True,
-                result=state["result"],
+                result=state.get("result") or {},
                 max_attempts=self.max_attempts,
             )
             return {"status": "finished"}
@@ -129,14 +132,14 @@ class LangGraphSupervisor:
                 run["id"],
                 worker_id=self.worker_id,
                 succeeded=False,
-                error=state.get("error", "Unknown error"),
+                error=state.get("error") or "Unknown error",
                 retryable=True,
                 max_attempts=self.max_attempts,
             )
             return {"status": "failed"}
 
     def tick(self, *, workflow_id: str | None = None) -> dict[str, Any]:
-        state = {
+        state: SupervisorState = {
             "worker_id": self.worker_id,
             "workflow_id": workflow_id,
             "recovered": [],
@@ -144,7 +147,7 @@ class LangGraphSupervisor:
             "run_info": None,
             "result": None,
             "error": None,
-            "status": "init"
+            "status": "init",
         }
         final_state = self.compiled.invoke(state)
         return final_state

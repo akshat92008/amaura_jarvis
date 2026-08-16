@@ -6,6 +6,7 @@ permission-bypass flag. Antigravity works only inside the Amaura-created Git
 worktree; Amaura independently validates the Git delta and reruns the declared
 verification commands before accepting success.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -18,9 +19,10 @@ import subprocess
 import tempfile
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Callable, Literal
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -40,8 +42,13 @@ from jarvis.amaura.verification import SecureVerifierRunner
 
 def _git(repository: Path, *args: str) -> str:
     completed = subprocess.run(
-        ["git", *args], cwd=repository, stdin=subprocess.DEVNULL,
-        capture_output=True, text=True, timeout=30, check=False,
+        ["git", *args],
+        cwd=repository,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
     )
     if completed.returncode != 0:
         raise GovernanceError(f"Git verification failed: {(completed.stderr or '')[-1600:]}")
@@ -100,7 +107,7 @@ class AntigravityResultContract(BaseModel):
         return commands
 
     @model_validator(mode="after")
-    def _clean_success(self) -> "AntigravityResultContract":
+    def _clean_success(self) -> AntigravityResultContract:
         if self.remaining_failures:
             raise ValueError("success=true cannot include remaining_failures")
         return self
@@ -118,9 +125,13 @@ class AntigravityRunResult:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "receipt": self.receipt.to_dict(), "returncode": self.returncode,
-            "stdout": self.stdout, "stderr": self.stderr, "result": self.result,
-            "verification": self.verification, "cli_version": self.cli_version,
+            "receipt": self.receipt.to_dict(),
+            "returncode": self.returncode,
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "result": self.result,
+            "verification": self.verification,
+            "cli_version": self.cli_version,
         }
 
 
@@ -131,11 +142,27 @@ class AntigravityDeliveryAdapter:
 
     # Antigravity authentication is kept in its own keyring/config. Amaura does
     # not pass model keys or governance secrets into the coding subprocess.
-    ENV_ALLOWLIST = frozenset({
-        "PATH", "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "TEMP", "TMP",
-        "LANG", "LC_ALL", "TERM", "COLORTERM", "SSL_CERT_FILE", "SSL_CERT_DIR",
-        "REQUESTS_CA_BUNDLE", "XDG_CONFIG_HOME", "XDG_CACHE_HOME",
-    })
+    ENV_ALLOWLIST = frozenset(
+        {
+            "PATH",
+            "HOME",
+            "USER",
+            "LOGNAME",
+            "SHELL",
+            "TMPDIR",
+            "TEMP",
+            "TMP",
+            "LANG",
+            "LC_ALL",
+            "TERM",
+            "COLORTERM",
+            "SSL_CERT_FILE",
+            "SSL_CERT_DIR",
+            "REQUESTS_CA_BUNDLE",
+            "XDG_CONFIG_HOME",
+            "XDG_CACHE_HOME",
+        }
+    )
 
     def __init__(self, *, command: str | None = None, receipt_key: str | None = None) -> None:
         self.command = (command or os.environ.get("AMAURA_ANTIGRAVITY_COMMAND", "agy")).strip() or "agy"
@@ -164,8 +191,13 @@ class AntigravityDeliveryAdapter:
         for flag in ("--version", "version"):
             try:
                 completed = subprocess.run(
-                    [*self._parts(), flag], stdin=subprocess.DEVNULL, capture_output=True,
-                    text=True, timeout=8, check=False, env=self._environment(),
+                    [*self._parts(), flag],
+                    stdin=subprocess.DEVNULL,
+                    capture_output=True,
+                    text=True,
+                    timeout=8,
+                    check=False,
+                    env=self._environment(),
                 )
             except (OSError, subprocess.TimeoutExpired):
                 continue
@@ -178,14 +210,23 @@ class AntigravityDeliveryAdapter:
     @staticmethod
     def _version_tuple(value: str) -> tuple[int, int, int]:
         match = re.search(r"(\d+)\.(\d+)\.(\d+)", value or "")
-        return tuple(int(v) for v in match.groups()) if match else (0, 0, 0)
+        return (int(match.group(1)), int(match.group(2)), int(match.group(3))) if match else (0, 0, 0)
 
     def _environment(self) -> dict[str, str]:
         extra = {v.strip() for v in os.environ.get("AMAURA_ANTIGRAVITY_ENV_ALLOWLIST", "").split(",") if v.strip()}
         denied_prefixes = (
-            "AMAURA_APPROVAL", "AMAURA_AUDIT", "AMAURA_REVIEWER", "AMAURA_OPERATOR",
-            "AMAURA_DESKTOP_BOOTSTRAP", "AMAURA_PROVIDER_RECEIPT", "JARVIS_API_KEY",
-            "OPENAI_", "ANTHROPIC_", "OPENROUTER_", "NVIDIA_", "GROQ_",
+            "AMAURA_APPROVAL",
+            "AMAURA_AUDIT",
+            "AMAURA_REVIEWER",
+            "AMAURA_OPERATOR",
+            "AMAURA_DESKTOP_BOOTSTRAP",
+            "AMAURA_PROVIDER_RECEIPT",
+            "JARVIS_API_KEY",
+            "OPENAI_",
+            "ANTHROPIC_",
+            "OPENROUTER_",
+            "NVIDIA_",
+            "GROQ_",
         )
         allowed = {k for k in self.ENV_ALLOWLIST | extra if not k.startswith(denied_prefixes)}
         return {k: v for k, v in os.environ.items() if k in allowed}
@@ -193,7 +234,11 @@ class AntigravityDeliveryAdapter:
     @staticmethod
     def _changed_files(repository: Path, base_commit: str) -> list[str]:
         names: set[str] = set()
-        for args in (("diff", "--name-only", base_commit, "--"), ("diff", "--name-only", "--"), ("diff", "--cached", "--name-only", "--")):
+        for args in (
+            ("diff", "--name-only", base_commit, "--"),
+            ("diff", "--name-only", "--"),
+            ("diff", "--cached", "--name-only", "--"),
+        ):
             for line in _git(repository, *args).splitlines():
                 if line.strip():
                     names.add(_relpath(line.strip()))
@@ -208,21 +253,33 @@ class AntigravityDeliveryAdapter:
     def _diff_hash(repository: Path, base_commit: str, changed_files: list[str]) -> str:
         digest = hashlib.sha256()
         patch = subprocess.run(
-            ["git", "diff", "--binary", base_commit, "--"], cwd=repository,
-            stdin=subprocess.DEVNULL, capture_output=True, timeout=30, check=False,
+            ["git", "diff", "--binary", base_commit, "--"],
+            cwd=repository,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=30,
+            check=False,
         )
         if patch.returncode != 0:
             raise GovernanceError("Unable to calculate Antigravity Git diff hash")
         digest.update(patch.stdout)
         for relative in changed_files:
             path = repository / relative
-            tracked = subprocess.run(
-                ["git", "ls-files", "--error-unmatch", relative], cwd=repository,
-                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                timeout=10, check=False,
-            ).returncode == 0
+            tracked = (
+                subprocess.run(
+                    ["git", "ls-files", "--error-unmatch", relative],
+                    cwd=repository,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=10,
+                    check=False,
+                ).returncode
+                == 0
+            )
             if path.is_file() and not tracked:
-                digest.update(relative.encode()); digest.update(path.read_bytes())
+                digest.update(relative.encode())
+                digest.update(path.read_bytes())
         return digest.hexdigest()
 
     @staticmethod
@@ -297,9 +354,12 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
                 _sm = value.get("summary") or value.get("result") or value.get("message")
                 if (
                     value.get("success") is True
-                    and isinstance(_cf, list) and len(_cf) > 0
-                    and isinstance(_vc, list) and len(_vc) > 0
-                    and isinstance(_sm, str) and len(_sm.strip()) >= 3
+                    and isinstance(_cf, list)
+                    and len(_cf) > 0
+                    and isinstance(_vc, list)
+                    and len(_vc) > 0
+                    and isinstance(_sm, str)
+                    and len(_sm.strip()) >= 3
                 ):
                     normalised = dict(value)
                     normalised["schema"] = "amaura.antigravity-result.v1"
@@ -336,10 +396,12 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
 
     @staticmethod
     def settings_path() -> Path:
-        return Path(os.environ.get(
-            "AMAURA_ANTIGRAVITY_SETTINGS",
-            str(Path.home() / ".gemini" / "antigravity-cli" / "settings.json"),
-        )).expanduser()
+        return Path(
+            os.environ.get(
+                "AMAURA_ANTIGRAVITY_SETTINGS",
+                str(Path.home() / ".gemini" / "antigravity-cli" / "settings.json"),
+            )
+        ).expanduser()
 
     @classmethod
     def settings_status(cls) -> dict[str, Any]:
@@ -355,14 +417,19 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         tool_permission = str(data.get("toolPermission", "request-review"))
         artifact_policy = str(data.get("artifactReviewPolicy", "asks-for-review"))
         non_workspace = bool(data.get("allowNonWorkspaceAccess", False))
-        permissions = data.get("permissions") if isinstance(data.get("permissions"), dict) else {}
+        permissions = cast(dict[str, Any], data.get("permissions")) if isinstance(data.get("permissions"), dict) else {}
         allows = [str(v) for v in (permissions.get("allow") or []) if isinstance(v, str)]
         risky_global_allows = [
-            rule for rule in allows
+            rule
+            for rule in allows
             if rule.strip().lower().startswith("unsandboxed(")
-            or rule.strip().lower() in {
-                "write_file(*)", "read_file(*)", "read_url(*)",
-                "execute_url(*)", "mcp(*)",
+            or rule.strip().lower()
+            in {
+                "write_file(*)",
+                "read_file(*)",
+                "read_url(*)",
+                "execute_url(*)",
+                "mcp(*)",
             }
         ]
         automation_ready = bool(
@@ -373,8 +440,11 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
             and not risky_global_allows
         )
         return {
-            "path": str(path), "exists": path.is_file(), "valid": True,
-            "tool_permission": tool_permission, "artifact_review_policy": artifact_policy,
+            "path": str(path),
+            "exists": path.is_file(),
+            "valid": True,
+            "tool_permission": tool_permission,
+            "artifact_review_policy": artifact_policy,
             "allow_non_workspace_access": non_workspace,
             "risky_global_allows": risky_global_allows,
             "automation_ready": automation_ready,
@@ -402,7 +472,11 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         for rule in rules:
             clean = "".join(str(rule).lower().split())
             if clean.startswith("unsandboxed(") or clean in {
-                "write_file(*)", "read_file(*)", "read_url(*)", "execute_url(*)", "mcp(*)",
+                "write_file(*)",
+                "read_file(*)",
+                "read_url(*)",
+                "execute_url(*)",
+                "mcp(*)",
             }:
                 unsafe.append(str(rule))
         return unsafe
@@ -417,7 +491,9 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         for JSON permission/settings files.
         """
         roots: list[Path] = []
-        project_id = os.environ.get("AMAURA_ANTIGRAVITY_PROJECT_ID", "default-cli-project").strip() or "default-cli-project"
+        project_id = (
+            os.environ.get("AMAURA_ANTIGRAVITY_PROJECT_ID", "default-cli-project").strip() or "default-cli-project"
+        )
         explicit = os.environ.get("AMAURA_ANTIGRAVITY_PROJECT_SETTINGS", "").strip()
         if explicit:
             roots.append(Path(explicit).expanduser())
@@ -512,21 +588,45 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         version = self.version() if self.configured else ""
         settings = self.settings_status()
         project = self._project_permission_status()
-        workspace = self._workspace_customization_status(Path(repository_path).expanduser().resolve()) if repository_path else {"executable": [], "advisory": []}
+        workspace = (
+            self._workspace_customization_status(Path(repository_path).expanduser().resolve())
+            if repository_path
+            else {"executable": [], "advisory": []}
+        )
         global_customizations = self._global_customization_status()
         compatible = self._version_tuple(version) >= self.MIN_STRUCTURED_VERSION
         project_safe = (
             not project["unsafe"]
             and not project["invalid"]
-            and (not project["unresolved"] or os.environ.get("AMAURA_ANTIGRAVITY_ALLOW_UNRESOLVED_PROJECT_SETTINGS", "0") == "1")
+            and (
+                not project["unresolved"]
+                or os.environ.get("AMAURA_ANTIGRAVITY_ALLOW_UNRESOLVED_PROJECT_SETTINGS", "0") == "1"
+            )
         )
-        workspace_safe = not workspace["executable"] or os.environ.get("AMAURA_ANTIGRAVITY_ALLOW_WORKSPACE_EXECUTABLE_CUSTOMIZATIONS", "0") == "1"
-        global_safe = not global_customizations["executable"] or os.environ.get("AMAURA_ANTIGRAVITY_ALLOW_GLOBAL_EXECUTABLE_CUSTOMIZATIONS", "0") == "1"
+        workspace_safe = (
+            not workspace["executable"]
+            or os.environ.get("AMAURA_ANTIGRAVITY_ALLOW_WORKSPACE_EXECUTABLE_CUSTOMIZATIONS", "0") == "1"
+        )
+        global_safe = (
+            not global_customizations["executable"]
+            or os.environ.get("AMAURA_ANTIGRAVITY_ALLOW_GLOBAL_EXECUTABLE_CUSTOMIZATIONS", "0") == "1"
+        )
         return {
-            "configured": self.configured, "version": version, "version_compatible": compatible,
+            "configured": self.configured,
+            "version": version,
+            "version_compatible": compatible,
             "settings": settings,
-            "project_permissions": project, "workspace_customizations": workspace, "global_customizations": global_customizations,
-            "ready": bool(self.configured and compatible and settings.get("automation_ready") and project_safe and workspace_safe and global_safe),
+            "project_permissions": project,
+            "workspace_customizations": workspace,
+            "global_customizations": global_customizations,
+            "ready": bool(
+                self.configured
+                and compatible
+                and settings.get("automation_ready")
+                and project_safe
+                and workspace_safe
+                and global_safe
+            ),
             "sandbox_forced_by_amaura": True,
             "dangerous_permission_bypass": False,
         }
@@ -540,7 +640,9 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
                 "Antigravity global permissions contain unsafe broad/unsandboxed allows: "
                 + ", ".join(settings["risky_global_allows"][:8])
             )
-        if os.environ.get("AMAURA_ANTIGRAVITY_REQUIRE_AUTONOMY_SETTINGS", "1") == "1" and not settings.get("automation_ready"):
+        if os.environ.get("AMAURA_ANTIGRAVITY_REQUIRE_AUTONOMY_SETTINGS", "1") == "1" and not settings.get(
+            "automation_ready"
+        ):
             raise GovernanceError(
                 "Antigravity CLI is installed but not configured for safe headless autonomy. "
                 "Run ./Setup_Amaura_Antigravity.command (toolPermission=proceed-in-sandbox, "
@@ -548,7 +650,10 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
             )
         project = self._project_permission_status()
         if project["invalid"]:
-            raise GovernanceError("Antigravity project permission/settings files could not be parsed: " + ", ".join(project["invalid"][:5]))
+            raise GovernanceError(
+                "Antigravity project permission/settings files could not be parsed: "
+                + ", ".join(project["invalid"][:5])
+            )
         if project["unresolved"] and os.environ.get("AMAURA_ANTIGRAVITY_ALLOW_UNRESOLVED_PROJECT_SETTINGS", "0") != "1":
             raise GovernanceError(
                 "Antigravity project-scoped settings exist but Amaura could not resolve the active project's file. "
@@ -557,23 +662,39 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         if project["unsafe"]:
             raise GovernanceError("Antigravity project-scoped permissions contain unsafe broad/unsandboxed allows")
         workspace = self._workspace_customization_status(repository)
-        if workspace["executable"] and os.environ.get("AMAURA_ANTIGRAVITY_ALLOW_WORKSPACE_EXECUTABLE_CUSTOMIZATIONS", "0") != "1":
+        if (
+            workspace["executable"]
+            and os.environ.get("AMAURA_ANTIGRAVITY_ALLOW_WORKSPACE_EXECUTABLE_CUSTOMIZATIONS", "0") != "1"
+        ):
             raise GovernanceError(
                 "Repository contains executable Antigravity workspace customizations (hooks/plugins/MCP). "
                 "Review/quarantine them before autonomous coding: " + ", ".join(workspace["executable"][:12])
             )
         global_customizations = self._global_customization_status()
-        if global_customizations["executable"] and os.environ.get("AMAURA_ANTIGRAVITY_ALLOW_GLOBAL_EXECUTABLE_CUSTOMIZATIONS", "0") != "1":
+        if (
+            global_customizations["executable"]
+            and os.environ.get("AMAURA_ANTIGRAVITY_ALLOW_GLOBAL_EXECUTABLE_CUSTOMIZATIONS", "0") != "1"
+        ):
             raise GovernanceError(
                 "Global Antigravity executable customizations (hooks/plugins/MCP) are active. "
                 "Disable or explicitly qualify them before JARVIS autonomous coding: "
                 + ", ".join(global_customizations["executable"][:12])
             )
-        return {"global": settings, "project": project, "workspace": workspace, "global_customizations": global_customizations}
+        return {
+            "global": settings,
+            "project": project,
+            "workspace": workspace,
+            "global_customizations": global_customizations,
+        }
 
     def run_with_result(
-        self, *, repository_path: str, objective: str, idempotency_key: str,
-        acceptance_criteria: list[str] | None = None, timeout_seconds: int = 3600,
+        self,
+        *,
+        repository_path: str,
+        objective: str,
+        idempotency_key: str,
+        acceptance_criteria: list[str] | None = None,
+        timeout_seconds: int = 3600,
         should_cancel: Callable[[], bool] | None = None,
         progress_callback: Callable[[dict[str, Any]], None] | None = None,
         phase_callback: Callable[[str, dict[str, Any]], None] | None = None,
@@ -611,7 +732,8 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
             argv = [
                 *self._parts(),
                 "--new-project",
-                "--add-dir", str(repository),
+                "--add-dir",
+                str(repository),
             ]
             # A linked Git worktree stores refs and its index under the parent
             # repository's common .git directory. Current agy sandboxing must
@@ -620,34 +742,44 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
             # working tree or any broader parent directory.
             if not git_common_dir.is_relative_to(repository):
                 argv.extend(["--add-dir", str(git_common_dir)])
-            argv.extend([
-                "--mode", "accept-edits",
-                "--sandbox",
-                "--output-format", "stream-json",
-                "--json-schema", str(schema_path),
-                "--print-timeout", f"{timeout}s",
-            ])
+            argv.extend(
+                [
+                    "--mode",
+                    "accept-edits",
+                    "--sandbox",
+                    "--output-format",
+                    "stream-json",
+                    "--json-schema",
+                    str(schema_path),
+                    "--print-timeout",
+                    f"{timeout}s",
+                ]
+            )
             model = os.environ.get("AMAURA_ANTIGRAVITY_MODEL", "").strip()
             if model:
                 argv.extend(["--model", model])
             # Prompt is provided as a flag so truly headless subprocess execution
             # does not read stdin. Never add --dangerously-skip-permissions.
-            argv.extend([
-                "-p",
-                self._prompt(
-                    objective,
-                    list(acceptance_criteria or []),
-                    base_commit,
-                    repository,
-                    git_common_dir,
-                ),
-            ])
+            argv.extend(
+                [
+                    "-p",
+                    self._prompt(
+                        objective,
+                        list(acceptance_criteria or []),
+                        base_commit,
+                        repository,
+                        git_common_dir,
+                    ),
+                ]
+            )
             if "--dangerously-skip-permissions" in argv:
                 raise GovernanceError("Amaura will never invoke Antigravity with permission bypass enabled")
             policy = MemoryPolicy.from_env()
             ledger = CrossProcessResourceLedger(policy)
             requested_mb = max(512, int(os.environ.get("AMAURA_ANTIGRAVITY_RESERVATION_MB", "1800")))
-            reservation_id, reason, state = ledger.try_reserve(capability="antigravity", ram_mb=requested_mb, heavy=True)
+            reservation_id, reason, state = ledger.try_reserve(
+                capability="antigravity", ram_mb=requested_mb, heavy=True
+            )
             if not reservation_id:
                 raise GovernanceError(f"Antigravity resource admission refused: {reason}; state={state}")
             stdout_lines: list[str] = []
@@ -656,12 +788,20 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
             proc: subprocess.Popen[str] | None = None
             try:
                 proc = subprocess.Popen(
-                    argv, cwd=repository, env=self._environment(), stdin=subprocess.DEVNULL,
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1,
+                    argv,
+                    cwd=repository,
+                    env=self._environment(),
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
                     start_new_session=(os.name == "posix"),
                 )
                 if phase_callback:
-                    phase_callback("executor_started", {"pid": proc.pid, "base_commit": base_commit, "argv_mode": "stream-json"})
+                    phase_callback(
+                        "executor_started", {"pid": proc.pid, "base_commit": base_commit, "argv_mode": "stream-json"}
+                    )
 
                 def reader(stream, sink: list[str], emit: bool = False) -> None:
                     if stream is None:
@@ -673,44 +813,64 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
                                 payload = json.loads(line)
                             except json.JSONDecodeError:
                                 payload = {"type": "text", "text": line.strip()[:1000]}
+
                             def collect_models(value: Any) -> None:
                                 if isinstance(value, dict):
                                     for key, item in value.items():
-                                        if str(key).lower() in {"model", "model_name", "modelid", "model_id", "actual_model"} and isinstance(item, str) and 0 < len(item.strip()) <= 300:
+                                        if (
+                                            str(key).lower()
+                                            in {"model", "model_name", "modelid", "model_id", "actual_model"}
+                                            and isinstance(item, str)
+                                            and 0 < len(item.strip()) <= 300
+                                        ):
                                             observed_models.add(item.strip())
                                         elif isinstance(item, (dict, list)):
                                             collect_models(item)
                                 elif isinstance(value, list):
                                     for item in value:
                                         collect_models(item)
+
                             collect_models(payload)
                             if progress_callback:
                                 try:
-                                    progress_callback(payload if isinstance(payload, dict) else {"type": "event", "value": payload})
+                                    progress_callback(
+                                        payload if isinstance(payload, dict) else {"type": "event", "value": payload}
+                                    )
                                 except Exception:
                                     pass
 
                 out_thread = threading.Thread(target=reader, args=(proc.stdout, stdout_lines, True), daemon=True)
                 err_thread = threading.Thread(target=reader, args=(proc.stderr, stderr_lines, False), daemon=True)
-                out_thread.start(); err_thread.start()
+                out_thread.start()
+                err_thread.start()
                 started = time.monotonic()
-                hard_limit = max(requested_mb, int(os.environ.get("AMAURA_ANTIGRAVITY_MAX_RSS_MB", str(child_hard_limit_mb(requested_mb, policy)))))
+                hard_limit = max(
+                    requested_mb,
+                    int(
+                        os.environ.get("AMAURA_ANTIGRAVITY_MAX_RSS_MB", str(child_hard_limit_mb(requested_mb, policy)))
+                    ),
+                )
                 while proc.poll() is None:
                     if should_cancel and should_cancel():
                         terminate_process_tree(proc.pid)
-                        raise GovernanceError("Antigravity execution cancelled/paused; process tree terminated and late output discarded")
+                        raise GovernanceError(
+                            "Antigravity execution cancelled/paused; process tree terminated and late output discarded"
+                        )
                     if time.monotonic() - started > timeout:
                         terminate_process_tree(proc.pid)
                         raise GovernanceError("Antigravity delivery exceeded its approved timeout")
                     rss = process_tree_rss_mb(proc.pid)
                     if rss > hard_limit:
                         terminate_process_tree(proc.pid)
-                        raise GovernanceError(f"Antigravity process tree exceeded memory limit ({rss} MB > {hard_limit} MB)")
+                        raise GovernanceError(
+                            f"Antigravity process tree exceeded memory limit ({rss} MB > {hard_limit} MB)"
+                        )
                     if sample_host_memory(policy).pressure == "red":
                         terminate_process_tree(proc.pid)
                         raise GovernanceError("Antigravity terminated because host memory pressure reached red")
                     time.sleep(0.2)
-                out_thread.join(timeout=2); err_thread.join(timeout=2)
+                out_thread.join(timeout=2)
+                err_thread.join(timeout=2)
                 returncode = int(proc.returncode or 0)
                 stdout = redact_sensitive_text("".join(stdout_lines)[-200_000:])
                 stderr = redact_sensitive_text("".join(stderr_lines)[-100_000:])
@@ -730,9 +890,7 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
             finally:
                 ledger.release(reservation_id)
             if returncode != 0:
-                raise GovernanceError(
-                    f"Antigravity delivery failed with exit code {returncode}: {stderr[-2400:]}"
-                )
+                raise GovernanceError(f"Antigravity delivery failed with exit code {returncode}: {stderr[-2400:]}")
             try:
                 contract = AntigravityResultContract.model_validate(self._extract_contract(stdout))
             except Exception as exc:
@@ -749,7 +907,9 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         if not actual:
             raise GovernanceError("Antigravity reported success but Amaura found no repository changes")
         norm_declared = [
-            str(Path(p).relative_to(repository)) if Path(p).is_absolute() and Path(p).is_relative_to(repository) else str(p)
+            str(Path(p).relative_to(repository))
+            if Path(p).is_absolute() and Path(p).is_relative_to(repository)
+            else str(p)
             for p in contract.changed_files
         ]
         if set(actual) != set(norm_declared):
@@ -759,7 +919,8 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         diff_hash = self._diff_hash(repository, base_commit, actual)
         verifier = SecureVerifierRunner()
         independent = verifier.run_all(
-            repository, contract.verification_commands,
+            repository,
+            contract.verification_commands,
             timeout_seconds=int(os.environ.get("AMAURA_ANTIGRAVITY_VERIFY_TIMEOUT_SECONDS", "600")),
         )
         # Test execution is untrusted repository code too. It must not mutate the
@@ -782,17 +943,32 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         }
         parsed = contract.model_dump(mode="json", by_alias=True)
         parsed["models_used"] = executor_models
-        output_hash = hashlib.sha256(json.dumps({"result": parsed, "verification": verification}, sort_keys=True).encode()).hexdigest()
+        output_hash = hashlib.sha256(
+            json.dumps({"result": parsed, "verification": verification}, sort_keys=True).encode()
+        ).hexdigest()
         external_id = contract.conversation_id.strip() or "agy-" + output_hash[:20]
         receipt = ProviderReceipt.issue(
-            provider=self.RECEIPT_PROVIDER, operation=self.RECEIPT_OPERATION,
-            external_id=external_id, idempotency_key=idempotency_key,
-            payload={"objective": objective, "acceptance_criteria": list(acceptance_criteria or []), "base_commit": base_commit},
-            status="completed", thread_id=str(repository), key=self.receipt_key,
+            provider=self.RECEIPT_PROVIDER,
+            operation=self.RECEIPT_OPERATION,
+            external_id=external_id,
+            idempotency_key=idempotency_key,
+            payload={
+                "objective": objective,
+                "acceptance_criteria": list(acceptance_criteria or []),
+                "base_commit": base_commit,
+            },
+            status="completed",
+            thread_id=str(repository),
+            key=self.receipt_key,
         )
         return AntigravityRunResult(
-            receipt=receipt, returncode=returncode, stdout=stdout, stderr=stderr,
-            result=parsed, verification=verification, cli_version=cli_version,
+            receipt=receipt,
+            returncode=returncode,
+            stdout=stdout,
+            stderr=stderr,
+            result=parsed,
+            verification=verification,
+            cli_version=cli_version,
         )
 
     def run(self, **kwargs: Any) -> ProviderReceipt:

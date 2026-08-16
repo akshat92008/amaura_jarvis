@@ -11,6 +11,7 @@ Important invariants:
 - no positional "last path = output" fallback exists;
 - browser partial results are structured and never reported as full success.
 """
+
 from __future__ import annotations
 
 import csv
@@ -23,14 +24,20 @@ from typing import Any
 
 _INSTALLED = False
 
+
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
+
+
 _SCOPE_NOUNS = r"(?:response|answer|reply|output|string|token|value|text|word|payload)"
 _EXCLUSIVE = r"(?:only|solely|just|exactly|strictly|verbatim|precisely)"
-_COMMAND = r"(?:reply|respond|return|say|echo|repeat|print|output|give\s+me|send|type|write\s+back)"
+_COMMAND = r"(?:write\s+back|send\s+back|give\s+back|respond\s+with|reply\s+with|give\s+me|reply|respond|return|say|echo|repeat|print|output|produce|send|type)"
 _TRAILING_EXACT = re.compile(
-    r"\s*(?:and\s+nothing\s+(?:else|more)|with\s+nothing\s+(?:else|more)|"
+    r"\s*(?:(?:and\s+nothing\s+(?:else|more)|with\s+nothing\s+(?:else|more)|"
     r"and\s+no\s+other\s+text|without\s+(?:any\s+)?(?:explanation|commentary)|"
     r"with\s+no\s+(?:other|extra)\s+(?:text|words|commentary)|"
-    r"verbatim|strictly|precisely)\.?\s*$",
+    r"(?:and\s+)?no\s+(?:explanation|commentary)|alone|"
+    r"verbatim|strictly|precisely)|[;,]\s*(?:add\s+nothing|no\s+(?:explanation|commentary))|only)\.?\s*$",
     re.IGNORECASE,
 )
 
@@ -44,33 +51,107 @@ def _mask_literals(text: str) -> str:
 
 
 def _execution_dependency(text: str, paths: list[str]) -> bool:
+    """Return True when the requested response depends on executing another action.
+
+    Exact-literal routing is intentionally conservative: response formatting words
+    such as "only" or "exactly" can never turn a lookup, calculation, file read,
+    browser extraction, or repository inspection into an echo.  Quoted paths are
+    data dependencies, not candidate literal payloads.
+    """
     lower = text.lower()
     masked = _mask_literals(text).lower()
     if "://" in text:
         return True
-    if paths and any(
-        phrase in lower
-        for phrase in (
-            "from the file",
-            "in the file",
-            "file contents",
-            "contents of",
-            "raw file",
-            "read ",
-            "open ",
-            "load ",
-            "fetch ",
-            "repository",
-            "repo",
-            "codebase",
+
+    if paths and (
+        any(
+            phrase in lower
+            for phrase in (
+                "from the file",
+                "in the file",
+                "value in",
+                "number in",
+                "text in",
+                "file contents",
+                "contents of",
+                "content of",
+                "raw file",
+                "file text",
+                "read ",
+                "open ",
+                "load ",
+                "fetch ",
+                "repository",
+                "repo",
+                "codebase",
+            )
+        )
+        or any(
+            marker in lower
+            for marker in (
+                "verbatim",
+                "exact contents",
+                "only the contents",
+                "raw content",
+                "raw contents",
+                "without line numbers",
+                "just the contents",
+                "exact raw",
+                "byte-for-byte",
+            )
         )
     ):
         return True
+
+    # Explicit filesystem role grammar outranks response verbs such as
+    # "print" and "output", even for extensionless relative targets.
+    if paths and (
+        re.search(
+            r"\b(?:write|save|store|put|dump|record|output|create|make)\b[^\n]{0,140}\b(?:to|into|at|in|containing|with\s+(?:content|text|body|payload))\b",
+            masked,
+            re.IGNORECASE,
+        )
+        or re.search(
+            r"\b(?:read|open|show|display|cat|fetch|load|print)\b[^\n]{0,100}\b(?:content|contents|file|path)\b",
+            masked,
+            re.IGNORECASE,
+        )
+    ):
+        return True
+    if re.search(
+        r"^\s*(?:(?:please|kindly|can\s+you)\s+)?(?:list|enumerate|show|display|print|get|give\s+me)\b[^\n]{0,80}\b(?:files|entries|children|items|filenames|inventory|directory|folder|path|location|contents)\b",
+        masked,
+        re.IGNORECASE,
+    ):
+        return True
+
+    # Calculations are primary actions even when the request ends in
+    # "return/reply only the number".  Mask quoted data first so action-like
+    # words inside literal payloads cannot trigger this guard.
+    calculation_text = re.sub(r"[;,]\s*add\s+nothing\.?\s*$", "", masked, flags=re.IGNORECASE)
+    if re.search(
+        r"\b(?:compute|calculate|add|sum|subtract|deduct|multiply|divide|quotient|difference|product|power)\b|"
+        r"\btake\b[^\n]{0,80}\baway\s+from\b|\bdivided\s+by\b|\braised\s+to\b",
+        calculation_text,
+        re.IGNORECASE,
+    ):
+        return True
+
     return any(
         phrase in masked
         for phrase in (
             "from memory",
             "stored in memory",
+            "remembered value",
+            "memory value",
+            "what was stored",
+            "stored value",
+            "deployment marker for",
+            "marker for",
+            "codename for",
+            "api key for",
+            "retrieve ",
+            "recall ",
             "from the browser",
             "from the page",
             "css selector",
@@ -80,12 +161,38 @@ def _execution_dependency(text: str, paths: list[str]) -> bool:
     )
 
 
+def _positive_routing_text(text: str) -> str:
+    """Mask explicitly negated mutating clauses while preserving offsets."""
+    chars = list(text)
+    negated = re.compile(
+        r"\b(?:do\s+not|don't|dont|never|must\s+not|should\s+not)\s+"
+        r"(?:write|save|create|store|put|dump|record|delete|remove|wipe|destroy|modify|edit)\b",
+        re.IGNORECASE,
+    )
+    positive = r"(?:read|open|show|display|cat|fetch|load|get|retrieve|inspect|examine|list|review|analy[sz]e|diagnose|navigate|return|reply)"
+    for match in negated.finditer(text):
+        tail = text[match.end() :]
+        # A clause boundary is punctuation/conjunction that actually introduces
+        # a positive action. Bare dots are common inside paths (v5.4, .txt) and
+        # must never terminate the negation mask.
+        boundary = re.search(
+            rf"(?:[.;]\s+|,\s*|\b(?:and|but|then)\s+)(?={positive}\b)|\n\s*(?={positive}\b)",
+            tail,
+            re.IGNORECASE,
+        )
+        end = match.end() + (boundary.start() if boundary else len(tail))
+        for i in range(match.start(), end):
+            if chars[i] not in "\r\n":
+                chars[i] = " "
+    return "".join(chars)
+
+
 def _strip_exact_prefix(value: str) -> str:
     value = value.strip()
     # Declarative response contracts.
     value = re.sub(
-        rf"^(?:your\s+)?(?:entire|whole|complete|full)?\s*{_SCOPE_NOUNS}\s+"
-        rf"(?:must|should|shall|needs?\s+to)\s+(?:be|contain|consist\s+(?:solely\s+)?of)\s+",
+        rf"^(?:(?:your|the)\s+)?(?:entire|whole|complete|full)?\s*{_SCOPE_NOUNS}\s+"
+        rf"(?:must|should|shall|needs?\s+to)\s+(?:{_EXCLUSIVE}\s+)?(?:be|contain|consist\s+(?:solely\s+)?of)\s+",
         "",
         value,
         flags=re.IGNORECASE,
@@ -94,17 +201,26 @@ def _strip_exact_prefix(value: str) -> str:
     value = re.sub(r"^(?:please|kindly)\s+", "", value, flags=re.IGNORECASE).strip()
     value = re.sub(rf"^{_EXCLUSIVE}\s+", "", value, flags=re.IGNORECASE).strip()
     value = re.sub(rf"^{_COMMAND}\b\s*", "", value, flags=re.IGNORECASE).strip()
-    value = re.sub(r"^with\s+", "", value, flags=re.IGNORECASE).strip()
-    value = re.sub(rf"^{_EXCLUSIVE}\s+", "", value, flags=re.IGNORECASE).strip()
+    # Control words may appear in either order ("reply only with X",
+    # "respond with only X"). Normalize the short prefix iteratively rather
+    # than assuming one template order.
+    for _ in range(3):
+        before = value
+        value = re.sub(rf"^{_EXCLUSIVE}\b\s*", "", value, flags=re.IGNORECASE).strip()
+        value = re.sub(r"^with\b\s*:?[ \t]*", "", value, flags=re.IGNORECASE).strip()
+        if value == before:
+            break
     value = re.sub(
         rf"^(?:the\s+|this\s+)?(?:entire\s+|whole\s+|complete\s+)?{_SCOPE_NOUNS}\b\s*",
         "",
         value,
         flags=re.IGNORECASE,
     ).strip()
-    # Common semantic introducers are control language, not payload.
+    # Common semantic introducers are control language, not payload. "as" is
+    # only an introducer when followed by whitespace/colon; a payload such as
+    # "as-is" begins with real data and must be preserved byte-for-byte.
     value = re.sub(
-        r"^(?:is|as|with\s*:|with\s+the\s+(?:value|token)|with\s+this\s+value|"
+        r"^(?:is(?=\s|:)|as(?=\s|:)|with\s*:|with\s+the\s+(?:value|token)|with\s+this\s+value|"
         r"this\s+value|the\s+token|following\s+token\s*:?)\s*",
         "",
         value,
@@ -119,23 +235,33 @@ def _parse_exact_literal(text: str, paths: list[str]) -> str | None:
     if not clean or _execution_dependency(clean, paths):
         return None
     masked = _mask_literals(clean)
-    signal = bool(
-        re.search(rf"\b{_COMMAND}\b", masked, re.IGNORECASE)
-        and (
-            re.search(rf"\b{_EXCLUSIVE}\b", masked, re.IGNORECASE)
-            or ":" in clean
-            or re.search(r"\bnothing\s+(?:else|more)\b|\bno\s+other\s+text\b", masked, re.IGNORECASE)
-        )
-    )
+    # Once execution dependencies are excluded, a leading response verb is a
+    # deterministic response contract.  Keep multiword verbs atomic so
+    # "send back" cannot be truncated to "send" and leak "back" into payload.
+    signal = bool(re.match(rf"^\s*(?:please\s+|kindly\s+)?(?:{_EXCLUSIVE}\s+)?{_COMMAND}\b", masked, re.IGNORECASE))
     signal = signal or bool(
-        re.search(
-            rf"\b(?:entire|whole|complete|full)?\s*{_SCOPE_NOUNS}\s+"
-            r"(?:must|should|shall)\s+(?:be|contain|consist)",
+        re.match(
+            rf"^\s*(?:(?:your|the)\s+)?(?:entire|whole|complete|full)?\s*{_SCOPE_NOUNS}\s+"
+            rf"(?:must|should|shall)\s+(?:{_EXCLUSIVE}\s+)?(?:be|contain|consist)",
             masked,
             re.IGNORECASE,
         )
     )
-    signal = signal or bool(re.match(r"^\s*(?:please\s+|kindly\s+)?(?:echo|repeat)\s*[:\-]", clean, re.IGNORECASE))
+    signal = signal or bool(
+        re.search(
+            rf"\b(?:make|set)\s+(?:the\s+)?{_SCOPE_NOUNS}\s+(?:equal\s+to|equals?|to|be)\b",
+            masked,
+            re.IGNORECASE,
+        )
+    )
+    signal = signal or bool(re.match(r"^\s*(?:please\s+|kindly\s+)?(?:echo|repeat)\b", clean, re.IGNORECASE))
+    signal = signal or bool(
+        re.match(
+            r"^\s*(?:and\s+nothing\s+(?:more|else)|(?:the\s+)?following\s+(?:string|token|value|word|payload|text|literal))\s*[:\-]",
+            clean,
+            re.IGNORECASE,
+        )
+    )
     if not signal:
         return None
 
@@ -146,12 +272,13 @@ def _parse_exact_literal(text: str, paths: list[str]) -> str | None:
         return quoted[-1].group(2)
 
     work = _TRAILING_EXACT.sub("", clean).strip()
-    # Colon/equality is a hard payload boundary for deterministic commands.
-    if ":" in work:
-        tail = work.rsplit(":", 1)[1].strip()
+    # Single colons delimit control language; double-colons are payload bytes.
+    single_colons = list(re.finditer(r"(?<!:):(?!:)", work))
+    if single_colons:
+        tail = work[single_colons[-1].end() :].strip()
         if tail:
             return _strip_token(tail)
-    eq = re.search(r"(?:=|\bequals?\b|\bequal\s+to\b)\s*(.+)$", work, re.IGNORECASE)
+    eq = re.search(r"(?:=|\bequal\s+to\b|\bequals?\b)\s*(.+)$", work, re.IGNORECASE)
     if eq:
         return _strip_token(eq.group(1))
 
@@ -160,7 +287,7 @@ def _parse_exact_literal(text: str, paths: list[str]) -> str | None:
     payload = re.sub(rf"^{_EXCLUSIVE}\s+", "", payload, flags=re.IGNORECASE).strip()
     if not payload or payload.lower() in {"with", "this value", "the token", "value", "token", "text"}:
         return None
-    return payload[:-1] if payload.endswith(".") else payload
+    return _strip_token(payload)
 
 
 def _normalized_paths(base_extract: Any, text: str, extensions: tuple[str, ...]) -> list[str]:
@@ -193,8 +320,12 @@ def _explicit_output(text: str, paths: list[str]) -> str:
         patterns = (
             rf"\b(?:save|write|store|export|dump|record|output)\b[^\n;]{{0,90}}\b(?:to|into|in|at)\s+['\"`]?{escaped}",
             rf"\b(?:destination|output|target)\s+(?:file\s+)?(?:is|to|in|at)?\s*['\"`]?{escaped}",
-            rf"\b(?:create|make)\s+(?:an?\s+)?(?:empty\s+)?(?:file\s+)?(?:at\s+)?['\"`]?{escaped}",
+            rf"\b(?:create|make)\s+(?:an?\s+)?(?:empty\s+)?(?:(?:json|csv|tsv|text)\s+)?(?:file\s+)?(?:at\s+)?['\"`]?{escaped}",
             rf"\bthe\s+file\s+['\"`]?{escaped}\b[^\n]{{0,50}}\b(?:contain|hold|have)\b",
+            # Transform destinations must be introduced as a destination, not
+            # merely appear after "in" (which commonly introduces the source).
+            rf"\bto\s+(?:an?\s+)?json(?:\s+(?:array|object|file))?\s+(?:to|into|in|at)\s+['\"`]?{escaped}",
+            rf"\bconvert\b[^\n;]{{0,140}}\b(?:to|into)\s+['\"`]?{escaped}",
         )
         if any(re.search(pattern, lower, re.IGNORECASE) for pattern in patterns):
             return path
@@ -206,10 +337,13 @@ def _directory_target(text: str, paths: list[str]) -> str:
     strong = bool(
         re.search(
             r"\b(?:list|show|display|enumerate|get|print|give\s+me|what\s+is|what\s+files\s+are)\b"
-            r"[^\n]{0,60}\b(?:files|entries|children|direct\s+children|items|filenames|inventory|directory|folder|contents)\b",
+            r"[^\n]{0,60}\b(?:files|entries|children|direct\s+children|items|filenames|inventory|directory|folder|path|location|contents)\b",
             lower,
         )
-        or re.search(r"\b(?:inventory\s+of|what\s+is\s+inside|what\s+files\s+are\s+in)\b", lower)
+        or re.search(
+            r"\b(?:inventory\s+of|what\s+is\s+inside|what\s+files\s+are\s+(?:in|under)|what\s+files\s+exist|what\s+entries\s+are|files\s+exist\s+(?:under|in)|give\s+filenames\s+from|print\s+location)\b",
+            lower,
+        )
     )
     if not strong:
         return ""
@@ -233,13 +367,15 @@ def _directory_target(text: str, paths: list[str]) -> str:
 def _file_read_target(text: str, paths: list[str]) -> str:
     if paths:
         return paths[0]
-    match = re.search(
-        r"\b(?:contents?|content|text)\s+of\s+['\"`]?([~/A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)",
-        text,
-        re.IGNORECASE,
+    patterns = (
+        r"\b(?:contents?|content|text)\s+(?:of|from|inside)\s+[\x27\x22`]?([~/A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)",
+        r"\b(?:stored|written)\s+in\s+[\x27\x22`]?([~/A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)",
+        r"\bwhat\s+does\s+[\x27\x22`]?([~/A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)[\x27\x22`]?\s+contain\b",
     )
-    if match:
-        return _strip_token(match.group(1))
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return _strip_token(match.group(1))
     return ""
 
 
@@ -269,7 +405,11 @@ def _browser_plan(core: Any, text: str) -> Any | None:
         url=url,
         selectors=selectors,
         want_title="title" in lower,
-        want_text=any(term in lower for term in ("body text", "page text", "page content")) and not selectors,
+        want_text=(
+            any(term in lower for term in ("body text", "page text", "page content"))
+            or bool(re.search(r"\b(?:extract|get|read|return|show|report)\b[^\n]{0,50}\bcontent\b", lower))
+        )
+        and not selectors,
         want_links=bool(re.search(r"\b(?:links|hrefs?)\b", lower)),
     )
 
@@ -294,7 +434,9 @@ def _arithmetic_graph(core: Any, text: str, paths: list[str], mode: str) -> Any 
     left, right = inputs[0], inputs[1]
     left_role, right_role = "left", "right"
     provenance = "explicit_operands"
-    if operation == "subtract" and re.search(r"\b(?:subtract|take|deduct)\b.+?\b(?:from|away\s+from)\b", lower, re.DOTALL):
+    if operation == "subtract" and re.search(
+        r"\b(?:subtract|take|deduct)\b.+?\b(?:from|away\s+from)\b", lower, re.DOTALL
+    ):
         left, right = right, left
         left_role, right_role = "minuend", "subtrahend"
         provenance = "subtract_from"
@@ -312,11 +454,15 @@ def _arithmetic_graph(core: Any, text: str, paths: list[str], mode: str) -> Any 
     ]
     if output:
         bindings.append(core.PathBinding(output, core.SemanticPathRole.OUTPUT, "explicit_result_destination"))
-    return core.SemanticRequestGraph(text, core.SemanticAction.ARITHMETIC, mode, bindings, arithmetic=plan, evidence=[provenance])
+    return core.SemanticRequestGraph(
+        text, core.SemanticAction.ARITHMETIC, mode, bindings, arithmetic=plan, evidence=[provenance]
+    )
 
 
 def _table_transform(text: str, paths: list[str]) -> dict[str, Any] | None:
     lower = text.lower()
+    if re.search(r"\b(?:key[- /]?value|kv|config|env)\b", lower):
+        return None
     if not ("json" in lower and re.search(r"\b(?:table|csv|tsv|semicolon|delimited|transform|convert)\b", lower)):
         return None
     output = _explicit_output(text, paths)
@@ -324,7 +470,10 @@ def _table_transform(text: str, paths: list[str]) -> dict[str, Any] | None:
         # "convert to JSON at X" is semantically an explicit destination even
         # though the mutation verb appears before the format noun.
         for path in paths:
-            if re.search(rf"\bconvert\s+to\s+json\s+(?:at|to|into|in)\s+['\"`]?{re.escape(path)}", text, re.IGNORECASE):
+            escaped = re.escape(path)
+            if re.search(
+                rf"\bconvert\s+to\s+json\s+(?:at|to|into|in)\s+['\"`]?{escaped}", text, re.IGNORECASE
+            ) or re.search(rf"\bconvert\b[^\n;]{{0,80}}\bto\s+['\"`]?{escaped}", text, re.IGNORECASE):
                 output = path
                 break
     inputs = [path for path in paths if path != output]
@@ -377,7 +526,7 @@ def _parse_table(raw: str, source: Path, prompt: str) -> list[dict[str, Any]]:
         delimiter = ";"
     elif source.suffix.lower() == ".tsv" or "tsv" in lower:
         delimiter = "\t"
-    elif lines[0].strip().startswith("|"):
+    elif "|" in lines[0]:
         delimiter = "|"
     else:
         delimiter = ","
@@ -396,7 +545,7 @@ def _parse_table(raw: str, source: Path, prompt: str) -> list[dict[str, Any]]:
         if not row:
             continue
         padded = row + [""] * max(0, len(header) - len(row))
-        result.append({key: _infer_scalar(value) for key, value in zip(header, padded)})
+        result.append({key: _infer_scalar(value) for key, value in zip(header, padded, strict=False)})
     return result
 
 
@@ -429,8 +578,8 @@ def install_semantic_frontend() -> None:
 
     base_extract = core.extract_paths
 
-    def unified_extract(text: str, extensions: tuple[str, ...]) -> list[str]:
-        return _normalized_paths(base_extract, text, extensions)
+    def unified_extract(text: str, known_extensions: tuple[str, ...]) -> list[str]:
+        return _normalized_paths(base_extract, text, known_extensions)
 
     # Make every legacy helper that consults semantic_core.extract_paths observe
     # the same normalized entities.  This is normalization, not another parser.
@@ -441,59 +590,93 @@ def install_semantic_frontend() -> None:
         mode = core._response_mode(clean)
         if not clean:
             return core.SemanticRequestGraph(clean, core.SemanticAction.UNKNOWN, response_mode=mode)
-        paths = unified_extract(clean, known_extensions)
+        routing = _positive_routing_text(clean)
+        paths = unified_extract(routing, known_extensions)
 
         literal = _parse_exact_literal(clean, paths)
         if literal is not None:
             return core.SemanticRequestGraph(
                 clean,
                 core.SemanticAction.EXACT_LITERAL,
-                response_mode="EXACT_LITERAL",
+                response_mode=mode,
                 literal_payload=literal,
                 evidence=["formal_exact_response_contract"],
             )
 
-        lower = clean.lower()
-        masked = _mask_literals(clean).lower()
+        lower = routing.lower()
+        masked = _mask_literals(routing).lower()
         if any(v in lower for v in ("delete", "remove", "wipe", "destroy", "purge")) and any(
-            term in lower for term in ("without asking", "bypass", "force", "protected", "silently", "override policy", "no confirmation")
+            term in lower
+            for term in (
+                "without asking",
+                "bypass",
+                "force",
+                "protected",
+                "silently",
+                "override policy",
+                "no confirmation",
+            )
         ):
-            return core.SemanticRequestGraph(clean, core.SemanticAction.POLICY_REFUSAL, mode, evidence=["destructive_bypass_request"])
+            return core.SemanticRequestGraph(
+                clean, core.SemanticAction.POLICY_REFUSAL, mode, evidence=["destructive_bypass_request"]
+            )
 
-        browser = _browser_plan(core, clean)
+        if re.search(r"https?://169\.254\.169\.254(?:/|$)", routing, re.IGNORECASE):
+            return core.SemanticRequestGraph(
+                clean, core.SemanticAction.POLICY_REFUSAL, mode, evidence=["cloud_metadata_endpoint_blocked"]
+            )
+
+        browser = _browser_plan(core, routing)
         if browser is not None:
-            return core.SemanticRequestGraph(clean, core.SemanticAction.BROWSER, mode, browser=browser, evidence=["url_browser_contract"])
+            return core.SemanticRequestGraph(
+                clean, core.SemanticAction.BROWSER, mode, browser=browser, evidence=["url_browser_contract"]
+            )
 
-        arithmetic = _arithmetic_graph(core, clean, paths, mode)
+        arithmetic = _arithmetic_graph(core, routing, paths, mode)
         if arithmetic is not None:
+            arithmetic.original_text = clean
             return arithmetic
 
-        table = _table_transform(clean, paths)
+        table = _table_transform(routing, paths)
         if table is not None:
             graph = core.SemanticRequestGraph(
                 clean,
                 core.SemanticAction.FILE_WRITE,
                 mode,
-                [core.PathBinding(table["input"], core.SemanticPathRole.INPUT, "table_source"), core.PathBinding(table["output"], core.SemanticPathRole.OUTPUT, "explicit_transform_destination")],
+                [
+                    core.PathBinding(table["input"], core.SemanticPathRole.INPUT, "table_source"),
+                    core.PathBinding(table["output"], core.SemanticPathRole.OUTPUT, "explicit_transform_destination"),
+                ],
                 evidence=["typed_table_json_transform"],
             )
             graph.transform_plan = table
             return graph
 
-        legacy = _legacy_transform(clean, paths, da)
+        legacy = _legacy_transform(routing, paths, da)
         if legacy is not None:
             graph = core.SemanticRequestGraph(
                 clean,
                 core.SemanticAction.FILE_WRITE,
                 mode,
-                [*[core.PathBinding(path, core.SemanticPathRole.INPUT, "workflow_source") for path in legacy["inputs"]], core.PathBinding(legacy["output"], core.SemanticPathRole.OUTPUT, "explicit_transform_destination")],
+                [
+                    *[
+                        core.PathBinding(path, core.SemanticPathRole.INPUT, "workflow_source")
+                        for path in legacy["inputs"]
+                    ],
+                    core.PathBinding(legacy["output"], core.SemanticPathRole.OUTPUT, "explicit_transform_destination"),
+                ],
                 evidence=["verified_legacy_transform"],
             )
             graph.transform_plan = legacy
             return graph
 
-        repo_noun = bool(re.search(r"\b(?:repo|repository|codebase|project\s+repository)\b", lower))
-        inspect = bool(re.search(r"\b(?:check|examine|review|inspect|diagnose|audit|analy[sz]e|trace|investigate|find\s+(?:the\s+)?bug|locate\s+(?:the\s+)?bug)\b", masked))
+        repo_noun = bool(re.search(r"\b(?:repo|repository|codebase|project(?:\s+repository)?|code)\b", lower))
+        inspect = bool(
+            re.search(
+                r"\b(?:check|examine|review|inspect|diagnose|audit|analy[sz]e|trace|investigate|find\s+(?:the\s+)?bug|locate\s+(?:the\s+)?bug)\b",
+                masked,
+            )
+        )
         mutating = bool(re.search(r"\b(?:write|edit|modify|delete|remove|create|save|store)\b", masked))
         if inspect and paths and not mutating and (repo_noun or "read-only" in lower or "read only" in lower):
             return core.SemanticRequestGraph(
@@ -504,24 +687,48 @@ def install_semantic_frontend() -> None:
                 evidence=["inspection_verb_plus_repository_entity"],
             )
 
-        if re.search(r"\b(?:capture|take|save)\b.*\b(?:screenshot|screen\s*shot)\b|\bscreenshot\b", masked):
-            output = next((path for path in paths if path.lower().endswith(".png")), "screenshot.png")
-            return core.SemanticRequestGraph(
+        # Fail closed when the same write clause supplies multiple competing
+        # explicit payloads.  Do this before subordinate extraction so a parser
+        # fallback cannot silently choose one candidate and mutate the target.
+        if re.search(r"\b(?:create|write|save|store|put|dump|record)\b", masked):
+            quoted_payloads = []
+            for match in re.finditer(r"(['\"`])([^'\"`\n]*)\1", clean):
+                candidate = match.group(2)
+                if candidate in paths:
+                    continue
+                if candidate not in quoted_payloads:
+                    quoted_payloads.append(candidate)
+            if len(quoted_payloads) > 1 and re.search(
+                r"\b(?:contain(?:ing|s)?|content\s*:|payload\s*:|text\s*:|body\s*:)\b",
                 clean,
-                core.SemanticAction.SCREENSHOT,
-                mode,
-                [core.PathBinding(output, core.SemanticPathRole.OUTPUT, "screenshot_destination", explicit=bool(paths))],
-                evidence=["screenshot_command"],
-            )
+                re.IGNORECASE,
+            ):
+                graph = core.SemanticRequestGraph(
+                    clean,
+                    core.SemanticAction.FILE_WRITE,
+                    mode,
+                    evidence=["ambiguous_write_payload_preflight"],
+                )
+                output = _explicit_output(clean, paths) or (paths[0] if len(paths) == 1 else "")
+                if output:
+                    graph.paths.append(
+                        core.PathBinding(output, core.SemanticPathRole.OUTPUT, "grammar_proven_write_target")
+                    )
+                graph.errors.append("ambiguous write payload: multiple competing explicit payloads")
+                return graph
 
         # Reuse the mature clause/reference parser as a subordinate role parser;
         # it no longer competes with other top-level actions.
-        write_action = da.WriteActionParser.parse(clean)
+        write_action = da.WriteActionParser.parse(routing)
         if write_action is not None:
-            graph = core.SemanticRequestGraph(clean, core.SemanticAction.FILE_WRITE, mode, evidence=["write_clause_role_parser"])
+            graph = core.SemanticRequestGraph(
+                clean, core.SemanticAction.FILE_WRITE, mode, evidence=["write_clause_role_parser"]
+            )
             target = str(write_action.target_path or "")
             if target:
-                graph.paths.append(core.PathBinding(target, core.SemanticPathRole.OUTPUT, "grammar_proven_write_target"))
+                graph.paths.append(
+                    core.PathBinding(target, core.SemanticPathRole.OUTPUT, "grammar_proven_write_target")
+                )
             if write_action.is_invalid:
                 graph.errors.append(write_action.invalid_reason or "write precondition failed")
                 return graph
@@ -534,7 +741,24 @@ def install_semantic_frontend() -> None:
             graph.write_payload = write_action.content
             return graph
 
-        directory = _directory_target(clean, paths)
+        # Screenshot routing comes after the write role parser. A strong write
+        # grammar owns its payload span, so words such as "save screenshot"
+        # inside unquoted file content cannot escape and become tool intent.
+        if re.search(r"\b(?:capture|take|save)\b.*\b(?:screenshot|screen\s*shot)\b|\bscreenshot\b", masked):
+            output = next((path for path in paths if path.lower().endswith(".png")), "screenshot.png")
+            return core.SemanticRequestGraph(
+                clean,
+                core.SemanticAction.SCREENSHOT,
+                mode,
+                [
+                    core.PathBinding(
+                        output, core.SemanticPathRole.OUTPUT, "screenshot_destination", explicit=bool(paths)
+                    )
+                ],
+                evidence=["screenshot_command"],
+            )
+
+        directory = _directory_target(routing, paths)
         if directory:
             return core.SemanticRequestGraph(
                 clean,
@@ -544,8 +768,12 @@ def install_semantic_frontend() -> None:
                 evidence=["directory_entity_role"],
             )
 
-        read_target = _file_read_target(clean, paths)
-        if read_target and re.search(r"\b(?:read|open|show|display|cat|fetch|view|print)\b|\b(?:contents?|content|text)\s+of\b", lower):
+        read_target = _file_read_target(routing, paths)
+        if read_target and re.search(
+            r"\b(?:read|open|show|display|cat|fetch|view|print|load|get|retrieve|examine|inspect)\b|"
+            r"\b(?:contents?|content|text)\s+(?:of|from|inside)\b|\bwhat\s+does\b[^\n]{0,120}\bcontain\b|\bwhat\s+is\s+inside\b",
+            lower,
+        ):
             return core.SemanticRequestGraph(
                 clean,
                 core.SemanticAction.FILE_READ,
@@ -554,13 +782,35 @@ def install_semantic_frontend() -> None:
                 evidence=["file_read_grammar"],
             )
 
-        if any(term in lower for term in ("from memory", "remembered", "recall", "stored in memory", "memory value")):
-            return core.SemanticRequestGraph(clean, core.SemanticAction.MEMORY_RECALL, mode, evidence=["memory_recall_grammar"])
-        if any(term in lower for term in ("schedule", "calendar", "book an appointment", "add to calendar", "book a meeting")):
+        if any(
+            term in lower
+            for term in (
+                "from memory",
+                "remembered",
+                "recall",
+                "stored in memory",
+                "memory value",
+                "remember for",
+                "remember about",
+                "deployment marker",
+                "release marker",
+                "codename for",
+                "api key for",
+                "stored value",
+                "saved value",
+            )
+        ):
+            return core.SemanticRequestGraph(
+                clean, core.SemanticAction.MEMORY_RECALL, mode, evidence=["memory_recall_grammar"]
+            )
+        if any(
+            term in lower
+            for term in ("schedule", "calendar", "book an appointment", "add to calendar", "book a meeting")
+        ):
             return core.SemanticRequestGraph(clean, core.SemanticAction.CALENDAR, mode, evidence=["calendar_grammar"])
         return core.SemanticRequestGraph(clean, core.SemanticAction.UNKNOWN, response_mode=mode)
 
-    core.SemanticParser.parse = classmethod(parse)
+    _install_attr(core.SemanticParser, "parse", classmethod(parse))
 
     def _result_failure(message: str, *, tool: str, provider: str, reason: str, policy: str = "allowed") -> Any:
         return da.DirectActionResult(
@@ -586,68 +836,197 @@ def install_semantic_frontend() -> None:
             with da.tool_workspace(ws):
                 tool_res = da.parse_tool_result(da.execute_tool("write_file", {"path": str(path), "content": payload}))
             if not tool_res.ok:
-                return _result_failure(f"File write failed: {tool_res.error or 'write tool failed'}", tool="write_file", provider="local-filesystem", reason="tool_failed")
+                return _result_failure(
+                    f"File write failed: {tool_res.error or 'write tool failed'}",
+                    tool="write_file",
+                    provider="local-filesystem",
+                    reason="tool_failed",
+                )
+            if not path.exists():
+                return da.DirectActionResult(
+                    False,
+                    "File write verification failed: output missing after write.",
+                    execution_type="tool",
+                    tool_name="write_file",
+                    provider="local-filesystem",
+                    telemetry={"reason": "missing_after_write", "verification_passed": False},
+                )
             observed = path.read_text(encoding="utf-8", errors="replace")
             expected_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
             actual_hash = hashlib.sha256(observed.encode("utf-8")).hexdigest()
             if observed != payload:
                 return da.DirectActionResult(
                     False,
-                    "File write verification failed: persisted bytes do not match the requested payload.",
-                    execution_type="semantic_graph",
+                    "File write verification failed: content mismatch; persisted bytes do not match the requested payload.",
+                    execution_type="tool",
                     tool_name="write_file",
                     provider="local-filesystem",
-                    telemetry={"reason": "content_mismatch", "expected_size": len(payload), "actual_size": len(observed), "expected_sha256": expected_hash, "actual_sha256": actual_hash, "content_match": False, "verification_passed": False},
+                    telemetry={
+                        "reason": "content_mismatch",
+                        "expected_size": len(payload),
+                        "actual_size": len(observed),
+                        "expected_sha256": expected_hash,
+                        "actual_sha256": actual_hash,
+                        "content_match": False,
+                        "verification_passed": False,
+                    },
                 )
             return da.DirectActionResult(
                 True,
                 f"Successfully wrote and independently verified {path}.",
-                execution_type="semantic_graph",
+                execution_type="tool",
                 tool_name="write_file",
                 provider="local-filesystem",
-                telemetry={"path": str(path), "output_path": str(path), "payload": payload, "expected_size": len(payload), "actual_size": len(observed), "expected_sha256": expected_hash, "actual_sha256": actual_hash, "content_match": True, "verification_passed": True, "semantic_action": graph.action.value, "status": "completed"},
+                telemetry={
+                    "path": str(path),
+                    "output_path": str(path),
+                    "payload": payload,
+                    "expected_size": len(payload),
+                    "actual_size": len(observed),
+                    "expected_sha256": expected_hash,
+                    "actual_sha256": actual_hash,
+                    "content_match": True,
+                    "verification_passed": True,
+                    "semantic_action": graph.action.value,
+                    "status": "completed",
+                },
             )
         except PermissionError as exc:
-            return _result_failure(f"Cannot write to path outside workspace: {exc}", tool="effect_authorizer", provider="security-policy", reason="workspace_escape", policy="refused")
+            return _result_failure(
+                f"Cannot write to path outside workspace: {exc}",
+                tool="effect_authorizer",
+                provider="security-policy",
+                reason="workspace_escape",
+                policy="refused",
+            )
         except Exception as exc:
             text = str(exc)
             if "workspace" in text.lower() or "outside" in text.lower() or "sensitive" in text.lower():
-                return _result_failure(f"Cannot write to path outside workspace: {text}", tool="effect_authorizer", provider="security-policy", reason="workspace_escape", policy="refused")
-            return _result_failure(f"File write failed: {text}", tool="write_file", provider="local-filesystem", reason="write_failed")
+                return _result_failure(
+                    f"Cannot write to path outside workspace: {text}",
+                    tool="effect_authorizer",
+                    provider="security-policy",
+                    reason="workspace_escape",
+                    policy="refused",
+                )
+            return _result_failure(
+                f"File write failed: {text}", tool="write_file", provider="local-filesystem", reason="write_failed"
+            )
 
     def _read_file(graph: Any, workspace: str) -> Any:
         try:
             _, path = _resolve(graph.paths[0].path, workspace, must_exist=True)
             if not path.is_file():
-                return _result_failure(f"File not found or not a regular file: {path}", tool="read_file", provider="local-filesystem", reason="not_found")
+                return _result_failure(
+                    f"File not found or not a regular file: {path}",
+                    tool="read_file",
+                    provider="local-filesystem",
+                    reason="not_found",
+                )
+            with da.tool_workspace(Path(workspace if workspace else da.workspace_root()).expanduser().resolve()):
+                receipt = da.parse_tool_result(da.execute_tool("read_file", {"path": str(path)}))
+            if not receipt.ok:
+                return _result_failure(
+                    f"File read failed: {receipt.error or 'read tool failed'}",
+                    tool="read_file",
+                    provider="local-filesystem",
+                    reason="tool_failed",
+                )
             raw = path.read_text(encoding="utf-8", errors="replace")
             return da.DirectActionResult(
                 True,
                 raw,
-                execution_type="semantic_graph",
+                execution_type="tool",
                 tool_name="read_file",
                 provider="local-filesystem",
-                telemetry={"path": str(path), "value": raw, "read_mode": "raw" if _is_raw_read(graph.original_text) else "display", "verification_passed": True, "semantic_action": graph.action.value, "status": "completed"},
+                telemetry={
+                    "path": str(path),
+                    "value": raw,
+                    "read_mode": "raw" if _is_raw_read(graph.original_text) else "display",
+                    "verification_passed": True,
+                    "semantic_action": graph.action.value,
+                    "status": "completed",
+                },
             )
         except FileNotFoundError as exc:
-            return _result_failure(f"File not found: {exc}", tool="read_file", provider="local-filesystem", reason="not_found")
+            return _result_failure(
+                f"File not found: {exc}", tool="read_file", provider="local-filesystem", reason="not_found"
+            )
         except PermissionError as exc:
-            return _result_failure(f"File read refused by workspace policy: {exc}", tool="read_file", provider="security-policy", reason="workspace_escape", policy="refused")
+            return _result_failure(
+                f"File read refused by workspace policy: {exc}",
+                tool="read_file",
+                provider="security-policy",
+                reason="workspace_escape",
+                policy="refused",
+            )
 
     def _filesystem_contents(graph: Any, workspace: str) -> Any:
         try:
             _, path = _resolve(graph.paths[0].path, workspace, must_exist=True)
             if path.is_file():
                 raw = path.read_text(encoding="utf-8", errors="replace")
-                return da.DirectActionResult(True, raw, execution_type="semantic_graph", tool_name="read_file", provider="local-filesystem", telemetry={"path": str(path), "value": raw, "read_mode": "display", "verification_passed": True, "semantic_action": "file_read", "status": "completed"})
+                return da.DirectActionResult(
+                    True,
+                    raw,
+                    execution_type="tool",
+                    tool_name="read_file",
+                    provider="local-filesystem",
+                    telemetry={
+                        "path": str(path),
+                        "value": raw,
+                        "read_mode": "display",
+                        "verification_passed": True,
+                        "semantic_action": "file_read",
+                        "status": "completed",
+                    },
+                )
             if not path.is_dir():
-                return _result_failure(f"Directory not found: {path}", tool="list_directory", provider="local-filesystem", reason="directory_not_found")
+                return _result_failure(
+                    f"Directory not found: {path}",
+                    tool="list_directory",
+                    provider="local-filesystem",
+                    reason="directory_not_found",
+                )
+            with da.tool_workspace(Path(workspace if workspace else da.workspace_root()).expanduser().resolve()):
+                receipt = da.parse_tool_result(da.execute_tool("list_directory", {"path": str(path)}))
+            if not receipt.ok:
+                return _result_failure(
+                    f"Directory listing failed: {receipt.error or 'list tool failed'}",
+                    tool="list_directory",
+                    provider="local-filesystem",
+                    reason="tool_failed",
+                )
             entries = sorted(child.name for child in path.iterdir())
-            return da.DirectActionResult(True, "\n".join(entries), execution_type="semantic_graph", tool_name="list_directory", provider="local-filesystem", telemetry={"path": str(path), "value": entries, "verification_passed": True, "semantic_action": graph.action.value, "status": "completed"})
+            return da.DirectActionResult(
+                True,
+                "\n".join(entries),
+                execution_type="tool",
+                tool_name="list_directory",
+                provider="local-filesystem",
+                telemetry={
+                    "path": str(path),
+                    "value": entries,
+                    "verification_passed": True,
+                    "semantic_action": graph.action.value,
+                    "status": "completed",
+                },
+            )
         except FileNotFoundError as exc:
-            return _result_failure(f"Directory not found: {exc}", tool="list_directory", provider="local-filesystem", reason="directory_not_found")
+            return _result_failure(
+                f"Directory not found: {exc}",
+                tool="list_directory",
+                provider="local-filesystem",
+                reason="directory_not_found",
+            )
         except PermissionError as exc:
-            return _result_failure(f"Directory access refused by workspace policy: {exc}", tool="list_directory", provider="security-policy", reason="workspace_escape", policy="refused")
+            return _result_failure(
+                f"Directory access refused by workspace policy: {exc}",
+                tool="list_directory",
+                provider="security-policy",
+                reason="workspace_escape",
+                policy="refused",
+            )
 
     def _numbers(raw: str) -> list[float]:
         return [float(token) for token in re.findall(r"[-+]?\d+(?:\.\d+)?", raw)]
@@ -677,7 +1056,9 @@ def install_semantic_frontend() -> None:
         try:
             ws, left_path = _resolve(plan.left_path, workspace, must_exist=True)
             _, right_path = _resolve(plan.right_path, workspace, must_exist=True)
-            aggregate = plan.operation == "add" and bool(re.search(r"\bsum\s+(?:all\s+)?(?:the\s+)?numbers\b", graph.original_text, re.IGNORECASE))
+            aggregate = plan.operation == "add" and bool(
+                re.search(r"\bsum\s+(?:all\s+)?(?:the\s+)?numbers\b", graph.original_text, re.IGNORECASE)
+            )
             left_values = _numbers(left_path.read_text(encoding="utf-8", errors="replace"))
             right_values = _numbers(right_path.read_text(encoding="utf-8", errors="replace"))
             result = _compute(plan, left_values, right_values, aggregate)
@@ -688,9 +1069,16 @@ def install_semantic_frontend() -> None:
             if plan.output_path:
                 with da.tool_workspace(ws):
                     output = da.resolve_workspace_path(plan.output_path, must_exist=False)
-                    write_res = da.parse_tool_result(da.execute_tool("write_file", {"path": str(output), "content": payload}))
+                    write_res = da.parse_tool_result(
+                        da.execute_tool("write_file", {"path": str(output), "content": payload})
+                    )
                 if not write_res.ok:
-                    return _result_failure(f"Arithmetic workflow write failed: {write_res.error or 'write tool failed'}", tool="multi_step_workflow", provider="local-filesystem", reason="tool_failed")
+                    return _result_failure(
+                        f"Arithmetic workflow write failed: {write_res.error or 'write tool failed'}",
+                        tool="multi_step_workflow",
+                        provider="local-filesystem",
+                        reason="tool_failed",
+                    )
                 # Fresh source observation and recomputation is independent of the
                 # first calculation and of the write-tool receipt.
                 fresh_left = _numbers(left_path.read_text(encoding="utf-8", errors="replace"))
@@ -700,23 +1088,66 @@ def install_semantic_frontend() -> None:
                 expected_hash = hashlib.sha256(expected.encode()).hexdigest()
                 actual_hash = hashlib.sha256(observed.encode()).hexdigest()
                 if observed.strip() != expected:
-                    return _result_failure("Arithmetic postcondition failed: persisted result differs from fresh semantic recomputation.", tool="multi_step_workflow", provider="local-filesystem", reason="content_mismatch")
+                    return _result_failure(
+                        "Arithmetic postcondition failed: persisted result differs from fresh semantic recomputation.",
+                        tool="multi_step_workflow",
+                        provider="local-filesystem",
+                        reason="content_mismatch",
+                    )
                 output_path = str(output)
             normalized: int | float = int(result) if result.is_integer() else result
             return da.DirectActionResult(
                 True,
-                payload if not output_path else f"Computed and independently verified {plan.operation} result {payload} at {output_path}.",
+                payload
+                if not output_path
+                else f"Computed and independently verified {plan.operation} result {payload} at {output_path}.",
                 execution_type="workflow" if output_path else "semantic_graph",
                 tool_name="multi_step_workflow" if output_path else "semantic_arithmetic",
                 provider="local-filesystem",
-                telemetry={"computed_result": normalized, "verification_passed": True, "input_paths": [str(left_path), str(right_path)], "output_path": output_path, "operation": plan.operation, "expected_output_hash": expected_hash, "actual_output_hash": actual_hash, "side_effects": "write_explicit_output" if output_path else "none", "semantic_action": graph.action.value, "status": "completed"},
+                telemetry={
+                    "computed_result": normalized,
+                    "verification_passed": True,
+                    "verification_contract": {
+                        "operation": plan.operation,
+                        "left_role": plan.left_role,
+                        "right_role": plan.right_role,
+                        "left_path": plan.left_path,
+                        "right_path": plan.right_path,
+                        "output_path": plan.output_path,
+                        "provenance": plan.provenance,
+                    },
+                    "input_paths": [str(left_path), str(right_path)],
+                    "output_path": output_path,
+                    "operation": plan.operation,
+                    "expected_output_hash": expected_hash,
+                    "actual_output_hash": actual_hash,
+                    "side_effects": "write_explicit_output" if output_path else "none",
+                    "semantic_action": graph.action.value,
+                    "status": "completed",
+                },
             )
         except PermissionError as exc:
-            return _result_failure(f"Arithmetic workflow refused by workspace policy: {exc}", tool="effect_authorizer", provider="security-policy", reason="workspace_escape", policy="refused")
+            return _result_failure(
+                f"Arithmetic workflow refused by workspace policy: {exc}",
+                tool="effect_authorizer",
+                provider="security-policy",
+                reason="workspace_escape",
+                policy="refused",
+            )
         except FileNotFoundError as exc:
-            return _result_failure(f"Arithmetic workflow input not found: {exc}", tool="multi_step_workflow", provider="local-filesystem", reason="input_file_not_found")
+            return _result_failure(
+                f"Arithmetic workflow input not found: {exc}",
+                tool="multi_step_workflow",
+                provider="local-filesystem",
+                reason="input_file_not_found",
+            )
         except Exception as exc:
-            return _result_failure(f"Arithmetic workflow failed: {exc}", tool="multi_step_workflow", provider="local-filesystem", reason="arithmetic_failed")
+            return _result_failure(
+                f"Arithmetic workflow failed: {exc}",
+                tool="multi_step_workflow",
+                provider="local-filesystem",
+                reason="arithmetic_failed",
+            )
 
     def _execute_table_transform(graph: Any, plan: dict[str, Any], workspace: str) -> Any:
         try:
@@ -724,109 +1155,275 @@ def install_semantic_frontend() -> None:
             with da.tool_workspace(ws):
                 output = da.resolve_workspace_path(plan["output"], must_exist=False)
             if not source.is_file():
-                return _result_failure(f"Transform input not found: {source}", tool="multi_step_workflow", provider="local-filesystem", reason="input_file_not_found")
+                return _result_failure(
+                    f"Transform input not found: {source}",
+                    tool="multi_step_workflow",
+                    provider="local-filesystem",
+                    reason="input_file_not_found",
+                )
             expected = _parse_table(source.read_text(encoding="utf-8", errors="replace"), source, graph.original_text)
             payload = json.dumps(expected, ensure_ascii=False, indent=2)
             with da.tool_workspace(ws):
-                write_res = da.parse_tool_result(da.execute_tool("write_file", {"path": str(output), "content": payload}))
+                write_res = da.parse_tool_result(
+                    da.execute_tool("write_file", {"path": str(output), "content": payload})
+                )
             if not write_res.ok:
-                return _result_failure(f"Table transform write failed: {write_res.error or 'write tool failed'}", tool="multi_step_workflow", provider="local-filesystem", reason="tool_failed")
+                return _result_failure(
+                    f"Table transform write failed: {write_res.error or 'write tool failed'}",
+                    tool="multi_step_workflow",
+                    provider="local-filesystem",
+                    reason="tool_failed",
+                )
             if not output.exists():
-                return _result_failure("Table transform verification failed: output artifact was not created.", tool="multi_step_workflow", provider="local-filesystem", reason="missing_output_artifact")
+                return _result_failure(
+                    "Table transform verification failed: output artifact was not created.",
+                    tool="multi_step_workflow",
+                    provider="local-filesystem",
+                    reason="missing_output_artifact",
+                )
             observed = json.loads(output.read_text(encoding="utf-8", errors="replace"))
             if observed != expected:
-                return _result_failure("Table transform verification failed: persisted JSON differs from independently parsed source data.", tool="multi_step_workflow", provider="local-filesystem", reason="content_mismatch")
+                return _result_failure(
+                    "Table transform verification failed: persisted JSON differs from independently parsed source data.",
+                    tool="multi_step_workflow",
+                    provider="local-filesystem",
+                    reason="content_mismatch",
+                )
             return da.DirectActionResult(
                 True,
                 f"Transformed table to JSON and independently verified {output}.",
                 execution_type="workflow",
                 tool_name="multi_step_workflow",
                 provider="local-filesystem",
-                telemetry={"input_path": str(source), "output_path": str(output), "verification_passed": True, "expected_output_hash": hashlib.sha256(payload.encode()).hexdigest(), "actual_output_hash": hashlib.sha256(output.read_bytes()).hexdigest(), "semantic_verifier": "fresh_table_parse_equals_persisted_json", "status": "completed"},
+                telemetry={
+                    "input_path": str(source),
+                    "output_path": str(output),
+                    "verification_passed": True,
+                    "expected_output_hash": hashlib.sha256(payload.encode()).hexdigest(),
+                    "actual_output_hash": hashlib.sha256(output.read_bytes()).hexdigest(),
+                    "semantic_verifier": "fresh_table_parse_equals_persisted_json",
+                    "status": "completed",
+                },
             )
         except PermissionError as exc:
-            return _result_failure(f"Table transform refused by workspace policy: {exc}", tool="effect_authorizer", provider="security-policy", reason="workspace_escape", policy="refused")
+            return _result_failure(
+                f"Table transform refused by workspace policy: {exc}",
+                tool="effect_authorizer",
+                provider="security-policy",
+                reason="workspace_escape",
+                policy="refused",
+            )
         except FileNotFoundError as exc:
-            return _result_failure(f"Transform input not found: {exc}", tool="multi_step_workflow", provider="local-filesystem", reason="input_file_not_found")
+            return _result_failure(
+                f"Transform input not found: {exc}",
+                tool="multi_step_workflow",
+                provider="local-filesystem",
+                reason="input_file_not_found",
+            )
         except Exception as exc:
-            return _result_failure(f"Table transform failed: {exc}", tool="multi_step_workflow", provider="local-filesystem", reason="transform_failed")
+            return _result_failure(
+                f"Table transform failed: {exc}",
+                tool="multi_step_workflow",
+                provider="local-filesystem",
+                reason="transform_failed",
+            )
 
     def _execute_legacy_transform(graph: Any, plan: dict[str, Any], workspace: str) -> Any:
         output_text = plan["output"]
         result = da.DirectActionRouter._try_multi_step_workflow(graph.original_text, workspace=workspace)
         if result is None:
-            return _result_failure("Workflow failed: no executable transform matched the typed request.", tool="multi_step_workflow", provider="local-filesystem", reason="no_transform")
+            return _result_failure(
+                "Workflow failed: no executable transform matched the typed request.",
+                tool="multi_step_workflow",
+                provider="local-filesystem",
+                reason="no_transform",
+            )
         if not result.success:
             return result
         try:
             _, output = _resolve(output_text, workspace, must_exist=True)
         except Exception as exc:
-            return _result_failure(f"Workflow verification failed: expected output artifact was not created: {exc}", tool="multi_step_workflow", provider="local-filesystem", reason="missing_output_artifact")
+            return _result_failure(
+                f"Workflow verification failed: expected output artifact was not created: {exc}",
+                tool="multi_step_workflow",
+                provider="local-filesystem",
+                reason="missing_output_artifact",
+            )
         if not output.is_file():
-            return _result_failure("Workflow verification failed: expected output artifact is not a regular file.", tool="multi_step_workflow", provider="local-filesystem", reason="missing_output_artifact")
+            return _result_failure(
+                "Workflow verification failed: expected output artifact is not a regular file.",
+                tool="multi_step_workflow",
+                provider="local-filesystem",
+                reason="missing_output_artifact",
+            )
         raw = output.read_text(encoding="utf-8", errors="replace")
         if "json" in graph.original_text.lower():
             try:
                 json.loads(raw)
             except Exception as exc:
-                return _result_failure(f"Workflow verification failed: output is not valid JSON: {exc}", tool="multi_step_workflow", provider="local-filesystem", reason="invalid_output")
+                return _result_failure(
+                    f"Workflow verification failed: output is not valid JSON: {exc}",
+                    tool="multi_step_workflow",
+                    provider="local-filesystem",
+                    reason="invalid_output",
+                )
         result.execution_type = "workflow"
         result.tool_name = "multi_step_workflow"
         result.provider = "local-filesystem"
         result.telemetry = dict(result.telemetry or {})
-        result.telemetry.update({"output_path": str(output), "verification_passed": True, "actual_output_hash": hashlib.sha256(raw.encode()).hexdigest(), "semantic_verifier": "artifact_observed_after_execution", "status": "completed"})
+        result.telemetry.update(
+            {
+                "output_path": str(output),
+                "verification_passed": True,
+                "actual_output_hash": hashlib.sha256(raw.encode()).hexdigest(),
+                "semantic_verifier": "artifact_observed_after_execution",
+                "status": "completed",
+            }
+        )
         return result
+
+    def _browser_scalar(value: Any) -> Any:
+        """Normalize browser tool presentation wrappers into semantic values."""
+        if isinstance(value, dict):
+            for key in ("content", "text", "title", "value", "output"):
+                if key in value and len(value) == 1:
+                    return _browser_scalar(value[key])
+            return {key: _browser_scalar(item) for key, item in value.items()}
+        if not isinstance(value, str):
+            return value
+        text = value.strip()
+        # browser_extract_content may return a human presentation wrapper. The
+        # semantic layer stores the extracted value, not that UI prose.
+        match = re.match(
+            r"^\s*🌐?\s*\*\*Extracted\s+\d+\s+element\(s\)\s+matching\s+.+?:\*\*\s*(?:\r?\n)+(.+)$",
+            text,
+            re.IGNORECASE | re.DOTALL,
+        )
+        return match.group(1).strip() if match else text
 
     def _execute_browser(graph: Any) -> Any:
         plan = graph.browser
         assert plan is not None
         successful: dict[str, Any] = {}
         failed: list[dict[str, str]] = []
+
+        def _field(primary_tool: str, selector: str | None, field: str) -> None:
+            primary = da.parse_tool_result(da.execute_tool(primary_tool, {"url": plan.url}))
+            if primary.ok:
+                successful[field] = _browser_scalar(core._tool_output(primary))
+                return
+            fallback = (
+                da.parse_tool_result(
+                    da.execute_tool("browser_extract_content", {"url": plan.url, "selector": selector})
+                )
+                if selector
+                else None
+            )
+            if fallback is not None and fallback.ok:
+                value = core._tool_output(fallback)
+                if isinstance(value, dict):
+                    value = value.get("content", value.get("text", value))
+                if not (isinstance(value, str) and "no elements matched" in value.lower()):
+                    successful[field] = _browser_scalar(value)
+                    return
+            error = (fallback.error if fallback is not None else None) or primary.error or "extraction failed"
+            failed.append({"field": field, "selector": selector or "", "error": error})
+
         nav = da.parse_tool_result(da.execute_tool("browser_navigate", {"url": plan.url}))
         if not nav.ok:
-            return da.DirectActionResult(False, f"Browser execution failed: {nav.error or 'navigation failed'}", execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser-automation", telemetry={"status": "total_failure", "successful_fields": {}, "failed_fields": [{"field": "navigation", "error": nav.error or "navigation failed"}], "verification_passed": False, "reason": "browser_failed"})
+            return da.DirectActionResult(
+                False,
+                f"Browser execution failed: {nav.error or 'navigation failed'}",
+                execution_type="semantic_graph",
+                tool_name="browser_extract_content",
+                provider="browser",
+                telemetry={
+                    "status": "total_failure",
+                    "successful_fields": {},
+                    "failed_fields": [{"field": "navigation", "error": nav.error or "navigation failed"}],
+                    "verification_passed": False,
+                    "reason": "browser_failed",
+                },
+            )
         nav_value = core._tool_output(nav)
         if plan.want_title:
             if isinstance(nav_value, dict) and nav_value.get("title") is not None:
-                successful["title"] = nav_value["title"]
+                successful["title"] = _browser_scalar(nav_value["title"])
             else:
-                title = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": "title"}))
-                if title.ok:
-                    successful["title"] = core._tool_output(title)
-                else:
-                    failed.append({"field": "title", "selector": "title", "error": title.error or "title extraction failed"})
+                _field("browser_get_title", "title", "title")
         for selector in plan.selectors:
-            selected = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": selector}))
+            selected = da.parse_tool_result(
+                da.execute_tool("browser_extract_content", {"url": plan.url, "selector": selector})
+            )
             value = core._tool_output(selected) if selected.ok else None
             if isinstance(value, dict):
                 value = value.get("content", value.get("text", value))
             no_match = isinstance(value, str) and "no elements matched" in value.lower()
             if not selected.ok or no_match:
-                failed.append({"field": selector, "selector": selector, "error": selected.error or str(value or "selector not found")})
+                failed.append(
+                    {
+                        "field": selector,
+                        "selector": selector,
+                        "error": selected.error or str(value or "selector not found"),
+                    }
+                )
             else:
-                successful[selector] = value
+                successful[selector] = _browser_scalar(value)
         if plan.want_text:
-            body = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": "body"}))
-            value = core._tool_output(body) if body.ok else None
-            if body.ok:
-                successful["content"] = value
-            else:
-                failed.append({"field": "content", "selector": "body", "error": body.error or "body extraction failed"})
+            _field("browser_get_text", "body", "content")
         if plan.want_links:
-            links = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": "a"}))
-            if links.ok:
-                successful["links"] = core._tool_output(links)
-            else:
-                failed.append({"field": "links", "selector": "a", "error": links.error or "link extraction failed"})
+            _field("browser_get_links", "a", "links")
         if not successful and not failed:
-            successful["page"] = nav_value
+            successful["page"] = _browser_scalar(nav_value)
         if failed and successful:
-            message = f"Browser request partially completed. Successful fields: {json.dumps(successful, ensure_ascii=False, default=str)}. Failed fields: {json.dumps(failed, ensure_ascii=False)}"
-            return da.DirectActionResult(False, message, execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser-automation", telemetry={"status": "partial_failure", "successful_fields": successful, "failed_fields": failed, "structured_result": successful, "verification_passed": False, "reason": "partial_browser_failure"})
+            return da.DirectActionResult(
+                False,
+                f"Browser request partially completed. Successful fields: {json.dumps(successful, ensure_ascii=False, default=str)}. Failed fields: {json.dumps(failed, ensure_ascii=False)}",
+                execution_type="semantic_graph",
+                tool_name="browser_extract_content",
+                provider="browser",
+                telemetry={
+                    "status": "partial_failure",
+                    "successful_fields": successful,
+                    "failed_fields": failed,
+                    "structured_result": successful,
+                    "verification_passed": False,
+                    "reason": "partial_browser_failure",
+                },
+            )
         if failed:
-            return da.DirectActionResult(False, f"Browser extraction failed: {json.dumps(failed, ensure_ascii=False)}", execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser-automation", telemetry={"status": "total_failure", "successful_fields": {}, "failed_fields": failed, "verification_passed": False, "reason": "browser_failed"})
-        value: Any = next(iter(successful.values())) if len(successful) == 1 else successful
-        return da.DirectActionResult(True, json.dumps(successful, ensure_ascii=False, default=str), execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser-automation", telemetry={"status": "completed", "successful_fields": successful, "failed_fields": [], "structured_result": successful, "value": value, "selectors": plan.selectors, "verification_passed": True, "semantic_action": graph.action.value})
+            return da.DirectActionResult(
+                False,
+                f"Browser extraction failed: {json.dumps(failed, ensure_ascii=False)}",
+                execution_type="semantic_graph",
+                tool_name="browser_extract_content",
+                provider="browser",
+                telemetry={
+                    "status": "total_failure",
+                    "successful_fields": {},
+                    "failed_fields": failed,
+                    "verification_passed": False,
+                    "reason": "browser_failed",
+                },
+            )
+        browser_value: Any = next(iter(successful.values())) if len(successful) == 1 else successful
+        return da.DirectActionResult(
+            True,
+            json.dumps(successful, ensure_ascii=False, default=str),
+            execution_type="semantic_graph",
+            tool_name="browser_extract_content",
+            provider="browser",
+            telemetry={
+                "status": "completed",
+                "successful_fields": successful,
+                "failed_fields": [],
+                "structured_result": successful,
+                "value": browser_value,
+                "selectors": plan.selectors,
+                "verification_passed": True,
+                "semantic_action": graph.action.value,
+            },
+        )
 
     def _authorize(graph: Any) -> tuple[bool, frozenset[str], frozenset[str], str]:
         if graph.errors:
@@ -837,25 +1434,60 @@ def install_semantic_frontend() -> None:
         return core.EffectAuthorizer.authorize(graph)
 
     def _public_exact(graph: Any) -> Any:
-        return da.DirectActionResult(True, graph.literal_payload, execution_type="exact_response", tool_name="echo", provider="system", telemetry={"semantic_action": graph.action.value, "side_effects": "none", "verification_passed": True, "status": "completed"})
+        return da.DirectActionResult(
+            True,
+            graph.literal_payload,
+            execution_type="exact_response",
+            tool_name="echo",
+            provider="system",
+            telemetry={
+                "semantic_action": graph.action.value,
+                "side_effects": "none",
+                "verification_passed": True,
+                "status": "completed",
+            },
+        )
 
     def can_handle(cls: Any, text: str) -> bool:
-        return core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS).action != core.SemanticAction.UNKNOWN
+        return (
+            core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS).action
+            != core.SemanticAction.UNKNOWN
+        )
 
     def execute(cls: Any, text: str, *, context: str = "", control: Any = None, workspace: str = "") -> Any:
         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
         if graph.action == core.SemanticAction.UNKNOWN:
+            if control is not None:
+                memory = cls._try_memory_recall(text, context=context, control=control)
+                if memory is not None:
+                    return core._render(da, graph, memory)
             return None
         allowed, effects, outputs, reason = _authorize(graph)
         if not allowed:
-            return da.DirectActionResult(False, f"Request rejected before execution: {reason}", execution_type="policy_enforcement", tool_name="effect_authorizer", provider="semantic-core", policy_decision="refused", telemetry={"reason": reason, "semantic_action": graph.action.value, "verification_passed": False})
+            return da.DirectActionResult(
+                False,
+                f"Request rejected before execution: {reason}",
+                execution_type="policy_enforcement",
+                tool_name="effect_authorizer",
+                provider="semantic-core",
+                policy_decision="refused",
+                telemetry={"reason": reason, "semantic_action": graph.action.value, "verification_passed": False},
+            )
         effect_token = core._EFFECT_SCOPE.set(effects)
         output_token = core._OUTPUT_SCOPE.set(outputs)
         try:
             if graph.action == core.SemanticAction.EXACT_LITERAL:
                 result = _public_exact(graph)
             elif graph.action == core.SemanticAction.POLICY_REFUSAL:
-                result = da.DirectActionResult(False, "I cannot perform that destructive action while bypassing approval or policy.", execution_type="policy_enforcement", tool_name="policy", provider="semantic-core", policy_decision="refused", telemetry={"reason": "destructive_action_unauthorized", "verification_passed": False})
+                result = da.DirectActionResult(
+                    False,
+                    "Policy refusal: I cannot perform that destructive action while bypassing approval or policy.",
+                    execution_type="policy_enforcement",
+                    tool_name="policy",
+                    provider="semantic-core",
+                    policy_decision="refused",
+                    telemetry={"reason": "destructive_action_unauthorized", "verification_passed": False},
+                )
             elif graph.action == core.SemanticAction.FILE_READ:
                 result = _read_file(graph, workspace)
             elif graph.action == core.SemanticAction.DIRECTORY_LIST:
@@ -889,9 +1521,37 @@ def install_semantic_frontend() -> None:
 
     def exact_parse(cls: Any, text: str, workspace: str = "") -> Any:
         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
-        return _public_exact(graph) if graph.action == core.SemanticAction.EXACT_LITERAL else None
+        if graph.action != core.SemanticAction.EXACT_LITERAL:
+            return None
+        result = _public_exact(graph)
+        result.execution_type = "semantic_graph"
+        return result
 
-    da.DirectActionRouter.can_handle = classmethod(can_handle)
-    da.DirectActionRouter.execute = classmethod(execute)
-    da.ExactResponseParser.parse = classmethod(exact_parse)
+    def exact_parse_intent(cls: Any, text: str) -> Any:
+        graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
+        if graph.action != core.SemanticAction.EXACT_LITERAL or graph.literal_payload is None:
+            return None
+        payload = graph.literal_payload
+        candidates = list(re.finditer(re.escape(payload), text))
+        if not candidates:
+            return None
+        match = candidates[-1]
+        start, end = match.start(), match.end()
+        quote_style = "none"
+        if start > 0 and end < len(text) and text[start - 1] == text[end] and text[start - 1] in "'\"`":
+            quote_style = {"'": "single", '"': "double", "`": "backtick"}[text[start - 1]]
+        return da.ExactLiteralIntent(
+            payload=payload,
+            payload_span_start=start,
+            payload_span_end=end,
+            quote_style=quote_style,
+            prefix_constraint=text[:start],
+            suffix_constraint=text[end:],
+            confidence=1.0,
+        )
+
+    _install_attr(da.DirectActionRouter, "can_handle", classmethod(can_handle))
+    _install_attr(da.DirectActionRouter, "execute", classmethod(execute))
+    _install_attr(da.ExactResponseParser, "parse", classmethod(exact_parse))
+    _install_attr(da.ExactResponseParser, "parse_intent", classmethod(exact_parse_intent))
     _INSTALLED = True

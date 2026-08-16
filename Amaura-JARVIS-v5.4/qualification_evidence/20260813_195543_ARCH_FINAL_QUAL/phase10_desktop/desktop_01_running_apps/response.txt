@@ -1,3 +1,0 @@
-I'm not capable of directly accessing or monitoring your Mac or any other external devices. I'm a text-based AI assistant and do not have the ability to retrieve information about your system or running applications.
-
-However, you can easily find this information on your Mac by using the Activity Monitor application, which can be found in the Applications/Utilities folder, or by using the Command + Tab keys to cycle through your open applications, or by using the Command + Option + Esc keys to open the Force Quit Applications window.

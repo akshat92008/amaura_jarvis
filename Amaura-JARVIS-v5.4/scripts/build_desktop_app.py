@@ -69,8 +69,16 @@ def update_info_plist(app_bundle: Path, version: str) -> None:
 
 def sign_app(app_bundle: Path, identity: str) -> None:
     command = [
-        "codesign", "--force", "--deep", "--timestamp", "--options", "runtime",
-        "--entitlements", str(DESKTOP / "entitlements.plist"), "--sign", identity,
+        "codesign",
+        "--force",
+        "--deep",
+        "--timestamp",
+        "--options",
+        "runtime",
+        "--entitlements",
+        str(DESKTOP / "entitlements.plist"),
+        "--sign",
+        identity,
         str(app_bundle),
     ]
     subprocess.run(command, check=True)
@@ -85,8 +93,16 @@ def create_dmg(app_bundle: Path, target: Path) -> None:
     shutil.copytree(app_bundle, staging / app_bundle.name, symlinks=True)
     subprocess.run(
         [
-            "hdiutil", "create", "-volname", "Amaura Company OS", "-srcfolder", str(staging),
-            "-ov", "-format", "UDZO", str(target),
+            "hdiutil",
+            "create",
+            "-volname",
+            "Amaura Company OS",
+            "-srcfolder",
+            str(staging),
+            "-ov",
+            "-format",
+            "UDZO",
+            str(target),
         ],
         check=True,
     )

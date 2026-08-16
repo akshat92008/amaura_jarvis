@@ -1,1 +1,0 @@
-Summarize the content at 'https://httpbin.org/get' and tell me the value of the 'Host' field in the response.

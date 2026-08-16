@@ -23,9 +23,24 @@ def test_oss_capability_inventory_is_complete_and_lazy():
     keys = {row["key"] for row in runtime.inventory()}
     assert keys == {adapter.descriptor.key for adapter in ADAPTER_TYPES}
     assert {
-        "playwright", "crawl4ai", "browser_use", "searxng", "docling", "pymupdf",
-        "paddleocr", "llamaindex", "qdrant_fastembed", "faster_whisper", "kokoro",
-        "ffmpeg", "remotion", "image_tools", "comfyui", "mcp", "langfuse", "antigravity",
+        "playwright",
+        "crawl4ai",
+        "browser_use",
+        "searxng",
+        "docling",
+        "pymupdf",
+        "paddleocr",
+        "llamaindex",
+        "qdrant_fastembed",
+        "faster_whisper",
+        "kokoro",
+        "ffmpeg",
+        "remotion",
+        "image_tools",
+        "comfyui",
+        "mcp",
+        "langfuse",
+        "antigravity",
     } <= keys
 
 
@@ -40,7 +55,11 @@ def test_pipeline_plans_prefer_lightweight_then_fallbacks():
     runtime = CapabilityRuntime()
     document = runtime.plan("document_ingest")
     assert [step["capability"] for step in document["steps"]] == [
-        "pymupdf", "docling", "paddleocr", "llamaindex", "qdrant_fastembed"
+        "pymupdf",
+        "docling",
+        "paddleocr",
+        "llamaindex",
+        "qdrant_fastembed",
     ]
     web = runtime.plan("lead_research")
     assert [step["capability"] for step in web["steps"]] == ["searxng", "crawl4ai", "playwright"]
@@ -109,8 +128,13 @@ def test_new_capability_tools_are_published_and_governed():
 
 def test_capability_execution_requires_matching_employee_permission():
     task = {
-        "id": "t1", "owner_id": "content_research", "state": "in_progress",
-        "risk": "low", "action_type": "research", "budget_cents": 100, "metadata": {"workspace": "."},
+        "id": "t1",
+        "owner_id": "content_research",
+        "state": "in_progress",
+        "risk": "low",
+        "action_type": "research",
+        "budget_cents": 100,
+        "metadata": {"workspace": "."},
     }
     decision = PolicyEngine.validate_tool_action(
         task,
@@ -132,8 +156,12 @@ def test_public_resource_inventory_includes_executor_health(monkeypatch):
 
 def test_capability_policy_is_operation_specific():
     research_task = {
-        "id": "t-research", "owner_id": "content_research", "state": "in_progress",
-        "risk": "low", "action_type": "research", "budget_cents": 100,
+        "id": "t-research",
+        "owner_id": "content_research",
+        "state": "in_progress",
+        "risk": "low",
+        "action_type": "research",
+        "budget_cents": 100,
         "metadata": {"workspace": "."},
     }
     allowed = PolicyEngine.validate_tool_action(
@@ -156,8 +184,12 @@ def test_capability_policy_is_operation_specific():
 
 def test_arbitrary_mcp_side_effects_are_not_employee_executable():
     task = {
-        "id": "t-mcp", "owner_id": "jarvis", "state": "in_progress",
-        "risk": "low", "action_type": "internal", "budget_cents": 100,
+        "id": "t-mcp",
+        "owner_id": "jarvis",
+        "state": "in_progress",
+        "risk": "low",
+        "action_type": "internal",
+        "budget_cents": 100,
         "metadata": {"workspace": "."},
     }
     decision = PolicyEngine.validate_tool_action(
@@ -172,8 +204,12 @@ def test_arbitrary_mcp_side_effects_are_not_employee_executable():
 
 def test_antigravity_handoff_is_allowed_for_jarvis_plan_permission():
     task = {
-        "id": "t-engineering", "owner_id": "jarvis", "state": "in_progress",
-        "risk": "low", "action_type": "internal", "budget_cents": 100,
+        "id": "t-engineering",
+        "owner_id": "jarvis",
+        "state": "in_progress",
+        "risk": "low",
+        "action_type": "internal",
+        "budget_cents": 100,
         "metadata": {"workspace": "."},
     }
     decision = PolicyEngine.validate_tool_action(
@@ -238,10 +274,14 @@ def test_operation_contracts_cover_remotion_bootstrap_and_audio_mux():
 
     assert "bootstrap_project" in CAPABILITY_OPERATION_CONTRACTS["remotion"]
     assert CAPABILITY_OPERATION_CONTRACTS["remotion"]["render"]["required"] == (
-        "project_path", "composition", "output_path"
+        "project_path",
+        "composition",
+        "output_path",
     )
     assert CAPABILITY_OPERATION_CONTRACTS["ffmpeg"]["mux_audio"]["required"] == (
-        "source_path", "audio_path", "output_path"
+        "source_path",
+        "audio_path",
+        "output_path",
     )
 
 
@@ -250,17 +290,13 @@ def test_remotion_bootstrap_creates_pinned_amaura_template_without_node(tmp_path
 
     monkeypatch.setenv("AMAURA_REMOTION_VERSION", "4.0.477")
     with tool_workspace(tmp_path):
-        result = RemotionAdapter().execute(
-            "bootstrap_project", {"project_path": "video-template"}
-        )
+        result = RemotionAdapter().execute("bootstrap_project", {"project_path": "video-template"})
     project = tmp_path / "video-template"
     package = json.loads((project / "package.json").read_text())
     assert package["dependencies"]["remotion"] == "4.0.477"
     assert package["dependencies"]["@remotion/cli"] == "4.0.477"
     assert (project / "src" / "AmauraVideo.tsx").is_file()
-    assert result.output["compositions"] == [
-        "AmauraReel30", "AmauraShort60", "AmauraLandscape60"
-    ]
+    assert result.output["compositions"] == ["AmauraReel30", "AmauraShort60", "AmauraLandscape60"]
 
 
 def test_browser_use_is_opt_in_even_when_package_is_present(monkeypatch):
@@ -274,7 +310,7 @@ def test_browser_use_is_opt_in_even_when_package_is_present(monkeypatch):
 
 
 def test_comfyui_execute_enforces_local_disable_not_only_health(monkeypatch):
-    from jarvis.amaura.capability_runtime import ComfyUIAdapter, CapabilityUnavailable
+    from jarvis.amaura.capability_runtime import CapabilityUnavailable, ComfyUIAdapter
 
     monkeypatch.setenv("COMFYUI_URL", "http://127.0.0.1:8188")
     monkeypatch.delenv("AMAURA_ALLOW_LOCAL_COMFYUI", raising=False)
@@ -284,16 +320,24 @@ def test_comfyui_execute_enforces_local_disable_not_only_health(monkeypatch):
 
 def test_media_operations_have_operation_specific_permissions():
     task = {
-        "id": "t-media", "owner_id": "video_production", "state": "in_progress",
-        "risk": "low", "action_type": "internal", "budget_cents": 100,
+        "id": "t-media",
+        "owner_id": "video_production",
+        "state": "in_progress",
+        "risk": "low",
+        "action_type": "internal",
+        "budget_cents": 100,
         "metadata": {"workspace": "."},
     }
     bootstrap = PolicyEngine.validate_tool_action(
-        task, "video_production", "amaura_execute_capability",
+        task,
+        "video_production",
+        "amaura_execute_capability",
         {"capability": "remotion", "operation": "bootstrap_project", "params": {}},
     )
     mux = PolicyEngine.validate_tool_action(
-        task, "video_production", "amaura_execute_capability",
+        task,
+        "video_production",
+        "amaura_execute_capability",
         {"capability": "ffmpeg", "operation": "mux_audio", "params": {}},
     )
     assert bootstrap.allowed, bootstrap.reasons

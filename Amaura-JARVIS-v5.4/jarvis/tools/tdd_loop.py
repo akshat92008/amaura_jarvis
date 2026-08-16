@@ -7,7 +7,6 @@ import os
 import re
 import subprocess
 import time
-from typing import List
 
 TDD_TOOL_DEFINITIONS = [
     {
@@ -21,38 +20,34 @@ TDD_TOOL_DEFINITIONS = [
                     "runner": {
                         "type": "string",
                         "description": "Test runner command to execute ('pytest', 'mypy', 'tsc', 'eslint', or custom command).",
-                        "default": "pytest"
+                        "default": "pytest",
                     },
                     "target": {
                         "type": "string",
                         "description": "Target test file or directory path (e.g. 'tests/').",
-                        "default": "."
+                        "default": ".",
                     },
                     "max_retries": {
                         "type": "integer",
                         "description": "Maximum auto-fix iterations allowed.",
-                        "default": 3
-                    }
+                        "default": 3,
+                    },
                 },
-                "required": ["runner"]
-            }
-        }
+                "required": ["runner"],
+            },
+        },
     }
 ]
 
 
-def _extract_broken_files(output: str) -> List[str]:
+def _extract_broken_files(output: str) -> list[str]:
     """Extract paths of failing files from error output."""
     pattern = r'(?:File "|FAIL:|ERROR:)\s*([^\s,:]+\.py)'
     matches = re.findall(pattern, output)
     return list(dict.fromkeys(matches))
 
 
-def test_and_auto_fix(
-    runner: str = "pytest",
-    target: str = ".",
-    max_retries: int = 3
-) -> str:
+def test_and_auto_fix(runner: str = "pytest", target: str = ".", max_retries: int = 3) -> str:
     """
     Executes specified test runner, captures un-truncated output, extracts exact stack traces,
     and runs iterative retry loop until tests pass or retry limit is reached.
@@ -77,14 +72,7 @@ def test_and_auto_fix(
 
     for iteration in range(1, max_retries + 1):
         try:
-            proc = subprocess.run(
-                cmd,
-                cwd=cwd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                timeout=120
-            )
+            proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=120)
             stdout = proc.stdout or ""
             stderr = proc.stderr or ""
             combined_output = f"{stdout}\n{stderr}".strip()
@@ -100,17 +88,20 @@ def test_and_auto_fix(
             # ── Parse Stack Traces / Errors & Run Self-Healing Repair ──────────────
             error_lines = []
             for line in combined_output.splitlines():
-                if any(k in line for k in ["FAIL", "ERROR", "Traceback", "AssertionError", "File \""]):
+                if any(k in line for k in ["FAIL", "ERROR", "Traceback", "AssertionError", 'File "']):
                     error_lines.append(line)
 
             formatted_errors = "\n".join(error_lines[:25])
             broken_files = _extract_broken_files(combined_output)
 
-            attempts_log.append(f"• **Attempt #{iteration} Failed (Exit {returncode})**: Broken files: {broken_files or ['Unknown']}")
+            attempts_log.append(
+                f"• **Attempt #{iteration} Failed (Exit {returncode})**: Broken files: {broken_files or ['Unknown']}"
+            )
 
             # Invoke Fable-5 SelfHealingDebugger for surgical repairs
             try:
                 from jarvis.fable_engine import SelfHealingDebugger
+
                 debugger = SelfHealingDebugger(cwd, max_attempts=1)
                 repair_res = debugger.run_and_repair(" ".join(cmd))
                 if repair_res.get("success"):
@@ -143,9 +134,7 @@ def test_and_auto_fix(
 
 
 # Prevent pytest from collecting this public tool when a test module imports it.
-setattr(test_and_auto_fix, "__test__", False)
+test_and_auto_fix.__test__ = False
 
 
-TDD_DISPATCH = {
-    "test_and_auto_fix": test_and_auto_fix
-}
+TDD_DISPATCH = {"test_and_auto_fix": test_and_auto_fix}

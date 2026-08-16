@@ -1,5 +1,0 @@
-{
-  "test": "Clean Antigravity Contract",
-  "payload": "{\"schema\": \"amaura.antigravity-result.v1\", \"success\": true, \"summary\": \"Implemented feature cleanly.\", \"changed_files\": [\"src/app.py\"], \"verification_commands\": [\"python -m unittest\"]}",
-  "success": true
-}

@@ -1,8 +1,9 @@
-from typing import Literal, Annotated, Any
-import operator
-from langgraph.graph import StateGraph, END
-from typing import TypedDict
+from typing import Literal, TypedDict
+
+from langgraph.graph import END, StateGraph
+
 from jarvis.amaura.actions import AmauraActions
+
 
 class ContentWorkflowState(TypedDict):
     campaign_id: str
@@ -12,6 +13,7 @@ class ContentWorkflowState(TypedDict):
     draft: str | None
     review_status: str | None
     status: str
+
 
 class ContentWorkflowGraph:
     def __init__(self, actions: AmauraActions):
@@ -30,13 +32,9 @@ class ContentWorkflowGraph:
         self.graph.add_edge("ideate", "outline")
         self.graph.add_edge("outline", "draft")
         self.graph.add_edge("draft", "review")
-        
-        self.graph.add_conditional_edges(
-            "review",
-            self.route_after_review,
-            {"publish": "publish", "draft": "draft"}
-        )
-        
+
+        self.graph.add_conditional_edges("review", self.route_after_review, {"publish": "publish", "draft": "draft"})
+
         self.graph.add_edge("publish", END)
         self.compiled = self.graph.compile()
 

@@ -5,11 +5,11 @@ Built-in unit tests verify contracts.  A launch qualification can point this
 harness at a private scenario pack and, optionally, real Git fixture repositories
 so the shipped source does not contain the answers to its own benchmark.
 """
+
 from __future__ import annotations
 
 import hashlib
 import json
-import shutil
 import subprocess
 import tempfile
 import time
@@ -49,7 +49,7 @@ class EngineeringScenario(BaseModel):
     timeout_seconds: int = Field(default=1800, ge=60, le=7200)
 
     @model_validator(mode="after")
-    def _safe_verifiers(self) -> "EngineeringScenario":
+    def _safe_verifiers(self) -> EngineeringScenario:
         for argv in self.verifier_argv:
             if not argv or not all(isinstance(part, str) and part for part in argv):
                 raise ValueError("verifier_argv must contain non-empty argument vectors")
@@ -159,7 +159,13 @@ def run_benchmark(
                     active = status.get("active_tasks") or []
                     step_keys = {str((task.get("metadata") or {}).get("step_key") or "") for task in active}
                     action_types = {str(task.get("action_type") or "") for task in active}
-                    details.update({"step_keys": sorted(step_keys), "action_types": sorted(action_types), "task_count": len(active)})
+                    details.update(
+                        {
+                            "step_keys": sorted(step_keys),
+                            "action_types": sorted(action_types),
+                            "task_count": len(active),
+                        }
+                    )
                     passed = passed and set(case.required_step_keys).issubset(step_keys)
                     passed = passed and not (set(case.forbidden_action_types) & action_types)
                     passed = passed and len(active) <= case.max_tasks
@@ -212,8 +218,8 @@ def run_benchmark(
                     )
                 )
 
-    passed = sum(1 for case in results if case.passed)
-    return BenchmarkResult(source_hash, len(results), passed, len(results) - passed, results)
+    passed_count = sum(1 for case in results if case.passed)
+    return BenchmarkResult(source_hash, len(results), passed_count, len(results) - passed_count, results)
 
 
 __all__ = [

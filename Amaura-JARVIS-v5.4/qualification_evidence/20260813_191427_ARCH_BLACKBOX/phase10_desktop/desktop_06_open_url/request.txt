@@ -1,1 +1,0 @@
-Open the URL 'https://example.com' in the default web browser.

@@ -1,1 +1,0 @@
-PASSED: Zero forbidden tokens found in jarvis/ source code.

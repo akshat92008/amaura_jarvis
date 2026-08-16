@@ -4,7 +4,7 @@ import random
 import string
 import tempfile
 from pathlib import Path
-import pytest
+
 from jarvis.amaura.direct_action import RepositoryDiagnosticEngine
 
 
@@ -81,7 +81,18 @@ def generate_wrong_constant_repos(count: int = 100):
 def {test_fn}():
     assert {fn_name}(100.0) == 25.0
 """
-        repos.append((f"module_{i}.py", code, f"test_module_{i}.py", test, "wrong_constant", fn_name, observed_const, expected_const))
+        repos.append(
+            (
+                f"module_{i}.py",
+                code,
+                f"test_module_{i}.py",
+                test,
+                "wrong_constant",
+                fn_name,
+                observed_const,
+                expected_const,
+            )
+        )
     return repos
 
 
@@ -103,7 +114,18 @@ def generate_wrong_return_var_repos(count: int = 100):
 def {test_fn}():
     assert {fn_name}(5, 10) == 20
 """
-        repos.append((f"module_{i}.py", code, f"test_module_{i}.py", test, "wrong_returned_variable", fn_name, "temp_val", "total_val"))
+        repos.append(
+            (
+                f"module_{i}.py",
+                code,
+                f"test_module_{i}.py",
+                test,
+                "wrong_returned_variable",
+                fn_name,
+                "temp_val",
+                "total_val",
+            )
+        )
     return repos
 
 
@@ -123,7 +145,9 @@ def generate_boolean_op_repos(count: int = 100):
 def {test_fn}():
     assert {fn_name}(True, False) is False
 """
-        repos.append((f"module_{i}.py", code, f"test_module_{i}.py", test, "boolean_operator_mismatch", fn_name, "or", "and"))
+        repos.append(
+            (f"module_{i}.py", code, f"test_module_{i}.py", test, "boolean_operator_mismatch", fn_name, "or", "and")
+        )
     return repos
 
 
@@ -152,7 +176,9 @@ def test_repo_semantic_diagnosis_500_cases():
             assert len(findings) > 0, f"No findings for {expected_category} in {py_name}"
 
             top = findings[0]
-            assert top["category"] == expected_category, f"Category mismatch: got {top['category']} vs {expected_category}"
+            assert top["category"] == expected_category, (
+                f"Category mismatch: got {top['category']} vs {expected_category}"
+            )
             assert top["function"] == fn_under_test, f"Function mismatch: got {top['function']} vs {fn_under_test}"
 
             # Check specific fields

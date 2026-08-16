@@ -1,14 +1,12 @@
 """Phase 5 Tests: Workspace Security Independence from Model Services (Phase 7)."""
 
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
-import pytest
 
-from jarvis.amaura.direct_action import DirectActionRouter
 from jarvis.amaura.cognition import ExecutiveKernel, ExecutiveRequest
 from jarvis.amaura.control_plane import AmauraControlPlane
+from jarvis.amaura.direct_action import DirectActionRouter
 
 
 def test_workspace_security_refusal_when_model_gateway_offline():
@@ -19,7 +17,10 @@ def test_workspace_security_refusal_when_model_gateway_offline():
         prompt = f"Save 'malicious payload' into {outside_path}"
 
         # Mock CognitiveModelGateway.generate to raise Exception (simulating total outage)
-        with patch("jarvis.amaura.model_gateway.CognitiveModelGateway.generate", side_effect=RuntimeError("Cognition Service Down")):
+        with patch(
+            "jarvis.amaura.model_gateway.CognitiveModelGateway.generate",
+            side_effect=RuntimeError("Cognition Service Down"),
+        ):
             with patch("jarvis.amaura.model_gateway.CognitiveModelGateway.available", return_value=False):
                 res = DirectActionRouter.execute(prompt, workspace=str(tmp_path))
                 assert res is not None
@@ -39,7 +40,9 @@ def test_workspace_security_refusal_through_executive_kernel():
         control = AmauraControlPlane(tmp_path / "control")
         kernel = ExecutiveKernel(control)
 
-        with patch("jarvis.amaura.model_gateway.CognitiveModelGateway.generate", side_effect=RuntimeError("LLM Offline")):
+        with patch(
+            "jarvis.amaura.model_gateway.CognitiveModelGateway.generate", side_effect=RuntimeError("LLM Offline")
+        ):
             with patch("jarvis.amaura.model_gateway.CognitiveModelGateway.available", return_value=False):
                 req = ExecutiveRequest(text=prompt, session_id="test_security", workspace=str(tmp_path))
                 resp = kernel.handle(req)

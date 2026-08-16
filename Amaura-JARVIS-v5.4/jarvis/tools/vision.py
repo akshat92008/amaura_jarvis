@@ -5,11 +5,10 @@ Provides webcam perception, face detection, hand landmarks (21 points), gesture 
 and visual UI screen inspection.
 """
 
-import os
 import base64
-import time
+import os
 import subprocess
-from typing import Dict, List, Optional
+import time
 
 VISION_TOOL_DEFINITIONS = [
     {
@@ -20,18 +19,15 @@ VISION_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "output_path": {
-                        "type": "string",
-                        "description": "Optional path to save the captured image frame."
-                    },
+                    "output_path": {"type": "string", "description": "Optional path to save the captured image frame."},
                     "prompt": {
                         "type": "string",
                         "description": "Specific question or visual analysis instructions.",
-                        "default": "Describe the user, expression, environment, and any items held."
-                    }
-                }
-            }
-        }
+                        "default": "Describe the user, expression, environment, and any items held.",
+                    },
+                },
+            },
+        },
     },
     {
         "type": "function",
@@ -41,29 +37,23 @@ VISION_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "output_path": {
-                        "type": "string",
-                        "description": "Optional path to save screenshot."
-                    },
+                    "output_path": {"type": "string", "description": "Optional path to save screenshot."},
                     "prompt": {
                         "type": "string",
                         "description": "Visual UI inspection instructions.",
-                        "default": "Analyze the UI layout, visual structure, text alignment, and identify any issues or errors."
-                    }
-                }
-            }
-        }
+                        "default": "Analyze the UI layout, visual structure, text alignment, and identify any issues or errors.",
+                    },
+                },
+            },
+        },
     },
     {
         "type": "function",
         "function": {
             "name": "check_desk_presence",
             "description": "Run face & presence detection to verify if user is present at desk.",
-            "parameters": {
-                "type": "object",
-                "properties": {}
-            }
-        }
+            "parameters": {"type": "object", "properties": {}},
+        },
     },
     {
         "type": "function",
@@ -75,11 +65,11 @@ VISION_TOOL_DEFINITIONS = [
                 "properties": {
                     "image_path": {
                         "type": "string",
-                        "description": "Optional image file path. If omitted, captures webcam snapshot."
+                        "description": "Optional image file path. If omitted, captures webcam snapshot.",
                     }
-                }
-            }
-        }
+                },
+            },
+        },
     },
     {
         "type": "function",
@@ -88,14 +78,9 @@ VISION_TOOL_DEFINITIONS = [
             "description": "Detect 21 3D hand joint landmarks from webcam frame or image file.",
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "image_path": {
-                        "type": "string",
-                        "description": "Optional image file path."
-                    }
-                }
-            }
-        }
+                "properties": {"image_path": {"type": "string", "description": "Optional image file path."}},
+            },
+        },
     },
     {
         "type": "function",
@@ -104,26 +89,18 @@ VISION_TOOL_DEFINITIONS = [
             "description": "Detect human faces, bounding boxes, and head counts in environment.",
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "image_path": {
-                        "type": "string",
-                        "description": "Optional image path."
-                    }
-                }
-            }
-        }
+                "properties": {"image_path": {"type": "string", "description": "Optional image path."}},
+            },
+        },
     },
     {
         "type": "function",
         "function": {
             "name": "track_desk_arrival_departure",
             "description": "Track desk presence transition events (desk_arrival, desk_departure, desk_occupied, desk_vacant).",
-            "parameters": {
-                "type": "object",
-                "properties": {}
-            }
-        }
-    }
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
 ]
 
 
@@ -134,7 +111,7 @@ class MediaPipeVisionEngine:
     _last_presence_time: float = 0.0
 
     @classmethod
-    def generate_synthetic_landmarks(cls, gesture_type: str = "thumbs_up") -> List[Dict[str, float]]:
+    def generate_synthetic_landmarks(cls, gesture_type: str = "thumbs_up") -> list[dict[str, float]]:
         """Generate 21 3D hand landmarks for a given gesture type."""
         landmarks = []
         # Base wrist point
@@ -151,7 +128,11 @@ class MediaPipeVisionEngine:
             landmarks.append({"x": 0.4 - (i * 0.02), "y": y_val, "z": -0.05 * i})
 
         # Index 5..8
-        index_y = [0.6, 0.5, 0.4, 0.3] if gesture_type in ["open_palm", "pointing", "peace", "wave"] else [0.65, 0.7, 0.75, 0.8]
+        index_y = (
+            [0.6, 0.5, 0.4, 0.3]
+            if gesture_type in ["open_palm", "pointing", "peace", "wave"]
+            else [0.65, 0.7, 0.75, 0.8]
+        )
         for i, y_val in enumerate(index_y):
             landmarks.append({"x": 0.45, "y": y_val, "z": -0.05 * i})
 
@@ -173,7 +154,7 @@ class MediaPipeVisionEngine:
         return landmarks
 
     @classmethod
-    def classify_gesture_from_landmarks(cls, landmarks: List[Dict[str, float]]) -> str:
+    def classify_gesture_from_landmarks(cls, landmarks: list[dict[str, float]]) -> str:
         """Classify gesture from 21 hand landmarks."""
         if len(landmarks) < 21:
             return "none"
@@ -196,7 +177,7 @@ class MediaPipeVisionEngine:
         return "open_palm" if (index_ext and middle_ext) else "none"
 
 
-def detect_gestures(image_path: Optional[str] = None) -> str:
+def detect_gestures(image_path: str | None = None) -> str:
     """Detect hand gestures (thumbs_up, open_palm, wave, pointing, peace)."""
     detected_gesture = "thumbs_up"
     confidence = 0.95
@@ -204,12 +185,13 @@ def detect_gestures(image_path: Optional[str] = None) -> str:
     if image_path and os.path.exists(image_path):
         try:
             import cv2
+
             img = cv2.imread(image_path)
             if img is not None:
                 # Basic contour heuristic
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                 blur = cv2.GaussianBlur(gray, (5, 5), 0)
-                _, thresh = cv2.threshold(blur, 60, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+                _, thresh = cv2.threshold(blur, 60, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
                 contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
                 if contours:
                     c = max(contours, key=cv2.contourArea)
@@ -237,17 +219,20 @@ def detect_gestures(image_path: Optional[str] = None) -> str:
 """
 
 
-def detect_hand_landmarks(image_path: Optional[str] = None) -> str:
+def detect_hand_landmarks(image_path: str | None = None) -> str:
     """Extract 21 3D hand joint landmarks."""
     landmarks = MediaPipeVisionEngine.generate_synthetic_landmarks("thumbs_up")
     formatted_landmarks = [
-        f"  Joint #{idx}: (x={lm['x']:.3f}, y={lm['y']:.3f}, z={lm['z']:.3f})"
-        for idx, lm in enumerate(landmarks[:5])
+        f"  Joint #{idx}: (x={lm['x']:.3f}, y={lm['y']:.3f}, z={lm['z']:.3f})" for idx, lm in enumerate(landmarks[:5])
     ]
-    return """🖐️ **MediaPipe Hand Landmarks Extracted (21 Points):**\n""" + "\n".join(formatted_landmarks) + "\n  *...and 16 additional hand joint coordinates*"
+    return (
+        """🖐️ **MediaPipe Hand Landmarks Extracted (21 Points):**\n"""
+        + "\n".join(formatted_landmarks)
+        + "\n  *...and 16 additional hand joint coordinates*"
+    )
 
 
-def detect_faces(image_path: Optional[str] = None) -> str:
+def detect_faces(image_path: str | None = None) -> str:
     """Detect faces, bounding boxes, and head counts."""
     face_count = 1
     bbox = [120, 80, 240, 240]
@@ -255,10 +240,11 @@ def detect_faces(image_path: Optional[str] = None) -> str:
     if image_path and os.path.exists(image_path):
         try:
             import cv2
+
             img = cv2.imread(image_path)
             if img is not None:
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+                cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
                 face_cascade = cv2.CascadeClassifier(cascade_path)
                 faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
                 if len(faces) > 0:
@@ -271,7 +257,7 @@ def detect_faces(image_path: Optional[str] = None) -> str:
     return f"""👤 **Face Detection Result:**
 - **Faces Detected:** {face_count}
 - **Primary Face Bounding Box:** `[x={bbox[0]}, y={bbox[1]}, w={bbox[2]}, h={bbox[3]}]`
-- **Landmark Center:** `({bbox[0] + bbox[2]//2}, {bbox[1] + bbox[3]//2})`
+- **Landmark Center:** `({bbox[0] + bbox[2] // 2}, {bbox[1] + bbox[3] // 2})`
 """
 
 
@@ -293,7 +279,7 @@ def track_desk_arrival_departure() -> str:
     return f"""🛋️ **Desk Presence Event Tracker:**
 - **Current Status:** `{current_presence.upper()}`
 - **Transition Event:** `{event}`
-- **Timestamp:** {time.strftime('%H:%M:%S')}
+- **Timestamp:** {time.strftime("%H:%M:%S")}
 - **Details:** User presence verified via camera telemetry.
 """
 
@@ -302,6 +288,7 @@ def _analyze_image_with_llm(b64_image: str, prompt: str) -> str:
     """Helper to analyze image base64 data using the multimodal LLM endpoint."""
     try:
         from jarvis.api import NvidiaClient
+
         client = NvidiaClient()
         vision_model = os.getenv("JARVIS_VISION_MODEL", "meta/llama-3.2-90b-vision-instruct")
         messages = [
@@ -309,19 +296,11 @@ def _analyze_image_with_llm(b64_image: str, prompt: str) -> str:
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"}
-                    }
-                ]
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"}},
+                ],
             }
         ]
-        res = client.chat_sync(
-            model_id=vision_model,
-            messages=messages,
-            temperature=0.2,
-            max_tokens=1024
-        )
+        res = client.chat_sync(model_id=vision_model, messages=messages, temperature=0.2, max_tokens=1024)
         if res and res.choices:
             return res.choices[0].message.content or "No visual description returned."
         return "⚠️ Multimodal vision API response was empty."
@@ -329,12 +308,15 @@ def _analyze_image_with_llm(b64_image: str, prompt: str) -> str:
         return f"*(Multimodal analysis unavailable: {e})*"
 
 
-def see_user(output_path: Optional[str] = None, prompt: str = "Describe the user, expression, environment, and any items held.") -> str:
+def see_user(
+    output_path: str | None = None, prompt: str = "Describe the user, expression, environment, and any items held."
+) -> str:
     if not output_path:
         output_path = os.path.join(os.getcwd(), "webcam_snapshot.jpg")
 
     try:
         import cv2
+
         cap = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
         if not cap.isOpened():
             return "📷 **Webcam Snapshot Perception:** Camera device offline/unavailable. Status: Verified vision fallback active."
@@ -343,7 +325,9 @@ def see_user(output_path: Optional[str] = None, prompt: str = "Describe the user
         cap.release()
 
         if not ret or frame is None:
-            return "📷 **Webcam Snapshot Perception:** Frame capture unavailable. Status: Verified vision fallback active."
+            return (
+                "📷 **Webcam Snapshot Perception:** Frame capture unavailable. Status: Verified vision fallback active."
+            )
 
         cv2.imwrite(output_path, frame)
         with open(output_path, "rb") as f:
@@ -365,12 +349,15 @@ def see_user(output_path: Optional[str] = None, prompt: str = "Describe the user
         return f"📷 **Webcam Snapshot Perception:** Vision fallback active ({e})"
 
 
-def inspect_visual_ui(output_path: Optional[str] = None, prompt: str = "Analyze the UI layout, visual structure, text alignment, and identify any issues or errors.") -> str:
+def inspect_visual_ui(
+    output_path: str | None = None,
+    prompt: str = "Analyze the UI layout, visual structure, text alignment, and identify any issues or errors.",
+) -> str:
     if not output_path:
         output_path = os.path.join(os.getcwd(), "ui_screenshot.png")
 
     try:
-        res = subprocess.run(["screencapture", "-x", output_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=2)
+        res = subprocess.run(["screencapture", "-x", output_path], capture_output=True, timeout=2)
         if res.returncode == 0 and os.path.exists(output_path):
             with open(output_path, "rb") as f:
                 b64_data = base64.b64encode(f.read()).decode("utf-8")

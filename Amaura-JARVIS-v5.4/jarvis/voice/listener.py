@@ -3,14 +3,13 @@ Voice Listener — Speech-to-Text using SpeechRecognition library.
 Captures audio from the microphone and transcribes it.
 """
 
+import importlib.util
 
 
 def is_available() -> bool:
     """Check if voice input dependencies are available."""
     try:
-        import speech_recognition
-        import pyaudio
-        return True
+        return bool(importlib.util.find_spec("pyaudio") and importlib.util.find_spec("speech_recognition"))
     except (ImportError, AttributeError, OSError):
         return False
 

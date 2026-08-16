@@ -5,12 +5,12 @@ with auto-summarization, compression, importance scoring, and pruning.
 """
 
 import hashlib
-import os
 import re
 import sqlite3
 import time
-from typing import Dict, List, Optional, Tuple
+
 import numpy as np
+
 from jarvis.paths import get_data_dir
 
 VECTOR_MEMORY_TOOL_DEFINITIONS = [
@@ -24,32 +24,32 @@ VECTOR_MEMORY_TOOL_DEFINITIONS = [
                 "properties": {
                     "fact": {
                         "type": "string",
-                        "description": "Fact or knowledge string to store (e.g. 'GCP VM uses n1-standard-4 with NVIDIA T4 GPU')."
+                        "description": "Fact or knowledge string to store (e.g. 'GCP VM uses n1-standard-4 with NVIDIA T4 GPU').",
                     },
                     "category": {
                         "type": "string",
                         "description": "Category tag ('architecture', 'preference', 'config', 'bugfix', 'project', 'conversation').",
-                        "default": "general"
+                        "default": "general",
                     },
                     "importance": {
                         "type": "number",
                         "description": "Importance score from 1.0 (normal) to 10.0 (critical).",
-                        "default": 1.0
+                        "default": 1.0,
                     },
                     "source": {
                         "type": "string",
                         "description": "Source of memory ('user', 'conversation', 'project', 'system').",
-                        "default": "user"
+                        "default": "user",
                     },
                     "tags": {
                         "type": "string",
                         "description": "Comma-separated tags for memory indexing.",
-                        "default": ""
-                    }
+                        "default": "",
+                    },
                 },
-                "required": ["fact"]
-            }
-        }
+                "required": ["fact"],
+            },
+        },
     },
     {
         "type": "function",
@@ -59,23 +59,13 @@ VECTOR_MEMORY_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Search query or concept to recall."
-                    },
-                    "category": {
-                        "type": "string",
-                        "description": "Optional category filter."
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Maximum number of memories to return.",
-                        "default": 10
-                    }
+                    "query": {"type": "string", "description": "Search query or concept to recall."},
+                    "category": {"type": "string", "description": "Optional category filter."},
+                    "limit": {"type": "integer", "description": "Maximum number of memories to return.", "default": 10},
                 },
-                "required": ["query"]
-            }
-        }
+                "required": ["query"],
+            },
+        },
     },
     {
         "type": "function",
@@ -85,13 +75,10 @@ VECTOR_MEMORY_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "category": {
-                        "type": "string",
-                        "description": "Category to summarize (or omit for all categories)."
-                    }
-                }
-            }
-        }
+                    "category": {"type": "string", "description": "Category to summarize (or omit for all categories)."}
+                },
+            },
+        },
     },
     {
         "type": "function",
@@ -104,11 +91,11 @@ VECTOR_MEMORY_TOOL_DEFINITIONS = [
                     "similarity_threshold": {
                         "type": "number",
                         "description": "Cosine similarity threshold for merging (default: 0.85).",
-                        "default": 0.85
+                        "default": 0.85,
                     }
-                }
-            }
-        }
+                },
+            },
+        },
     },
     {
         "type": "function",
@@ -121,11 +108,11 @@ VECTOR_MEMORY_TOOL_DEFINITIONS = [
                     "min_importance": {
                         "type": "number",
                         "description": "Minimum importance threshold to keep.",
-                        "default": 0.0
+                        "default": 0.0,
                     }
-                }
-            }
-        }
+                },
+            },
+        },
     },
     {
         "type": "function",
@@ -134,16 +121,11 @@ VECTOR_MEMORY_TOOL_DEFINITIONS = [
             "description": "Search project-specific decisions, architecture choices, bugs, fixes, and preferences.",
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Project question or query."
-                    }
-                },
-                "required": ["query"]
-            }
-        }
-    }
+                "properties": {"query": {"type": "string", "description": "Project question or query."}},
+                "required": ["query"],
+            },
+        },
+    },
 ]
 
 
@@ -171,9 +153,7 @@ class VectorEmbeddingEngine:
             return np.zeros(cls.DIMENSION, dtype=np.float32)
 
         features = [f"u:{token}" for token in tokens]
-        features.extend(
-            f"b:{left}_{right}" for left, right in zip(tokens, tokens[1:])
-        )
+        features.extend(f"b:{left}_{right}" for left, right in zip(tokens, tokens[1:], strict=False))
         vec = np.zeros(cls.DIMENSION, dtype=np.float32)
         for feature in features:
             digest = hashlib.blake2b(feature.encode("utf-8"), digest_size=8).digest()
@@ -190,7 +170,7 @@ class VectorEmbeddingEngine:
         return vec.tobytes()
 
     @classmethod
-    def deserialize_vector(cls, data: Optional[bytes]) -> np.ndarray:
+    def deserialize_vector(cls, data: bytes | None) -> np.ndarray:
         if not data:
             return np.zeros(cls.DIMENSION, dtype=np.float32)
         try:
@@ -208,7 +188,7 @@ class VectorEmbeddingEngine:
 
 
 class JarvisVectorBrain:
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None):
         if not db_path:
             db_path = str(get_data_dir() / "vector_brain.db")
         self.db_path = db_path
@@ -252,12 +232,7 @@ class JarvisVectorBrain:
         conn.close()
 
     def remember(
-        self,
-        fact: str,
-        category: str = "general",
-        importance: float = 1.0,
-        source: str = "user",
-        tags: str = ""
+        self, fact: str, category: str = "general", importance: float = 1.0, source: str = "user", tags: str = ""
     ) -> str:
         if not fact or not fact.strip():
             return "❌ Memory fact cannot be empty."
@@ -287,7 +262,7 @@ class JarvisVectorBrain:
             INSERT INTO memories (fact, category, importance, embedding, source, tags)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (fact, category, float(importance), vec_bytes, source, tags)
+            (fact, category, float(importance), vec_bytes, source, tags),
         )
         conn.commit()
         mem_id = cursor.lastrowid
@@ -297,17 +272,17 @@ class JarvisVectorBrain:
             f"🧠 **Memory Saved to Vector Brain!** (ID: #{mem_id})\n"
             f"- **Category:** `{category}`\n"
             f"- **Importance:** `{importance:.1f}/10.0`\n"
-            f"- **Fact:** \"{fact}\""
+            f'- **Fact:** "{fact}"'
         )
 
-    def recall(self, query: str, category: Optional[str] = None, limit: int = 10) -> str:
+    def recall(self, query: str, category: str | None = None, limit: int = 10) -> str:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
         if category:
             cursor.execute(
                 "SELECT id, fact, category, importance, embedding, source, tags, access_count, created_at FROM memories WHERE category = ?",
-                (category,)
+                (category,),
             )
         else:
             cursor.execute(
@@ -354,8 +329,7 @@ class JarvisVectorBrain:
         for _, r in top_matches:
             mem_id = r[0]
             cursor.execute(
-                "UPDATE memories SET access_count = access_count + 1, last_accessed = ? WHERE id = ?",
-                (now_str, mem_id)
+                "UPDATE memories SET access_count = access_count + 1, last_accessed = ? WHERE id = ?", (now_str, mem_id)
             )
         conn.commit()
         conn.close()
@@ -368,12 +342,15 @@ class JarvisVectorBrain:
 
         return "\n".join(results)
 
-    def summarize(self, category: Optional[str] = None) -> str:
+    def summarize(self, category: str | None = None) -> str:
         """Summarize stored memories by category or project focus."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         if category:
-            cursor.execute("SELECT fact, category, importance FROM memories WHERE category = ? ORDER BY importance DESC", (category,))
+            cursor.execute(
+                "SELECT fact, category, importance FROM memories WHERE category = ? ORDER BY importance DESC",
+                (category,),
+            )
         else:
             cursor.execute("SELECT fact, category, importance FROM memories ORDER BY category, importance DESC")
         rows = cursor.fetchall()
@@ -382,9 +359,9 @@ class JarvisVectorBrain:
         if not rows:
             return "🧠 No memories available to summarize."
 
-        by_cat: Dict[str, List[Tuple[str, float]]] = {}
+        by_cat: dict[str, list[tuple[str, float]]] = {}
         for fact, cat, imp in rows:
-            by_cat.setdefault(cat or 'general', []).append((fact, imp or 1.0))
+            by_cat.setdefault(cat or "general", []).append((fact, imp or 1.0))
 
         summary_lines = ["📊 **JARVIS Memory Summary & Knowledge Map**\n"]
         for cat, facts in by_cat.items():
@@ -441,7 +418,7 @@ class JarvisVectorBrain:
 
                 cursor.execute(
                     "UPDATE memories SET fact = ?, importance = ?, embedding = ? WHERE id = ?",
-                    (combined_fact, max_imp, new_emb_bytes, keep_id)
+                    (combined_fact, max_imp, new_emb_bytes, keep_id),
                 )
 
                 for c in cluster[1:]:
@@ -500,20 +477,16 @@ _brain_instance = JarvisVectorBrain()
 
 
 def remember_fact(
-    fact: str,
-    category: str = "general",
-    importance: float = 1.0,
-    source: str = "user",
-    tags: str = ""
+    fact: str, category: str = "general", importance: float = 1.0, source: str = "user", tags: str = ""
 ) -> str:
     return _brain_instance.remember(fact, category, importance, source, tags)
 
 
-def recall_memory(query: str, category: Optional[str] = None, limit: int = 10) -> str:
+def recall_memory(query: str, category: str | None = None, limit: int = 10) -> str:
     return _brain_instance.recall(query, category, limit)
 
 
-def summarize_memories(category: Optional[str] = None) -> str:
+def summarize_memories(category: str | None = None) -> str:
     return _brain_instance.summarize(category)
 
 

@@ -1,2 +1,0 @@
-tests/test_phase8_api_boundary.py
-tests/test_phase8_semantic_composition.py

@@ -4,9 +4,8 @@ import concurrent.futures
 import random
 import string
 from unittest.mock import patch
-import pytest
 
-from jarvis.amaura.direct_action import DirectActionRouter, ExactResponseParser
+from jarvis.amaura.direct_action import DirectActionRouter
 
 
 def _random_token(length: int = 10) -> str:
@@ -83,7 +82,7 @@ def test_exact_response_paraphrase_variations():
         for idx, template in enumerate(templates):
             token = f"TOKEN_{idx}_{_random_token(8)}"
             prompt = template.format(payload=token)
-            
+
             res = DirectActionRouter.execute(prompt)
             assert res is not None, f"Failed for template {idx}: '{prompt}'"
             assert res.success is True
@@ -121,7 +120,9 @@ def test_concurrency_20_simultaneous_requests():
     assert len(results) == 20
     for r in results:
         assert r["success"] is True, f"Worker {r['worker_id']} failed"
-        assert r["actual"] == r["expected"], f"Crosstalk detected: worker {r['worker_id']} got {r['actual']} instead of {r['expected']}"
+        assert r["actual"] == r["expected"], (
+            f"Crosstalk detected: worker {r['worker_id']} got {r['actual']} instead of {r['expected']}"
+        )
     assert model_invocations == 0
 
 
@@ -153,5 +154,7 @@ def test_concurrency_40_simultaneous_requests():
     assert len(results) == 40
     for r in results:
         assert r["success"] is True, f"Worker {r['worker_id']} failed"
-        assert r["actual"] == r["expected"], f"Crosstalk detected: worker {r['worker_id']} got {r['actual']} instead of {r['expected']}"
+        assert r["actual"] == r["expected"], (
+            f"Crosstalk detected: worker {r['worker_id']} got {r['actual']} instead of {r['expected']}"
+        )
     assert model_invocations == 0

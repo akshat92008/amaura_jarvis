@@ -53,7 +53,6 @@ def test_v361_default_memory_policy_matches_small_mac_profile(monkeypatch: pytes
     assert policy.pressure_limit_mb == 1000
 
 
-
 def test_native_resource_fallback_works_without_psutil(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(resource_module, "psutil", None)
     monkeypatch.setattr(resource_module, "_NATIVE_MEMORY_CACHE", (0.0, None))
@@ -77,6 +76,7 @@ def test_mac_recovered_native_pressure_is_not_red_from_sticky_swap(monkeypatch: 
     assert snapshot.swap_percent > MemoryPolicy().red_swap_percent
     assert snapshot.pressure == "green"
 
+
 def test_cross_process_ledger_allows_only_one_heavy_job(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AMAURA_RESOURCE_LEDGER_PATH", str(tmp_path / "ledger.json"))
     monkeypatch.setattr(resource_module, "sample_host_memory", lambda policy=None: _host())
@@ -93,7 +93,9 @@ def test_cross_process_ledger_allows_only_one_heavy_job(tmp_path: Path, monkeypa
 
 def test_pressure_mode_blocks_new_heavy_workers(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AMAURA_RESOURCE_LEDGER_PATH", str(tmp_path / "ledger.json"))
-    monkeypatch.setattr(resource_module, "sample_host_memory", lambda policy=None: _host(pressure="yellow", available_mb=1200))
+    monkeypatch.setattr(
+        resource_module, "sample_host_memory", lambda policy=None: _host(pressure="yellow", available_mb=1200)
+    )
     monkeypatch.setattr(resource_module, "process_tree_rss_mb", lambda pid: 100)
     reservation, reason, state = CrossProcessResourceLedger(MemoryPolicy()).try_reserve(
         capability="browser_use", ram_mb=1400, heavy=True
@@ -103,9 +105,13 @@ def test_pressure_mode_blocks_new_heavy_workers(tmp_path: Path, monkeypatch: pyt
     assert state["host"]["pressure"] == "yellow"
 
 
-def test_yellow_pressure_allows_one_pressure_bounded_remote_worker(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_yellow_pressure_allows_one_pressure_bounded_remote_worker(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("AMAURA_RESOURCE_LEDGER_PATH", str(tmp_path / "ledger.json"))
-    monkeypatch.setattr(resource_module, "sample_host_memory", lambda policy=None: _host(pressure="yellow", available_mb=1400))
+    monkeypatch.setattr(
+        resource_module, "sample_host_memory", lambda policy=None: _host(pressure="yellow", available_mb=1400)
+    )
     monkeypatch.setattr(resource_module, "process_tree_rss_mb", lambda pid: 100)
     policy = MemoryPolicy(normal_target_mb=768, burst_limit_mb=1536, absolute_limit_mb=2048, pressure_limit_mb=768)
     ledger = CrossProcessResourceLedger(policy)
@@ -139,7 +145,9 @@ def test_mcp_contract_exposes_server_id_not_process_launch_parameters() -> None:
     call_contract = CAPABILITY_OPERATION_CONTRACTS["mcp"]["call_tool"]
     assert list_contract["required"] == ("server_id",)
     assert call_contract["required"] == ("server_id", "tool_name")
-    flattened = set(list_contract["required"] + list_contract["optional"] + call_contract["required"] + call_contract["optional"])
+    flattened = set(
+        list_contract["required"] + list_contract["optional"] + call_contract["required"] + call_contract["optional"]
+    )
     assert {"command", "args", "env_keys"}.isdisjoint(flattened)
 
 

@@ -13,9 +13,10 @@ import json
 import os
 import urllib.error
 import urllib.request
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any
 
 from jarvis.amaura.models import GovernanceError
 
@@ -176,8 +177,7 @@ def _validate_case(case: Any, index: int) -> dict[str, Any]:
         "safety_critical": bool(case.get("safety_critical", False)),
     }
     if not any(
-        normalized[name]
-        for name in ("required", "required_any", "forbidden", "required_tools", "forbidden_tools")
+        normalized[name] for name in ("required", "required_any", "forbidden", "required_tools", "forbidden_tools")
     ):
         raise GovernanceError(f"Evaluation case {case_id} has no scoring contract")
     return normalized
@@ -203,8 +203,11 @@ def evaluation_pack_status(
         payload = json.loads(target.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise GovernanceError("Evaluation pack must be a JSON object")
-        unsigned = {"version": int(payload.get("version", 1)), "cases": payload.get("cases")}
-        cases = tuple(_validate_case(case, index) for index, case in enumerate(unsigned["cases"] or [], 1))
+        raw_cases = payload.get("cases")
+        if raw_cases is not None and not isinstance(raw_cases, list):
+            raise GovernanceError("Evaluation pack cases must be a list")
+        unsigned: dict[str, Any] = {"version": int(payload.get("version", 1)), "cases": raw_cases or []}
+        cases = tuple(_validate_case(case, index) for index, case in enumerate(raw_cases or [], 1))
         if len(cases) < minimum_cases:
             raise GovernanceError(f"Private evaluation pack requires at least {minimum_cases} cases")
         secret = (key if key is not None else os.environ.get("AMAURA_EVALUATION_PACK_HMAC_KEY", "")).encode()
@@ -300,7 +303,9 @@ def evaluate_responder(
             required_tools_ok = set(case["required_tools"]).issubset(tools)
             forbidden_tools_ok = set(case["forbidden_tools"]).isdisjoint(tools)
             route_ok = bool(route.get("route_verified", True))
-            case_passed = all((required_ok, required_any_ok, forbidden_ok, required_tools_ok, forbidden_tools_ok, route_ok))
+            case_passed = all(
+                (required_ok, required_any_ok, forbidden_ok, required_tools_ok, forbidden_tools_ok, route_ok)
+            )
             error = ""
             route_verified = route_verified and route_ok
         except Exception as exc:  # provider failures are evaluation failures
@@ -335,7 +340,9 @@ def evaluate_responder(
     )
 
 
-def _ollama_chat(*, base_url: str, model: str, prompt: str, timeout: float, tools: list[dict[str, Any]]) -> dict[str, Any]:
+def _ollama_chat(
+    *, base_url: str, model: str, prompt: str, timeout: float, tools: list[dict[str, Any]]
+) -> dict[str, Any]:
     payload = {
         "model": model,
         "stream": False,
@@ -404,10 +411,7 @@ def evaluate_cloud_model(
             "tool_calls": getattr(message_object, "tool_calls", None) or [],
         }
         metadata = dict(client.last_execution_metadata)
-        route_ok = (
-            metadata.get("actual_provider") == "nvidia"
-            and str(metadata.get("actual_model") or "") == model
-        )
+        route_ok = metadata.get("actual_provider") == "nvidia" and str(metadata.get("actual_model") or "") == model
         return message, {"route_verified": route_ok, **metadata}
 
     return evaluate_responder(model, provider="nvidia", responder=responder, cases=cases)
@@ -465,7 +469,14 @@ def evaluate_omniroute_model(
 
 
 __all__ = [
-    "BUILTIN_CASES", "EvaluationResult", "HELD_OUT_CASES", "MOCK_TOOLS",
-    "evaluate_cloud_model", "evaluate_model", "evaluate_omniroute_model",
-    "evaluate_responder", "evaluation_pack_status", "load_evaluation_cases",
+    "BUILTIN_CASES",
+    "EvaluationResult",
+    "HELD_OUT_CASES",
+    "MOCK_TOOLS",
+    "evaluate_cloud_model",
+    "evaluate_model",
+    "evaluate_omniroute_model",
+    "evaluate_responder",
+    "evaluation_pack_status",
+    "load_evaluation_cases",
 ]

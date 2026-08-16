@@ -11,8 +11,8 @@ from jarvis.amaura.telemetry import OperationalTelemetry
 
 # ARCH semantic execution boundary.
 # There is exactly one active language front-end above the typed request graph.
-# Historical semantic compatibility modules remain inert and must not wrap
-# SemanticParser.parse or DirectActionRouter at import time.
+# Historical compatibility and repair modules remain inert and never form a
+# second parser/executor stack.
 install_semantic_core()
 install_semantic_frontend()
 

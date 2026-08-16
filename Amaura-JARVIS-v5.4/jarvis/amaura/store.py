@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-from contextlib import closing
 import hashlib
 import hmac
 import json
@@ -13,12 +12,13 @@ import tempfile
 import threading
 import uuid
 import weakref
+from contextlib import closing
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
-from jarvis.paths import get_data_dir
 from jarvis.amaura.operation_policy import requires_reconciliation_after_lease_expiry
+from jarvis.paths import get_data_dir
 
 
 def utc_now() -> str:
@@ -38,19 +38,16 @@ def _compact_json_value(value: Any, *, depth: int = 0) -> Any:
     if isinstance(value, str):
         return value if len(value) <= 4000 else value[:4000] + "\n...[truncated]"
     if isinstance(value, list):
-        compacted = [_compact_json_value(item, depth=depth + 1) for item in value[:25]]
+        compacted_list = [_compact_json_value(item, depth=depth + 1) for item in value[:25]]
         if len(value) > 25:
-            compacted.append({"_truncated": True, "remaining": len(value) - 25})
-        return compacted
+            compacted_list.append({"_truncated": True, "remaining": len(value) - 25})
+        return compacted_list
     if isinstance(value, dict):
         items = list(value.items())
-        compacted = {
-            str(key): _compact_json_value(item, depth=depth + 1)
-            for key, item in items[:40]
-        }
+        compacted_dict = {str(key): _compact_json_value(item, depth=depth + 1) for key, item in items[:40]}
         if len(items) > 40:
-            compacted["_truncated_keys"] = len(items) - 40
-        return compacted
+            compacted_dict["_truncated_keys"] = len(items) - 40
+        return compacted_dict
     return value
 
 
@@ -139,9 +136,7 @@ class CompanyStore:
         self.db_path = Path(db_path) if db_path else default_dir / "amaura.db"
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._audit_checkpoint_path_override = (
-            Path(audit_checkpoint_path).expanduser().resolve()
-            if audit_checkpoint_path is not None
-            else None
+            Path(audit_checkpoint_path).expanduser().resolve() if audit_checkpoint_path is not None else None
         )
         self._lock = threading.RLock()
         self._connection = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -156,17 +151,16 @@ class CompanyStore:
         try:
             self._migrate()
             self._initialize_empty_audit_checkpoint()
+            self._validate_external_audit_checkpoint_on_open()
         except Exception:
             self._connection.close()
             self._closed = True
             raise
-        self._finalizer = weakref.finalize(
-            self, CompanyStore._finalize_connection, self._connection
-        )
+        self._finalizer = weakref.finalize(self, CompanyStore._finalize_connection, self._connection)
         # Explicit service shutdown handles process-global stores.  Running many
         # SQLite close callbacks during late interpreter finalization can block
         # Python shutdown after a multiprocessing test or worker lifecycle.
-        self._finalizer.atexit = False
+        cast(Any, self._finalizer).atexit = False
 
     @staticmethod
     def _finalize_connection(connection: sqlite3.Connection) -> None:
@@ -190,7 +184,7 @@ class CompanyStore:
                 CompanyStore._finalize_connection(self._connection)
             self._closed = True
 
-    def __enter__(self) -> "CompanyStore":
+    def __enter__(self) -> CompanyStore:
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
@@ -205,16 +199,16 @@ class CompanyStore:
         Supports nested transactions using SQLite SAVEPOINTs (P0-3).
         """
         with self._lock:
-            is_outer = (self._savepoints == 0)
-            
+            is_outer = self._savepoints == 0
+
             if is_outer:
                 self._connection.execute("BEGIN IMMEDIATE")
                 self._autocommit = False
-            
+
             self._savepoints += 1
             sp_name = f"sp_{self._savepoints}"
             self._connection.execute(f"SAVEPOINT {sp_name}")
-            
+
             try:
                 yield
                 self._connection.execute(f"RELEASE SAVEPOINT {sp_name}")
@@ -233,7 +227,6 @@ class CompanyStore:
     def _commit_if_needed(self) -> None:
         if self._autocommit:
             self._connection.commit()
-
 
     def integrity_check(self) -> dict[str, Any]:
         """Run SQLite structural and referential integrity checks."""
@@ -992,10 +985,14 @@ class CompanyStore:
             self._ensure_column("outbox_events", "worker_id", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column("outbox_events", "lease_until", "TEXT")
             self._ensure_column("outbox_events", "next_attempt_at", "TEXT")
-            
+
             # Create indexes after ensuring columns exist
-            self._connection.execute("CREATE INDEX IF NOT EXISTS idx_outbox_status ON outbox_events(status, next_attempt_at, created_at)")
-            self._connection.execute("CREATE INDEX IF NOT EXISTS idx_outbox_lease ON outbox_events(status, lease_until)")
+            self._connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_outbox_status ON outbox_events(status, next_attempt_at, created_at)"
+            )
+            self._connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_outbox_lease ON outbox_events(status, lease_until)"
+            )
             self._ensure_column("outbox_events", "receipt", "TEXT NOT NULL DEFAULT '{}'")
             self._ensure_column("outbox_events", "updated_at", "TEXT")
             self._ensure_column("invoices", "idempotency_key", "TEXT NOT NULL DEFAULT ''")
@@ -1033,7 +1030,9 @@ class CompanyStore:
         return hashlib.sha256(encoded).hexdigest()
 
     def _backfill_approval_integrity(self) -> None:
-        rows = self._connection.execute("SELECT id,payload,payload_hash,created_at,expires_at FROM approvals").fetchall()
+        rows = self._connection.execute(
+            "SELECT id,payload,payload_hash,created_at,expires_at FROM approvals"
+        ).fetchall()
         for row in rows:
             changes: dict[str, str] = {}
             if not row["payload_hash"]:
@@ -1046,11 +1045,32 @@ class CompanyStore:
                 created_at = datetime.fromisoformat(row["created_at"])
                 changes["expires_at"] = (created_at + timedelta(hours=48)).isoformat()
             if changes:
-                self._connection.execute(f"UPDATE approvals SET {', '.join(f'{key}=?' for key in changes)} WHERE id=?", [*changes.values(), row["id"]])
+                self._connection.execute(
+                    f"UPDATE approvals SET {', '.join(f'{key}=?' for key in changes)} WHERE id=?",
+                    [*changes.values(), row["id"]],
+                )
 
     @staticmethod
-    def _audit_digest(*, previous: str, actor: str, action: str, resource_type: str, resource_id: str, outcome: str, details_json: str, created_at: str) -> str:
-        entry = {"actor": actor, "action": action, "resource_type": resource_type, "resource_id": resource_id, "outcome": outcome, "details": details_json, "created_at": created_at}
+    def _audit_digest(
+        *,
+        previous: str,
+        actor: str,
+        action: str,
+        resource_type: str,
+        resource_id: str,
+        outcome: str,
+        details_json: str,
+        created_at: str,
+    ) -> str:
+        entry = {
+            "actor": actor,
+            "action": action,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+            "outcome": outcome,
+            "details": details_json,
+            "created_at": created_at,
+        }
         payload = previous + json.dumps(entry, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(payload.encode()).hexdigest()
 
@@ -1103,6 +1123,81 @@ class CompanyStore:
                 key_id=self._audit_key_id(),
             )
 
+    def _validate_external_audit_checkpoint_on_open(self) -> None:
+        """Fail closed when an external audit anchor proves DB rollback.
+
+        The database commit happens before the external checkpoint update, so a
+        checkpoint may legitimately lag the database during concurrent writers.
+        The reverse cannot occur in the normal append protocol: a checkpoint
+        ahead of the durable database is rollback evidence.
+        """
+        if os.environ.get("AMAURA_REQUIRE_EXTERNAL_AUDIT_CHECKPOINT", "0") != "1":
+            return
+
+        checkpoint = self._checkpoint_path()
+        if checkpoint is None or not checkpoint.is_file():
+            raise RuntimeError("Audit integrity failure: required external checkpoint is missing")
+
+        lock_path = checkpoint.with_suffix(checkpoint.suffix + ".lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(lock_path, "a+b") as lock_file:
+            try:
+                import fcntl
+
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            except (ImportError, OSError):
+                pass
+            try:
+                try:
+                    saved = json.loads(checkpoint.read_text(encoding="utf-8"))
+                    checkpoint_sequence = int(saved.get("sequence", -1))
+                except (OSError, ValueError, json.JSONDecodeError, TypeError) as exc:
+                    raise RuntimeError("Audit integrity failure: external checkpoint is invalid") from exc
+
+                if checkpoint_sequence < 0:
+                    raise RuntimeError("Audit integrity failure: external checkpoint sequence is invalid")
+
+                row = self._connection.execute(
+                    "SELECT sequence,entry_hash FROM audit_logs ORDER BY sequence DESC LIMIT 1"
+                ).fetchone()
+                database_sequence = int(row["sequence"]) if row is not None else 0
+                if checkpoint_sequence > database_sequence:
+                    raise RuntimeError(
+                        "Audit integrity failure: external checkpoint is ahead of the database; "
+                        "possible database rollback detected"
+                    )
+
+                if checkpoint_sequence == 0:
+                    anchored_head = ""
+                else:
+                    anchor = self._connection.execute(
+                        "SELECT entry_hash FROM audit_logs WHERE sequence=?", (checkpoint_sequence,)
+                    ).fetchone()
+                    if anchor is None:
+                        raise RuntimeError(
+                            "Audit integrity failure: external checkpoint references a missing audit row"
+                        )
+                    anchored_head = str(anchor["entry_hash"])
+
+                checkpoint_head = str(saved.get("head", ""))
+                if not hmac.compare_digest(checkpoint_head, anchored_head):
+                    raise RuntimeError("Audit integrity failure: external checkpoint head does not match audit history")
+
+                checkpoint_signature = str(saved.get("signature", ""))
+                expected_signature = self._audit_signature(checkpoint_head)
+                if checkpoint_signature:
+                    if not expected_signature or not hmac.compare_digest(checkpoint_signature, expected_signature):
+                        raise RuntimeError("Audit integrity failure: external checkpoint signature is invalid")
+                elif os.environ.get("AMAURA_STRICT_AUDIT_SIGNATURES", "0") == "1":
+                    raise RuntimeError("Audit integrity failure: external checkpoint signature is missing")
+            finally:
+                try:
+                    import fcntl
+
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                except (ImportError, OSError):
+                    pass
+
     def _write_external_audit_checkpoint(self, *, sequence: int, head: str, signature: str, key_id: str) -> None:
         target = self._checkpoint_path()
         if target is None:
@@ -1113,6 +1208,7 @@ class CompanyStore:
         with open(lock_path, "a+b") as lock_file:
             try:
                 import fcntl
+
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
             except (ImportError, OSError):
                 pass
@@ -1137,6 +1233,7 @@ class CompanyStore:
                         pass
             try:
                 import fcntl
+
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
             except (ImportError, OSError):
                 pass
@@ -1154,17 +1251,17 @@ class CompanyStore:
             return
 
         fully_unsigned = all(
-            not row["prev_hash"] and not row["entry_hash"]
-            and not row["entry_signature"] and not row["signature_key_id"]
+            not row["prev_hash"]
+            and not row["entry_hash"]
+            and not row["entry_signature"]
+            and not row["signature_key_id"]
             for row in rows
         )
         hash_chain_only = all(
-            bool(row["entry_hash"]) and not row["entry_signature"] and not row["signature_key_id"]
-            for row in rows
+            bool(row["entry_hash"]) and not row["entry_signature"] and not row["signature_key_id"] for row in rows
         )
         fully_signed = all(
-            bool(row["entry_hash"]) and bool(row["entry_signature"]) and bool(row["signature_key_id"])
-            for row in rows
+            bool(row["entry_hash"]) and bool(row["entry_signature"]) and bool(row["signature_key_id"]) for row in rows
         )
 
         if hash_chain_only or fully_signed:
@@ -1172,8 +1269,7 @@ class CompanyStore:
                 rows,
                 require_checkpoint=False,
                 enforce_strict=not (
-                    hash_chain_only
-                    and os.environ.get("AMAURA_ALLOW_LEGACY_AUDIT_MIGRATION", "0") == "1"
+                    hash_chain_only and os.environ.get("AMAURA_ALLOW_LEGACY_AUDIT_MIGRATION", "0") == "1"
                 ),
             )
             if not check["ok"]:
@@ -1200,8 +1296,10 @@ class CompanyStore:
                         )
                     self._connection.commit()
                 self._write_external_audit_checkpoint(
-                    sequence=int(rows[-1]["sequence"]), head=str(rows[-1]["entry_hash"]),
-                    signature=self._audit_signature(str(rows[-1]["entry_hash"])), key_id=key_id,
+                    sequence=int(rows[-1]["sequence"]),
+                    head=str(rows[-1]["entry_hash"]),
+                    signature=self._audit_signature(str(rows[-1]["entry_hash"])),
+                    key_id=key_id,
                 )
             return
 
@@ -1240,9 +1338,14 @@ class CompanyStore:
         key_id = self._audit_key_id()
         for row in rows:
             entry_hash = self._audit_digest(
-                previous=previous, actor=row["actor"], action=row["action"],
-                resource_type=row["resource_type"], resource_id=row["resource_id"],
-                outcome=row["outcome"], details_json=row["details"], created_at=row["created_at"],
+                previous=previous,
+                actor=row["actor"],
+                action=row["action"],
+                resource_type=row["resource_type"],
+                resource_id=row["resource_id"],
+                outcome=row["outcome"],
+                details_json=row["details"],
+                created_at=row["created_at"],
             )
             signature = self._audit_signature(entry_hash)
             self._connection.execute(
@@ -1251,8 +1354,10 @@ class CompanyStore:
             )
             previous = entry_hash
         self._write_external_audit_checkpoint(
-            sequence=int(rows[-1]["sequence"]), head=previous,
-            signature=self._audit_signature(previous), key_id=key_id,
+            sequence=int(rows[-1]["sequence"]),
+            head=previous,
+            signature=self._audit_signature(previous),
+            key_id=key_id,
         )
 
     def _audit_chain_check_rows(
@@ -1265,37 +1370,67 @@ class CompanyStore:
         previous = ""
         key = self._audit_key()
         require_signatures = enforce_strict and os.environ.get("AMAURA_STRICT_AUDIT_SIGNATURES", "0") == "1"
-        require_checkpoint = require_checkpoint or (enforce_strict and (
-            os.environ.get("AMAURA_STRICT_AUDIT_CHECKPOINT", "0") == "1"
-        ))
+        require_checkpoint = bool(require_checkpoint)
         signed_entries = 0
         for row in rows:
             expected = self._audit_digest(
-                previous=previous, actor=row["actor"], action=row["action"],
-                resource_type=row["resource_type"], resource_id=row["resource_id"],
-                outcome=row["outcome"], details_json=row["details"], created_at=row["created_at"],
+                previous=previous,
+                actor=row["actor"],
+                action=row["action"],
+                resource_type=row["resource_type"],
+                resource_id=row["resource_id"],
+                outcome=row["outcome"],
+                details_json=row["details"],
+                created_at=row["created_at"],
             )
             if row["prev_hash"] != previous or row["entry_hash"] != expected:
-                return {"ok": False, "broken_at_sequence": row["sequence"], "entries": len(rows), "reason": "hash_chain_mismatch"}
+                return {
+                    "ok": False,
+                    "broken_at_sequence": row["sequence"],
+                    "entries": len(rows),
+                    "reason": "hash_chain_mismatch",
+                }
             signature = str(row["entry_signature"] or "")
             if signature:
                 signed_entries += 1
                 if len(key) < 32 or not hmac.compare_digest(signature, self._audit_signature(expected)):
-                    return {"ok": False, "broken_at_sequence": row["sequence"], "entries": len(rows), "reason": "signature_invalid"}
+                    return {
+                        "ok": False,
+                        "broken_at_sequence": row["sequence"],
+                        "entries": len(rows),
+                        "reason": "signature_invalid",
+                    }
             elif require_signatures:
-                return {"ok": False, "broken_at_sequence": row["sequence"], "entries": len(rows), "reason": "signature_missing"}
+                return {
+                    "ok": False,
+                    "broken_at_sequence": row["sequence"],
+                    "entries": len(rows),
+                    "reason": "signature_missing",
+                }
             previous = row["entry_hash"]
         if not require_checkpoint:
-            return {"ok": True, "broken_at_sequence": None, "entries": len(rows), "head": previous, "signed_entries": signed_entries, "checkpoint_ok": True, "reason": ""}
+            return {
+                "ok": True,
+                "broken_at_sequence": None,
+                "entries": len(rows),
+                "head": previous,
+                "signed_entries": signed_entries,
+                "checkpoint_ok": True,
+                "reason": "",
+            }
         checkpoint_ok = True
         checkpoint_reason = ""
         checkpoint = self._checkpoint_path()
         if checkpoint and checkpoint.is_file():
             try:
                 saved = json.loads(checkpoint.read_text(encoding="utf-8"))
-                checkpoint_ok = int(saved.get("sequence", -1)) == (int(rows[-1]["sequence"]) if rows else 0) and hmac.compare_digest(str(saved.get("head", "")), previous)
+                checkpoint_ok = int(saved.get("sequence", -1)) == (
+                    int(rows[-1]["sequence"]) if rows else 0
+                ) and hmac.compare_digest(str(saved.get("head", "")), previous)
                 if saved.get("signature"):
-                    checkpoint_ok = checkpoint_ok and hmac.compare_digest(str(saved["signature"]), self._audit_signature(previous))
+                    checkpoint_ok = checkpoint_ok and hmac.compare_digest(
+                        str(saved["signature"]), self._audit_signature(previous)
+                    )
                 checkpoint_reason = "" if checkpoint_ok else "external_checkpoint_mismatch"
             except (OSError, ValueError, json.JSONDecodeError, TypeError):
                 checkpoint_ok = False
@@ -1303,7 +1438,15 @@ class CompanyStore:
         elif enforce_strict and os.environ.get("AMAURA_REQUIRE_EXTERNAL_AUDIT_CHECKPOINT", "0") == "1":
             checkpoint_ok = False
             checkpoint_reason = "external_checkpoint_missing"
-        return {"ok": checkpoint_ok, "broken_at_sequence": None if checkpoint_ok else (int(rows[-1]["sequence"]) if rows else 0), "entries": len(rows), "head": previous, "signed_entries": signed_entries, "checkpoint_ok": checkpoint_ok, "reason": checkpoint_reason}
+        return {
+            "ok": checkpoint_ok,
+            "broken_at_sequence": None if checkpoint_ok else (int(rows[-1]["sequence"]) if rows else 0),
+            "entries": len(rows),
+            "head": previous,
+            "signed_entries": signed_entries,
+            "checkpoint_ok": checkpoint_ok,
+            "reason": checkpoint_reason,
+        }
 
     def audit_chain_check(self) -> dict[str, Any]:
         with self._lock:
@@ -1355,7 +1498,9 @@ class CompanyStore:
 
     def set_agent_enabled(self, agent_id: str, enabled: bool) -> dict[str, Any]:
         with self._lock:
-            cursor = self._connection.execute("UPDATE agents SET enabled = ?, updated_at = ? WHERE agent_id = ?", (int(enabled), utc_now(), agent_id))
+            cursor = self._connection.execute(
+                "UPDATE agents SET enabled = ?, updated_at = ? WHERE agent_id = ?", (int(enabled), utc_now(), agent_id)
+            )
             if cursor.rowcount != 1:
                 raise KeyError(f"Unknown Amaura agent: {agent_id}")
             self._commit_if_needed()
@@ -1426,17 +1571,32 @@ class CompanyStore:
             raise KeyError(f"Unknown work item: {item_id}")
         return decoded
 
-    def list_work_items(self, *, item_type: str | None = None, state: str | None = None, owner_id: str | None = None, parent_id: str | None = None, limit: int = 200) -> list[dict[str, Any]]:
+    def list_work_items(
+        self,
+        *,
+        item_type: str | None = None,
+        state: str | None = None,
+        owner_id: str | None = None,
+        parent_id: str | None = None,
+        limit: int = 200,
+    ) -> list[dict[str, Any]]:
         clauses: list[str] = []
         params: list[Any] = []
-        for column, value in (("item_type", item_type), ("state", state), ("owner_id", owner_id), ("parent_id", parent_id)):
+        for column, value in (
+            ("item_type", item_type),
+            ("state", state),
+            ("owner_id", owner_id),
+            ("parent_id", parent_id),
+        ):
             if value is not None:
                 clauses.append(f"{column} = ?")
                 params.append(value)
         where = " WHERE " + " AND ".join(clauses) if clauses else ""
         params.append(max(1, min(limit, 1000)))
         with self._lock:
-            rows = self._connection.execute(f"SELECT * FROM work_items{where} ORDER BY priority ASC, created_at ASC LIMIT ?", params).fetchall()
+            rows = self._connection.execute(
+                f"SELECT * FROM work_items{where} ORDER BY priority ASC, created_at ASC LIMIT ?", params
+            ).fetchall()
         return [self._decode_row(row) for row in rows]  # type: ignore[misc]
 
     def update_work_item(self, item_id: str, **fields: Any) -> dict[str, Any]:
@@ -1461,7 +1621,14 @@ class CompanyStore:
 
     def create_approval(self, approval: dict[str, Any]) -> dict[str, Any]:
         now = utc_now()
-        values = {"status": "pending", "decided_by": None, "reason": "", "payload": {}, "expires_at": (datetime.now(UTC) + timedelta(hours=48)).isoformat(), **approval}
+        values = {
+            "status": "pending",
+            "decided_by": None,
+            "reason": "",
+            "payload": {},
+            "expires_at": (datetime.now(UTC) + timedelta(hours=48)).isoformat(),
+            **approval,
+        }
         payload_json = json.dumps(values["payload"], sort_keys=True, separators=(",", ":"), default=str)
         payload_hash = self.canonical_hash(values["payload"])
         with self._lock:
@@ -1489,7 +1656,9 @@ class CompanyStore:
             except sqlite3.IntegrityError as exc:
                 self._connection.rollback()
                 if "approvals.task_id" in str(exc):
-                    existing = self._connection.execute("SELECT id FROM approvals WHERE task_id=? AND status='pending'", (values["task_id"],)).fetchone()
+                    existing = self._connection.execute(
+                        "SELECT id FROM approvals WHERE task_id=? AND status='pending'", (values["task_id"],)
+                    ).fetchone()
                     if existing:
                         return self.get_approval(existing["id"])
                 raise
@@ -1527,13 +1696,18 @@ class CompanyStore:
 
     def resolve_approval(self, approval_id: str, status: str, decided_by: str, reason: str) -> dict[str, Any]:
         with self._lock:
-            current = self._connection.execute("SELECT status,expires_at FROM approvals WHERE id=?", (approval_id,)).fetchone()
+            current = self._connection.execute(
+                "SELECT status,expires_at FROM approvals WHERE id=?", (approval_id,)
+            ).fetchone()
             if current is None:
                 raise KeyError(f"Unknown approval: {approval_id}")
             if current["status"] != "pending":
                 raise ValueError(f"Approval is already {current['status']}")
             if current["expires_at"] and datetime.fromisoformat(current["expires_at"]) <= datetime.now(UTC):
-                self._connection.execute("UPDATE approvals SET status='expired',resolved_at=? WHERE id=? AND status='pending'", (utc_now(), approval_id))
+                self._connection.execute(
+                    "UPDATE approvals SET status='expired',resolved_at=? WHERE id=? AND status='pending'",
+                    (utc_now(), approval_id),
+                )
                 self._commit_if_needed()
                 raise ValueError("Approval has expired and must be requested again")
             cursor = self._connection.execute(
@@ -1550,11 +1724,22 @@ class CompanyStore:
     def publish_event(self, event_type: str, aggregate_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         created_at = utc_now()
         with self._lock:
-            cursor = self._connection.execute("INSERT INTO events(event_type, aggregate_id, payload, created_at) VALUES(?, ?, ?, ?)", (event_type, aggregate_id, json.dumps(payload), created_at))
+            cursor = self._connection.execute(
+                "INSERT INTO events(event_type, aggregate_id, payload, created_at) VALUES(?, ?, ?, ?)",
+                (event_type, aggregate_id, json.dumps(payload), created_at),
+            )
             self._commit_if_needed()
-        return {"sequence": cursor.lastrowid, "event_type": event_type, "aggregate_id": aggregate_id, "payload": payload, "created_at": created_at}
+        return {
+            "sequence": cursor.lastrowid,
+            "event_type": event_type,
+            "aggregate_id": aggregate_id,
+            "payload": payload,
+            "created_at": created_at,
+        }
 
-    def enqueue_outbox_event(self, provider: str, operation: str, payload: dict[str, Any], idempotency_key: str) -> dict[str, Any]:
+    def enqueue_outbox_event(
+        self, provider: str, operation: str, payload: dict[str, Any], idempotency_key: str
+    ) -> dict[str, Any]:
         """Enqueue one idempotent provider operation for durable dispatch."""
         now = utc_now()
         event_id = f"outbox_{uuid.uuid4().hex[:16]}"
@@ -1800,9 +1985,7 @@ class CompanyStore:
                 message = self.get_message(message_id)
                 if message["status"] == status_by_resolution[resolution]:
                     return message
-                raise ValueError(
-                    f"Message is {message['status']} and is not awaiting reconciliation"
-                )
+                raise ValueError(f"Message is {message['status']} and is not awaiting reconciliation")
             self._commit_if_needed()
         self.publish_event(
             f"message.reconciliation_{resolution}",
@@ -1835,13 +2018,18 @@ class CompanyStore:
             rows = self._connection.execute(query, params).fetchall()
         return [self._decode_row(row) for row in rows]  # type: ignore[misc]
 
-    def audit(self, actor: str, action: str, resource_type: str, resource_id: str, outcome: str, details: dict[str, Any] | None = None) -> None:
+    def audit(
+        self,
+        actor: str,
+        action: str,
+        resource_type: str,
+        resource_id: str,
+        outcome: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
         if self._audit_integrity_fault:
             raise RuntimeError(self._audit_integrity_fault)
-        if (
-            os.environ.get("AMAURA_STRICT_AUDIT_SIGNATURES", "0") == "1"
-            and len(self._audit_key()) < 32
-        ):
+        if os.environ.get("AMAURA_STRICT_AUDIT_SIGNATURES", "0") == "1" and len(self._audit_key()) < 32:
             raise RuntimeError("Strict audit signatures require AMAURA_AUDIT_HMAC_KEY of at least 32 bytes")
         created_at = utc_now()
         details_json = json.dumps(details or {}, sort_keys=True, separators=(",", ":"), default=str)
@@ -1851,11 +2039,19 @@ class CompanyStore:
         key_id = ""
         # BEGIN IMMEDIATE serialises the read-head + append operation across processes.
         with self.atomic_block():
-            row = self._connection.execute("SELECT entry_hash FROM audit_logs ORDER BY sequence DESC LIMIT 1").fetchone()
+            row = self._connection.execute(
+                "SELECT entry_hash FROM audit_logs ORDER BY sequence DESC LIMIT 1"
+            ).fetchone()
             previous = row["entry_hash"] if row else ""
             entry_hash = self._audit_digest(
-                previous=previous, actor=actor, action=action, resource_type=resource_type,
-                resource_id=resource_id, outcome=outcome, details_json=details_json, created_at=created_at
+                previous=previous,
+                actor=actor,
+                action=action,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                outcome=outcome,
+                details_json=details_json,
+                created_at=created_at,
             )
             signature = self._audit_signature(entry_hash)
             key_id = self._audit_key_id() if signature else ""
@@ -1863,14 +2059,30 @@ class CompanyStore:
                 """INSERT INTO audit_logs(actor, action, resource_type, resource_id, outcome, details,
                 prev_hash,entry_hash,entry_signature,signature_key_id,created_at)
                 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (actor, action, resource_type, resource_id, outcome, details_json, previous, entry_hash, signature, key_id, created_at),
+                (
+                    actor,
+                    action,
+                    resource_type,
+                    resource_id,
+                    outcome,
+                    details_json,
+                    previous,
+                    entry_hash,
+                    signature,
+                    key_id,
+                    created_at,
+                ),
             )
+            if cursor.lastrowid is None:
+                raise RuntimeError("Audit insert did not return a sequence")
             sequence = int(cursor.lastrowid)
         self._write_external_audit_checkpoint(sequence=sequence, head=entry_hash, signature=signature, key_id=key_id)
 
     def list_audit(self, limit: int = 100) -> list[dict[str, Any]]:
         with self._lock:
-            rows = self._connection.execute("SELECT * FROM audit_logs ORDER BY sequence DESC LIMIT ?", (max(1, min(limit, 1000)),)).fetchall()
+            rows = self._connection.execute(
+                "SELECT * FROM audit_logs ORDER BY sequence DESC LIMIT ?", (max(1, min(limit, 1000)),)
+            ).fetchall()
         return [self._decode_row(row) for row in rows]  # type: ignore[misc]
 
     def record_cost(self, entry: dict[str, Any]) -> None:
@@ -1879,12 +2091,27 @@ class CompanyStore:
             self._connection.execute(
                 """INSERT INTO costs(id, task_id, agent_id, category, amount_cents, units, unit_name, metadata, created_at)
                 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (entry["id"], entry["task_id"], entry["agent_id"], entry["category"], entry["amount_cents"], entry.get("units", 0), entry.get("unit_name", ""), json.dumps(metadata), utc_now()),
+                (
+                    entry["id"],
+                    entry["task_id"],
+                    entry["agent_id"],
+                    entry["category"],
+                    entry["amount_cents"],
+                    entry.get("units", 0),
+                    entry.get("unit_name", ""),
+                    json.dumps(metadata),
+                    utc_now(),
+                ),
             )
-            self._connection.execute("UPDATE work_items SET spent_cents = spent_cents + ?, updated_at = ? WHERE id = ?", (entry["amount_cents"], utc_now(), entry["task_id"]))
+            self._connection.execute(
+                "UPDATE work_items SET spent_cents = spent_cents + ?, updated_at = ? WHERE id = ?",
+                (entry["amount_cents"], utc_now(), entry["task_id"]),
+            )
             self._commit_if_needed()
 
-    def upsert_knowledge(self, namespace: str, key: str, value: Any, evidence_refs: list[str], sensitivity: str, actor: str) -> None:
+    def upsert_knowledge(
+        self, namespace: str, key: str, value: Any, evidence_refs: list[str], sensitivity: str, actor: str
+    ) -> None:
         with self._lock:
             self._connection.execute(
                 """INSERT INTO knowledge(namespace, key, value, evidence_refs, sensitivity, updated_by, updated_at)
@@ -1968,10 +2195,27 @@ class CompanyStore:
             **objective,
         }
         columns = (
-            "id", "title", "objective", "department", "workflow_key", "status",
-            "priority", "success_metric", "target_value", "current_value", "unit",
-            "cadence", "inputs", "max_active_programmes", "budget_cents", "deadline",
-            "last_planned_key", "last_planned_at", "created_by", "created_at", "updated_at",
+            "id",
+            "title",
+            "objective",
+            "department",
+            "workflow_key",
+            "status",
+            "priority",
+            "success_metric",
+            "target_value",
+            "current_value",
+            "unit",
+            "cadence",
+            "inputs",
+            "max_active_programmes",
+            "budget_cents",
+            "deadline",
+            "last_planned_key",
+            "last_planned_at",
+            "created_by",
+            "created_at",
+            "updated_at",
         )
         values["created_at"] = now
         values["updated_at"] = now
@@ -1986,9 +2230,7 @@ class CompanyStore:
 
     def get_objective(self, objective_id: str) -> dict[str, Any]:
         with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM company_objectives WHERE id=?", (objective_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM company_objectives WHERE id=?", (objective_id,)).fetchone()
         decoded = self._decode_row(row)
         if decoded is None:
             raise KeyError(f"Unknown company objective: {objective_id}")
@@ -2020,9 +2262,21 @@ class CompanyStore:
 
     def update_objective(self, objective_id: str, **updates: Any) -> dict[str, Any]:
         allowed = {
-            "title", "objective", "status", "priority", "success_metric", "target_value",
-            "current_value", "unit", "cadence", "inputs", "max_active_programmes",
-            "budget_cents", "deadline", "last_planned_key", "last_planned_at",
+            "title",
+            "objective",
+            "status",
+            "priority",
+            "success_metric",
+            "target_value",
+            "current_value",
+            "unit",
+            "cadence",
+            "inputs",
+            "max_active_programmes",
+            "budget_cents",
+            "deadline",
+            "last_planned_key",
+            "last_planned_at",
         }
         invalid = set(updates) - allowed
         if invalid:
@@ -2064,14 +2318,18 @@ class CompanyStore:
                     id,objective_id,previous_value,new_value,note,evidence_refs,actor,created_at
                 ) VALUES(?,?,?,?,?,?,?,?)""",
                 (
-                    update_id, objective_id, float(previous_value), float(new_value),
-                    note, json.dumps(evidence_refs), actor, created_at,
+                    update_id,
+                    objective_id,
+                    float(previous_value),
+                    float(new_value),
+                    note,
+                    json.dumps(evidence_refs),
+                    actor,
+                    created_at,
                 ),
             )
             self._commit_if_needed()
-            row = self._connection.execute(
-                "SELECT * FROM objective_updates WHERE id=?", (update_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM objective_updates WHERE id=?", (update_id,)).fetchone()
         decoded = self._decode_row(row)
         if decoded is None:
             raise RuntimeError("Objective update was not persisted")
@@ -2137,9 +2395,7 @@ class CompanyStore:
             raise RuntimeError("Objective cadence completion was not persisted")
         return decoded
 
-    def get_objective_cadence_run(
-        self, objective_id: str, cadence_key: str
-    ) -> dict[str, Any] | None:
+    def get_objective_cadence_run(self, objective_id: str, cadence_key: str) -> dict[str, Any] | None:
         with self._lock:
             row = self._connection.execute(
                 "SELECT * FROM objective_cadence_runs WHERE objective_id=? AND cadence_key=?",
@@ -2201,7 +2457,16 @@ class CompanyStore:
 
     def upsert_campaign(self, campaign: dict[str, Any]) -> dict[str, Any]:
         now = utc_now()
-        values = {"minimum_score": 70, "active": True, "daily_lead_limit": 10, "daily_outreach_limit": 3, "daily_followup_limit": 5, "maximum_followups": 2, "config": {}, **campaign}
+        values = {
+            "minimum_score": 70,
+            "active": True,
+            "daily_lead_limit": 10,
+            "daily_outreach_limit": 3,
+            "daily_followup_limit": 5,
+            "maximum_followups": 2,
+            "config": {},
+            **campaign,
+        }
         with self._lock:
             self._connection.execute(
                 """INSERT INTO campaigns(id,name,target_segment,offer,minimum_score,active,
@@ -2248,7 +2513,9 @@ class CompanyStore:
             rows = self._connection.execute(query, params).fetchall()
         return [self._decode_row(row) for row in rows]  # type: ignore[misc]
 
-    def insert_lead(self, lead: dict[str, Any], *, daily_limit: int | None = None, day_prefix: str = "") -> dict[str, Any]:
+    def insert_lead(
+        self, lead: dict[str, Any], *, daily_limit: int | None = None, day_prefix: str = ""
+    ) -> dict[str, Any]:
         now = utc_now()
         values = {
             "contact_name": "",
@@ -2269,39 +2536,42 @@ class CompanyStore:
             **lead,
         }
         with self.atomic_block():
-                if daily_limit is not None:
-                    count = self._connection.execute("SELECT COUNT(*) FROM leads WHERE campaign_id=? AND created_at LIKE ?", (values["campaign_id"], f"{day_prefix}%")).fetchone()[0]
-                    if count >= daily_limit:
-                        raise ValueError("Daily lead discovery limit reached")
-                self._connection.execute(
-                    """INSERT INTO leads(id,campaign_id,company_name,domain,contact_name,public_contact,
+            if daily_limit is not None:
+                count = self._connection.execute(
+                    "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND created_at LIKE ?",
+                    (values["campaign_id"], f"{day_prefix}%"),
+                ).fetchone()[0]
+                if count >= daily_limit:
+                    raise ValueError("Daily lead discovery limit reached")
+            self._connection.execute(
+                """INSERT INTO leads(id,campaign_id,company_name,domain,contact_name,public_contact,
                     contact_source_url,linkedin_url,country,industry,stage,total_score,score_components,
                     do_not_contact,opt_out_reason,estimated_value_cents,next_action,next_action_at,metadata,
                     created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (
-                        values["id"],
-                        values["campaign_id"],
-                        values["company_name"],
-                        values["domain"],
-                        values["contact_name"],
-                        values["public_contact"],
-                        values["contact_source_url"],
-                        values["linkedin_url"],
-                        values["country"],
-                        values["industry"],
-                        values["stage"],
-                        values["total_score"],
-                        json.dumps(values["score_components"]),
-                        int(values["do_not_contact"]),
-                        values["opt_out_reason"],
-                        values["estimated_value_cents"],
-                        values["next_action"],
-                        values["next_action_at"],
-                        json.dumps(values["metadata"]),
-                        now,
-                        now,
-                    ),
-                )
+                (
+                    values["id"],
+                    values["campaign_id"],
+                    values["company_name"],
+                    values["domain"],
+                    values["contact_name"],
+                    values["public_contact"],
+                    values["contact_source_url"],
+                    values["linkedin_url"],
+                    values["country"],
+                    values["industry"],
+                    values["stage"],
+                    values["total_score"],
+                    json.dumps(values["score_components"]),
+                    int(values["do_not_contact"]),
+                    values["opt_out_reason"],
+                    values["estimated_value_cents"],
+                    values["next_action"],
+                    values["next_action_at"],
+                    json.dumps(values["metadata"]),
+                    now,
+                    now,
+                ),
+            )
         return self.get_lead(values["id"])
 
     def get_lead(self, lead_id: str) -> dict[str, Any]:
@@ -2331,7 +2601,9 @@ class CompanyStore:
                 return decoded
         return None
 
-    def list_leads(self, campaign_id: str | None = None, stage: str | None = None, limit: int = 500) -> list[dict[str, Any]]:
+    def list_leads(
+        self, campaign_id: str | None = None, stage: str | None = None, limit: int = 500
+    ) -> list[dict[str, Any]]:
         clauses: list[str] = []
         params: list[Any] = []
         if campaign_id:
@@ -2413,15 +2685,23 @@ class CompanyStore:
 
     def list_lead_evidence(self, lead_id: str) -> list[dict[str, Any]]:
         with self._lock:
-            rows = self._connection.execute("SELECT * FROM lead_evidence WHERE lead_id=? ORDER BY created_at", (lead_id,)).fetchall()
+            rows = self._connection.execute(
+                "SELECT * FROM lead_evidence WHERE lead_id=? ORDER BY created_at", (lead_id,)
+            ).fetchall()
         return [self._decode_row(row) for row in rows]  # type: ignore[misc]
 
     def insert_message(self, message: dict[str, Any]) -> dict[str, Any]:
         now = utc_now()
         values = {
-            "subject": "", "recipient": "", "approved_payload_hash": "",
-            "status": "draft", "approved_by": None, "approved_at": None,
-            "sent_at": None, "external_message_id": None, "thread_id": None,
+            "subject": "",
+            "recipient": "",
+            "approved_payload_hash": "",
+            "status": "draft",
+            "approved_by": None,
+            "approved_at": None,
+            "sent_at": None,
+            "external_message_id": None,
+            "thread_id": None,
             "evidence_snapshot": [],
             **message,
         }
@@ -2467,14 +2747,24 @@ class CompanyStore:
         # subject and body are write-once: they are set at staging time and locked
         # from that point forward to enforce exact-payload approval (P0-6).
         # approved_payload_hash is written once at approval time by decide_message.
-        allowed = {"status", "approved_by", "approved_at", "sent_at",
-                   "external_message_id", "thread_id", "approved_payload_hash"}
+        allowed = {
+            "status",
+            "approved_by",
+            "approved_at",
+            "sent_at",
+            "external_message_id",
+            "thread_id",
+            "approved_payload_hash",
+        }
         invalid = set(fields) - allowed
         if invalid:
             raise ValueError(f"Invalid message fields: {', '.join(sorted(invalid))}")
         fields["updated_at"] = utc_now()
         with self._lock:
-            cursor = self._connection.execute(f"UPDATE messages SET {', '.join(f'{key}=?' for key in fields)} WHERE id=?", [*fields.values(), message_id])
+            cursor = self._connection.execute(
+                f"UPDATE messages SET {', '.join(f'{key}=?' for key in fields)} WHERE id=?",
+                [*fields.values(), message_id],
+            )
             if cursor.rowcount != 1:
                 raise KeyError(f"Unknown message: {message_id}")
             self._commit_if_needed()
@@ -2492,9 +2782,7 @@ class CompanyStore:
                 message = self.get_message(message_id)
                 if message["status"] == "sent":
                     return message
-                raise ValueError(
-                    f"Message is {message['status']} and cannot start a new provider send"
-                )
+                raise ValueError(f"Message is {message['status']} and cannot start a new provider send")
             self._commit_if_needed()
         return self.get_message(message_id)
 
@@ -2512,44 +2800,56 @@ class CompanyStore:
         self.publish_event("message.reconciliation_required", message_id, {"reason": reason})
         return self.get_message(message_id)
 
-    def confirm_message_sent_atomic(self, message_id: str, *, campaign_id: str, is_followup: bool, daily_limit: int, since: str, external_message_id: str, thread_id: str | None) -> dict[str, Any]:
+    def confirm_message_sent_atomic(
+        self,
+        message_id: str,
+        *,
+        campaign_id: str,
+        is_followup: bool,
+        daily_limit: int,
+        since: str,
+        external_message_id: str,
+        thread_id: str | None,
+    ) -> dict[str, Any]:
         """Atomically enforce a campaign cap and record provider-confirmed delivery."""
         with self.atomic_block():
-                message = self._connection.execute("SELECT status FROM messages WHERE id=?", (message_id,)).fetchone()
-                if message is None:
-                    raise KeyError(f"Unknown message: {message_id}")
-                if message["status"] == "sent":
-                    self._connection.rollback()
-                    return self.get_message(message_id)
-                if message["status"] not in {
-                    "approved",
-                    "sending",
-                    "queued",
-                    "dispatching",
-                    "prepared",
-                    "reconciliation_required",
-                }:
-                    raise ValueError(
-                        "Only an approved, sending, queued, dispatching, prepared, or reconciliation-required message can be marked sent"
-                    )
-                comparator = "='followup'" if is_followup else "!='followup'"
-                count = self._connection.execute(
-                    f"""SELECT COUNT(*) FROM messages m JOIN leads l ON l.id=m.lead_id
+            message = self._connection.execute("SELECT status FROM messages WHERE id=?", (message_id,)).fetchone()
+            if message is None:
+                raise KeyError(f"Unknown message: {message_id}")
+            if message["status"] == "sent":
+                self._connection.rollback()
+                return self.get_message(message_id)
+            if message["status"] not in {
+                "approved",
+                "sending",
+                "queued",
+                "dispatching",
+                "prepared",
+                "reconciliation_required",
+            }:
+                raise ValueError(
+                    "Only an approved, sending, queued, dispatching, prepared, or reconciliation-required message can be marked sent"
+                )
+            comparator = "='followup'" if is_followup else "!='followup'"
+            count = self._connection.execute(
+                f"""SELECT COUNT(*) FROM messages m JOIN leads l ON l.id=m.lead_id
                     WHERE l.campaign_id=? AND m.status='sent' AND m.message_type{comparator}
                     AND m.sent_at>=?""",
-                    (campaign_id, since),
-                ).fetchone()[0]
-                if count >= daily_limit:
-                    raise ValueError("Campaign daily outbound limit reached")
-                now = utc_now()
-                self._connection.execute(
-                    """UPDATE messages SET status='sent',sent_at=?,external_message_id=?,thread_id=?,updated_at=?
+                (campaign_id, since),
+            ).fetchone()[0]
+            if count >= daily_limit:
+                raise ValueError("Campaign daily outbound limit reached")
+            now = utc_now()
+            self._connection.execute(
+                """UPDATE messages SET status='sent',sent_at=?,external_message_id=?,thread_id=?,updated_at=?
                     WHERE id=?""",
-                    (now, external_message_id, thread_id, now, message_id),
-                )
+                (now, external_message_id, thread_id, now, message_id),
+            )
         return self.get_message(message_id)
 
-    def list_messages(self, lead_id: str | None = None, status: str | None = None, since: str | None = None) -> list[dict[str, Any]]:
+    def list_messages(
+        self, lead_id: str | None = None, status: str | None = None, since: str | None = None
+    ) -> list[dict[str, Any]]:
         clauses, params = [], []
         for column, value in (("lead_id", lead_id), ("status", status)):
             if value:
@@ -2558,12 +2858,25 @@ class CompanyStore:
         if since:
             clauses.append("created_at>=?")
             params.append(since)
-        query = "SELECT * FROM messages" + (" WHERE " + " AND ".join(clauses) if clauses else "") + " ORDER BY created_at DESC"
+        query = (
+            "SELECT * FROM messages"
+            + (" WHERE " + " AND ".join(clauses) if clauses else "")
+            + " ORDER BY created_at DESC"
+        )
         with self._lock:
             rows = self._connection.execute(query, params).fetchall()
         return [self._decode_row(row) for row in rows]  # type: ignore[misc]
 
-    def publish_pipeline_event(self, *, lead_id: str | None, campaign_id: str | None, event_type: str, agent: str, input_hash: str, output: dict[str, Any]) -> dict[str, Any]:
+    def publish_pipeline_event(
+        self,
+        *,
+        lead_id: str | None,
+        campaign_id: str | None,
+        event_type: str,
+        agent: str,
+        input_hash: str,
+        output: dict[str, Any],
+    ) -> dict[str, Any]:
         now = utc_now()
         with self._lock:
             cursor = self._connection.execute(
@@ -2571,7 +2884,16 @@ class CompanyStore:
                 (lead_id, campaign_id, event_type, agent, input_hash, json.dumps(output), now),
             )
             self._commit_if_needed()
-        return {"sequence": cursor.lastrowid, "lead_id": lead_id, "campaign_id": campaign_id, "event_type": event_type, "agent": agent, "input_hash": input_hash, "output": output, "created_at": now}
+        return {
+            "sequence": cursor.lastrowid,
+            "lead_id": lead_id,
+            "campaign_id": campaign_id,
+            "event_type": event_type,
+            "agent": agent,
+            "input_hash": input_hash,
+            "output": output,
+            "created_at": now,
+        }
 
     def list_pipeline_events(self, lead_id: str | None = None, limit: int = 500) -> list[dict[str, Any]]:
         query = "SELECT * FROM pipeline_events"
@@ -2588,14 +2910,17 @@ class CompanyStore:
     def record_idempotency(self, key: str, operation: str, resource_id: str, result_hash: str) -> bool:
         with self._lock:
             cursor = self._connection.execute(
-                "INSERT OR IGNORE INTO idempotency_records(idempotency_key,operation,resource_id,result_hash,created_at) VALUES(?,?,?,?,?)", (key, operation, resource_id, result_hash, utc_now())
+                "INSERT OR IGNORE INTO idempotency_records(idempotency_key,operation,resource_id,result_hash,created_at) VALUES(?,?,?,?,?)",
+                (key, operation, resource_id, result_hash, utc_now()),
             )
             self._commit_if_needed()
         return cursor.rowcount == 1
 
     def get_idempotency(self, key: str) -> dict[str, Any] | None:
         with self._lock:
-            row = self._connection.execute("SELECT * FROM idempotency_records WHERE idempotency_key=?", (key,)).fetchone()
+            row = self._connection.execute(
+                "SELECT * FROM idempotency_records WHERE idempotency_key=?", (key,)
+            ).fetchone()
         return self._decode_row(row)
 
     def set_control(self, key: str, value: str, actor: str) -> None:
@@ -2611,7 +2936,6 @@ class CompanyStore:
         with self._lock:
             row = self._connection.execute("SELECT value FROM system_controls WHERE key=?", (key,)).fetchone()
         return str(row[0]) if row else default
-
 
     # -- Inbound communications and free-first integration actions --------
 
@@ -2641,12 +2965,22 @@ class CompanyStore:
                 classification,raw_metadata,content_hash,received_at,created_at,updated_at
                 ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
-                    values["id"], values["provider"], values["external_id"],
-                    values["thread_id"], values["lead_id"], values["sender"],
-                    values["recipient"], values["subject"], values["body"],
-                    values["status"], json.dumps(values["classification"]),
-                    json.dumps(values["raw_metadata"]), values["content_hash"],
-                    values["received_at"], now, now,
+                    values["id"],
+                    values["provider"],
+                    values["external_id"],
+                    values["thread_id"],
+                    values["lead_id"],
+                    values["sender"],
+                    values["recipient"],
+                    values["subject"],
+                    values["body"],
+                    values["status"],
+                    json.dumps(values["classification"]),
+                    json.dumps(values["raw_metadata"]),
+                    values["content_hash"],
+                    values["received_at"],
+                    now,
+                    now,
                 ),
             )
             inserted = cursor.rowcount == 1
@@ -2660,9 +2994,7 @@ class CompanyStore:
 
     def get_inbound_message(self, message_id: str) -> dict[str, Any]:
         with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM inbound_messages WHERE id=?", (message_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM inbound_messages WHERE id=?", (message_id,)).fetchone()
         decoded = self._decode_row(row)
         if decoded is None:
             raise KeyError(f"Unknown inbound message: {message_id}")
@@ -2711,7 +3043,9 @@ class CompanyStore:
             self._commit_if_needed()
         return self.get_inbound_message(message_id)
 
-    def set_integration_cursor(self, provider: str, cursor: str, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    def set_integration_cursor(
+        self, provider: str, cursor: str, metadata: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         now = utc_now()
         with self._lock:
             self._connection.execute(
@@ -2720,25 +3054,26 @@ class CompanyStore:
                 (provider, cursor, json.dumps(metadata or {}), now),
             )
             self._commit_if_needed()
-            row = self._connection.execute(
-                "SELECT * FROM integration_cursors WHERE provider=?", (provider,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM integration_cursors WHERE provider=?", (provider,)).fetchone()
         decoded = self._decode_row(row)
         assert decoded is not None
         return decoded
 
     def get_integration_cursor(self, provider: str) -> dict[str, Any] | None:
         with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM integration_cursors WHERE provider=?", (provider,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM integration_cursors WHERE provider=?", (provider,)).fetchone()
         return self._decode_row(row)
 
     def insert_integration_action(self, action: dict[str, Any]) -> tuple[dict[str, Any], bool]:
         now = utc_now()
         values = {
-            "risk": "medium", "status": "awaiting_approval", "approved_by": None,
-            "approved_at": None, "outbox_event_id": None, "receipt": {}, "error": "",
+            "risk": "medium",
+            "status": "awaiting_approval",
+            "approved_by": None,
+            "approved_at": None,
+            "outbox_event_id": None,
+            "receipt": {},
+            "error": "",
             **action,
         }
         inserted = False
@@ -2749,10 +3084,22 @@ class CompanyStore:
                 approved_by,approved_at,outbox_event_id,receipt,error,created_at,updated_at
                 ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
-                    values["id"], values["provider"], values["operation"], json.dumps(values["payload"]),
-                    values["payload_hash"], values["idempotency_key"], values["risk"], values["status"],
-                    values["requested_by"], values["approved_by"], values["approved_at"],
-                    values["outbox_event_id"], json.dumps(values["receipt"]), values["error"], now, now,
+                    values["id"],
+                    values["provider"],
+                    values["operation"],
+                    json.dumps(values["payload"]),
+                    values["payload_hash"],
+                    values["idempotency_key"],
+                    values["risk"],
+                    values["status"],
+                    values["requested_by"],
+                    values["approved_by"],
+                    values["approved_at"],
+                    values["outbox_event_id"],
+                    json.dumps(values["receipt"]),
+                    values["error"],
+                    now,
+                    now,
                 ),
             )
             inserted = cursor.rowcount == 1
@@ -2766,9 +3113,7 @@ class CompanyStore:
 
     def get_integration_action(self, action_id: str) -> dict[str, Any]:
         with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM integration_actions WHERE id=?", (action_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM integration_actions WHERE id=?", (action_id,)).fetchone()
         decoded = self._decode_row(row)
         if decoded is None:
             raise KeyError(f"Unknown integration action: {action_id}")
@@ -2796,9 +3141,7 @@ class CompanyStore:
         now = utc_now()
         target = "approved" if approved else "rejected"
         with self.atomic_block():
-            row = self._connection.execute(
-                "SELECT * FROM integration_actions WHERE id=?", (action_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM integration_actions WHERE id=?", (action_id,)).fetchone()
             if row is None:
                 raise KeyError(f"Unknown integration action: {action_id}")
             if row["status"] != "awaiting_approval":
@@ -2828,9 +3171,7 @@ class CompanyStore:
         """
         now = utc_now()
         with self.atomic_block():
-            row = self._connection.execute(
-                "SELECT * FROM integration_actions WHERE id=?", (action_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM integration_actions WHERE id=?", (action_id,)).fetchone()
             if row is None:
                 raise KeyError(f"Unknown integration action: {action_id}")
 
@@ -2885,7 +3226,8 @@ class CompanyStore:
                 raise ValueError("Integration action payload changed after approval")
             self._connection.execute(
                 """UPDATE integration_actions SET status='enqueued',outbox_event_id=?,updated_at=?
-                WHERE id=?""", (outbox_event_id, now, action_id)
+                WHERE id=?""",
+                (outbox_event_id, now, action_id),
             )
         return self.get_integration_action(action_id)
 
@@ -2907,13 +3249,16 @@ class CompanyStore:
     def provider_can_attempt(self, provider: str) -> tuple[bool, dict[str, Any]]:
         now = datetime.now(UTC)
         with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM provider_health WHERE provider=?", (provider,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM provider_health WHERE provider=?", (provider,)).fetchone()
         decoded = self._decode_row(row) or {
-            "provider": provider, "state": "closed", "consecutive_failures": 0,
-            "last_success_at": None, "last_failure_at": None, "circuit_open_until": None,
-            "last_error": "", "updated_at": utc_now(),
+            "provider": provider,
+            "state": "closed",
+            "consecutive_failures": 0,
+            "last_success_at": None,
+            "last_failure_at": None,
+            "circuit_open_until": None,
+            "last_error": "",
+            "updated_at": utc_now(),
         }
         until = decoded.get("circuit_open_until")
         if decoded.get("state") == "open" and until:
@@ -2968,17 +3313,23 @@ class CompanyStore:
 
     def list_provider_health(self) -> list[dict[str, Any]]:
         with self._lock:
-            rows = self._connection.execute(
-                "SELECT * FROM provider_health ORDER BY provider"
-            ).fetchall()
+            rows = self._connection.execute("SELECT * FROM provider_health ORDER BY provider").fetchall()
         return [self._decode_row(row) for row in rows]  # type: ignore[misc]
 
     def insert_invoice(self, invoice: dict[str, Any]) -> tuple[dict[str, Any], bool]:
         now = utc_now()
         values = {
-            "client_email": "", "currency": "INR", "tax_minor": 0, "line_items": [],
-            "due_date": None, "status": "draft", "payment_uri": "", "document_path": "",
-            "idempotency_key": "", "payment_reference": "", "status_reason": "",
+            "client_email": "",
+            "currency": "INR",
+            "tax_minor": 0,
+            "line_items": [],
+            "due_date": None,
+            "status": "draft",
+            "payment_uri": "",
+            "document_path": "",
+            "idempotency_key": "",
+            "payment_reference": "",
+            "status_reason": "",
             **invoice,
         }
         inserted = False
@@ -2990,12 +3341,23 @@ class CompanyStore:
                 created_at,updated_at
                 ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
-                    values["id"], values["idempotency_key"], values["client_name"],
-                    values["client_email"], values["currency"], values["amount_minor"],
-                    values["tax_minor"], json.dumps(values["line_items"]), values["due_date"],
-                    values["status"], values["payment_uri"], values["document_path"],
-                    values["payload_hash"], values["payment_reference"], values["status_reason"],
-                    now, now,
+                    values["id"],
+                    values["idempotency_key"],
+                    values["client_name"],
+                    values["client_email"],
+                    values["currency"],
+                    values["amount_minor"],
+                    values["tax_minor"],
+                    json.dumps(values["line_items"]),
+                    values["due_date"],
+                    values["status"],
+                    values["payment_uri"],
+                    values["document_path"],
+                    values["payload_hash"],
+                    values["payment_reference"],
+                    values["status_reason"],
+                    now,
+                    now,
                 ),
             )
             inserted = cursor.rowcount == 1
@@ -3005,9 +3367,7 @@ class CompanyStore:
                     (values["idempotency_key"],),
                 ).fetchone()
             else:
-                row = self._connection.execute(
-                    "SELECT * FROM invoices WHERE id=?", (values["id"],)
-                ).fetchone()
+                row = self._connection.execute("SELECT * FROM invoices WHERE id=?", (values["id"],)).fetchone()
         decoded = self._decode_row(row)
         assert decoded is not None
         if not hmac.compare_digest(str(decoded["payload_hash"]), str(values["payload_hash"])):
@@ -3036,8 +3396,12 @@ class CompanyStore:
 
     def update_invoice(self, invoice_id: str, **fields: Any) -> dict[str, Any]:
         allowed = {
-            "status", "payment_uri", "document_path", "due_date",
-            "payment_reference", "status_reason",
+            "status",
+            "payment_uri",
+            "document_path",
+            "due_date",
+            "payment_reference",
+            "status_reason",
         }
         invalid = set(fields) - allowed
         if invalid:
@@ -3048,9 +3412,7 @@ class CompanyStore:
         assignments = [f"{key}=?" for key in fields]
         params = list(fields.values()) + [invoice_id]
         with self._lock:
-            cursor = self._connection.execute(
-                f"UPDATE invoices SET {', '.join(assignments)} WHERE id=?", params
-            )
+            cursor = self._connection.execute(f"UPDATE invoices SET {', '.join(assignments)} WHERE id=?", params)
             if cursor.rowcount != 1:
                 raise KeyError(f"Unknown invoice: {invoice_id}")
             self._commit_if_needed()
@@ -3076,9 +3438,7 @@ class CompanyStore:
         now = utc_now()
         clean_reference = reference.strip()
         with self.atomic_block():
-            row = self._connection.execute(
-                "SELECT * FROM invoices WHERE id=?", (invoice_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,)).fetchone()
             if row is None:
                 raise KeyError(f"Unknown invoice: {invoice_id}")
             current = str(row["status"])
@@ -3122,7 +3482,9 @@ class CompanyStore:
             raise KeyError(f"Unknown execution run: {run_id}")
         return decoded
 
-    def list_executions(self, *, state: str | None = None, task_id: str | None = None, limit: int = 200) -> list[dict[str, Any]]:
+    def list_executions(
+        self, *, state: str | None = None, task_id: str | None = None, limit: int = 200
+    ) -> list[dict[str, Any]]:
         clauses: list[str] = []
         params: list[Any] = []
         if state:
@@ -3145,28 +3507,41 @@ class CompanyStore:
         now = utc_now()
         recovered: list[dict[str, Any]] = []
         with self.atomic_block():
-                rows = self._connection.execute(
-                    """SELECT * FROM execution_runs
+            rows = self._connection.execute(
+                """SELECT * FROM execution_runs
                     WHERE state IN ('leased','running') AND lease_until<=?
                     ORDER BY started_at""",
-                    (now,),
-                ).fetchall()
-                for row in rows:
-                    self._connection.execute(
-                        """UPDATE execution_runs
+                (now,),
+            ).fetchall()
+            for row in rows:
+                self._connection.execute(
+                    """UPDATE execution_runs
                         SET state='expired',finished_at=?,error=?
                         WHERE id=? AND state IN ('leased','running')""",
-                        (now, "Worker lease expired before completion", row["id"]),
-                    )
-                    retry = row["attempt"] < max(1, max_attempts)
-                    task_state = "assigned" if retry else "failed"
-                    self._connection.execute(
-                        """UPDATE work_items SET state=?,updated_at=?,
+                    (now, "Worker lease expired before completion", row["id"]),
+                )
+                retry = row["attempt"] < max(1, max_attempts)
+                task_state = "assigned" if retry else "failed"
+                self._connection.execute(
+                    """UPDATE work_items SET state=?,updated_at=?,
                         summary=CASE WHEN summary='' THEN ? ELSE ? || '\n\n' || summary END
                         WHERE id=? AND state='in_progress'""",
-                        (task_state, now, "Execution lease expired; JARVIS recovered the task.", "Execution lease expired; JARVIS recovered the task.", row["task_id"]),
-                    )
-                    recovered.append({"run_id": row["id"], "task_id": row["task_id"], "attempt": row["attempt"], "retry_scheduled": retry})
+                    (
+                        task_state,
+                        now,
+                        "Execution lease expired; JARVIS recovered the task.",
+                        "Execution lease expired; JARVIS recovered the task.",
+                        row["task_id"],
+                    ),
+                )
+                recovered.append(
+                    {
+                        "run_id": row["id"],
+                        "task_id": row["task_id"],
+                        "attempt": row["attempt"],
+                        "retry_scheduled": retry,
+                    }
+                )
         return recovered
 
     def dynamic_mission_task_runnable(self, task: dict[str, Any]) -> bool:
@@ -3226,7 +3601,9 @@ class CompanyStore:
         programme_generation = int(pmeta.get("mission_generation", 1) or 1)
         return task_generation == programme_generation
 
-    def claim_next_task(self, *, worker_id: str, lease_seconds: int = 900, max_attempts: int = 3, workflow_id: str | None = None) -> dict[str, Any] | None:
+    def claim_next_task(
+        self, *, worker_id: str, lease_seconds: int = 900, max_attempts: int = 3, workflow_id: str | None = None
+    ) -> dict[str, Any] | None:
         """Atomically lease one dependency-ready task to one worker."""
         if not worker_id.strip():
             raise ValueError("worker_id is required")
@@ -3238,13 +3615,13 @@ class CompanyStore:
         lease_until = (now_dt + timedelta(seconds=lease_seconds)).isoformat()
         run_id = f"run_{uuid.uuid4().hex[:16]}"
         with self.atomic_block():
-                params: list[Any] = []
-                workflow_clause = ""
-                if workflow_id:
-                    workflow_clause = " AND w.workflow_id=?"
-                    params.append(workflow_id)
-                candidates = self._connection.execute(
-                    f"""SELECT w.* FROM work_items w
+            params: list[Any] = []
+            workflow_clause = ""
+            if workflow_id:
+                workflow_clause = " AND w.workflow_id=?"
+                params.append(workflow_id)
+            candidates = self._connection.execute(
+                f"""SELECT w.* FROM work_items w
                     JOIN agents a ON a.agent_id=w.owner_id AND a.enabled=1
                     WHERE w.item_type='task' AND w.state IN ('assigned','blocked')
                     {workflow_clause}
@@ -3253,59 +3630,65 @@ class CompanyStore:
                         WHERE r.task_id=w.id AND r.state IN ('leased','running')
                     )
                     ORDER BY w.priority ASC,w.created_at ASC LIMIT 200""",
-                    params,
-                ).fetchall()
-                selected: sqlite3.Row | None = None
-                attempt = 0
-                for candidate in candidates:
-                    if not self._dynamic_mission_candidate_runnable(candidate):
-                        # Freeze a stale dynamic task rather than allowing a
-                        # global supervisor/autopilot to bypass the mission.
-                        if candidate["state"] in {"assigned", "blocked"}:
+                params,
+            ).fetchall()
+            selected: sqlite3.Row | None = None
+            attempt = 0
+            for candidate in candidates:
+                if not self._dynamic_mission_candidate_runnable(candidate):
+                    # Freeze a stale dynamic task rather than allowing a
+                    # global supervisor/autopilot to bypass the mission.
+                    if candidate["state"] in {"assigned", "blocked"}:
+                        self._connection.execute(
+                            "UPDATE work_items SET state='draft',updated_at=? WHERE id=?",
+                            (now, candidate["id"]),
+                        )
+                    continue
+                try:
+                    dependencies = json.loads(candidate["dependencies"])
+                except json.JSONDecodeError:
+                    dependencies = []
+                if dependencies:
+                    placeholders = ",".join("?" for _ in dependencies)
+                    incomplete = self._connection.execute(
+                        f"""SELECT COUNT(*) FROM work_items
+                            WHERE id IN ({placeholders}) AND state!='completed'""",
+                        dependencies,
+                    ).fetchone()[0]
+                    if incomplete:
+                        if candidate["state"] != "blocked":
                             self._connection.execute(
-                                "UPDATE work_items SET state='draft',updated_at=? WHERE id=?",
-                                (now, candidate["id"]),
+                                "UPDATE work_items SET state='blocked',updated_at=? WHERE id=?", (now, candidate["id"])
                             )
                         continue
-                    try:
-                        dependencies = json.loads(candidate["dependencies"])
-                    except json.JSONDecodeError:
-                        dependencies = []
-                    if dependencies:
-                        placeholders = ",".join("?" for _ in dependencies)
-                        incomplete = self._connection.execute(
-                            f"""SELECT COUNT(*) FROM work_items
-                            WHERE id IN ({placeholders}) AND state!='completed'""",
-                            dependencies,
-                        ).fetchone()[0]
-                        if incomplete:
-                            if candidate["state"] != "blocked":
-                                self._connection.execute("UPDATE work_items SET state='blocked',updated_at=? WHERE id=?", (now, candidate["id"]))
-                            continue
-                    prior = self._connection.execute("SELECT COALESCE(MAX(attempt),0) FROM execution_runs WHERE task_id=?", (candidate["id"],)).fetchone()[0]
-                    if prior >= max_attempts:
-                        self._connection.execute("UPDATE work_items SET state='failed',updated_at=? WHERE id=?", (now, candidate["id"]))
-                        continue
-                    selected = candidate
-                    attempt = prior + 1
-                    break
-                if selected is None:
-                    self._commit_if_needed()
-                    return None
-                cursor = self._connection.execute(
-                    """UPDATE work_items SET state='in_progress',updated_at=?
+                prior = self._connection.execute(
+                    "SELECT COALESCE(MAX(attempt),0) FROM execution_runs WHERE task_id=?", (candidate["id"],)
+                ).fetchone()[0]
+                if prior >= max_attempts:
+                    self._connection.execute(
+                        "UPDATE work_items SET state='failed',updated_at=? WHERE id=?", (now, candidate["id"])
+                    )
+                    continue
+                selected = candidate
+                attempt = prior + 1
+                break
+            if selected is None:
+                self._commit_if_needed()
+                return None
+            cursor = self._connection.execute(
+                """UPDATE work_items SET state='in_progress',updated_at=?
                     WHERE id=? AND state IN ('assigned','blocked')""",
-                    (now, selected["id"]),
-                )
-                if cursor.rowcount != 1:
-                    self._connection.rollback()
-                    return None
-                self._connection.execute(
-                    """INSERT INTO execution_runs(
+                (now, selected["id"]),
+            )
+            if cursor.rowcount != 1:
+                self._connection.rollback()
+                return None
+            self._connection.execute(
+                """INSERT INTO execution_runs(
                     id,task_id,worker_id,attempt,state,lease_until,heartbeat_at,started_at,result
                     ) VALUES(?,?,?,?,?,?,?,?,?)""",
-                    (run_id, selected["id"], worker_id.strip(), attempt, "running", lease_until, now, now, "{}"),
-                )
+                (run_id, selected["id"], worker_id.strip(), attempt, "running", lease_until, now, now, "{}"),
+            )
         return {"run": self._get_execution(run_id), "task": self.get_work_item(selected["id"])}
 
     def heartbeat_execution(self, run_id: str, *, worker_id: str, lease_seconds: int = 900) -> dict[str, Any]:
@@ -3322,38 +3705,57 @@ class CompanyStore:
             self._commit_if_needed()
         return self._get_execution(run_id)
 
-    def finish_execution(self, run_id: str, *, worker_id: str, succeeded: bool, result: dict[str, Any] | None = None, error: str = "", retryable: bool = True, max_attempts: int = 3) -> dict[str, Any]:
+    def finish_execution(
+        self,
+        run_id: str,
+        *,
+        worker_id: str,
+        succeeded: bool,
+        result: dict[str, Any] | None = None,
+        error: str = "",
+        retryable: bool = True,
+        max_attempts: int = 3,
+    ) -> dict[str, Any]:
         """Close a lease and deterministically retry or fail an interrupted task."""
         now = utc_now()
         with self.atomic_block():
-                run = self._connection.execute("SELECT * FROM execution_runs WHERE id=?", (run_id,)).fetchone()
-                if run is None:
-                    raise KeyError(f"Unknown execution run: {run_id}")
-                if run["worker_id"] != worker_id:
-                    raise ValueError("Execution lease belongs to another worker")
-                if run["state"] != "running":
-                    raise ValueError(f"Execution run is already {run['state']}")
-                state = "succeeded" if succeeded else "failed"
-                self._connection.execute(
-                    """UPDATE execution_runs SET state=?,finished_at=?,heartbeat_at=?,
+            run = self._connection.execute("SELECT * FROM execution_runs WHERE id=?", (run_id,)).fetchone()
+            if run is None:
+                raise KeyError(f"Unknown execution run: {run_id}")
+            if run["worker_id"] != worker_id:
+                raise ValueError("Execution lease belongs to another worker")
+            if run["state"] != "running":
+                raise ValueError(f"Execution run is already {run['state']}")
+            state = "succeeded" if succeeded else "failed"
+            self._connection.execute(
+                """UPDATE execution_runs SET state=?,finished_at=?,heartbeat_at=?,
                     error=?,result=? WHERE id=?""",
-                    (state, now, now, error[:4000], json.dumps(result or {}, sort_keys=True, default=str), run_id),
+                (state, now, now, error[:4000], json.dumps(result or {}, sort_keys=True, default=str), run_id),
+            )
+            if not succeeded:
+                retry = retryable and run["attempt"] < max(1, max_attempts)
+                task_state = "assigned" if retry else "failed"
+                summary = (
+                    f"EXECUTION ATTEMPT {run['attempt']} FAILED: {error[:2000]}"
+                    if error
+                    else f"EXECUTION ATTEMPT {run['attempt']} FAILED"
                 )
-                if not succeeded:
-                    retry = retryable and run["attempt"] < max(1, max_attempts)
-                    task_state = "assigned" if retry else "failed"
-                    summary = f"EXECUTION ATTEMPT {run['attempt']} FAILED: {error[:2000]}" if error else f"EXECUTION ATTEMPT {run['attempt']} FAILED"
-                    self._connection.execute(
-                        """UPDATE work_items SET state=?,updated_at=?,
+                self._connection.execute(
+                    """UPDATE work_items SET state=?,updated_at=?,
                         summary=CASE WHEN summary='' THEN ? ELSE ? || '\n\n' || summary END
                         WHERE id=? AND state='in_progress'""",
-                        (task_state, now, summary, summary, run["task_id"]),
-                    )
+                    (task_state, now, summary, summary, run["task_id"]),
+                )
         return self._get_execution(run_id)
 
     def execution_status(self) -> dict[str, Any]:
         with self._lock:
-            counts = {row["state"]: row["count"] for row in self._connection.execute("SELECT state,COUNT(*) AS count FROM execution_runs GROUP BY state").fetchall()}
+            counts = {
+                row["state"]: row["count"]
+                for row in self._connection.execute(
+                    "SELECT state,COUNT(*) AS count FROM execution_runs GROUP BY state"
+                ).fetchall()
+            }
             active = [
                 self._decode_row(row)
                 for row in self._connection.execute(
@@ -3371,7 +3773,16 @@ class CompanyStore:
         with self._lock:
             self._connection.execute(
                 "INSERT INTO content_campaigns(id,title,audience,business_objective,status,config,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",
-                (values["id"], values["title"], values["audience"], values["business_objective"], values["status"], json.dumps(values["config"]), now, now),
+                (
+                    values["id"],
+                    values["title"],
+                    values["audience"],
+                    values["business_objective"],
+                    values["status"],
+                    json.dumps(values["config"]),
+                    now,
+                    now,
+                ),
             )
             self._commit_if_needed()
         return self.get_content_campaign(values["id"])
@@ -3413,7 +3824,9 @@ class CompanyStore:
 
     def list_content_assets(self, campaign_id: str) -> list[dict[str, Any]]:
         with self._lock:
-            rows = self._connection.execute("SELECT * FROM content_assets WHERE campaign_id=? ORDER BY created_at", (campaign_id,)).fetchall()
+            rows = self._connection.execute(
+                "SELECT * FROM content_assets WHERE campaign_id=? ORDER BY created_at", (campaign_id,)
+            ).fetchall()
         return [self._decode_row(row) for row in rows]  # type: ignore[misc]
 
     def record_content_metrics(self, entry: dict[str, Any]) -> dict[str, Any]:
@@ -3422,11 +3835,21 @@ class CompanyStore:
                 """INSERT INTO content_metrics(id,campaign_id,platform,window,captured_at,metrics)
                 VALUES(?,?,?,?,?,?) ON CONFLICT(campaign_id,platform,window) DO UPDATE SET
                 captured_at=excluded.captured_at,metrics=excluded.metrics""",
-                (entry["id"], entry["campaign_id"], entry["platform"], entry["window"], entry.get("captured_at", utc_now()), json.dumps(entry["metrics"])),
+                (
+                    entry["id"],
+                    entry["campaign_id"],
+                    entry["platform"],
+                    entry["window"],
+                    entry.get("captured_at", utc_now()),
+                    json.dumps(entry["metrics"]),
+                ),
             )
             self._commit_if_needed()
         with self._lock:
-            row = self._connection.execute("SELECT * FROM content_metrics WHERE campaign_id=? AND platform=? AND window=?", (entry["campaign_id"], entry["platform"], entry["window"])).fetchone()
+            row = self._connection.execute(
+                "SELECT * FROM content_metrics WHERE campaign_id=? AND platform=? AND window=?",
+                (entry["campaign_id"], entry["platform"], entry["window"]),
+            ).fetchone()
         return self._decode_row(row)  # type: ignore[return-value]
 
     def list_content_metrics(
@@ -3468,9 +3891,7 @@ class CompanyStore:
                 (identifier, campaign_id, lesson, json.dumps(evidence_refs), created_at),
             )
             self._commit_if_needed()
-            row = self._connection.execute(
-                "SELECT * FROM content_lessons WHERE id=?", (identifier,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM content_lessons WHERE id=?", (identifier,)).fetchone()
         return self._decode_row(row)  # type: ignore[return-value]
 
     def list_content_lessons(self, campaign_id: str, limit: int = 100) -> list[dict[str, Any]]:
@@ -3505,13 +3926,27 @@ class CompanyStore:
                     provider,provider_status,error,metadata,created_at,updated_at
                     ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
-                        values["id"], values["campaign_id"], values["task_id"],
-                        values["platform"], values["account_ref"], values["visibility"],
-                        values["title"], values["body"], json.dumps(values["asset_ids"]),
-                        values["payload_hash"], values["idempotency_key"], values["status"],
-                        values["scheduled_at"], values["outbox_event_id"], values["external_id"],
-                        values["provider"], values["provider_status"], values["error"],
-                        json.dumps(values["metadata"]), now, now,
+                        values["id"],
+                        values["campaign_id"],
+                        values["task_id"],
+                        values["platform"],
+                        values["account_ref"],
+                        values["visibility"],
+                        values["title"],
+                        values["body"],
+                        json.dumps(values["asset_ids"]),
+                        values["payload_hash"],
+                        values["idempotency_key"],
+                        values["status"],
+                        values["scheduled_at"],
+                        values["outbox_event_id"],
+                        values["external_id"],
+                        values["provider"],
+                        values["provider_status"],
+                        values["error"],
+                        json.dumps(values["metadata"]),
+                        now,
+                        now,
                     ),
                 )
                 self._commit_if_needed()
@@ -3560,12 +3995,16 @@ class CompanyStore:
             rows = self._connection.execute(query, params).fetchall()
         return [self._decode_row(row) for row in rows]  # type: ignore[misc]
 
-    def update_distribution_publication(
-        self, publication_id: str, **fields: Any
-    ) -> dict[str, Any]:
+    def update_distribution_publication(self, publication_id: str, **fields: Any) -> dict[str, Any]:
         allowed = {
-            "status", "scheduled_at", "outbox_event_id", "external_id",
-            "provider", "provider_status", "error", "metadata",
+            "status",
+            "scheduled_at",
+            "outbox_event_id",
+            "external_id",
+            "provider",
+            "provider_status",
+            "error",
+            "metadata",
         }
         invalid = set(fields) - allowed
         if invalid:
@@ -3704,8 +4143,7 @@ class CompanyStore:
     def list_metrics(self) -> list[dict[str, Any]]:
         with self._lock:
             rows = self._connection.execute(
-                "SELECT name,labels,value,updated_at FROM operational_metrics "
-                "ORDER BY name,labels_key"
+                "SELECT name,labels,value,updated_at FROM operational_metrics ORDER BY name,labels_key"
             ).fetchall()
         return [self._decode_row(row) for row in rows]  # type: ignore[misc]
 
@@ -3847,11 +4285,21 @@ class CompanyStore:
                 programme_id,error,claimed_by,claim_until,created_at,updated_at,resolved_at
                 ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
-                    values["id"], values["idempotency_key"], values["signal_type"],
-                    values["source"], values["severity"], values["status"],
-                    values["department"], json.dumps(values["payload"]), values["programme_id"],
-                    values["error"], values["claimed_by"], values["claim_until"],
-                    values["created_at"], values["updated_at"], values["resolved_at"],
+                    values["id"],
+                    values["idempotency_key"],
+                    values["signal_type"],
+                    values["source"],
+                    values["severity"],
+                    values["status"],
+                    values["department"],
+                    json.dumps(values["payload"]),
+                    values["programme_id"],
+                    values["error"],
+                    values["claimed_by"],
+                    values["claim_until"],
+                    values["created_at"],
+                    values["updated_at"],
+                    values["resolved_at"],
                 ),
             )
             self._commit_if_needed()
@@ -3866,9 +4314,7 @@ class CompanyStore:
 
     def get_company_signal(self, signal_id: str) -> dict[str, Any]:
         with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM company_signals WHERE id=?", (signal_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM company_signals WHERE id=?", (signal_id,)).fetchone()
         decoded = self._decode_row(row)
         if decoded is None:
             raise KeyError(f"Unknown company signal: {signal_id}")
@@ -3990,10 +4436,22 @@ class CompanyStore:
             "updated_at": now,
         }
         columns = (
-            "id", "title", "problem", "target_user", "product_type", "source",
-            "evidence", "score_components", "total_score", "estimated_build_days",
-            "monetization", "distribution_channel", "status", "strategic_fit",
-            "created_at", "updated_at",
+            "id",
+            "title",
+            "problem",
+            "target_user",
+            "product_type",
+            "source",
+            "evidence",
+            "score_components",
+            "total_score",
+            "estimated_build_days",
+            "monetization",
+            "distribution_channel",
+            "status",
+            "strategic_fit",
+            "created_at",
+            "updated_at",
         )
         encoded = [json.dumps(values[c]) if c in self.JSON_COLUMNS else values[c] for c in columns]
         with self._lock:
@@ -4014,9 +4472,7 @@ class CompanyStore:
             raise KeyError(f"Unknown venture opportunity: {opportunity_id}")
         return decoded
 
-    def list_venture_opportunities(
-        self, *, status: str | None = None, limit: int = 200
-    ) -> list[dict[str, Any]]:
+    def list_venture_opportunities(self, *, status: str | None = None, limit: int = 200) -> list[dict[str, Any]]:
         where = " WHERE status=?" if status else ""
         params: list[Any] = [status] if status else []
         params.append(max(1, min(int(limit), 2000)))
@@ -4028,7 +4484,15 @@ class CompanyStore:
         return [self._decode_row(row) for row in rows]  # type: ignore[misc]
 
     def update_venture_opportunity(self, opportunity_id: str, **fields: Any) -> dict[str, Any]:
-        allowed = {"status", "strategic_fit", "evidence", "score_components", "total_score", "monetization", "distribution_channel"}
+        allowed = {
+            "status",
+            "strategic_fit",
+            "evidence",
+            "score_components",
+            "total_score",
+            "monetization",
+            "distribution_channel",
+        }
         invalid = set(fields) - allowed
         if invalid:
             raise ValueError(f"Invalid venture opportunity fields: {', '.join(sorted(invalid))}")
@@ -4039,9 +4503,7 @@ class CompanyStore:
         values = [json.dumps(value) if key in self.JSON_COLUMNS else value for key, value in fields.items()]
         values.append(opportunity_id)
         with self._lock:
-            cursor = self._connection.execute(
-                f"UPDATE venture_opportunities SET {assignments} WHERE id=?", values
-            )
+            cursor = self._connection.execute(f"UPDATE venture_opportunities SET {assignments} WHERE id=?", values)
             if cursor.rowcount != 1:
                 raise KeyError(f"Unknown venture opportunity: {opportunity_id}")
             self._commit_if_needed()
@@ -4050,17 +4512,42 @@ class CompanyStore:
     def create_venture_experiment(self, experiment: dict[str, Any]) -> dict[str, Any]:
         now = utc_now()
         values = {
-            "stage": "planned", "spent_cents": 0, "current_value": 0.0,
-            "recommendation": "", "decision": "", "decision_reason": "",
-            "programme_id": "", "metadata": {}, "started_at": None, "deadline": None,
-            **experiment, "created_at": now, "updated_at": now,
+            "stage": "planned",
+            "spent_cents": 0,
+            "current_value": 0.0,
+            "recommendation": "",
+            "decision": "",
+            "decision_reason": "",
+            "programme_id": "",
+            "metadata": {},
+            "started_at": None,
+            "deadline": None,
+            **experiment,
+            "created_at": now,
+            "updated_at": now,
         }
         columns = (
-            "id", "opportunity_id", "product_name", "hypothesis", "stage",
-            "timebox_days", "budget_cents", "spent_cents", "primary_metric",
-            "target_value", "kill_threshold", "current_value", "recommendation",
-            "decision", "decision_reason", "programme_id", "metadata", "started_at",
-            "deadline", "created_at", "updated_at",
+            "id",
+            "opportunity_id",
+            "product_name",
+            "hypothesis",
+            "stage",
+            "timebox_days",
+            "budget_cents",
+            "spent_cents",
+            "primary_metric",
+            "target_value",
+            "kill_threshold",
+            "current_value",
+            "recommendation",
+            "decision",
+            "decision_reason",
+            "programme_id",
+            "metadata",
+            "started_at",
+            "deadline",
+            "created_at",
+            "updated_at",
         )
         encoded = [json.dumps(values[c]) if c in self.JSON_COLUMNS else values[c] for c in columns]
         with self._lock:
@@ -4075,7 +4562,10 @@ class CompanyStore:
         """Atomically reserve a bounded startup-studio slot and create the sprint."""
         max_active = max(1, int(max_active))
         with self.atomic_block():
-            occupied = {int(row["slot_number"]) for row in self._connection.execute("SELECT slot_number FROM venture_sprint_slots").fetchall()}
+            occupied = {
+                int(row["slot_number"])
+                for row in self._connection.execute("SELECT slot_number FROM venture_sprint_slots").fetchall()
+            }
             slot = next((candidate for candidate in range(1, max_active + 1) if candidate not in occupied), None)
             if slot is None:
                 raise RuntimeError(f"Amaura Ventures allows only {max_active} active validation sprint(s)")
@@ -4096,9 +4586,7 @@ class CompanyStore:
 
     def get_venture_experiment(self, experiment_id: str) -> dict[str, Any]:
         with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM venture_experiments WHERE id=?", (experiment_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM venture_experiments WHERE id=?", (experiment_id,)).fetchone()
         decoded = self._decode_row(row)
         if decoded is None:
             raise KeyError(f"Unknown venture experiment: {experiment_id}")
@@ -4125,8 +4613,16 @@ class CompanyStore:
 
     def update_venture_experiment(self, experiment_id: str, **fields: Any) -> dict[str, Any]:
         allowed = {
-            "stage", "spent_cents", "current_value", "recommendation", "decision",
-            "decision_reason", "programme_id", "metadata", "started_at", "deadline",
+            "stage",
+            "spent_cents",
+            "current_value",
+            "recommendation",
+            "decision",
+            "decision_reason",
+            "programme_id",
+            "metadata",
+            "started_at",
+            "deadline",
         }
         invalid = set(fields) - allowed
         if invalid:
@@ -4138,12 +4634,16 @@ class CompanyStore:
         values = [json.dumps(value) if key in self.JSON_COLUMNS else value for key, value in fields.items()]
         values.append(experiment_id)
         with self._lock:
-            cursor = self._connection.execute(
-                f"UPDATE venture_experiments SET {assignments} WHERE id=?", values
-            )
+            cursor = self._connection.execute(f"UPDATE venture_experiments SET {assignments} WHERE id=?", values)
             if cursor.rowcount != 1:
                 raise KeyError(f"Unknown venture experiment: {experiment_id}")
-            if "stage" in fields and fields["stage"] not in {"validating", "building", "launching", "measuring", "scaling"}:
+            if "stage" in fields and fields["stage"] not in {
+                "validating",
+                "building",
+                "launching",
+                "measuring",
+                "scaling",
+            }:
                 self._connection.execute("DELETE FROM venture_sprint_slots WHERE experiment_id=?", (experiment_id,))
             self._commit_if_needed()
         return self.get_venture_experiment(experiment_id)
@@ -4151,16 +4651,39 @@ class CompanyStore:
     def create_venture_cashflow_stream(self, stream: dict[str, Any]) -> dict[str, Any]:
         now = utc_now()
         values = {
-            "experiment_id": "", "status": "draft", "currency": "INR",
-            "price_cents": 0, "unit_cost_cents": 0, "founder_minutes_per_week": 0,
-            "automation_level": 0, "launch_url": "", "metadata": {},
-            **stream, "created_at": now, "updated_at": now,
+            "experiment_id": "",
+            "status": "draft",
+            "currency": "INR",
+            "price_cents": 0,
+            "unit_cost_cents": 0,
+            "founder_minutes_per_week": 0,
+            "automation_level": 0,
+            "launch_url": "",
+            "metadata": {},
+            **stream,
+            "created_at": now,
+            "updated_at": now,
         }
         columns = (
-            "id", "opportunity_id", "experiment_id", "name", "lane", "platform", "status",
-            "offer", "target_user", "distribution_channel", "currency", "price_cents",
-            "unit_cost_cents", "founder_minutes_per_week", "automation_level", "launch_url",
-            "metadata", "created_at", "updated_at",
+            "id",
+            "opportunity_id",
+            "experiment_id",
+            "name",
+            "lane",
+            "platform",
+            "status",
+            "offer",
+            "target_user",
+            "distribution_channel",
+            "currency",
+            "price_cents",
+            "unit_cost_cents",
+            "founder_minutes_per_week",
+            "automation_level",
+            "launch_url",
+            "metadata",
+            "created_at",
+            "updated_at",
         )
         encoded = [json.dumps(values[c]) if c in self.JSON_COLUMNS else values[c] for c in columns]
         with self._lock:
@@ -4177,10 +4700,12 @@ class CompanyStore:
         """Atomically enforce the portfolio founder-attention cap and insert a stream."""
         requested = int(stream.get("founder_minutes_per_week") or 0)
         with self.atomic_block():
-            used = int(self._connection.execute(
-                "SELECT COALESCE(SUM(founder_minutes_per_week),0) FROM venture_cashflow_streams "
-                "WHERE status IN ('validation','ready','live')"
-            ).fetchone()[0])
+            used = int(
+                self._connection.execute(
+                    "SELECT COALESCE(SUM(founder_minutes_per_week),0) FROM venture_cashflow_streams "
+                    "WHERE status IN ('validation','ready','live')"
+                ).fetchone()[0]
+            )
             if used + requested > int(max_founder_minutes):
                 raise ValueError(
                     f"Portfolio founder-attention cap exceeded: {used + requested} > {int(max_founder_minutes)} minutes/week"
@@ -4196,19 +4721,24 @@ class CompanyStore:
         with self.atomic_block():
             current = self.get_venture_cashflow_stream(stream_id)
             if status in active_states and current.get("status") not in active_states:
-                used = int(self._connection.execute(
-                    "SELECT COALESCE(SUM(founder_minutes_per_week),0) FROM venture_cashflow_streams "
-                    "WHERE id<>? AND status IN ('validation','ready','live')", (stream_id,)
-                ).fetchone()[0])
+                used = int(
+                    self._connection.execute(
+                        "SELECT COALESCE(SUM(founder_minutes_per_week),0) FROM venture_cashflow_streams "
+                        "WHERE id<>? AND status IN ('validation','ready','live')",
+                        (stream_id,),
+                    ).fetchone()[0]
+                )
                 requested = int(current.get("founder_minutes_per_week") or 0)
                 if used + requested > int(max_founder_minutes):
                     raise ValueError(
                         f"Portfolio founder-attention cap exceeded: {used + requested} > {int(max_founder_minutes)} minutes/week"
                     )
             if status == "live":
-                live = int(self._connection.execute(
-                    "SELECT COUNT(*) FROM venture_cashflow_streams WHERE id<>? AND status='live'", (stream_id,)
-                ).fetchone()[0])
+                live = int(
+                    self._connection.execute(
+                        "SELECT COUNT(*) FROM venture_cashflow_streams WHERE id<>? AND status='live'", (stream_id,)
+                    ).fetchone()[0]
+                )
                 if live >= int(max_live):
                     raise ValueError(f"Portfolio live-stream cap reached ({int(max_live)})")
             updated = self.update_venture_cashflow_stream(stream_id, status=status)
@@ -4216,17 +4746,13 @@ class CompanyStore:
 
     def get_venture_cashflow_stream(self, stream_id: str) -> dict[str, Any]:
         with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM venture_cashflow_streams WHERE id=?", (stream_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM venture_cashflow_streams WHERE id=?", (stream_id,)).fetchone()
         decoded = self._decode_row(row)
         if decoded is None:
             raise KeyError(f"Unknown venture cash-flow stream: {stream_id}")
         return decoded
 
-    def list_venture_cashflow_streams(
-        self, *, status: str | None = None, limit: int = 200
-    ) -> list[dict[str, Any]]:
+    def list_venture_cashflow_streams(self, *, status: str | None = None, limit: int = 200) -> list[dict[str, Any]]:
         where = " WHERE status=?" if status else ""
         params: list[Any] = [status] if status else []
         params.append(max(1, min(int(limit), 5000)))
@@ -4238,8 +4764,17 @@ class CompanyStore:
 
     def update_venture_cashflow_stream(self, stream_id: str, **fields: Any) -> dict[str, Any]:
         allowed = {
-            "status", "platform", "offer", "distribution_channel", "currency", "price_cents",
-            "unit_cost_cents", "founder_minutes_per_week", "automation_level", "launch_url", "metadata",
+            "status",
+            "platform",
+            "offer",
+            "distribution_channel",
+            "currency",
+            "price_cents",
+            "unit_cost_cents",
+            "founder_minutes_per_week",
+            "automation_level",
+            "launch_url",
+            "metadata",
         }
         invalid = set(fields) - allowed
         if invalid:
@@ -4251,9 +4786,7 @@ class CompanyStore:
         values = [json.dumps(value) if key in self.JSON_COLUMNS else value for key, value in fields.items()]
         values.append(stream_id)
         with self._lock:
-            cursor = self._connection.execute(
-                f"UPDATE venture_cashflow_streams SET {assignments} WHERE id=?", values
-            )
+            cursor = self._connection.execute(f"UPDATE venture_cashflow_streams SET {assignments} WHERE id=?", values)
             if cursor.rowcount != 1:
                 raise KeyError(f"Unknown venture cash-flow stream: {stream_id}")
             self._commit_if_needed()
@@ -4263,9 +4796,20 @@ class CompanyStore:
         values = {"metadata": {}, **event, "created_at": utc_now()}
         values = {"trust_level": "unverified", "provider": "", "external_event_id": "", **values}
         columns = (
-            "id", "stream_id", "event_type", "amount_cents", "currency", "source",
-            "evidence", "trust_level", "provider", "external_event_id", "idempotency_key",
-            "occurred_at", "metadata", "created_at",
+            "id",
+            "stream_id",
+            "event_type",
+            "amount_cents",
+            "currency",
+            "source",
+            "evidence",
+            "trust_level",
+            "provider",
+            "external_event_id",
+            "idempotency_key",
+            "occurred_at",
+            "metadata",
+            "created_at",
         )
         encoded = [json.dumps(values[c]) if c in self.JSON_COLUMNS else values[c] for c in columns]
         with self._lock:
@@ -4292,16 +4836,38 @@ class CompanyStore:
     def create_venture_cashflow_action(self, action: dict[str, Any]) -> dict[str, Any]:
         now = utc_now()
         values = {
-            "stream_id": "", "status": "proposed", "priority": 3,
-            "requires_founder_approval": False, "payload": {}, "payload_hash": "",
-            "approval_id": "", "approval_task_id": "", "mission_id": "",
-            "result": {}, "due_at": "",
-            **action, "created_at": now, "updated_at": now,
+            "stream_id": "",
+            "status": "proposed",
+            "priority": 3,
+            "requires_founder_approval": False,
+            "payload": {},
+            "payload_hash": "",
+            "approval_id": "",
+            "approval_task_id": "",
+            "mission_id": "",
+            "result": {},
+            "due_at": "",
+            **action,
+            "created_at": now,
+            "updated_at": now,
         }
         columns = (
-            "id", "stream_id", "action_type", "title", "status", "priority",
-            "requires_founder_approval", "payload", "payload_hash", "approval_id",
-            "approval_task_id", "mission_id", "result", "due_at", "created_at", "updated_at",
+            "id",
+            "stream_id",
+            "action_type",
+            "title",
+            "status",
+            "priority",
+            "requires_founder_approval",
+            "payload",
+            "payload_hash",
+            "approval_id",
+            "approval_task_id",
+            "mission_id",
+            "result",
+            "due_at",
+            "created_at",
+            "updated_at",
         )
         encoded = [json.dumps(values[c]) if c in self.JSON_COLUMNS else values[c] for c in columns]
         with self._lock:
@@ -4314,9 +4880,7 @@ class CompanyStore:
 
     def get_venture_cashflow_action(self, action_id: str) -> dict[str, Any]:
         with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM venture_cashflow_actions WHERE id=?", (action_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM venture_cashflow_actions WHERE id=?", (action_id,)).fetchone()
         decoded = self._decode_row(row)
         if decoded is None:
             raise KeyError(f"Unknown venture cash-flow action: {action_id}")
@@ -4341,15 +4905,23 @@ class CompanyStore:
             rows = self._connection.execute(
                 f"SELECT * FROM venture_cashflow_actions{where} ORDER BY priority ASC, created_at ASC LIMIT ?", params
             ).fetchall()
-        decoded = [self._decode_row(row) for row in rows]  # type: ignore[misc]
+        decoded = [decoded_row for row in rows if (decoded_row := self._decode_row(row)) is not None]
         for row in decoded:
             row["requires_founder_approval"] = bool(row.get("requires_founder_approval"))
         return decoded
 
     def update_venture_cashflow_action(self, action_id: str, **fields: Any) -> dict[str, Any]:
         allowed = {
-            "status", "priority", "requires_founder_approval", "payload", "payload_hash",
-            "approval_id", "approval_task_id", "mission_id", "result", "due_at"
+            "status",
+            "priority",
+            "requires_founder_approval",
+            "payload",
+            "payload_hash",
+            "approval_id",
+            "approval_task_id",
+            "mission_id",
+            "result",
+            "due_at",
         }
         invalid = set(fields) - allowed
         if invalid:
@@ -4361,9 +4933,7 @@ class CompanyStore:
         values = [json.dumps(value) if key in self.JSON_COLUMNS else value for key, value in fields.items()]
         values.append(action_id)
         with self._lock:
-            cursor = self._connection.execute(
-                f"UPDATE venture_cashflow_actions SET {assignments} WHERE id=?", values
-            )
+            cursor = self._connection.execute(f"UPDATE venture_cashflow_actions SET {assignments} WHERE id=?", values)
             if cursor.rowcount != 1:
                 raise KeyError(f"Unknown venture cash-flow action: {action_id}")
             self._commit_if_needed()
@@ -4380,9 +4950,7 @@ class CompanyStore:
             )
             self._commit_if_needed()
         with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM venture_metric_events WHERE id=?", (values["id"],)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM venture_metric_events WHERE id=?", (values["id"],)).fetchone()
         decoded = self._decode_row(row)
         if decoded is None:
             raise RuntimeError("Venture metric insert did not persist")
@@ -4405,7 +4973,15 @@ class CompanyStore:
                 (run_id, worker_id, mode, started_at),
             )
             self._commit_if_needed()
-        return {"id": run_id, "worker_id": worker_id, "mode": mode, "status": "running", "result": {}, "started_at": started_at, "finished_at": None}
+        return {
+            "id": run_id,
+            "worker_id": worker_id,
+            "mode": mode,
+            "status": "running",
+            "result": {},
+            "started_at": started_at,
+            "finished_at": None,
+        }
 
     def finish_autonomy_run(
         self,
@@ -4430,9 +5006,7 @@ class CompanyStore:
             if cursor.rowcount != 1:
                 raise KeyError(f"Unknown or completed autonomy run: {run_id}")
             self._commit_if_needed()
-            row = self._connection.execute(
-                "SELECT * FROM autonomy_runs WHERE id=?", (run_id,)
-            ).fetchone()
+            row = self._connection.execute("SELECT * FROM autonomy_runs WHERE id=?", (run_id,)).fetchone()
         decoded = self._decode_row(row)
         if decoded is None:
             raise RuntimeError("Autonomy run completion did not persist")
@@ -4448,12 +5022,26 @@ class CompanyStore:
 
     def dashboard(self) -> dict[str, Any]:
         with self._lock:
-            states = {row["state"]: row["count"] for row in self._connection.execute("SELECT state, COUNT(*) AS count FROM work_items WHERE item_type = 'task' GROUP BY state").fetchall()}
-            departments = {row["department"]: row["count"] for row in self._connection.execute("SELECT department, COUNT(*) AS count FROM agents WHERE enabled = 1 GROUP BY department").fetchall()}
+            states = {
+                row["state"]: row["count"]
+                for row in self._connection.execute(
+                    "SELECT state, COUNT(*) AS count FROM work_items WHERE item_type = 'task' GROUP BY state"
+                ).fetchall()
+            }
+            departments = {
+                row["department"]: row["count"]
+                for row in self._connection.execute(
+                    "SELECT department, COUNT(*) AS count FROM agents WHERE enabled = 1 GROUP BY department"
+                ).fetchall()
+            }
             pending = self._connection.execute("SELECT COUNT(*) FROM approvals WHERE status = 'pending'").fetchone()[0]
             total_cost = self._connection.execute("SELECT COALESCE(SUM(amount_cents), 0) FROM costs").fetchone()[0]
-            active_programmes = self._connection.execute("SELECT COUNT(*) FROM work_items WHERE item_type = 'programme' AND state NOT IN ('completed','cancelled','failed')").fetchone()[0]
-            violations = self._connection.execute("SELECT COUNT(*) FROM audit_logs WHERE outcome = 'denied'").fetchone()[0]
+            active_programmes = self._connection.execute(
+                "SELECT COUNT(*) FROM work_items WHERE item_type = 'programme' AND state NOT IN ('completed','cancelled','failed')"
+            ).fetchone()[0]
+            violations = self._connection.execute(
+                "SELECT COUNT(*) FROM audit_logs WHERE outcome = 'denied'"
+            ).fetchone()[0]
             open_alerts = self._connection.execute(
                 "SELECT COUNT(*) FROM operational_alerts WHERE status='open'"
             ).fetchone()[0]
@@ -4478,6 +5066,9 @@ class CompanyStore:
             "policy_violations": violations,
             "open_alerts": open_alerts,
             "objectives": {"active": active_objectives, "completed": completed_objectives},
-            "ventures": {"qualified_opportunities": qualified_ventures, "active_experiments": active_venture_experiments},
+            "ventures": {
+                "qualified_opportunities": qualified_ventures,
+                "active_experiments": active_venture_experiments,
+            },
             "agents": {"total": sum(departments.values()), "departments": departments},
         }

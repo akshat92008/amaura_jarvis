@@ -8,19 +8,17 @@ paraphrases per capability and adversarial ambiguity test cases.
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import tempfile
 import uuid
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
 from jarvis.amaura.brain import GoalRequest
 from jarvis.amaura.cognition import ExecutiveKernel, ExecutiveRequest, IntentEngine
 from jarvis.amaura.control_plane import AmauraControlPlane
-from jarvis.amaura.direct_action import DirectActionRouter, PathExtractor
+from jarvis.amaura.direct_action import DirectActionRouter
 from jarvis.amaura.store import CompanyStore
 from jarvis.tools.security import tool_workspace
 
@@ -259,9 +257,7 @@ def test_repository_inspection_paraphrases(routing_env, template):
     repo_dir.mkdir(parents=True, exist_ok=True)
     calc_py = repo_dir / "calc.py"
     calc_py.write_text(
-        "def compute_total(a, b):\n"
-        "    \"\"\"Add two numbers.\"\"\"\n"
-        "    return a - b\n",
+        'def compute_total(a, b):\n    """Add two numbers."""\n    return a - b\n',
         encoding="utf-8",
     )
 
@@ -278,6 +274,7 @@ def test_repository_inspection_paraphrases(routing_env, template):
 
 
 # ── 6. Adversarial Ambiguity & Boundary Routing ───────────────────────────────
+
 
 def test_adversarial_macos_app_vs_filesystem(routing_env):
     """Verify macOS app verbs don't capture filesystem requests."""
@@ -334,7 +331,7 @@ def test_out_of_workspace_policy_refusal_truthful(routing_env):
         assert res_write.telemetry.get("reason") == "workspace_escape"
 
         # List outside workspace
-        res_list = DirectActionRouter.execute(f"List files in '/etc'", workspace=str(ws))
+        res_list = DirectActionRouter.execute("List files in '/etc'", workspace=str(ws))
         assert res_list is not None
         assert res_list.success is False
         assert res_list.execution_type == "policy_enforcement"
@@ -343,6 +340,7 @@ def test_out_of_workspace_policy_refusal_truthful(routing_env):
 
 
 # ── 7. Multi-Step Workflow Composition ────────────────────────────────────────
+
 
 def test_workflow_single_input_json_transform(routing_env):
     """Multi-step workflow: read key-value text file, extract JSON, save and verify."""
@@ -405,6 +403,7 @@ def test_workspace_propagation_to_goal_request(routing_env):
 
 
 # ── 8. Phase 3.1 Routing Contradiction & Actionable Guard Regressions ─────────
+
 
 def test_macos_app_collision_file_read_rerouted(routing_env):
     """1. Initial classification = macos_app but path clearly identifies a file -> filesystem executes, conversation NOT called."""
@@ -471,6 +470,7 @@ def test_macos_app_actual_app_unchanged(routing_env, monkeypatch):
     import jarvis.amaura.capability_runtime
 
     executed_app = ""
+
     def mock_execute(self, capability, operation, params=None):
         nonlocal executed_app
         assert capability == "macos_app"
@@ -492,6 +492,7 @@ def test_macos_app_actual_app_unchanged(routing_env, monkeypatch):
 def test_conversational_open_without_file_or_app(routing_env):
     """4. Conversational use of word 'open' without filesystem/app evidence -> conversation, no privileged tools."""
     called_conversation = False
+
     def _mock_conversation(text, context=""):
         nonlocal called_conversation
         called_conversation = True
@@ -531,4 +532,3 @@ def test_macos_app_policy_violation_refusal(routing_env):
     assert response.state == "refused"
     assert response.result.get("policy_decision") == "refused"
     assert response.result.get("provider") == "security-policy"
-

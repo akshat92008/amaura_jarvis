@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -15,9 +15,9 @@ from jarvis.amaura.workflows import WORKFLOWS
 
 def _fake_public_fetch(url: str, *, max_length: int = 200_000):
     payload = (
-        "Students report repeated errors. Existing tools lack mistake-first revision. "
-        "The problem is frequent and users actively seek a focused solution."
-    ).encode()
+        b"Students report repeated errors. Existing tools lack mistake-first revision. "
+        b"The problem is frequent and users actively seek a focused solution."
+    )
     return payload, {
         "validated_hostname": url.split("/")[2],
         "validated_ip": "93.184.216.34",
@@ -44,8 +44,16 @@ def _qualified(studio: VentureStudio):
         product_type="mobile_app",
         source="public student interviews and forum threads",
         evidence=[
-            {"source": "https://evidence-one.example/thread", "claim": "Students report repeated errors", "excerpt": "Students report repeated errors"},
-            {"source": "https://evidence-two.example/reviews", "claim": "Existing tools lack mistake-first revision", "excerpt": "Existing tools lack mistake-first revision"},
+            {
+                "source": "https://evidence-one.example/thread",
+                "claim": "Students report repeated errors",
+                "excerpt": "Students report repeated errors",
+            },
+            {
+                "source": "https://evidence-two.example/reviews",
+                "claim": "Existing tools lack mistake-first revision",
+                "excerpt": "Existing tools lack mistake-first revision",
+            },
         ],
         score_components={
             "pain": 90,
@@ -71,7 +79,12 @@ def test_venture_catalogue_and_score_are_deterministic(monkeypatch):
             assert opportunity["total_score"] == 78
             assert opportunity["status"] == "review_required"
             assert opportunity["estimated_build_days"] <= 14
-            assert {"venture_opportunity_cycle", "venture_validation_sprint", "venture_cashflow_cycle", "venture_portfolio_review"}.issubset(WORKFLOWS)
+            assert {
+                "venture_opportunity_cycle",
+                "venture_validation_sprint",
+                "venture_cashflow_cycle",
+                "venture_portfolio_review",
+            }.issubset(WORKFLOWS)
             assert control.dashboard()["ventures"]["qualified_opportunities"] == 0
         finally:
             control.close()
@@ -90,7 +103,10 @@ def test_venture_rejects_weak_or_unbounded_ideas(monkeypatch):
                     product_type="micro_saas",
                     source="guess",
                     evidence=[],
-                    score_components={key: 100 for key in ("pain", "evidence", "distribution_fit", "speed", "monetization", "strategic_fit")},
+                    score_components={
+                        key: 100
+                        for key in ("pain", "evidence", "distribution_fit", "speed", "monetization", "strategic_fit")
+                    },
                     estimated_build_days=30,
                     monetization="Unknown",
                     distribution_channel="Everywhere",
@@ -150,8 +166,7 @@ def test_venture_metric_requires_evidence_and_drives_recommendation(monkeypatch)
             )["experiment"]
             with pytest.raises(GovernanceError):
                 studio.record_metric(
-                    experiment["id"], metric_name="qualified_weekly_users", value=25,
-                    source="analytics", evidence=[]
+                    experiment["id"], metric_name="qualified_weekly_users", value=25, source="analytics", evidence=[]
                 )
             recorded = studio.record_metric(
                 experiment["id"],

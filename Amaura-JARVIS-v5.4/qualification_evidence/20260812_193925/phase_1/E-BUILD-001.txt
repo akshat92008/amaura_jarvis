@@ -1,4 +1,0 @@
-EVIDENCE ID: E-BUILD-001
-CLAIM: Record build ID A
-BUILD_ID: 3d1ba478d82e693c880a1b6a402ba36bc34803e6
-JSON: {'status': 'online', 'version': '5.4.1', 'build_id': '3d1ba478d82e693c880a1b6a402ba36bc34803e6', 'timestamp': '2026-08-12T19:47:10.896093', 'sessions': 0, 'tools': {'coding': 14, 'advanced_coding': 18, 'agent_factory': 8, 'desktop': 12, 'research': 4, 'documents': 3, 'communication': 5, 'app_builder': 1, 'tdd_loop': 1, 'ast_indexer': 3, 'vision': 7, 'vector_memory': 6, 'fleet': 4, 'browser': 9, 'hud': 1, 'duplex_voice': 5, 'amaura_company_os': 38, 'total': 137}, 'pid': 68582, 'bootstrap_proof': '', 'service_proof': ''}

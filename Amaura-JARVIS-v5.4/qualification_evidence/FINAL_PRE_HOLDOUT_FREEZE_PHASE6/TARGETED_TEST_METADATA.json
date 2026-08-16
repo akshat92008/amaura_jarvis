@@ -1,8 +1,0 @@
-{
-  "command": "PYTHONPATH=. python3 -m pytest tests/test_generic_execution_repair.py tests/test_intent_routing.py tests/test_phase4_execution_semantics.py tests/test_phase5_2_grammar_closure.py tests/test_phase6_arch_repairs.py -v",
-  "exit_code": 0,
-  "duration_seconds": 58.38,
-  "passed": 290,
-  "failed": 0,
-  "skipped": 0
-}

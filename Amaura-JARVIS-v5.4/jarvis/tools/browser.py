@@ -7,10 +7,10 @@ retries, and error recovery.
 
 import os
 import time
+
 import httpx
-from pathlib import Path
 from bs4 import BeautifulSoup
-from typing import Dict, List, Optional
+
 from jarvis.paths import get_data_dir
 
 SESSION_FILE = get_data_dir() / "browser_session.json"
@@ -27,17 +27,17 @@ BROWSER_TOOL_DEFINITIONS = [
                 "properties": {
                     "url": {
                         "type": "string",
-                        "description": "Target website URL (e.g. 'https://console.cloud.google.com')."
+                        "description": "Target website URL (e.g. 'https://console.cloud.google.com').",
                     },
                     "use_playwright": {
                         "type": "boolean",
                         "description": "Set to True for JavaScript-rendered SPAs.",
-                        "default": True
-                    }
+                        "default": True,
+                    },
                 },
-                "required": ["url"]
-            }
-        }
+                "required": ["url"],
+            },
+        },
     },
     {
         "type": "function",
@@ -47,18 +47,15 @@ BROWSER_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "url": {
-                        "type": "string",
-                        "description": "Target webpage URL."
-                    },
+                    "url": {"type": "string", "description": "Target webpage URL."},
                     "selector": {
                         "type": "string",
-                        "description": "CSS selector or button label (e.g. 'button#submit', 'text=Login')."
-                    }
+                        "description": "CSS selector or button label (e.g. 'button#submit', 'text=Login').",
+                    },
                 },
-                "required": ["url", "selector"]
-            }
-        }
+                "required": ["url", "selector"],
+            },
+        },
     },
     {
         "type": "function",
@@ -68,22 +65,16 @@ BROWSER_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "url": {
-                        "type": "string",
-                        "description": "Target webpage URL."
-                    },
+                    "url": {"type": "string", "description": "Target webpage URL."},
                     "selector": {
                         "type": "string",
-                        "description": "CSS selector for input field (e.g. 'input[name=username]')."
+                        "description": "CSS selector for input field (e.g. 'input[name=username]').",
                     },
-                    "text": {
-                        "type": "string",
-                        "description": "Text to type into the element."
-                    }
+                    "text": {"type": "string", "description": "Text to type into the element."},
                 },
-                "required": ["url", "selector", "text"]
-            }
-        }
+                "required": ["url", "selector", "text"],
+            },
+        },
     },
     {
         "type": "function",
@@ -93,23 +84,17 @@ BROWSER_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "url": {
-                        "type": "string",
-                        "description": "Target webpage URL."
-                    },
-                    "output_path": {
-                        "type": "string",
-                        "description": "Optional output filepath to save PNG image."
-                    },
+                    "url": {"type": "string", "description": "Target webpage URL."},
+                    "output_path": {"type": "string", "description": "Optional output filepath to save PNG image."},
                     "full_page": {
                         "type": "boolean",
                         "description": "Set True for full scrollable page capture.",
-                        "default": True
-                    }
+                        "default": True,
+                    },
                 },
-                "required": ["url"]
-            }
-        }
+                "required": ["url"],
+            },
+        },
     },
     {
         "type": "function",
@@ -119,19 +104,16 @@ BROWSER_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "url": {
-                        "type": "string",
-                        "description": "Target website URL."
-                    },
+                    "url": {"type": "string", "description": "Target website URL."},
                     "selector": {
                         "type": "string",
                         "description": "CSS selector to target specific elements.",
-                        "default": "body"
-                    }
+                        "default": "body",
+                    },
                 },
-                "required": ["url"]
-            }
-        }
+                "required": ["url"],
+            },
+        },
     },
     {
         "type": "function",
@@ -141,22 +123,16 @@ BROWSER_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "url": {
-                        "type": "string",
-                        "description": "Target webpage URL."
-                    },
+                    "url": {"type": "string", "description": "Target webpage URL."},
                     "selector": {
                         "type": "string",
-                        "description": "CSS selector for file input element (e.g. 'input[type=file]')."
+                        "description": "CSS selector for file input element (e.g. 'input[type=file]').",
                     },
-                    "file_path": {
-                        "type": "string",
-                        "description": "Absolute path to local file to upload."
-                    }
+                    "file_path": {"type": "string", "description": "Absolute path to local file to upload."},
                 },
-                "required": ["url", "selector", "file_path"]
-            }
-        }
+                "required": ["url", "selector", "file_path"],
+            },
+        },
     },
     {
         "type": "function",
@@ -166,22 +142,13 @@ BROWSER_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "url": {
-                        "type": "string",
-                        "description": "Target webpage URL."
-                    },
-                    "selector": {
-                        "type": "string",
-                        "description": "CSS selector for download link or button."
-                    },
-                    "save_path": {
-                        "type": "string",
-                        "description": "Optional destination filepath."
-                    }
+                    "url": {"type": "string", "description": "Target webpage URL."},
+                    "selector": {"type": "string", "description": "CSS selector for download link or button."},
+                    "save_path": {"type": "string", "description": "Optional destination filepath."},
                 },
-                "required": ["url", "selector"]
-            }
-        }
+                "required": ["url", "selector"],
+            },
+        },
     },
     {
         "type": "function",
@@ -194,20 +161,13 @@ BROWSER_TOOL_DEFINITIONS = [
                     "action": {
                         "type": "string",
                         "description": "Tab action: 'list', 'create', 'switch', 'close'.",
-                        "default": "list"
+                        "default": "list",
                     },
-                    "url": {
-                        "type": "string",
-                        "description": "URL for new tab if action is 'create'."
-                    },
-                    "tab_index": {
-                        "type": "integer",
-                        "description": "Tab index for switch or close.",
-                        "default": 0
-                    }
-                }
-            }
-        }
+                    "url": {"type": "string", "description": "URL for new tab if action is 'create'."},
+                    "tab_index": {"type": "integer", "description": "Tab index for switch or close.", "default": 0},
+                },
+            },
+        },
     },
     {
         "type": "function",
@@ -220,12 +180,12 @@ BROWSER_TOOL_DEFINITIONS = [
                     "action": {
                         "type": "string",
                         "description": "Action: 'save', 'restore', 'clear', 'info'.",
-                        "default": "info"
+                        "default": "info",
                     }
-                }
-            }
-        }
-    }
+                },
+            },
+        },
+    },
 ]
 
 
@@ -235,9 +195,9 @@ class BrowserAgentV2:
     def __init__(self):
         SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
         DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
-        self.active_tabs: List[Dict[str, str]] = []
+        self.active_tabs: list[dict[str, str]] = []
 
-    def _get_storage_state(self) -> Optional[str]:
+    def _get_storage_state(self) -> str | None:
         if SESSION_FILE.exists():
             return str(SESSION_FILE)
         return None
@@ -249,7 +209,7 @@ class BrowserAgentV2:
                 return func()
             except Exception as e:
                 last_err = e
-                time.sleep(delay * (2 ** attempt))
+                time.sleep(delay * (2**attempt))
         raise last_err or RuntimeError("Operation failed after retries.")
 
 
@@ -263,16 +223,19 @@ def browser_navigate(url: str, use_playwright: bool = True) -> str:
     if use_playwright:
         try:
             from playwright.sync_api import sync_playwright
+
             def _nav():
                 with sync_playwright() as p:
                     browser = p.chromium.launch(headless=True)
                     storage_state = _browser_agent._get_storage_state()
-                    context = browser.new_context(storage_state=storage_state) if storage_state else browser.new_context()
+                    context = (
+                        browser.new_context(storage_state=storage_state) if storage_state else browser.new_context()
+                    )
                     page = context.new_page()
                     page.goto(url, timeout=15000, wait_until="domcontentloaded")
                     title = page.title()
                     content = page.inner_text("body")
-                    
+
                     # Save session state
                     context.storage_state(path=str(SESSION_FILE))
                     browser.close()
@@ -291,14 +254,20 @@ Engine: Playwright Chromium (Authenticated Session Active)
 {clean_text[:2500]}
 ```
 """
+
             return _browser_agent.execute_with_retries(_nav)
         except Exception:
             pass
 
     try:
-        resp = httpx.get(url, timeout=10.0, follow_redirects=True, headers={
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        })
+        resp = httpx.get(
+            url,
+            timeout=10.0,
+            follow_redirects=True,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+        )
         soup = BeautifulSoup(resp.text, "html.parser")
         title = soup.title.string if soup.title else "No Title"
 
@@ -330,6 +299,7 @@ def browser_click(url: str, selector: str) -> str:
 
     try:
         from playwright.sync_api import sync_playwright
+
         def _click():
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
@@ -358,6 +328,7 @@ def browser_type(url: str, selector: str, text: str) -> str:
 
     try:
         from playwright.sync_api import sync_playwright
+
         def _type():
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
@@ -377,7 +348,7 @@ def browser_type(url: str, selector: str, text: str) -> str:
         return f"❌ Playwright Type Error ({selector}): {e}"
 
 
-def browser_take_screenshot(url: str, output_path: Optional[str] = None, full_page: bool = True) -> str:
+def browser_take_screenshot(url: str, output_path: str | None = None, full_page: bool = True) -> str:
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
@@ -386,6 +357,7 @@ def browser_take_screenshot(url: str, output_path: Optional[str] = None, full_pa
 
     try:
         from playwright.sync_api import sync_playwright
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
@@ -426,6 +398,7 @@ def browser_upload_file(url: str, selector: str, file_path: str) -> str:
 
     try:
         from playwright.sync_api import sync_playwright
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
@@ -437,13 +410,14 @@ def browser_upload_file(url: str, selector: str, file_path: str) -> str:
         return f"❌ File Upload Error: {e}"
 
 
-def browser_download_file(url: str, selector: str, save_path: Optional[str] = None) -> str:
+def browser_download_file(url: str, selector: str, save_path: str | None = None) -> str:
     """Trigger a file download by clicking a link/button and save to disk."""
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
     try:
         from playwright.sync_api import sync_playwright
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
@@ -460,7 +434,7 @@ def browser_download_file(url: str, selector: str, save_path: Optional[str] = No
         return f"❌ File Download Error: {e}"
 
 
-def browser_manage_tabs(action: str = "list", url: Optional[str] = None, tab_index: int = 0) -> str:
+def browser_manage_tabs(action: str = "list", url: str | None = None, tab_index: int = 0) -> str:
     """Manage multi-tab browser states."""
     action = action.lower().strip()
     if action == "create":

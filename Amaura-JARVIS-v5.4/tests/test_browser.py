@@ -1,13 +1,15 @@
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
+
 from jarvis.tools.browser import (
-    browser_navigate,
     browser_extract_content,
-    browser_manage_tabs,
     browser_manage_session,
-    browser_upload_file
+    browser_manage_tabs,
+    browser_navigate,
+    browser_upload_file,
 )
+
 
 class TestBrowser(unittest.TestCase):
     def test_navigate_and_extract(self):
@@ -41,6 +43,7 @@ class TestBrowser(unittest.TestCase):
     def test_upload_missing_file_error(self):
         err = browser_upload_file("https://example.com", "input[type=file]", "/non/existent/path.txt")
         self.assertIn("does not exist", err)
+
 
 if __name__ == "__main__":
     unittest.main()
