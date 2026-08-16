@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -48,9 +49,9 @@ def test_strict_external_checkpoint_blocks_database_rollback_before_new_audit(
     shutil.copy2(snapshot, db)
     _remove_sqlite_sidecars(db)
 
-    with CompanyStore(db) as rolled_back:
-        check = rolled_back.audit_chain_check()
-        assert check["ok"] is False
-        assert check["reason"] == "external_checkpoint_mismatch"
-        with pytest.raises(RuntimeError, match="checkpoint|integrity|rollback"):
-            rolled_back.audit("operator", "must_not_append", "test", "3", "allowed", {"step": 3})
+    with pytest.raises(RuntimeError, match="checkpoint|integrity|rollback"):
+        CompanyStore(db)
+
+    with sqlite3.connect(db) as connection:
+        count = int(connection.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0])
+    assert count == 1

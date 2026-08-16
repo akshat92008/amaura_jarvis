@@ -151,6 +151,7 @@ class CompanyStore:
         try:
             self._migrate()
             self._initialize_empty_audit_checkpoint()
+            self._validate_external_audit_checkpoint_on_open()
         except Exception:
             self._connection.close()
             self._closed = True
@@ -1121,6 +1122,79 @@ class CompanyStore:
                 signature=self._audit_signature(""),
                 key_id=self._audit_key_id(),
             )
+
+    def _validate_external_audit_checkpoint_on_open(self) -> None:
+        """Fail closed when an external audit anchor proves DB rollback.
+
+        The database commit happens before the external checkpoint update, so a
+        checkpoint may legitimately lag the database during concurrent writers.
+        The reverse cannot occur in the normal append protocol: a checkpoint
+        ahead of the durable database is rollback evidence.
+        """
+        if os.environ.get("AMAURA_REQUIRE_EXTERNAL_AUDIT_CHECKPOINT", "0") != "1":
+            return
+
+        checkpoint = self._checkpoint_path()
+        if checkpoint is None or not checkpoint.is_file():
+            raise RuntimeError("Audit integrity failure: required external checkpoint is missing")
+
+        lock_path = checkpoint.with_suffix(checkpoint.suffix + ".lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(lock_path, "a+b") as lock_file:
+            try:
+                import fcntl
+
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            except (ImportError, OSError):
+                pass
+            try:
+                try:
+                    saved = json.loads(checkpoint.read_text(encoding="utf-8"))
+                    checkpoint_sequence = int(saved.get("sequence", -1))
+                except (OSError, ValueError, json.JSONDecodeError, TypeError) as exc:
+                    raise RuntimeError("Audit integrity failure: external checkpoint is invalid") from exc
+
+                if checkpoint_sequence < 0:
+                    raise RuntimeError("Audit integrity failure: external checkpoint sequence is invalid")
+
+                row = self._connection.execute(
+                    "SELECT sequence,entry_hash FROM audit_logs ORDER BY sequence DESC LIMIT 1"
+                ).fetchone()
+                database_sequence = int(row["sequence"]) if row is not None else 0
+                if checkpoint_sequence > database_sequence:
+                    raise RuntimeError(
+                        "Audit integrity failure: external checkpoint is ahead of the database; "
+                        "possible database rollback detected"
+                    )
+
+                if checkpoint_sequence == 0:
+                    anchored_head = ""
+                else:
+                    anchor = self._connection.execute(
+                        "SELECT entry_hash FROM audit_logs WHERE sequence=?", (checkpoint_sequence,)
+                    ).fetchone()
+                    if anchor is None:
+                        raise RuntimeError("Audit integrity failure: external checkpoint references a missing audit row")
+                    anchored_head = str(anchor["entry_hash"])
+
+                checkpoint_head = str(saved.get("head", ""))
+                if not hmac.compare_digest(checkpoint_head, anchored_head):
+                    raise RuntimeError("Audit integrity failure: external checkpoint head does not match audit history")
+
+                checkpoint_signature = str(saved.get("signature", ""))
+                expected_signature = self._audit_signature(checkpoint_head)
+                if checkpoint_signature:
+                    if not expected_signature or not hmac.compare_digest(checkpoint_signature, expected_signature):
+                        raise RuntimeError("Audit integrity failure: external checkpoint signature is invalid")
+                elif os.environ.get("AMAURA_STRICT_AUDIT_SIGNATURES", "0") == "1":
+                    raise RuntimeError("Audit integrity failure: external checkpoint signature is missing")
+            finally:
+                try:
+                    import fcntl
+
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                except (ImportError, OSError):
+                    pass
 
     def _write_external_audit_checkpoint(self, *, sequence: int, head: str, signature: str, key_id: str) -> None:
         target = self._checkpoint_path()
