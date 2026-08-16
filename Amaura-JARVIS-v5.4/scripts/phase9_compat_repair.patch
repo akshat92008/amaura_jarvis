@@ -1,0 +1,412 @@
+--- a/Amaura-JARVIS-v5.4/jarvis/amaura/semantic_frontend.py
++++ b/Amaura-JARVIS-v5.4/jarvis/amaura/semantic_frontend.py
+@@ -27,10 +27,10 @@
+ _EXCLUSIVE = r"(?:only|solely|just|exactly|strictly|verbatim|precisely)"
+ _COMMAND = r"(?:reply|respond|return|say|echo|repeat|print|output|give\s+me|send|type|write\s+back)"
+ _TRAILING_EXACT = re.compile(
+-    r"\s*(?:and\s+nothing\s+(?:else|more)|with\s+nothing\s+(?:else|more)|"
++    r"\s*(?:(?:and\s+nothing\s+(?:else|more)|with\s+nothing\s+(?:else|more)|"
+     r"and\s+no\s+other\s+text|without\s+(?:any\s+)?(?:explanation|commentary)|"
+     r"with\s+no\s+(?:other|extra)\s+(?:text|words|commentary)|"
+-    r"verbatim|strictly|precisely)\.?\s*$",
++    r"verbatim|strictly|precisely)|[;,]\s*add\s+nothing|only)\.?\s*$",
+     re.IGNORECASE,
+ )
+ 
+@@ -67,6 +67,7 @@
+             "file contents",
+             "contents of",
+             "raw file",
++            "file text",
+             "read ",
+             "open ",
+             "load ",
+@@ -113,6 +114,28 @@
+     )
+ 
+ 
++def _positive_routing_text(text: str) -> str:
++    """Mask explicitly negated mutating clauses while preserving offsets."""
++    chars = list(text)
++    negated = re.compile(
++        r"\b(?:do\s+not|don't|dont|never|must\s+not|should\s+not)\s+"
++        r"(?:write|save|create|store|put|dump|record|delete|remove|wipe|destroy|modify|edit)\b",
++        re.IGNORECASE,
++    )
++    positive = r"(?:read|open|show|display|cat|fetch|load|get|retrieve|inspect|examine|list|review|analy[sz]e|diagnose|navigate|return|reply)"
++    for match in negated.finditer(text):
++        tail = text[match.end():]
++        boundary = re.search(
++            rf"[.;\n]|,\s*(?={positive}\b)|\b(?:and|but|then)\s+(?={positive}\b)",
++            tail, re.IGNORECASE,
++        )
++        end = match.end() + (boundary.start() if boundary else len(tail))
++        for i in range(match.start(), end):
++            if chars[i] not in "\r\n":
++                chars[i] = " "
++    return "".join(chars)
++
++
+ def _strip_exact_prefix(value: str) -> str:
+     value = value.strip()
+     # Declarative response contracts.
+@@ -175,7 +198,11 @@
+             re.IGNORECASE,
+         )
+     )
+-    signal = signal or bool(re.match(r"^\s*(?:please\s+|kindly\s+)?(?:echo|repeat)\s*[:\-]", clean, re.IGNORECASE))
++    signal = signal or bool(re.match(r"^\s*(?:please\s+|kindly\s+)?(?:echo|repeat)\b", clean, re.IGNORECASE))
++    signal = signal or bool(re.match(
++        r"^\s*(?:and\s+nothing\s+more|(?:the\s+)?following\s+(?:string|token|value|word|payload|text|literal))\s*[:\-]",
++        clean, re.IGNORECASE,
++    ))
+     if not signal:
+         return None
+ 
+@@ -186,9 +213,10 @@
+         return quoted[-1].group(2)
+ 
+     work = _TRAILING_EXACT.sub("", clean).strip()
+-    # Colon/equality is a hard payload boundary for deterministic commands.
+-    if ":" in work:
+-        tail = work.rsplit(":", 1)[1].strip()
++    # Single colons delimit control language; double-colons are payload bytes.
++    single_colons = list(re.finditer(r"(?<!:):(?!:)", work))
++    if single_colons:
++        tail = work[single_colons[-1].end():].strip()
+         if tail:
+             return _strip_token(tail)
+     eq = re.search(r"(?:=|\bequal\s+to\b|\bequals?\b)\s*(.+)$", work, re.IGNORECASE)
+@@ -233,7 +261,7 @@
+         patterns = (
+             rf"\b(?:save|write|store|export|dump|record|output)\b[^\n;]{{0,90}}\b(?:to|into|in|at)\s+['\"`]?{escaped}",
+             rf"\b(?:destination|output|target)\s+(?:file\s+)?(?:is|to|in|at)?\s*['\"`]?{escaped}",
+-            rf"\b(?:create|make)\s+(?:an?\s+)?(?:empty\s+)?(?:file\s+)?(?:at\s+)?['\"`]?{escaped}",
++            rf"\b(?:create|make)\s+(?:an?\s+)?(?:empty\s+)?(?:(?:json|csv|tsv|text)\s+)?(?:file\s+)?(?:at\s+)?['\"`]?{escaped}",
+             rf"\bthe\s+file\s+['\"`]?{escaped}\b[^\n]{{0,50}}\b(?:contain|hold|have)\b",
+         )
+         if any(re.search(pattern, lower, re.IGNORECASE) for pattern in patterns):
+@@ -249,7 +277,7 @@
+             r"[^\n]{0,60}\b(?:files|entries|children|direct\s+children|items|filenames|inventory|directory|folder|contents)\b",
+             lower,
+         )
+-        or re.search(r"\b(?:inventory\s+of|what\s+is\s+inside|what\s+files\s+are\s+in)\b", lower)
++        or re.search(r"\b(?:inventory\s+of|what\s+is\s+inside|what\s+files\s+are\s+(?:in|under)|what\s+files\s+exist|what\s+entries\s+are|files\s+exist\s+(?:under|in)|give\s+filenames\s+from|print\s+location)\b", lower)
+     )
+     if not strong:
+         return ""
+@@ -273,13 +301,15 @@
+ def _file_read_target(text: str, paths: list[str]) -> str:
+     if paths:
+         return paths[0]
+-    match = re.search(
+-        r"\b(?:contents?|content|text)\s+of\s+['\"`]?([~/A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)",
+-        text,
+-        re.IGNORECASE,
++    patterns = (
++        r"\b(?:contents?|content|text)\s+(?:of|from|inside)\s+[\x27\x22`]?([~/A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)",
++        r"\b(?:stored|written)\s+in\s+[\x27\x22`]?([~/A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)",
++        r"\bwhat\s+does\s+[\x27\x22`]?([~/A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)[\x27\x22`]?\s+contain\b",
+     )
+-    if match:
+-        return _strip_token(match.group(1))
++    for pattern in patterns:
++        match = re.search(pattern, text, re.IGNORECASE)
++        if match:
++            return _strip_token(match.group(1))
+     return ""
+@@ -321,7 +351,7 @@
+     return core.BrowserPlan(
+         url=url,
+         selectors=selectors,
+         want_title="title" in lower,
+-        want_text=any(term in lower for term in ("body text", "page text", "page content")) and not selectors,
++        want_text=(any(term in lower for term in ("body text", "page text", "page content")) or bool(re.search(r"\b(?:extract|get|read|return|show|report)\b[^\n]{0,50}\bcontent\b", lower))) and not selectors,
+         want_links=bool(re.search(r"\b(?:links|hrefs?)\b", lower)),
+     )
+@@ -417,7 +447,7 @@
+         delimiter = ";"
+     elif source.suffix.lower() == ".tsv" or "tsv" in lower:
+         delimiter = "\t"
+-    elif lines[0].strip().startswith("|"):
++    elif "|" in lines[0]:
+         delimiter = "|"
+     else:
+         delimiter = ","
+@@ -481,7 +511,8 @@
+         mode = core._response_mode(clean)
+         if not clean:
+             return core.SemanticRequestGraph(clean, core.SemanticAction.UNKNOWN, response_mode=mode)
+-        paths = unified_extract(clean, known_extensions)
++        routing = _positive_routing_text(clean)
++        paths = unified_extract(routing, known_extensions)
+ 
+         literal = _parse_exact_literal(clean, paths)
+         if literal is not None:
+@@ -493,22 +524,23 @@
+                 evidence=["formal_exact_response_contract"],
+             )
+ 
+-        lower = clean.lower()
+-        masked = _mask_literals(clean).lower()
++        lower = routing.lower()
++        masked = _mask_literals(routing).lower()
+         if any(v in lower for v in ("delete", "remove", "wipe", "destroy", "purge")) and any(
+             term in lower for term in ("without asking", "bypass", "force", "protected", "silently", "override policy", "no confirmation")
+         ):
+             return core.SemanticRequestGraph(clean, core.SemanticAction.POLICY_REFUSAL, mode, evidence=["destructive_bypass_request"])
+ 
+-        browser = _browser_plan(core, clean)
++        browser = _browser_plan(core, routing)
+         if browser is not None:
+             return core.SemanticRequestGraph(clean, core.SemanticAction.BROWSER, mode, browser=browser, evidence=["url_browser_contract"])
+ 
+-        arithmetic = _arithmetic_graph(core, clean, paths, mode)
++        arithmetic = _arithmetic_graph(core, routing, paths, mode)
+         if arithmetic is not None:
++            arithmetic.original_text = clean
+             return arithmetic
+ 
+-        table = _table_transform(clean, paths)
++        table = _table_transform(routing, paths)
+         if table is not None:
+             graph = core.SemanticRequestGraph(
+                 clean,
+@@ -520,7 +552,7 @@
+             graph.transform_plan = table
+             return graph
+ 
+-        legacy = _legacy_transform(clean, paths, da)
++        legacy = _legacy_transform(routing, paths, da)
+         if legacy is not None:
+             graph = core.SemanticRequestGraph(
+                 clean,
+@@ -532,7 +564,7 @@
+             graph.transform_plan = legacy
+             return graph
+ 
+-        repo_noun = bool(re.search(r"\b(?:repo|repository|codebase|project\s+repository)\b", lower))
++        repo_noun = bool(re.search(r"\b(?:repo|repository|codebase|project(?:\s+repository)?|code)\b", lower))
+         inspect = bool(re.search(r"\b(?:check|examine|review|inspect|diagnose|audit|analy[sz]e|trace|investigate|find\s+(?:the\s+)?bug|locate\s+(?:the\s+)?bug)\b", masked))
+         mutating = bool(re.search(r"\b(?:write|edit|modify|delete|remove|create|save|store)\b", masked))
+         if inspect and paths and not mutating and (repo_noun or "read-only" in lower or "read only" in lower):
+@@ -584,7 +616,7 @@
+ 
+         # Reuse the mature clause/reference parser as a subordinate role parser;
+         # it no longer competes with other top-level actions.
+-        write_action = da.WriteActionParser.parse(clean)
++        write_action = da.WriteActionParser.parse(routing)
+         if write_action is not None:
+             graph = core.SemanticRequestGraph(clean, core.SemanticAction.FILE_WRITE, mode, evidence=["write_clause_role_parser"])
+             target = str(write_action.target_path or "")
+@@ -602,7 +634,7 @@
+             graph.write_payload = write_action.content
+             return graph
+ 
+-        directory = _directory_target(clean, paths)
++        directory = _directory_target(routing, paths)
+         if directory:
+             return core.SemanticRequestGraph(
+                 clean,
+@@ -612,8 +644,12 @@
+                 evidence=["directory_entity_role"],
+             )
+ 
+-        read_target = _file_read_target(clean, paths)
+-        if read_target and re.search(r"\b(?:read|open|show|display|cat|fetch|view|print)\b|\b(?:contents?|content|text)\s+of\b", lower):
++        read_target = _file_read_target(routing, paths)
++        if read_target and re.search(
++            r"\b(?:read|open|show|display|cat|fetch|view|print|load|get|retrieve|examine|inspect)\b|"
++            r"\b(?:contents?|content|text)\s+(?:of|from|inside)\b|\bwhat\s+does\b[^\n]{0,120}\bcontain\b|\bwhat\s+is\s+inside\b",
++            lower,
++        ):
+             return core.SemanticRequestGraph(
+                 clean,
+                 core.SemanticAction.FILE_READ,
+@@ -655,6 +691,8 @@
+                 tool_res = da.parse_tool_result(da.execute_tool("write_file", {"path": str(path), "content": payload}))
+             if not tool_res.ok:
+                 return _result_failure(f"File write failed: {tool_res.error or 'write tool failed'}", tool="write_file", provider="local-filesystem", reason="tool_failed")
++            if not path.exists():
++                return da.DirectActionResult(False, "File write verification failed: output missing after write.", execution_type="tool", tool_name="write_file", provider="local-filesystem", telemetry={"reason": "missing_after_write", "verification_passed": False})
+             observed = path.read_text(encoding="utf-8", errors="replace")
+             expected_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+             actual_hash = hashlib.sha256(observed.encode("utf-8")).hexdigest()
+@@ -662,7 +700,7 @@
+                 return da.DirectActionResult(
+                     False,
+                     "File write verification failed: persisted bytes do not match the requested payload.",
+-                    execution_type="semantic_graph",
++                    execution_type="tool",
+                     tool_name="write_file",
+                     provider="local-filesystem",
+                     telemetry={"reason": "content_mismatch", "expected_size": len(payload), "actual_size": len(observed), "expected_sha256": expected_hash, "actual_sha256": actual_hash, "content_match": False, "verification_passed": False},
+@@ -670,7 +708,7 @@
+             return da.DirectActionResult(
+                 True,
+                 f"Successfully wrote and independently verified {path}.",
+-                execution_type="semantic_graph",
++                execution_type="tool",
+                 tool_name="write_file",
+                 provider="local-filesystem",
+                 telemetry={"path": str(path), "output_path": str(path), "payload": payload, "expected_size": len(payload), "actual_size": len(observed), "expected_sha256": expected_hash, "actual_sha256": actual_hash, "content_match": True, "verification_passed": True, "semantic_action": graph.action.value, "status": "completed"},
+@@ -692,7 +730,7 @@
+             return da.DirectActionResult(
+                 True,
+                 raw,
+-                execution_type="semantic_graph",
++                execution_type="tool",
+                 tool_name="read_file",
+                 provider="local-filesystem",
+                 telemetry={"path": str(path), "value": raw, "read_mode": "raw" if _is_raw_read(graph.original_text) else "display", "verification_passed": True, "semantic_action": graph.action.value, "status": "completed"},
+@@ -707,11 +745,11 @@
+             _, path = _resolve(graph.paths[0].path, workspace, must_exist=True)
+             if path.is_file():
+                 raw = path.read_text(encoding="utf-8", errors="replace")
+-                return da.DirectActionResult(True, raw, execution_type="semantic_graph", tool_name="read_file", provider="local-filesystem", telemetry={"path": str(path), "value": raw, "read_mode": "display", "verification_passed": True, "semantic_action": "file_read", "status": "completed"})
++                return da.DirectActionResult(True, raw, execution_type="tool", tool_name="read_file", provider="local-filesystem", telemetry={"path": str(path), "value": raw, "read_mode": "display", "verification_passed": True, "semantic_action": "file_read", "status": "completed"})
+             if not path.is_dir():
+                 return _result_failure(f"Directory not found: {path}", tool="list_directory", provider="local-filesystem", reason="directory_not_found")
+             entries = sorted(child.name for child in path.iterdir())
+-            return da.DirectActionResult(True, "\n".join(entries), execution_type="semantic_graph", tool_name="list_directory", provider="local-filesystem", telemetry={"path": str(path), "value": entries, "verification_passed": True, "semantic_action": graph.action.value, "status": "completed"})
++            return da.DirectActionResult(True, "\n".join(entries), execution_type="tool", tool_name="list_directory", provider="local-filesystem", telemetry={"path": str(path), "value": entries, "verification_passed": True, "semantic_action": graph.action.value, "status": "completed"})
+         except FileNotFoundError as exc:
+             return _result_failure(f"Directory not found: {exc}", tool="list_directory", provider="local-filesystem", reason="directory_not_found")
+         except PermissionError as exc:
+@@ -870,49 +908,59 @@
+         plan = graph.browser
+         assert plan is not None
+         successful: dict[str, Any] = {}
+         failed: list[dict[str, str]] = []
++
++        def _field(primary_tool: str, selector: str | None, field: str) -> None:
++            primary = da.parse_tool_result(da.execute_tool(primary_tool, {"url": plan.url}))
++            if primary.ok:
++                successful[field] = core._tool_output(primary)
++                return
++            fallback = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": selector})) if selector else None
++            if fallback is not None and fallback.ok:
++                value = core._tool_output(fallback)
++                if isinstance(value, dict):
++                    value = value.get("content", value.get("text", value))
++                if not (isinstance(value, str) and "no elements matched" in value.lower()):
++                    successful[field] = value
++                    return
++            error = (fallback.error if fallback is not None else None) or primary.error or "extraction failed"
++            failed.append({"field": field, "selector": selector or "", "error": error})
++
+         nav = da.parse_tool_result(da.execute_tool("browser_navigate", {"url": plan.url}))
+         if not nav.ok:
+-            return da.DirectActionResult(False, f"Browser execution failed: {nav.error or 'navigation failed'}", execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser-automation", telemetry={"status": "total_failure", "successful_fields": {}, "failed_fields": [{"field": "navigation", "error": nav.error or "navigation failed"}], "verification_passed": False, "reason": "browser_failed"})
++            return da.DirectActionResult(False, f"Browser execution failed: {nav.error or 'navigation failed'}", execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser", telemetry={"status": "total_failure", "successful_fields": {}, "failed_fields": [{"field": "navigation", "error": nav.error or "navigation failed"}], "verification_passed": False, "reason": "browser_failed"})
+         nav_value = core._tool_output(nav)
+         if plan.want_title:
+             if isinstance(nav_value, dict) and nav_value.get("title") is not None:
+                 successful["title"] = nav_value["title"]
+             else:
+-                title = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": "title"}))
+-                if title.ok:
+-                    successful["title"] = core._tool_output(title)
+-                else:
+-                    failed.append({"field": "title", "selector": "title", "error": title.error or "title extraction failed"})
++                _field("browser_get_title", "title", "title")
+         for selector in plan.selectors:
+             selected = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": selector}))
+             value = core._tool_output(selected) if selected.ok else None
+@@ -925,25 +973,20 @@
+             else:
+                 successful[selector] = value
+         if plan.want_text:
+-            body = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": "body"}))
+-            value = core._tool_output(body) if body.ok else None
+-            if body.ok:
+-                successful["content"] = value
+-            else:
+-                failed.append({"field": "content", "selector": "body", "error": body.error or "body extraction failed"})
++            _field("browser_get_text", "body", "content")
+         if plan.want_links:
+-            links = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": "a"}))
+-            if links.ok:
+-                successful["links"] = core._tool_output(links)
+-            else:
+-                failed.append({"field": "links", "selector": "a", "error": links.error or "link extraction failed"})
++            _field("browser_get_links", "a", "links")
+         if not successful and not failed:
+             successful["page"] = nav_value
+         if failed and successful:
+-            message = f"Browser request partially completed. Successful fields: {json.dumps(successful, ensure_ascii=False, default=str)}. Failed fields: {json.dumps(failed, ensure_ascii=False)}"
+-            return da.DirectActionResult(False, message, execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser-automation", telemetry={"status": "partial_failure", "successful_fields": successful, "failed_fields": failed, "structured_result": successful, "verification_passed": False, "reason": "partial_browser_failure"})
++            return da.DirectActionResult(False, f"Browser request partially completed. Successful fields: {json.dumps(successful, ensure_ascii=False, default=str)}. Failed fields: {json.dumps(failed, ensure_ascii=False)}", execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser", telemetry={"status": "partial_failure", "successful_fields": successful, "failed_fields": failed, "structured_result": successful, "verification_passed": False, "reason": "partial_browser_failure"})
+         if failed:
+-            return da.DirectActionResult(False, f"Browser extraction failed: {json.dumps(failed, ensure_ascii=False)}", execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser-automation", telemetry={"status": "total_failure", "successful_fields": {}, "failed_fields": failed, "verification_passed": False, "reason": "browser_failed"})
++            return da.DirectActionResult(False, f"Browser extraction failed: {json.dumps(failed, ensure_ascii=False)}", execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser", telemetry={"status": "total_failure", "successful_fields": {}, "failed_fields": failed, "verification_passed": False, "reason": "browser_failed"})
+         value: Any = next(iter(successful.values())) if len(successful) == 1 else successful
+-        return da.DirectActionResult(True, json.dumps(successful, ensure_ascii=False, default=str), execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser-automation", telemetry={"status": "completed", "successful_fields": successful, "failed_fields": [], "structured_result": successful, "value": value, "selectors": plan.selectors, "verification_passed": True, "semantic_action": graph.action.value})
++        return da.DirectActionResult(True, json.dumps(successful, ensure_ascii=False, default=str), execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser", telemetry={"status": "completed", "successful_fields": successful, "failed_fields": [], "structured_result": successful, "value": value, "selectors": plan.selectors, "verification_passed": True, "semantic_action": graph.action.value})
+ 
+     def _authorize(graph: Any) -> tuple[bool, frozenset[str], frozenset[str], str]:
+         if graph.errors:
+@@ -934,7 +977,11 @@
+     def execute(cls: Any, text: str, *, context: str = "", control: Any = None, workspace: str = "") -> Any:
+         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
+         if graph.action == core.SemanticAction.UNKNOWN:
++            if control is not None:
++                memory = cls._try_memory_recall(text, context=context, control=control)
++                if memory is not None:
++                    return memory
+             return None
+         allowed, effects, outputs, reason = _authorize(graph)
+         if not allowed:
+@@ -943,7 +990,7 @@
+             if graph.action == core.SemanticAction.EXACT_LITERAL:
+                 result = _public_exact(graph)
+             elif graph.action == core.SemanticAction.POLICY_REFUSAL:
+-                result = da.DirectActionResult(False, "I cannot perform that destructive action while bypassing approval or policy.", execution_type="policy_enforcement", tool_name="policy", provider="semantic-core", policy_decision="refused", telemetry={"reason": "destructive_action_unauthorized", "verification_passed": False})
++                result = da.DirectActionResult(False, "Policy refusal: I cannot perform that destructive action while bypassing approval or policy.", execution_type="policy_enforcement", tool_name="policy", provider="semantic-core", policy_decision="refused", telemetry={"reason": "destructive_action_unauthorized", "verification_passed": False})
+             elif graph.action == core.SemanticAction.FILE_READ:
+                 result = _read_file(graph, workspace)
+@@ -979,9 +1026,32 @@
+     def exact_parse(cls: Any, text: str, workspace: str = "") -> Any:
+         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
+-        return _public_exact(graph) if graph.action == core.SemanticAction.EXACT_LITERAL else None
++        if graph.action != core.SemanticAction.EXACT_LITERAL:
++            return None
++        result = _public_exact(graph)
++        result.execution_type = "semantic_graph"
++        return result
++
++    def exact_parse_intent(cls: Any, text: str) -> Any:
++        graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
++        if graph.action != core.SemanticAction.EXACT_LITERAL or graph.literal_payload is None:
++            return None
++        payload = graph.literal_payload
++        candidates = list(re.finditer(re.escape(payload), text))
++        if not candidates:
++            return None
++        match = candidates[-1]
++        start, end = match.start(), match.end()
++        quote_style = "none"
++        if start > 0 and end < len(text) and text[start - 1] == text[end] and text[start - 1] in "'\"`":
++            quote_style = {"'": "single", '\"': "double", "`": "backtick"}[text[start - 1]]
++        return da.ExactLiteralIntent(payload=payload, payload_span_start=start, payload_span_end=end, quote_style=quote_style, prefix_constraint=text[:start], suffix_constraint=text[end:], confidence=1.0)
+ 
+     da.DirectActionRouter.can_handle = classmethod(can_handle)
+     da.DirectActionRouter.execute = classmethod(execute)
+     da.ExactResponseParser.parse = classmethod(exact_parse)
++    da.ExactResponseParser.parse_intent = classmethod(exact_parse_intent)
+     _INSTALLED = True
+--- a/Amaura-JARVIS-v5.4/jarvis/amaura/direct_action.py
++++ b/Amaura-JARVIS-v5.4/jarvis/amaura/direct_action.py
+@@ -1127,7 +1127,11 @@
+             cand = to_match.group(1).strip().strip("'\"`")
+             while cand and cand[-1] in ('.', ',', ':', ';', '!', '?', ')', ']', '}'):
+                 cand = cand[:-1].strip()
+-            if cand in all_paths or any(cand.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS) or "/" in cand:
++            quoted_payload_destination = bool(re.search(
++                r"\b(?:save|write|put|store|dump|record|output)\b\s+[\x27\x22`][^\x27\x22`]*[\x27\x22`]\s+(?:to|into|in|at)\s+[\x27\x22`]?" + re.escape(cand) + r"(?:\b|$)",
++                clean, re.IGNORECASE,
++            ))
++            if cand in all_paths or any(cand.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS) or "/" in cand or quoted_payload_destination:
+                 target_path = cand
+ 
+         if not target_path and args.get("output_path"):
