@@ -9,8 +9,9 @@ on:
       - 'Amaura-JARVIS-v5.4/scripts/phase9_compat_v2.patch'
       - 'Amaura-JARVIS-v5.4/scripts/phase9_compat_v3.patch'
       - 'Amaura-JARVIS-v5.4/scripts/phase9_compat_v4.patch'
+      - 'Amaura-JARVIS-v5.4/scripts/phase9_compat_v5.patch'
       - '.github/workflows/phase9-diagnostics.yml'
-      - 'Amaura-JARVIS-v5.4/jarvis/amaura/**'
+      - 'Amaura-JARVIS-v5.4/jarvis/**'
 
 permissions:
   contents: write
@@ -69,7 +70,9 @@ jobs:
           git apply scripts/phase9_compat_v3.patch
           git apply --check scripts/phase9_compat_v4.patch
           git apply scripts/phase9_compat_v4.patch
-          python -m py_compile jarvis/amaura/semantic_frontend.py jarvis/amaura/direct_action.py
+          git apply --check scripts/phase9_compat_v5.patch
+          git apply scripts/phase9_compat_v5.patch
+          python -m py_compile jarvis/amaura/semantic_frontend.py jarvis/amaura/direct_action.py jarvis/agent.py
       - name: Install frozen environment
         run: |
           python -m pip install --upgrade pip uv
@@ -100,12 +103,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase9-compatibility-v4-diagnostics
+          name: phase9-compatibility-final-diagnostics
           path: |
             Amaura-JARVIS-v5.4/compatibility-diagnostics.txt
             Amaura-JARVIS-v5.4/compatibility-exit.txt
             Amaura-JARVIS-v5.4/jarvis/amaura/semantic_frontend.py
             Amaura-JARVIS-v5.4/jarvis/amaura/direct_action.py
+            Amaura-JARVIS-v5.4/jarvis/agent.py
           if-no-files-found: warn
           retention-days: 1
       - name: Commit verified compatibility repair
@@ -113,7 +117,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add jarvis/amaura/semantic_frontend.py jarvis/amaura/direct_action.py
+          git add jarvis/amaura/semantic_frontend.py jarvis/amaura/direct_action.py jarvis/agent.py
           if ! git diff --cached --quiet; then
             git commit -m 'fix: close semantic compatibility regressions'
             git push origin HEAD:agent/phase9-semantic-repair
