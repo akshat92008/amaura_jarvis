@@ -41,8 +41,26 @@ jobs:
           python-version: '3.11'
       - name: Apply staged compatibility repair
         run: |
-          git apply --recount --check scripts/phase9_compat_repair.patch
-          git apply --recount scripts/phase9_compat_repair.patch
+          git apply --recount --reject scripts/phase9_compat_repair.patch || true
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('jarvis/amaura/semantic_frontend.py')
+          s = p.read_text()
+          old = '''    def exact_parse(cls: Any, text: str, workspace: str = "") -> Any:\n        graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)\n        return _public_exact(graph) if graph.action == core.SemanticAction.EXACT_LITERAL else None\n\n    da.DirectActionRouter.can_handle = classmethod(can_handle)\n    da.DirectActionRouter.execute = classmethod(execute)\n    da.ExactResponseParser.parse = classmethod(exact_parse)\n'''
+          new = '''    def exact_parse(cls: Any, text: str, workspace: str = "") -> Any:\n        graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)\n        if graph.action != core.SemanticAction.EXACT_LITERAL:\n            return None\n        result = _public_exact(graph)\n        result.execution_type = "semantic_graph"\n        return result\n\n    def exact_parse_intent(cls: Any, text: str) -> Any:\n        graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)\n        if graph.action != core.SemanticAction.EXACT_LITERAL or graph.literal_payload is None:\n            return None\n        payload = graph.literal_payload\n        candidates = list(re.finditer(re.escape(payload), text))\n        if not candidates:\n            return None\n        match = candidates[-1]\n        start, end = match.start(), match.end()\n        quote_style = "none"\n        if start > 0 and end < len(text) and text[start - 1] == text[end] and text[start - 1] in "'\\\"`":\n            quote_style = {"'": "single", '\\"': "double", "`": "backtick"}[text[start - 1]]\n        return da.ExactLiteralIntent(payload=payload, payload_span_start=start, payload_span_end=end, quote_style=quote_style, prefix_constraint=text[:start], suffix_constraint=text[end:], confidence=1.0)\n\n    da.DirectActionRouter.can_handle = classmethod(can_handle)\n    da.DirectActionRouter.execute = classmethod(execute)\n    da.ExactResponseParser.parse = classmethod(exact_parse)\n    da.ExactResponseParser.parse_intent = classmethod(exact_parse_intent)\n'''
+          if old not in s:
+              raise SystemExit('exact parser tail did not match expected canonical source')
+          p.write_text(s.replace(old, new, 1))
+          PY
+          rejects=$(find . -name '*.rej' -print)
+          if [ -n "$rejects" ]; then
+            echo "$rejects"
+            for f in $rejects; do cat "$f"; done
+            count=$(find . -name '*.rej' | wc -l)
+            [ "$count" -eq 1 ] || exit 2
+            grep -q 'def exact_parse' $rejects || exit 2
+            find . -name '*.rej' -delete
+          fi
           python -m py_compile jarvis/amaura/semantic_frontend.py jarvis/amaura/direct_action.py
       - name: Install frozen environment
         run: |
