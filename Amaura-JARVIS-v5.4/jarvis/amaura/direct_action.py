@@ -1109,8 +1109,20 @@ class WriteActionParser:
             if not any(w in clean_lower for w in (" and write", " and save", " and put", " and store", " then write", " then save")):
                 return None
 
-        # Reject if this is a genuine screenshot command (CAPTURE_VERB + SCREEN_OBJECT in active clause)
-        if any(c.action_type == ActionType.SCREENSHOT_CAPTURE and not c.is_blocked_as_negated and c.confidence > 0.8 for c in parsed.candidate_actions):
+        # Screenshot-looking words inside an explicit write payload are data.
+        # Reject as a screenshot only when the request does not establish a strong
+        # write target+payload relationship.
+        strong_write_payload_contract = bool(re.search(
+            r"\b(?:write|create|save|store|put|dump|record)\b[^\n]{0,180}"
+            r"(?:\b(?:to|into|at)\b[^\n]{0,120}\b(?:text|content|payload|body|data|string)\b\s*:|"
+            r"\b(?:contain|containing|contains|should\s+contain|must\s+contain)\b)",
+            clean,
+            re.IGNORECASE,
+        ))
+        if (
+            not strong_write_payload_contract
+            and any(c.action_type == ActionType.SCREENSHOT_CAPTURE and not c.is_blocked_as_negated and c.confidence > 0.8 for c in parsed.candidate_actions)
+        ):
             return None
 
         all_paths = [p.raw_text.strip("'\"`") for p in parsed.paths]
@@ -1252,6 +1264,12 @@ class WriteActionParser:
                     flags=re.IGNORECASE,
                 ).strip()
                 cand_after = cls.INTRODUCER_STRIP_RE.sub("", cand_after).strip()
+                cand_after = re.sub(
+                    r"^(?:exactly|verbatim|strictly|precisely)\s*[:=\-]?\s*",
+                    "",
+                    cand_after,
+                    flags=re.IGNORECASE,
+                ).strip()
                 if cand_after and cand_after != after_tgt:
                     cand_after = cls.TRAILING_DIRECTIVE_RE.sub("", cand_after).strip()
                     if (cand_after.startswith("'") and cand_after.endswith("'")) or (cand_after.startswith('"') and cand_after.endswith('"')):
@@ -1937,10 +1955,46 @@ class RepositoryDiagnosticEngine:
                                     local_calls.append(child.func.attr)
 
                         if local_calls and module_fn_names:
+                            def _helper_return_operator(helper_name: str) -> str:
+                                for helper_node in ast.walk(tree):
+                                    if not isinstance(helper_node, ast.FunctionDef) or helper_node.name != helper_name:
+                                        continue
+                                    for ret in ast.walk(helper_node):
+                                        if isinstance(ret, ast.Return) and isinstance(ret.value, ast.BinOp):
+                                            if isinstance(ret.value.op, ast.Add):
+                                                return "+"
+                                            if isinstance(ret.value.op, ast.Sub):
+                                                return "-"
+                                            if isinstance(ret.value.op, ast.Mult):
+                                                return "*"
+                                            if isinstance(ret.value.op, ast.Div):
+                                                return "/"
+                                return ""
+
+                            contract_op = ""
+                            if re.search(r"\b(?:add|adds|adding|increase|plus|bonus|fee)\b", combined_doc):
+                                contract_op = "+"
+                            elif re.search(r"\b(?:subtract|subtracts|subtracting|decrease|minus|deduct|discount)\b", combined_doc):
+                                contract_op = "-"
+
                             for called_helper in set(local_calls):
+                                called_op = _helper_return_operator(called_helper)
                                 for sibling in module_fn_names:
                                     if sibling == called_helper:
                                         continue
+                                    sibling_op = _helper_return_operator(sibling)
+                                    if contract_op and called_op and sibling_op == contract_op and called_op != contract_op:
+                                        findings.append({
+                                            "function": fn_name,
+                                            "category": "wrong_helper_call",
+                                            "called_helper": called_helper,
+                                            "expected_helper": sibling,
+                                            "description": f"Function '{fn_name}' calls helper '{called_helper}' ({called_op}) but contract semantics require '{sibling}' ({contract_op}).",
+                                            "reason": "helper return operator contradicts function contract while sibling satisfies it",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        })
+                                        break
                                     sibling_doc = ""
                                     for mod_node in ast.walk(tree):
                                         if isinstance(mod_node, ast.FunctionDef) and mod_node.name == sibling:
@@ -1975,7 +2029,7 @@ class RepositoryDiagnosticEngine:
                                 combined_doc = doc_lower + " " + fn_lower
 
                                 # At least / greater than or equal
-                                if ("at least" in combined_doc or "greater than or equal" in combined_doc or "inclusive" in combined_doc) and any(isinstance(op, ast.Gt) for op in child.ops):
+                                if ("at least" in combined_doc or "greater than or equal" in combined_doc or ">=" in doc or "inclusive" in combined_doc) and any(isinstance(op, ast.Gt) for op in child.ops):
                                     findings.append({
                                         "function": fn_name,
                                         "category": "comparison_boundary",
@@ -1986,7 +2040,7 @@ class RepositoryDiagnosticEngine:
                                         "file": str(py_file),
                                     })
                                 # At most / less than or equal
-                                elif ("at most" in combined_doc or "less than or equal" in combined_doc) and any(isinstance(op, ast.Lt) for op in child.ops):
+                                elif ("at most" in combined_doc or "less than or equal" in combined_doc or "<=" in doc) and any(isinstance(op, ast.Lt) for op in child.ops):
                                     findings.append({
                                         "function": fn_name,
                                         "category": "comparison_boundary",
@@ -3764,18 +3818,39 @@ class DirectActionRouter:
             factual_hits = [h for h in hits if h.source not in ("conversation_memory", "legacy_user_memory")]
             if not factual_hits:
                 return None
-            selected_hits = factual_hits
+            generic_entities = {"give", "only", "reply", "return", "remember", "recall", "retrieve"}
+            meaningful_entities = [
+                str(entity).strip() for entity in entities
+                if str(entity).strip() and str(entity).strip().lower() not in generic_entities
+            ]
 
-            if selected_hits and selected_hits[0].score >= 0.10:
+            def grounded_score(hit: Any) -> float:
+                try:
+                    body = hit.content if isinstance(hit.content, str) else json.dumps(hit.content, ensure_ascii=False)
+                except Exception:
+                    body = str(hit.content)
+                haystack = f"{hit.key} {body}".lower()
+                exact_entity_bonus = sum(1.25 for entity in meaningful_entities if entity.lower() in haystack)
+                project_bonus = 0.15 if meaningful_entities and str(hit.source).endswith(".project") else 0.0
+                return float(hit.score) + exact_entity_bonus + project_bonus
+
+            selected_hits = sorted(factual_hits, key=grounded_score, reverse=True)
+
+            if selected_hits and grounded_score(selected_hits[0]) >= 0.10:
                 top_hit = selected_hits[0]
                 content = top_hit.content
                 if isinstance(content, dict):
                     val = content.get("content") or content.get("value") or json.dumps(content)
                 else:
                     val = str(content)
+                scalar = str(val).strip()
+                relation = re.search(r"\bis\s+(.+?)[.\s]*$", scalar, re.IGNORECASE)
+                if relation:
+                    scalar = relation.group(1).strip().rstrip(".")
 
                 candidate_ids = [f"{h.source}:{h.key}" for h in selected_hits[:8]]
                 candidate_scores = [round(h.score, 3) for h in selected_hits[:8]]
+                grounded_scores = [round(grounded_score(h), 3) for h in selected_hits[:8]]
                 selected_ids = [f"{top_hit.source}:{top_hit.key}"]
                 namespaces = list(dict.fromkeys(h.source for h in selected_hits[:8]))
 
@@ -3793,8 +3868,10 @@ class DirectActionRouter:
                         "namespaces_searched": namespaces,
                         "candidate_ids": candidate_ids,
                         "candidate_scores": candidate_scores,
+                        "grounded_candidate_scores": grounded_scores,
                         "selected_ids": selected_ids,
-                        "selection_reason": f"Top-scoring factual memory hit ({top_hit.source}:{top_hit.key}, score={top_hit.score:.3f})",
+                        "value": scalar,
+                        "selection_reason": f"Top entity-grounded factual memory hit ({top_hit.source}:{top_hit.key}, raw={top_hit.score:.3f}, grounded={grounded_score(top_hit):.3f})",
                     },
                 )
         except Exception:

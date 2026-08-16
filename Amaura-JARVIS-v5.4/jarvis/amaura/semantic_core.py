@@ -162,14 +162,19 @@ def _mask_quoted(text: str) -> str:
 
 def _response_mode(text: str) -> str:
     lower = text.lower()
-    if re.search(r"\b(?:reply|respond|return|output|answer)\b.*\bonly\b.*\bnumber\b", lower) or "number only" in lower:
-        return "NUMBER_ONLY"
-    if re.search(r"\b(?:reply|respond|return|output|answer)\b.*\bonly\b.*\bvalue\b", lower) or "value only" in lower:
-        return "VALUE_ONLY"
+    # Raw-file contracts outrank generic scalar wording such as "only the contents".
     if "exact raw" in lower or "byte-for-byte" in lower or "exact file contents" in lower:
         return "EXACT_RAW"
     if "raw file" in lower or "raw contents" in lower or "without line numbers" in lower or "just the contents" in lower:
         return "RAW"
+    if re.search(r"\b(?:reply|respond|return|output|answer|give)\b.*\bonly\b.*\bnumber\b", lower) or "number only" in lower:
+        return "NUMBER_ONLY"
+    if (
+        re.search(r"\b(?:reply|respond|return|output|answer|give)\b.*\b(?:only|just)\b.*\b(?:value|text|title|content|token|marker|code)\b", lower)
+        or re.search(r"\b(?:reply|respond|return|output|answer|give)\b\s+(?:with\s+)?(?:only|just)\s+(?:the\s+)?(?:value|text|title|content|token|marker|code)\b", lower)
+        or any(phrase in lower for phrase in ("value only", "title only", "text only", "content only"))
+    ):
+        return "VALUE_ONLY"
     if "json only" in lower or "only json" in lower:
         return "JSON_ONLY"
     if "path only" in lower or "only the path" in lower:
