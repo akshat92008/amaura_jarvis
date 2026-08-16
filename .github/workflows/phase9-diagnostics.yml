@@ -96,6 +96,8 @@ jobs:
           path: |
             Amaura-JARVIS-v5.4/compatibility-diagnostics.txt
             Amaura-JARVIS-v5.4/compatibility-exit.txt
+            Amaura-JARVIS-v5.4/jarvis/amaura/semantic_frontend.py
+            Amaura-JARVIS-v5.4/jarvis/amaura/direct_action.py
           if-no-files-found: warn
           retention-days: 1
       - name: Enforce result
