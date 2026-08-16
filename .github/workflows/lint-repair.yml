@@ -34,19 +34,26 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          # cognition.py: Path is used by semantic execution helpers but was not imported.
           p = Path('jarvis/amaura/cognition.py')
           text = p.read_text()
           if 'from pathlib import Path\n' not in text:
               text = text.replace('from datetime import UTC, datetime\n', 'from datetime import UTC, datetime\nfrom pathlib import Path\n', 1)
           p.write_text(text)
 
-          # capability_runtime.py: keep re at module scope and make exception chaining explicit.
           p = Path('jarvis/amaura/capability_runtime.py')
           text = p.read_text()
           if '\nimport re\n' not in text.split('from dataclasses', 1)[0]:
               text = text.replace('import os\n', 'import os\nimport re\n', 1)
-          text = text.replace('\nimport re\n\nclass MacOSAppAdapter', '\n\nclass MacOSAppAdapter', 1)
+          lines = text.splitlines(keepends=True)
+          seen_re = False
+          cleaned = []
+          for source_line in lines:
+              if source_line.strip() == 'import re' and not source_line.startswith((' ', '\t')):
+                  if seen_re:
+                      continue
+                  seen_re = True
+              cleaned.append(source_line)
+          text = ''.join(cleaned)
           text = text.replace(
               "        except subprocess.TimeoutExpired:\n            raise CapabilityExecutionError(f\"Command timed out for application '{raw_app_name}'.\")\n",
               "        except subprocess.TimeoutExpired:\n            raise CapabilityExecutionError(f\"Command timed out for application '{raw_app_name}'.\") from None\n",
@@ -64,7 +71,6 @@ jobs:
           )
           p.write_text(text)
 
-          # antigravity_bridge.py: split the three flagged semicolon statements.
           p = Path('jarvis/amaura/antigravity_bridge.py')
           text = p.read_text()
           text = text.replace(
@@ -83,6 +89,27 @@ jobs:
               1,
           )
           p.write_text(text)
+
+          p = Path('jarvis/amaura/direct_action.py')
+          text = p.read_text()
+          text = text.replace(
+              'def _helper_return_operator(helper_name: str) -> str:',
+              'def _helper_return_operator(helper_name: str, tree: ast.AST = tree) -> str:',
+              1,
+          )
+          text = text.replace('lines = [l for l in input_1.splitlines() if l.strip()]', 'lines = [line for line in input_1.splitlines() if line.strip()]', 1)
+          text = text.replace('re.match(r"^[a-zA-Z0-9_.\\-]+\\s*[:=]\\s*", l.strip()) for l in lines if not l.strip().startswith("#")', 're.match(r"^[a-zA-Z0-9_.\\-]+\\s*[:=]\\s*", line.strip()) for line in lines if not line.strip().startswith("#")', 1)
+          text = text.replace('not any("|" in l or "\\t" in l or "," in l for l in lines)', 'not any("|" in line or "\\t" in line or "," in line for line in lines)', 1)
+          text = text.replace('clean_lines = [l for l in input_1.splitlines() if l.strip() and not l.strip().startswith("#") and not re.match(r"^[-|+= :]+$", l.strip())]', 'clean_lines = [line for line in input_1.splitlines() if line.strip() and not line.strip().startswith("#") and not re.match(r"^[-|+= :]+$", line.strip())]', 1)
+          text = text.replace('lines = [l for l in input_1.splitlines() if l.strip() and not l.strip().startswith("#")]', 'lines = [line for line in input_1.splitlines() if line.strip() and not line.strip().startswith("#")]', 1)
+          text = text.replace('                for l in lines:\n                    m = re.match(r"^\\s*([a-zA-Z0-9_.\\-]+)\\s*[:=]\\s*(.*)$", l)', '                for line in lines:\n                    m = re.match(r"^\\s*([a-zA-Z0-9_.\\-]+)\\s*[:=]\\s*(.*)$", line)', 1)
+          p.write_text(text)
+
+          p = Path('jarvis/amaura/content_factory.py')
+          text = p.read_text()
+          text = text.replace('            raise GovernanceError(f"Invalid campaign schema: {exc}")', '            raise GovernanceError(f"Invalid campaign schema: {exc}") from exc', 1)
+          text = text.replace('            raise GovernanceError(f"Invalid asset schema: {exc}")', '            raise GovernanceError(f"Invalid asset schema: {exc}") from exc', 1)
+          p.write_text(text)
           PY
       - name: Enforce clean lint
         run: .venv/bin/ruff check --output-format=github jarvis tests/test_phase9_semantic_hardening.py scripts/*.py
@@ -92,7 +119,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add jarvis/agent.py jarvis/amaura/cognition.py jarvis/amaura/capability_runtime.py jarvis/amaura/antigravity_bridge.py jarvis/amaura/direct_action.py jarvis/amaura/semantic_core.py
+          git add jarvis
           if git diff --cached --quiet; then
             echo "No lint changes required."
           else
