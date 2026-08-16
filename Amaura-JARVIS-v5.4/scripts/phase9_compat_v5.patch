@@ -1,0 +1,26 @@
+--- a/Amaura-JARVIS-v5.4/jarvis/agent.py
++++ b/Amaura-JARVIS-v5.4/jarvis/agent.py
+@@ -1054,7 +1054,13 @@
+ 
+         payload = response.model_dump(mode="json")
+         if response.result and response.result.get("execution_type"):
+-            provenance.update({
++            result_execution_type = response.result.get("execution_type")
++            # The kernel may surface the exact-response parser receipt as a
++            # semantic_graph result after the conversation handler has already
++            # executed the deterministic echo. Parser provenance must not
++            # overwrite the truthful runtime execution receipt.
++            preserve_exact_runtime = provenance.get("execution_type") == "exact_response" and result_execution_type == "semantic_graph"
++            provenance.update({
+                 "execution_type": response.result.get("execution_type"),
+                 "tool_name": response.result.get("tool_name", ""),
+                 "provider": response.result.get("provider", ""),
+@@ -1063,6 +1069,8 @@
+                 "fallback_used": False,
+                 **(response.result.get("telemetry") or {}),
+             })
++            if preserve_exact_runtime:
++                provenance["execution_type"] = "exact_response"
+         elif response.result and (response.result.get("provider") or response.result.get("tool_name")):
+             provenance.update({
+                 "provider": response.result.get("provider", ""),
