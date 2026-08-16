@@ -15,25 +15,80 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
-      - name: Fix missed reviewer variables and verify
+      - name: Fix complete reviewer tail and verify
         run: |
           cd Amaura-JARVIS-v5.4
           python - <<'PY'
           from pathlib import Path
           p = Path('jarvis/amaura/executor.py')
           text = p.read_text()
-          replacements = [
-              (
-                  'task_id, actor=reviewer_id, approve=approve, findings=findings.strip(), attestation=attestation',
-                  'task_id, actor=reviewer_id, approve=review_approve, findings=review_findings.strip(), attestation=attestation',
-              ),
-              ('"approved" if approve else "rejected",', '"approved" if review_approve else "rejected",'),
-          ]
-          for old, new in replacements:
-              if old not in text:
-                  raise SystemExit(f'reviewer variable anchor missing: {old}')
-              text = text.replace(old, new, 1)
-          p.write_text(text)
+          old = '''        updated = self.control.review_task(
+            task_id, actor=reviewer_id, approve=approve, findings=findings.strip(), attestation=attestation
+        )
+        self.control.store.record_review_attestation(attestation)
+        self.control.store.audit(
+            reviewer_id,
+            "automated_independent_review",
+            "task",
+            task_id,
+            "approved" if approve else "rejected",
+            {
+                "requested_model": model_id,
+                "actual_model": actual_model,
+                "actual_provider": actual_provider,
+                "criteria": decision.get("criteria", []),
+                "criterion_review": criterion_review,
+                "failed_evidence": len(failed_evidence),
+                "submission_sha256": deterministic["submission_sha256"],
+                "attestation_signature": attestation["signature"],
+            },
+        )
+        return {
+            "task_id": task_id,
+            "reviewer_id": reviewer_id,
+            "reviewer_model": actual_model,
+            "requested_reviewer_model": model_id,
+            "reviewer_provider": actual_provider,
+            "approve": approve,
+            "findings": findings.strip(),
+'''
+          new = '''        updated = self.control.review_task(
+            task_id,
+            actor=reviewer_id,
+            approve=review_approve,
+            findings=review_findings.strip(),
+            attestation=attestation,
+        )
+        self.control.store.record_review_attestation(attestation)
+        self.control.store.audit(
+            reviewer_id,
+            "automated_independent_review",
+            "task",
+            task_id,
+            "approved" if review_approve else "rejected",
+            {
+                "requested_model": model_id,
+                "actual_model": actual_model,
+                "actual_provider": actual_provider,
+                "criteria": decision.get("criteria", []),
+                "criterion_review": criterion_review,
+                "failed_evidence": len(failed_evidence),
+                "submission_sha256": deterministic["submission_sha256"],
+                "attestation_signature": attestation["signature"],
+            },
+        )
+        return {
+            "task_id": task_id,
+            "reviewer_id": reviewer_id,
+            "reviewer_model": actual_model,
+            "requested_reviewer_model": model_id,
+            "reviewer_provider": actual_provider,
+            "approve": review_approve,
+            "findings": review_findings.strip(),
+'''
+          if old not in text:
+              raise SystemExit('complete reviewer tail anchor missing')
+          p.write_text(text.replace(old, new, 1))
           PY
           python -m pip install --upgrade pip uv
           uv sync --frozen --extra dev --python python
