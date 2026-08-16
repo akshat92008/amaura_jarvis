@@ -83,6 +83,44 @@ def repair_black_box_harnesses() -> None:
     )
     harness.write_text(text)
 
+    phase00 = Path("scripts/qual_bb_phase00.py")
+    text = phase00.read_text()
+    text = text.replace(
+        "    try: packages = json.loads(pip_out)\n    except: packages = []\n",
+        "    try:\n        packages = json.loads(pip_out)\n    except json.JSONDecodeError:\n        packages = []\n",
+        1,
+    )
+    text = text.replace(
+        "from jarvis.amaura.runtime import load_amaura_env\n",
+        "from jarvis.amaura.runtime import load_amaura_env  # noqa: E402 - path bootstrap above\n",
+        1,
+    )
+    text = text.replace(
+        "from jarvis.tools.registry import get_tool_count, ALL_TOOL_DEFINITIONS\n",
+        "from jarvis.tools.registry import get_tool_count, ALL_TOOL_DEFINITIONS  # noqa: E402 - bootstrap after env load\n",
+        1,
+    )
+    phase00.write_text(text)
+
+    selftest = Path("scripts/qual_harness_selftest.py")
+    text = selftest.read_text()
+    text = text.replace(
+        "from jarvis.amaura.runtime import load_amaura_env\n",
+        "from jarvis.amaura.runtime import load_amaura_env  # noqa: E402 - path bootstrap above\n",
+        1,
+    )
+    text = text.replace(
+        "from jarvis.amaura.model_gateway import CognitiveModelGateway\n",
+        "from jarvis.amaura.model_gateway import CognitiveModelGateway  # noqa: E402 - env configured above\n",
+        1,
+    )
+    text = text.replace(
+        "from scripts.qual_bb_harness import (\n",
+        "from scripts.qual_bb_harness import (  # noqa: E402 - env configured above\n",
+        1,
+    )
+    selftest.write_text(text)
+
 
 def main() -> None:
     repair_api()
