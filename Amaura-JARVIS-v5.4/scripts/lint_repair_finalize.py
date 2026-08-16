@@ -50,11 +50,46 @@ def repair_voice_probe() -> None:
     path.write_text(text)
 
 
+def repair_black_box_harnesses() -> None:
+    master = Path("scripts/qual_bb_master.py")
+    text = master.read_text()
+    text = text.replace(
+        "from jarvis.amaura.runtime import load_amaura_env\n",
+        "from jarvis.amaura.runtime import load_amaura_env  # noqa: E402 - path bootstrap above\n",
+        1,
+    )
+    text = text.replace(
+        "from scripts.qual_bb_harness import (\n",
+        "from scripts.qual_bb_harness import (  # noqa: E402 - path bootstrap above\n",
+        1,
+    )
+    if "    BlackBoxResult,\n" not in text:
+        text = text.replace(
+            "from scripts.qual_bb_harness import (  # noqa: E402 - path bootstrap above\n",
+            "from scripts.qual_bb_harness import (  # noqa: E402 - path bootstrap above\n    BlackBoxResult,\n",
+            1,
+        )
+    text = text.replace("    import pptx\n", "    import pptx  # noqa: F401 - dependency availability probe\n", 1)
+    text = text.replace("        import paddleocr\n", "        import paddleocr  # noqa: F401 - dependency availability probe\n", 1)
+    text = text.replace("        import docling\n", "        import docling  # noqa: F401 - dependency availability probe\n", 1)
+    master.write_text(text)
+
+    harness = Path("scripts/qual_bb_harness.py")
+    text = harness.read_text()
+    text = text.replace(
+        "        try: _server_proc.wait(timeout=5)\n        except: _server_proc.kill()\n",
+        "        try:\n            _server_proc.wait(timeout=5)\n        except subprocess.TimeoutExpired:\n            _server_proc.kill()\n",
+        1,
+    )
+    harness.write_text(text)
+
+
 def main() -> None:
     repair_api()
     repair_registry()
     repair_documents()
     repair_voice_probe()
+    repair_black_box_harnesses()
 
 
 if __name__ == "__main__":
