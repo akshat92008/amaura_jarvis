@@ -12,7 +12,7 @@ on:
       - agent/phase9-semantic-repair
 
 permissions:
-  contents: read
+  contents: write
 
 defaults:
   run:
@@ -37,10 +37,22 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          persist-credentials: false
+          persist-credentials: true
+          ref: agent/phase9-semantic-repair
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
+      - name: Apply staged canonical repair
+        run: |
+          if git apply --check scripts/phase9_semantic_repair.patch; then
+            git apply scripts/phase9_semantic_repair.patch
+          elif git apply --reverse --check scripts/phase9_semantic_repair.patch; then
+            echo 'Canonical repair is already applied.'
+          else
+            echo 'Patch no longer matches canonical source.' >&2
+            exit 2
+          fi
+          python -m py_compile jarvis/amaura/semantic_frontend.py
       - name: Install frozen environment
         run: |
           python -m pip install --upgrade pip uv
@@ -55,6 +67,9 @@ jobs:
             tests/test_phase9_semantic_request_graph.py \
             > phase9-diagnostics.txt 2>&1 || echo $? > phase9-exit-code.txt
           cat phase9-diagnostics.txt
+          if [ -f phase9-exit-code.txt ]; then
+            exit "$(cat phase9-exit-code.txt)"
+          fi
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -70,7 +85,20 @@ jobs:
             Amaura-JARVIS-v5.4/tests/test_phase9_semantic_request_graph.py
           if-no-files-found: warn
           retention-days: 1
+      - name: Commit verified canonical repair
+        if: steps.semantic.outcome == 'success'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add jarvis/amaura/semantic_frontend.py
+          if git diff --cached --quiet; then
+            echo 'No canonical source changes to commit.'
+          else
+            git commit -m 'fix: harden canonical semantic contracts'
+            git push origin HEAD:agent/phase9-semantic-repair
+          fi
       - name: Enforce semantic result
+        if: always()
         run: |
           if [ -f phase9-exit-code.txt ]; then
             exit "$(cat phase9-exit-code.txt)"
