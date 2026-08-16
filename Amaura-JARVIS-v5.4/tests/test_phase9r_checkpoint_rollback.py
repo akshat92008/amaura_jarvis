@@ -24,6 +24,7 @@ def test_strict_external_checkpoint_blocks_database_rollback_before_new_audit(
     This models restoring an older database snapshot while leaving the external
     checkpoint at the newer sequence. Internal hashes/signatures in the old
     snapshot are still valid, so only the external anchor can detect rollback.
+    The failed reopen must also leave the restored audit history unchanged.
     """
 
     db = tmp_path / "company.db"
