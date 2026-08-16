@@ -284,13 +284,12 @@ def build_wheel(stage: Path, output: Path) -> Path:
     command = [
         sys.executable,
         "-m",
-        "pip",
-        "wheel",
-        ".",
-        "--no-deps",
-        "--no-build-isolation",
-        "--wheel-dir",
+        "build",
+        "--wheel",
+        "--no-isolation",
+        "--outdir",
         str(wheel_dir),
+        str(stage),
     ]
     build_env = {**os.environ, "SOURCE_DATE_EPOCH": SOURCE_DATE_EPOCH, "PYTHONHASHSEED": "0"}
     subprocess.run(command, cwd=stage, env=build_env, check=True, timeout=180)
@@ -307,13 +306,9 @@ def build_wheel(stage: Path, output: Path) -> Path:
 def smoke_wheel(wheel: Path) -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix="amaura-wheel-smoke-") as tmp:
         target = Path(tmp) / "site"
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--no-deps", "--target", str(target), str(wheel)],
-            check=True,
-            timeout=120,
-            capture_output=True,
-            text=True,
-        )
+        target.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(wheel, "r") as zf:
+            zf.extractall(target)
         code = f"""
 import json
 from pathlib import Path
