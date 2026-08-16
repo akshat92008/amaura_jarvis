@@ -27,25 +27,62 @@ jobs:
         run: |
           python -m pip install --upgrade pip uv
           uv sync --frozen --extra dev --python python
-      - name: Apply mechanical lint repairs
+      - name: Apply confirmed lint repairs
         run: |
           set -euo pipefail
           .venv/bin/ruff check --fix --unsafe-fixes jarvis tests/test_phase9_semantic_hardening.py scripts/*.py || true
           python - <<'PY'
           from pathlib import Path
-          p = Path('jarvis/amaura/direct_action.py')
-          source_lines = p.read_text().splitlines(keepends=True)
-          repaired = []
-          for source_line in source_lines:
-              if source_line.strip() == 'content_str = result.output':
-                  continue
-              if 'all(re.match(r"^[a-zA-Z0-9_.\\-]+\\s*[:=]\\s*", l) for l in clean_lines)' in source_line:
-                  source_line = source_line.replace(
-                      'all(re.match(r"^[a-zA-Z0-9_.\\-]+\\s*[:=]\\s*", l) for l in clean_lines)',
-                      'all(re.match(r"^[a-zA-Z0-9_.\\-]+\\s*[:=]\\s*", line) for line in clean_lines)',
-                  )
-              repaired.append(source_line)
-          p.write_text(''.join(repaired))
+
+          # cognition.py: Path is used by semantic execution helpers but was not imported.
+          p = Path('jarvis/amaura/cognition.py')
+          text = p.read_text()
+          if 'from pathlib import Path\n' not in text:
+              text = text.replace('from datetime import UTC, datetime\n', 'from datetime import UTC, datetime\nfrom pathlib import Path\n', 1)
+          p.write_text(text)
+
+          # capability_runtime.py: keep re at module scope and make exception chaining explicit.
+          p = Path('jarvis/amaura/capability_runtime.py')
+          text = p.read_text()
+          if '\nimport re\n' not in text.split('from dataclasses', 1)[0]:
+              text = text.replace('import os\n', 'import os\nimport re\n', 1)
+          text = text.replace('\nimport re\n\nclass MacOSAppAdapter', '\n\nclass MacOSAppAdapter', 1)
+          text = text.replace(
+              "        except subprocess.TimeoutExpired:\n            raise CapabilityExecutionError(f\"Command timed out for application '{raw_app_name}'.\")\n",
+              "        except subprocess.TimeoutExpired:\n            raise CapabilityExecutionError(f\"Command timed out for application '{raw_app_name}'.\") from None\n",
+              1,
+          )
+          text = text.replace(
+              "        except Exception as e:\n            raise CapabilityExecutionError(f\"Execution error for application '{raw_app_name}': {e}\")\n",
+              "        except Exception as e:\n            raise CapabilityExecutionError(f\"Execution error for application '{raw_app_name}': {e}\") from e\n",
+              1,
+          )
+          text = text.replace(
+              '                    raise CapabilityExecutionError(\n                        "Another heavy Amaura capability is already running; retry after it completes"\n                    )\n',
+              '                    raise CapabilityExecutionError(\n                        "Another heavy Amaura capability is already running; retry after it completes"\n                    ) from None\n',
+              1,
+          )
+          p.write_text(text)
+
+          # antigravity_bridge.py: split the three flagged semicolon statements.
+          p = Path('jarvis/amaura/antigravity_bridge.py')
+          text = p.read_text()
+          text = text.replace(
+              '                digest.update(relative.encode()); digest.update(path.read_bytes())',
+              '                digest.update(relative.encode())\n                digest.update(path.read_bytes())',
+              1,
+          )
+          text = text.replace(
+              '                out_thread.start(); err_thread.start()',
+              '                out_thread.start()\n                err_thread.start()',
+              1,
+          )
+          text = text.replace(
+              '                out_thread.join(timeout=2); err_thread.join(timeout=2)',
+              '                out_thread.join(timeout=2)\n                err_thread.join(timeout=2)',
+              1,
+          )
+          p.write_text(text)
           PY
       - name: Enforce clean lint
         run: .venv/bin/ruff check --output-format=github jarvis tests/test_phase9_semantic_hardening.py scripts/*.py
@@ -55,7 +92,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add jarvis/agent.py jarvis/amaura/direct_action.py jarvis/amaura/semantic_core.py
+          git add jarvis/agent.py jarvis/amaura/cognition.py jarvis/amaura/capability_runtime.py jarvis/amaura/antigravity_bridge.py jarvis/amaura/direct_action.py jarvis/amaura/semantic_core.py
           if git diff --cached --quiet; then
             echo "No lint changes required."
           else
