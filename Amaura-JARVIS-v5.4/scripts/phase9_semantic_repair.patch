@@ -27,7 +27,7 @@
              "file contents",
              "contents of",
              "raw file",
-@@ -66,11 +77,32 @@
+@@ -66,11 +77,33 @@
          )
      ):
          return True
@@ -55,12 +55,13 @@
 +            "deployment marker for",
 +            "marker for",
 +            "codename for",
++            "api key for",
 +            "retrieve ",
 +            "recall ",
              "from the browser",
              "from the page",
              "css selector",
-@@ -135,6 +167,13 @@
+@@ -135,6 +168,13 @@
              re.IGNORECASE,
          )
      )
@@ -74,7 +75,16 @@
      signal = signal or bool(re.match(r"^\s*(?:please\s+|kindly\s+)?(?:echo|repeat)\s*[:\-]", clean, re.IGNORECASE))
      if not signal:
          return None
-@@ -448,7 +487,7 @@
+@@ -151,7 +191,7 @@
+         tail = work.rsplit(":", 1)[1].strip()
+         if tail:
+             return _strip_token(tail)
+-    eq = re.search(r"(?:=|\bequals?\b|\bequal\s+to\b)\s*(.+)$", work, re.IGNORECASE)
++    eq = re.search(r"(?:=|\bequal\s+to\b|\bequals?\b)\s*(.+)$", work, re.IGNORECASE)
+     if eq:
+         return _strip_token(eq.group(1))
+ 
+@@ -448,7 +488,7 @@
              return core.SemanticRequestGraph(
                  clean,
                  core.SemanticAction.EXACT_LITERAL,
@@ -83,7 +93,7 @@
                  literal_payload=literal,
                  evidence=["formal_exact_response_contract"],
              )
-@@ -514,6 +553,34 @@
+@@ -514,6 +554,34 @@
                  evidence=["screenshot_command"],
              )
  
@@ -118,7 +128,7 @@
          # Reuse the mature clause/reference parser as a subordinate role parser;
          # it no longer competes with other top-level actions.
          write_action = da.WriteActionParser.parse(clean)
-@@ -709,7 +776,27 @@
+@@ -709,7 +777,27 @@
                  execution_type="workflow" if output_path else "semantic_graph",
                  tool_name="multi_step_workflow" if output_path else "semantic_arithmetic",
                  provider="local-filesystem",
