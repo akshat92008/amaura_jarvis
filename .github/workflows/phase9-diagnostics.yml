@@ -41,8 +41,8 @@ jobs:
           python-version: '3.11'
       - name: Apply staged compatibility repair
         run: |
-          git apply --check scripts/phase9_compat_repair.patch
-          git apply scripts/phase9_compat_repair.patch
+          git apply --recount --check scripts/phase9_compat_repair.patch
+          git apply --recount scripts/phase9_compat_repair.patch
           python -m py_compile jarvis/amaura/semantic_frontend.py jarvis/amaura/direct_action.py
       - name: Install frozen environment
         run: |
