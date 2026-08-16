@@ -32,11 +32,12 @@ jobs:
           set -euo pipefail
           .venv/bin/ruff check --fix --unsafe-fixes jarvis tests/test_phase9_semantic_hardening.py scripts/*.py || true
           .venv/bin/python scripts/lint_repair_apply.py
+          .venv/bin/python scripts/lint_repair_finalize.py
           .venv/bin/ruff check --fix --unsafe-fixes jarvis tests/test_phase9_semantic_hardening.py scripts/*.py || true
       - name: Enforce clean lint
         run: .venv/bin/ruff check --output-format=github jarvis tests/test_phase9_semantic_hardening.py scripts/*.py
       - name: Compile after lint repair
-        run: .venv/bin/python -m compileall -q jarvis scripts/lint_repair_apply.py
+        run: .venv/bin/python -m compileall -q jarvis scripts/lint_repair_apply.py scripts/lint_repair_finalize.py
       - name: Commit lint repair
         run: |
           git config user.name "github-actions[bot]"
