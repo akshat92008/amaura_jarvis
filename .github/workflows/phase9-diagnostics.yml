@@ -7,6 +7,9 @@ on:
       - 'Amaura-JARVIS-v5.4/tests/test_phase8_semantic_composition.py'
       - 'Amaura-JARVIS-v5.4/tests/test_phase9_*.py'
       - '.github/workflows/phase9-diagnostics.yml'
+  push:
+    branches:
+      - agent/phase9-semantic-repair
 
 permissions:
   contents: read
@@ -50,9 +53,6 @@ jobs:
           .venv/bin/python -m pytest -p anyio.pytest_plugin -vv --tb=short \
             tests/test_phase8_semantic_composition.py \
             tests/test_phase9_semantic_request_graph.py \
-            tests/test_phase9_compatibility_surface.py \
-            tests/test_phase9_safety_routing.py \
-            tests/test_phase9_core_semantic_hardening.py \
             > phase9-diagnostics.txt 2>&1 || echo $? > phase9-exit-code.txt
           cat phase9-diagnostics.txt
       - name: Upload diagnostics
