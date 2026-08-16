@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import contextlib
 import os
-import shutil
 import shlex
+import shutil
 import subprocess
 import tempfile
 import time
+from collections.abc import Iterator, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterator, Sequence
+from typing import Any
 
 from jarvis.amaura.models import GovernanceError
 from jarvis.amaura.verification import SecureVerifierRunner
@@ -100,14 +101,17 @@ def _trusted_hooks_dir() -> Path:
 
 def _safe_git_environment() -> dict[str, str]:
     environment = {
-        key: value for key, value in os.environ.items()
+        key: value
+        for key, value in os.environ.items()
         if key in {"PATH", "HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "WINDIR"}
     }
-    environment.update({
-        "GIT_TERMINAL_PROMPT": "0",
-        "GIT_CONFIG_NOSYSTEM": "1",
-        "GIT_CONFIG_GLOBAL": os.devnull,
-    })
+    environment.update(
+        {
+            "GIT_TERMINAL_PROMPT": "0",
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+        }
+    )
     return environment
 
 
@@ -122,11 +126,20 @@ def _assert_safe_repository_git_config(repository: str | Path) -> None:
     try:
         completed = subprocess.run(
             [
-                "git", "-c", f"core.hooksPath={_trusted_hooks_dir()}",
-                "config", "--local", "--null", "--list",
+                "git",
+                "-c",
+                f"core.hooksPath={_trusted_hooks_dir()}",
+                "config",
+                "--local",
+                "--null",
+                "--list",
             ],
-            cwd=str(repository), capture_output=True, text=True,
-            env=_safe_git_environment(), timeout=15, check=False,
+            cwd=str(repository),
+            capture_output=True,
+            text=True,
+            env=_safe_git_environment(),
+            timeout=15,
+            check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise GovernanceError("Unable to inspect repository-local Git configuration") from exc
@@ -197,7 +210,6 @@ def _repository_root(workspace: str | Path) -> Path:
     if not root:
         raise GovernanceError("Assigned engineering workspace is not a Git repository")
     return Path(root).resolve()
-
 
 
 def is_git_repository(workspace: str | Path) -> bool:
@@ -354,9 +366,9 @@ def repository_lock(repository: str | Path, *, timeout_seconds: int = 30) -> Ite
             try:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 break
-            except BlockingIOError:
+            except BlockingIOError as exc:
                 if time.monotonic() >= deadline:
-                    raise GovernanceError("Timed out waiting for the repository merge lock")
+                    raise GovernanceError("Timed out waiting for the repository merge lock") from exc
                 time.sleep(0.1)
         try:
             yield
@@ -397,7 +409,9 @@ def _run_validation(repository: Path, command: str) -> None:
 def merge_approved_task(task: dict[str, Any], *, cleanup: bool = True) -> MergeRecord:
     """Merge the exact reviewed commit into the exact recorded base head, then validate."""
     metadata = dict(task.get("metadata") or {})
-    repository = Path(str(metadata.get("git_repository_root") or metadata.get("workspace") or "")).expanduser().resolve()
+    repository = (
+        Path(str(metadata.get("git_repository_root") or metadata.get("workspace") or "")).expanduser().resolve()
+    )
     branch = str(metadata.get("git_branch", ""))
     base_branch = str(metadata.get("git_base_branch", ""))
     base_commit = str(metadata.get("git_base_commit", ""))
@@ -407,8 +421,7 @@ def merge_approved_task(task: dict[str, Any], *, cleanup: bool = True) -> MergeR
         raise GovernanceError("Engineering task is missing immutable Git execution metadata")
 
     validation_command = str(
-        metadata.get("post_merge_validation")
-        or os.environ.get("AMAURA_POST_MERGE_COMMAND", "")
+        metadata.get("post_merge_validation") or os.environ.get("AMAURA_POST_MERGE_COMMAND", "")
     ).strip()
     with repository_lock(repository):
         status = _run_git(repository, ["status", "--porcelain"]).stdout.strip()
@@ -479,9 +492,7 @@ def rollback_approved_merge(task: dict[str, Any], merge: MergeRecord) -> None:
         ).stdout.strip()
         current_head = _run_git(repository, ["rev-parse", "HEAD"]).stdout.strip()
         if current_branch != expected_branch or current_head != merge.merged_head:
-            raise GovernanceError(
-                "Cannot compensate merge because the target repository changed after the merge"
-            )
+            raise GovernanceError("Cannot compensate merge because the target repository changed after the merge")
         _run_git(repository, ["reset", "--hard", merge.previous_head])
         _run_git(repository, ["clean", "-fd"], allow_failure=True)
         if _run_git(repository, ["status", "--porcelain"]).stdout.strip():

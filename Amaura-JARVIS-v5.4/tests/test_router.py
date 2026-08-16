@@ -1,5 +1,7 @@
 import unittest
+
 from jarvis.models import SmartHybridModelRouter, resolve_model
+
 
 class TestRouter(unittest.TestCase):
     def test_routing(self):
@@ -16,6 +18,7 @@ class TestRouter(unittest.TestCase):
         m = resolve_model("llama")
         self.assertIsNotNone(m)
         self.assertEqual(m["id"], "meta/llama-3.1-70b-instruct")
+
 
 if __name__ == "__main__":
     unittest.main()

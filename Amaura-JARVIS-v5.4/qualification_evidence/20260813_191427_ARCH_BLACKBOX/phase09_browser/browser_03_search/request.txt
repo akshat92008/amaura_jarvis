@@ -1,1 +1,0 @@
-Use the browser to go to 'https://duckduckgo.com', search for 'Python programming language', and tell me the title of the first search result you see.

@@ -1,6 +1,5 @@
 """Comprehensive verification test suite for Amaura P0 remediations."""
 
-import json
 import os
 import tempfile
 from pathlib import Path
@@ -12,9 +11,8 @@ from jarvis.amaura.integrations import ProviderReceipt
 from jarvis.amaura.models import GovernanceError
 from jarvis.amaura.pipeline import AcquisitionPipeline
 from jarvis.amaura.policy import PolicyEngine
-from jarvis.amaura.readiness import production_readiness
 from jarvis.amaura.registry import ALL_AGENTS
-from jarvis.amaura.security import redact_sensitive_text, isolate_untrusted_text
+from jarvis.amaura.security import isolate_untrusted_text, redact_sensitive_text
 from scripts.release_gate import _run as run_release_gate
 
 
@@ -72,7 +70,7 @@ def test_outbound_delivery_confirm_from_sending_state():
         control = AmauraControlPlane(db_path)
         try:
             pipeline = AcquisitionPipeline(control.store)
-            campaign = pipeline.create_campaign(
+            pipeline.create_campaign(
                 campaign_id="c1",
                 name="Test Campaign",
                 target_segment="tech",
@@ -111,7 +109,7 @@ def test_outbound_delivery_confirm_from_sending_state():
                 body="Dear Acme team,\n\nWe noticed that your team currently manages business operations manually on a daily basis. Amaura Labs provides tailored workforce automation that can streamline these exact operational workflows and significantly reduce manual effort across your organization. We have successfully implemented similar solutions for high-growth technology companies with verified measurable results and strict governance controls. We would welcome a brief conversation with your team to explore how we can support Acme's operational efficiency goals this quarter.\n\nBest regards,\nAmaura Labs",
             )
             pipeline.decide_message(msg["id"], approve=True, reason="Qualified outreach approved", actor="founder")
-            
+
             # Change status to sending
             control.store.mark_message_sending(msg["id"])
             m_sending = control.store.get_message(msg["id"])
@@ -150,7 +148,7 @@ def test_lead_validation_public_urls_and_email():
                 target_segment="tech",
                 offer="automation",
             )
-            
+
             # Local URL blocked
             with pytest.raises(GovernanceError, match="valid public source URL"):
                 pipeline.discover_lead(

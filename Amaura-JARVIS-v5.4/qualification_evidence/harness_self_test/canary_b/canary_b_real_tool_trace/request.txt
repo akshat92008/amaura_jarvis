@@ -1,1 +1,0 @@
-Create a text file at exact path '/Users/ashishsingh/Desktop/amaura_jarivs/Amaura-JARVIS-v5.4/qualification_evidence/harness_self_test/canary_b/canary_b_64d3aeec.txt' with content 'CANARY-SECRET-039da7e3-7d4b-455a-a9c7-10c064098a29'.

@@ -1,10 +1,8 @@
 """Phase 7 Test Suite 3: Screenshot Positive / Negative Matrix (250+ Positives, 250+ Negative Controls)."""
 
 import random
-import pytest
+
 from jarvis.amaura.direct_action import (
-    RequestPreprocessor,
-    ActionType,
     DirectActionRouter,
 )
 
@@ -12,7 +10,15 @@ from jarvis.amaura.direct_action import (
 def generate_positive_screenshot_cases(count: int = 300) -> list[str]:
     """Generate positive screenshot requests requiring CAPTURE_VERB + SCREEN_OBJECT."""
     verbs = ["take", "capture", "grab", "snap"]
-    screen_nouns = ["screenshot", "screen shot", "the screen", "current screen", "the display", "current display", "the desktop"]
+    screen_nouns = [
+        "screenshot",
+        "screen shot",
+        "the screen",
+        "current screen",
+        "the display",
+        "current display",
+        "the desktop",
+    ]
     targets = ["screenshot.png", "capture.png", "display.png", "/tmp/shot.png", "/Users/operator/screen.png"]
     connectors = ["and save to", "and write to", "saving in", "to", "into", "stored at"]
 
@@ -58,14 +64,16 @@ def generate_negative_screenshot_controls(count: int = 300) -> list[str]:
 
     # Category 4: Arithmetic 'take'
     for i in range(60):
-        cases.append(f"take the number in /Users/operator/Desktop/a_{i}.num away from /Users/operator/Desktop/b_{i}.num and save to /tmp/res_{i}.num")
+        cases.append(
+            f"take the number in /Users/operator/Desktop/a_{i}.num away from /Users/operator/Desktop/b_{i}.num and save to /tmp/res_{i}.num"
+        )
         cases.append(f"take 15 away from 40 and store in /tmp/math_{i}.txt")
 
     # Category 5: Discussion / conversational questions
-    for i in range(60):
-        cases.append(f"what is a screenshot and how does it work in macOS?")
-        cases.append(f"how do I capture the display using native shortcuts?")
-        cases.append(f"explain the difference between desktop capture and window capture")
+    for _ in range(60):
+        cases.append("what is a screenshot and how does it work in macOS?")
+        cases.append("how do I capture the display using native shortcuts?")
+        cases.append("explain the difference between desktop capture and window capture")
 
     return cases[:count]
 

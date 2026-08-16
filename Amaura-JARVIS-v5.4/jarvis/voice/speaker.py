@@ -5,21 +5,20 @@ Supports sentence-level streaming TTS and instant barge-in interruption.
 """
 
 import atexit
-import re
 import queue
+import re
 import subprocess
 import threading
-from typing import Optional, List
 
 # Available macOS voices that sound good for Jarvis
 VOICES = {
-    "daniel": "Daniel",        # British English (default Jarvis voice)
-    "alex": "Alex",            # American English
-    "samantha": "Samantha",    # American English (female)
-    "karen": "Karen",          # Australian English
-    "moira": "Moira",          # Irish English
-    "rishi": "Rishi",          # Indian English
-    "tessa": "Tessa",          # South African English
+    "daniel": "Daniel",  # British English (default Jarvis voice)
+    "alex": "Alex",  # American English
+    "samantha": "Samantha",  # American English (female)
+    "karen": "Karen",  # Australian English
+    "moira": "Moira",  # Irish English
+    "rishi": "Rishi",  # Indian English
+    "tessa": "Tessa",  # South African English
 }
 
 DEFAULT_VOICE = "Daniel"
@@ -32,11 +31,11 @@ class Speaker:
     def __init__(self, voice: str = DEFAULT_VOICE, rate: int = DEFAULT_RATE):
         self.voice = voice
         self.rate = rate
-        self._current_process: Optional[subprocess.Popen] = None
+        self._current_process: subprocess.Popen | None = None
         self._lock = threading.Lock()
         self._interrupt_event = threading.Event()
         self._speech_queue: queue.Queue = queue.Queue()
-        self._worker_thread: Optional[threading.Thread] = None
+        self._worker_thread: threading.Thread | None = None
         self._threads: set[threading.Thread] = set()
         self._threads_lock = threading.Lock()
 
@@ -106,7 +105,7 @@ class Speaker:
                 if self._interrupt_event.is_set():
                     break
                 buffer += chunk
-                sentences = re.split(r'([.!?\n]+)', buffer)
+                sentences = re.split(r"([.!?\n]+)", buffer)
                 while len(sentences) > 2:
                     sentence = sentences.pop(0) + sentences.pop(0)
                     clean_s = self._clean_for_speech(sentence)
@@ -165,26 +164,28 @@ class Speaker:
     @staticmethod
     def _clean_for_speech(text: str) -> str:
         """Clean text for natural speech output."""
-        text = re.sub(r'```[\s\S]*?```', 'code block omitted', text)
-        text = re.sub(r'`[^`]+`', '', text)
-        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
-        text = re.sub(r'\*([^*]+)\*', r'\1', text)
-        text = re.sub(r'#+\s*', '', text)
-        text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
-        text = re.sub(r'[─═╔╗╚╝╠╣║┌┐└┘├┤│┬┴┼▓▲▼◄►◈●◉⬜🔄✅❌⏭️🔒⚡🛑🚫⚠️📋📁📄🔍🧠💾🔋⏱🖥️🎤📝🔊✓✗ℹ]', '', text)
-        text = re.sub(r'/[\w/.-]+', '', text)
-        text = re.sub(r'https?://\S+', '', text)
-        text = re.sub(r'\s+', ' ', text).strip()
+        text = re.sub(r"```[\s\S]*?```", "code block omitted", text)
+        text = re.sub(r"`[^`]+`", "", text)
+        text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+        text = re.sub(r"\*([^*]+)\*", r"\1", text)
+        text = re.sub(r"#+\s*", "", text)
+        text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+        text = re.sub(r"[─═╔╗╚╝╠╣║┌┐└┘├┤│┬┴┼▓▲▼◄►◈●◉⬜🔄✅❌⏭️🔒⚡🛑🚫⚠️📋📁📄🔍🧠💾🔋⏱🖥️🎤📝🔊✓✗ℹ]", "", text)
+        text = re.sub(r"/[\w/.-]+", "", text)
+        text = re.sub(r"https?://\S+", "", text)
+        text = re.sub(r"\s+", " ", text).strip()
         if len(text) > 1000:
             text = text[:1000] + ". I'll stop here. Check the output for full response."
         return text
 
     @staticmethod
-    def list_voices() -> List[str]:
+    def list_voices() -> list[str]:
         try:
             result = subprocess.run(
                 ["say", "-v", "?"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             if result.returncode == 0:
                 voices = []
@@ -198,7 +199,7 @@ class Speaker:
         return list(VOICES.values())
 
 
-_speaker: Optional[Speaker] = None
+_speaker: Speaker | None = None
 
 
 def get_speaker() -> Speaker:

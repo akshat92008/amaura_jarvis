@@ -6,10 +6,10 @@ Adapted from Nexus with Jarvis-specific extensions.
 
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class SafetyLevel(str, Enum):
+class SafetyLevel(StrEnum):
     SAFE = "safe"
     WARN = "warn"
     DANGEROUS = "dangerous"
@@ -19,6 +19,7 @@ class SafetyLevel(str, Enum):
 @dataclass
 class SafetyCheck:
     """Result of a safety evaluation."""
+
     level: SafetyLevel
     operation: str
     reason: str
@@ -61,7 +62,6 @@ _COMMAND_PATTERNS: list[tuple[str, SafetyLevel, str]] = [
     (r"\bwget\b.*\|\s*(bash|sh|zsh)", SafetyLevel.BLOCKED, "Piping remote script directly to shell"),
     (r"\bshutdown\b", SafetyLevel.DANGEROUS, "System shutdown requested"),
     (r"\breboot\b", SafetyLevel.DANGEROUS, "System reboot requested"),
-
     # DANGEROUS — require confirmation
     (r"\brm\s+-rf\b", SafetyLevel.DANGEROUS, "Recursive file deletion"),
     (r"\brm\s+-r\b", SafetyLevel.DANGEROUS, "Recursive file deletion"),
@@ -73,7 +73,6 @@ _COMMAND_PATTERNS: list[tuple[str, SafetyLevel, str]] = [
     (r"\bDROP\s+(TABLE|DATABASE|SCHEMA)\b", SafetyLevel.DANGEROUS, "Database DROP operation"),
     (r"\bTRUNCATE\s+TABLE\b", SafetyLevel.DANGEROUS, "Database TRUNCATE operation"),
     (r"\bDELETE\s+FROM\b(?!.*WHERE)", SafetyLevel.DANGEROUS, "DELETE without WHERE clause"),
-
     # WARN — log but proceed
     (r"\bsudo\b", SafetyLevel.WARN, "Running with elevated privileges"),
     (r"\bcurl\b.*-[oO]", SafetyLevel.WARN, "Downloading file from the internet"),
@@ -91,8 +90,16 @@ _DESKTOP_PATTERNS: list[tuple[str, SafetyLevel, str]] = [
 ]
 
 _PROTECTED_PATHS = [
-    "/System", "/Library", "/usr", "/bin", "/sbin", "/etc",
-    "/private", "/var", "/dev", "/tmp",
+    "/System",
+    "/Library",
+    "/usr",
+    "/bin",
+    "/sbin",
+    "/etc",
+    "/private",
+    "/var",
+    "/dev",
+    "/tmp",
 ]
 
 
@@ -118,7 +125,9 @@ class SafetyLayer:
         for pattern, level, reason in self._custom_rules:
             if re.search(pattern, command, re.IGNORECASE):
                 return SafetyCheck(
-                    level=level, operation="command", reason=reason,
+                    level=level,
+                    operation="command",
+                    reason=reason,
                     details=f"Command: {command[:100]}",
                     requires_confirmation=level == SafetyLevel.DANGEROUS,
                 )
@@ -128,31 +137,37 @@ class SafetyLayer:
         for pattern, level, reason in all_patterns:
             if re.search(pattern, command, re.IGNORECASE):
                 return SafetyCheck(
-                    level=level, operation="command", reason=reason,
+                    level=level,
+                    operation="command",
+                    reason=reason,
                     details=f"Command: {command[:100]}",
                     requires_confirmation=level == SafetyLevel.DANGEROUS,
                 )
 
         return SafetyCheck(
-            level=SafetyLevel.SAFE, operation="command",
+            level=SafetyLevel.SAFE,
+            operation="command",
             reason="Command appears safe",
         )
 
     def check_file_write(self, filepath: str, content: str = "") -> SafetyCheck:
         """Check if a file write operation is safe."""
         from pathlib import Path
+
         p = str(Path(filepath).resolve())
 
         for blocked in self._blocked_paths:
             if p.startswith(blocked):
                 return SafetyCheck(
-                    level=SafetyLevel.BLOCKED, operation="file_write",
+                    level=SafetyLevel.BLOCKED,
+                    operation="file_write",
                     reason=f"Writing to protected system path: {blocked}",
                     details=f"Path: {filepath}",
                 )
 
         return SafetyCheck(
-            level=SafetyLevel.SAFE, operation="file_write",
+            level=SafetyLevel.SAFE,
+            operation="file_write",
             reason="File write appears safe",
         )
 
@@ -167,11 +182,14 @@ class SafetyLayer:
         for pattern, level, reason in _DESKTOP_PATTERNS:
             if re.search(pattern, combined, re.IGNORECASE):
                 return SafetyCheck(
-                    level=level, operation="desktop",
-                    reason=reason, details=f"Action: {action}, Target: {target}",
+                    level=level,
+                    operation="desktop",
+                    reason=reason,
+                    details=f"Action: {action}, Target: {target}",
                     requires_confirmation=level == SafetyLevel.DANGEROUS,
                 )
         return SafetyCheck(
-            level=SafetyLevel.SAFE, operation="desktop",
+            level=SafetyLevel.SAFE,
+            operation="desktop",
             reason="Desktop action appears safe",
         )

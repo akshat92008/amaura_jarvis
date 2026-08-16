@@ -3,8 +3,8 @@ Telegram Bot — allows controlling Jarvis from your phone via Telegram.
 Supports text messages, voice notes, and file sharing.
 """
 
-import os
 import asyncio
+import os
 import tempfile
 from pathlib import Path
 
@@ -34,7 +34,14 @@ def start_telegram_bot(agent):
 
     try:
         from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-        from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters, ContextTypes
+        from telegram.ext import (
+            Application,
+            CallbackQueryHandler,
+            CommandHandler,
+            ContextTypes,
+            MessageHandler,
+            filters,
+        )
     except ImportError:
         ui.print_error("Install python-telegram-bot: pip install python-telegram-bot")
         return
@@ -123,6 +130,7 @@ def start_telegram_bot(agent):
         file = await context.bot.get_file(doc.file_id)
 
         from jarvis.paths import get_data_dir
+
         save_dir = get_data_dir() / "telegram_uploads"
         save_dir.mkdir(parents=True, exist_ok=True)
         safe_name = Path(doc.file_name or "telegram-upload").name
@@ -132,8 +140,7 @@ def start_telegram_bot(agent):
         ui.print_info(f"[Telegram] Saved file: {save_path}")
 
         await update.message.reply_text(
-            f"📎 File saved to your Mac:\n`{save_path}`\n\n"
-            f"What would you like me to do with it?",
+            f"📎 File saved to your Mac:\n`{save_path}`\n\nWhat would you like me to do with it?",
             parse_mode="Markdown",
         )
 
@@ -142,6 +149,7 @@ def start_telegram_bot(agent):
         if not _is_authorized(update, allowed_user_id):
             return
         from jarvis.tools.desktop import tool_get_system_info
+
         info = tool_get_system_info()
         await update.message.reply_text(f"```\n{info}\n```", parse_mode="Markdown")
 
@@ -153,17 +161,22 @@ def start_telegram_bot(agent):
         if not _is_authorized(update, allowed_user_id):
             return
         from jarvis.tools.amaura import get_control_plane
+
         approvals = get_control_plane().store.list_approvals("pending")
         if not approvals:
             await update.message.reply_text("✅ No founder approvals are pending.")
             return
         for item in approvals:
             payload = item.get("payload", {})
-            keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("✅ Approve", callback_data=f"amaura:approved:{item['id']}"),
-                InlineKeyboardButton("✏️ Revise", callback_data=f"amaura:changes_requested:{item['id']}"),
-                InlineKeyboardButton("⛔ Reject", callback_data=f"amaura:rejected:{item['id']}"),
-            ]])
+            keyboard = InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton("✅ Approve", callback_data=f"amaura:approved:{item['id']}"),
+                        InlineKeyboardButton("✏️ Revise", callback_data=f"amaura:changes_requested:{item['id']}"),
+                        InlineKeyboardButton("⛔ Reject", callback_data=f"amaura:rejected:{item['id']}"),
+                    ]
+                ]
+            )
             await update.message.reply_text(
                 f"🛡️ AMAURA APPROVAL\n\n"
                 f"{payload.get('title', 'Company action')}\n"
@@ -175,12 +188,19 @@ def start_telegram_bot(agent):
             )
 
         from jarvis.amaura.integration_control import IntegrationActionController
-        integration_actions = IntegrationActionController(get_control_plane().store, get_control_plane().founder_id).list_pending()
+
+        integration_actions = IntegrationActionController(
+            get_control_plane().store, get_control_plane().founder_id
+        ).list_pending()
         for item in integration_actions[:20]:
-            keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("✅ Approve", callback_data=f"iact:approved:{item['id']}"),
-                InlineKeyboardButton("⛔ Reject", callback_data=f"iact:rejected:{item['id']}"),
-            ]])
+            keyboard = InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton("✅ Approve", callback_data=f"iact:approved:{item['id']}"),
+                        InlineKeyboardButton("⛔ Reject", callback_data=f"iact:rejected:{item['id']}"),
+                    ]
+                ]
+            )
             await update.message.reply_text(
                 f"🔌 INTEGRATION APPROVAL\n\nProvider: {item['provider']}\nOperation: {item['operation']}\n"
                 f"Risk: {item['risk'].upper()}\nRequested by: {item['requested_by']}",
@@ -195,11 +215,14 @@ def start_telegram_bot(agent):
         await query.answer()
         try:
             _, decision, action_id = query.data.split(":", 2)
-            from jarvis.tools.amaura import get_control_plane
             from jarvis.amaura.integration_control import IntegrationActionController
+            from jarvis.tools.amaura import get_control_plane
+
             control = get_control_plane()
             result = IntegrationActionController(control.store, control.founder_id).decide(
-                action_id, approve=decision == "approved", actor=control.founder_id,
+                action_id,
+                approve=decision == "approved",
+                actor=control.founder_id,
                 reason=f"{decision.title()} via authenticated Telegram",
             )
             await query.edit_message_text(
@@ -218,13 +241,12 @@ def start_telegram_bot(agent):
         try:
             _, decision, approval_id = query.data.split(":", 2)
             from jarvis.tools.amaura import get_control_plane
+
             control = get_control_plane()
             reason = f"{decision.replace('_', ' ').title()} by {control.founder_name} via authenticated Telegram"
             result = control.decide_approval(approval_id, control.founder_id, decision, reason)
             await query.edit_message_text(
-                f"Decision recorded: {decision.upper()}\n"
-                f"Task: {result['task']['title']}\n"
-                f"Audit ID: {approval_id}"
+                f"Decision recorded: {decision.upper()}\nTask: {result['task']['title']}\nAudit ID: {approval_id}"
             )
         except Exception as exc:
             await query.edit_message_text(f"Approval could not be recorded: {exc}")
@@ -234,6 +256,7 @@ def start_telegram_bot(agent):
         if not _is_authorized(update, allowed_user_id):
             return
         from jarvis.tools.amaura import get_control_plane
+
         briefing = get_control_plane().daily_briefing()
         status = briefing["company_status"]
         decisions = briefing["top_founder_decisions"]
@@ -266,6 +289,7 @@ def start_telegram_bot(agent):
         agent_id, reason = context.args[0], " ".join(context.args[1:])
         try:
             from jarvis.tools.amaura import get_control_plane
+
             control = get_control_plane()
             restored = control.resume_agent(agent_id, reason, actor=control.founder_id)
             await update.message.reply_text(f"✅ {restored['name']} restored. The decision is in the audit log.")
@@ -273,49 +297,65 @@ def start_telegram_bot(agent):
             await update.message.reply_text(f"Employee could not be restored: {exc}")
 
     async def leads_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not _is_authorized(update, allowed_user_id): return
+        if not _is_authorized(update, allowed_user_id):
+            return
         from jarvis.tools.amaura import get_control_plane
+
         leads = get_control_plane().store.list_leads(limit=20)
-        lines = ["🎯 RECENT LEADS"] + [f"• {item['company_name']} — {item['stage']} — {item['total_score']}/100" for item in leads]
+        lines = ["🎯 RECENT LEADS"] + [
+            f"• {item['company_name']} — {item['stage']} — {item['total_score']}/100" for item in leads
+        ]
         await update.message.reply_text("\n".join(lines) if leads else "No leads recorded.")
 
     async def projects_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not _is_authorized(update, allowed_user_id): return
+        if not _is_authorized(update, allowed_user_id):
+            return
         from jarvis.tools.amaura import get_control_plane
+
         items = get_control_plane().store.list_work_items(item_type="project", limit=20)
         lines = ["📁 PROJECTS"] + [f"• {item['title']} — {item['state']}" for item in items]
         await update.message.reply_text("\n".join(lines) if items else "No projects recorded.")
 
     async def incidents_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not _is_authorized(update, allowed_user_id): return
+        if not _is_authorized(update, allowed_user_id):
+            return
         from jarvis.tools.amaura import get_control_plane
+
         alerts = get_control_plane().store.list_alerts(status="open", limit=20)
-        lines = ["🚨 OPEN INCIDENTS"] + [f"• {item['severity'].upper()} {item['code']}: {item['message']}" for item in alerts]
+        lines = ["🚨 OPEN INCIDENTS"] + [
+            f"• {item['severity'].upper()} {item['code']}: {item['message']}" for item in alerts
+        ]
         await update.message.reply_text("\n".join(lines) if alerts else "✅ No open incidents.")
 
     async def costs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not _is_authorized(update, allowed_user_id): return
+        if not _is_authorized(update, allowed_user_id):
+            return
         from jarvis.tools.amaura import get_control_plane
+
         tasks = get_control_plane().store.list_work_items(item_type="task", limit=2000)
         total = sum(int(item.get("spent_cents", 0)) for item in tasks)
         await update.message.reply_text(f"💰 Recorded operating cost: {total} cents across {len(tasks)} tasks.")
 
     async def pause_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not _is_authorized(update, allowed_user_id): return
+        if not _is_authorized(update, allowed_user_id):
+            return
         reason = " ".join(context.args).strip() or "Paused by founder via Telegram"
-        from jarvis.tools.amaura import get_control_plane
         from jarvis.amaura.mission_control import MissionControl
+        from jarvis.tools.amaura import get_control_plane
+
         control = get_control_plane()
         MissionControl(control).set_autopilot(False, reason=reason, actor=control.founder_id)
         await update.message.reply_text("⏸️ Company autopilot paused. Existing state was preserved.")
 
     async def external_on_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not _is_authorized(update, allowed_user_id): return
+        if not _is_authorized(update, allowed_user_id):
+            return
         reason = " ".join(context.args).strip()
         if not reason:
             await update.message.reply_text("Usage: /external-on <reviewed reason>")
             return
         from jarvis.tools.amaura import get_control_plane
+
         control = get_control_plane()
         control.store.set_control("external_actions_kill_switch", "off", control.founder_id)
         control.store.audit(
@@ -326,16 +366,20 @@ def start_telegram_bot(agent):
             "allowed",
             {"reason": reason},
         )
-        await update.message.reply_text("✅ External action dispatch re-enabled. Existing approval policies remain active.")
+        await update.message.reply_text(
+            "✅ External action dispatch re-enabled. Existing approval policies remain active."
+        )
 
     async def kill_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not _is_authorized(update, allowed_user_id): return
+        if not _is_authorized(update, allowed_user_id):
+            return
         reason = " ".join(context.args).strip()
         if not reason:
             await update.message.reply_text("Usage: /kill <reason>")
             return
-        from jarvis.tools.amaura import get_control_plane
         from jarvis.amaura.mission_control import MissionControl
+        from jarvis.tools.amaura import get_control_plane
+
         control = get_control_plane()
         MissionControl(control).set_autopilot(False, reason=reason, actor=control.founder_id)
         control.acquisition.set_kill_switch(True, actor=control.founder_id, reason=reason)
@@ -372,6 +416,7 @@ def start_telegram_bot(agent):
 
 # ── Helper Functions ─────────────────────────────────────────────────────────
 
+
 def _is_authorized(update, allowed_user_id: str) -> bool:
     """Check if the message sender is authorized."""
     if not allowed_user_id:
@@ -402,14 +447,16 @@ def _split_message(text: str, max_length: int = 4000) -> list[str]:
 def _transcribe_voice(audio_path: str) -> str | None:
     """Transcribe a voice file using SpeechRecognition."""
     try:
-        import speech_recognition as sr
         import subprocess
+
+        import speech_recognition as sr
 
         # Convert OGG to WAV
         wav_path = audio_path.replace(".ogg", ".wav")
         subprocess.run(
             ["ffmpeg", "-i", audio_path, "-ar", "16000", "-ac", "1", wav_path, "-y"],
-            capture_output=True, timeout=30,
+            capture_output=True,
+            timeout=30,
         )
 
         recognizer = sr.Recognizer()
@@ -425,10 +472,11 @@ def _transcribe_voice(audio_path: str) -> str | None:
 
 async def _send_generated_files(update, response: str):
     """Check response for generated file paths and send them."""
-    import re
     import os
+    import re
+
     # Look for file paths in the response
-    paths = re.findall(r'(?:saved to|created:|wrote to)\s+([/~][\w/._-]+)', response, re.IGNORECASE)
+    paths = re.findall(r"(?:saved to|created:|wrote to)\s+([/~][\w/._-]+)", response, re.IGNORECASE)
     for p in paths:
         path = Path(os.path.expanduser(p.strip())).resolve()
         if _is_exportable_path(path) and path.is_file():
@@ -437,12 +485,14 @@ async def _send_generated_files(update, response: str):
                     await update.message.reply_document(document=document)
             except Exception as e:
                 import logging
+
                 logging.error(f"Failed to send file {path}: {e}")
 
 
 def _is_exportable_path(path: Path) -> bool:
     """Prevent model-authored text from exfiltrating arbitrary host files."""
     from jarvis.paths import get_data_dir
+
     configured = [
         Path(item).expanduser().resolve()
         for item in os.environ.get("JARVIS_FILE_EXPORT_ROOTS", "").split(os.pathsep)

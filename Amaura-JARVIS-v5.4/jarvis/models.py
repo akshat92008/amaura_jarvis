@@ -2,7 +2,6 @@
 Model registry & Smart Hybrid Router — all top-tier models and GCP fine-tuned endpoint router.
 """
 
-
 MODELS = {
     # ── GCP Fable 5 Adaptive Reasoning ─────────────────────────────
     "fable-5-reasoning": {
@@ -78,7 +77,7 @@ MODELS = {
         "context": 128000,
         "description": "Multimodal vision flagship model for UI inspection and image perception",
         "supports_tools": True,
-    }
+    },
 }
 
 ALIASES = {
@@ -105,15 +104,21 @@ DEFAULT_MODEL = "llama-3.3-70b"
 
 class SmartHybridModelRouter:
     """Intelligent query classification & multi-modal model selection engine."""
-    
+
     @staticmethod
     def classify_intent(prompt: str) -> str:
         p = prompt.lower()
-        if any(w in p for w in ["screenshot", "webcam", "image", "visual", "look at", "see user", "ui layout", "inspect ui"]):
+        if any(
+            w in p
+            for w in ["screenshot", "webcam", "image", "visual", "look at", "see user", "ui layout", "inspect ui"]
+        ):
             return "vision"
         if any(w in p for w in ["browser", "navigate", "click", "web page", "scrape", "url", "playwright"]):
             return "browser"
-        if any(w in p for w in ["architecture", "refactor", "system design", "security review", "audit", "math", "proof", "fable"]):
+        if any(
+            w in p
+            for w in ["architecture", "refactor", "system design", "security review", "audit", "math", "proof", "fable"]
+        ):
             return "reasoning"
         if any(w in p for w in ["speak", "listen", "voice", "duplex", "barge in"]):
             return "voice"
@@ -126,14 +131,14 @@ class SmartHybridModelRouter:
     @classmethod
     def route_query(cls, prompt: str) -> str:
         intent = cls.classify_intent(prompt)
-        
+
         if intent == "vision":
             return "llama-vision"
         elif intent in ["reasoning", "coding", "planning"]:
             return "fable-5-reasoning"
         elif intent in ["browser", "summarization"]:
             return "llama-3.3-70b"
-        
+
         return DEFAULT_MODEL
 
 
@@ -158,4 +163,3 @@ def list_models() -> list[dict]:
         entry["key"] = key
         result.append(entry)
     return result
-

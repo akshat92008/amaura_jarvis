@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -16,12 +15,12 @@ def load_prompt_catalogue() -> dict[str, str]:
     catalogue = {}
     if not _PROMPTS_DIR.exists():
         return catalogue
-    
+
     for file in _PROMPTS_DIR.glob("*.md"):
         # The key is just the filename without the .md extension
         key = file.stem
         catalogue[key] = file.read_text(encoding="utf-8").strip()
-        
+
     return catalogue
 
 

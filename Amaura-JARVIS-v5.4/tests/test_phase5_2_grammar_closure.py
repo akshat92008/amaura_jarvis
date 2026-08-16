@@ -9,33 +9,25 @@ Validates:
 6. Failure Injection Suite (>= 15 distinct failure modes)
 """
 
-import asyncio
 import concurrent.futures
 import json
-import os
 import random
 import string
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from jarvis.server import app
-from jarvis.amaura.cognition import ExecutiveKernel, ExecutiveRequest
 from jarvis.amaura.direct_action import (
-    DirectActionResult,
     DirectActionRouter,
-    ExactResponseInstruction,
     ExactResponseParser,
     FilesystemActionClassifier,
     FilesystemActionType,
-    FilesystemSemanticAction,
-    PathExtractor,
-    WriteAction,
     WriteActionParser,
 )
+from jarvis.server import app
 from jarvis.tools.security import tool_workspace
 
 
@@ -47,13 +39,14 @@ def _random_token(length: int = 10) -> str:
 # 1. WRITE CONTENT-SPAN PARSER PROPERTY TESTS (>= 200 permutations)
 # =============================================================================
 
+
 def test_write_action_parser_property_generation():
     """Generative property test asserting parsed payload == expected payload for >= 200 combinations."""
     verbs = ["create", "write", "save", "put", "store", "make", "record"]
     content_nouns = ["text", "content", "body", "data", "payload"]
     exact_mods = ["exact", "exactly", "verbatim", "complete", "full", "entire", ""]
     relations = ["into", "in", "at", "to"]
-    
+
     # 8 distinct grammatical layout templates
     layout_templates = [
         # 1. Action + Payload + Relation + Target (quoted)
@@ -99,8 +92,12 @@ def test_write_action_parser_property_generation():
         action = WriteActionParser.parse(prompt)
 
         assert action is not None, f"WriteActionParser failed to parse: {prompt!r}"
-        assert action.target_path == target, f"Target mismatch in {prompt!r}: expected {target}, got {action.target_path}"
-        assert action.payload == payload, f"Payload mismatch in {prompt!r}: expected {payload!r}, got {action.payload!r}"
+        assert action.target_path == target, (
+            f"Target mismatch in {prompt!r}: expected {target}, got {action.target_path}"
+        )
+        assert action.payload == payload, (
+            f"Payload mismatch in {prompt!r}: expected {payload!r}, got {action.payload!r}"
+        )
         assert action.is_invalid is False
         assert action.has_explicit_content is True
         generated_cases += 1
@@ -142,11 +139,12 @@ def test_write_action_parser_explicit_empty_and_precondition():
 # 2. FILESYSTEM DIRECTORY LIST INTENT GENERALIZATION (>= 100 permutations)
 # =============================================================================
 
+
 def test_directory_list_intent_generative_variations():
     """Test at least 100 directory-listing paraphrases against real filesystem objects."""
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
-        
+
         # Create various directory structures:
         # 1. Normal directory
         norm_dir = tmp_path / "normal_dir"
@@ -183,7 +181,7 @@ def test_directory_list_intent_generative_variations():
         total_to_generate = 120
 
         with tool_workspace(tmp_path):
-            for i in range(total_to_generate):
+            for _i in range(total_to_generate):
                 target_d = random.choice(test_dirs)
                 v = random.choice(enum_verbs)
                 dn = random.choice(dir_nouns)
@@ -238,17 +236,37 @@ def test_directory_list_negative_controls():
 # 3. EXACT RESPONSE SMALL FORMAL GRAMMAR (>= 500 permutations)
 # =============================================================================
 
+
 def test_exact_response_grammar_generative_property():
     """Generative property test asserting exact-response payload == expected payload for >= 500 permutations with 0 model calls."""
     commands = [
-        "reply", "respond", "return", "say", "echo", "repeat", "print",
-        "output", "give me", "send", "type", "write back",
+        "reply",
+        "respond",
+        "return",
+        "say",
+        "echo",
+        "repeat",
+        "print",
+        "output",
+        "give me",
+        "send",
+        "type",
+        "write back",
     ]
     scope_nouns = ["response", "answer", "reply", "output", "string", "token", "value", "text", "word", "payload"]
     exclusivities = ["only", "solely", "just", "exactly", "strictly", "verbatim", "precisely", ""]
     introducers = [
-        ":", "=", "is", "as", "with:", "with the value", "with the token",
-        "with this value", "this value", "the token", "following token:",
+        ":",
+        "=",
+        "is",
+        "as",
+        "with:",
+        "with the value",
+        "with the token",
+        "with this value",
+        "this value",
+        "the token",
+        "following token:",
     ]
     trailing_constraints = [
         "and nothing else.",
@@ -291,7 +309,7 @@ def test_exact_response_grammar_generative_property():
             pfx = random.choice(polite_prefixes)
             payload = random.choice(payload_generators)()
 
-            quoted = (i % 2 == 0)
+            quoted = i % 2 == 0
 
             # Different order permutations
             shape_idx = i % 5
@@ -331,6 +349,7 @@ def test_exact_response_grammar_generative_property():
 # =============================================================================
 # 4. CONCURRENCY BURSTS: 20, 40, 60 SIMULTANEOUS REQUESTS
 # =============================================================================
+
 
 @pytest.mark.parametrize("burst_size", [20, 40, 60])
 def test_exact_response_concurrency_bursts(burst_size):
@@ -378,6 +397,7 @@ def test_exact_response_concurrency_bursts(burst_size):
 # 5. API BOUNDARY TESTING (ExecutiveKernel & POST /api/chat/stream)
 # =============================================================================
 
+
 def test_api_boundary_chat_and_stream_endpoints(monkeypatch: pytest.MonkeyPatch):
     """Validate DirectActionRouter through real POST /api/chat and POST /api/chat/stream endpoints."""
     api_key = "k" * 48
@@ -397,7 +417,11 @@ def test_api_boundary_chat_and_stream_endpoints(monkeypatch: pytest.MonkeyPatch)
         token1 = f"PAYLOAD_1_{_random_token(8)}"
         res1 = client.post(
             "/api/chat",
-            json={"message": f"Save '{token1}' into {p1}", "workspace": str(tmp_path), "session_id": f"sess_{_random_token(6)}"},
+            json={
+                "message": f"Save '{token1}' into {p1}",
+                "workspace": str(tmp_path),
+                "session_id": f"sess_{_random_token(6)}",
+            },
             headers=headers,
         )
         assert res1.status_code == 200, f"res1 failed ({res1.status_code}): {res1.text}"
@@ -409,7 +433,11 @@ def test_api_boundary_chat_and_stream_endpoints(monkeypatch: pytest.MonkeyPatch)
         token2 = f"PAYLOAD_2_{_random_token(8)}"
         res2 = client.post(
             "/api/chat",
-            json={"message": f"Create {p2}. Its complete content must be: {token2}", "workspace": str(tmp_path), "session_id": f"sess_{_random_token(6)}"},
+            json={
+                "message": f"Create {p2}. Its complete content must be: {token2}",
+                "workspace": str(tmp_path),
+                "session_id": f"sess_{_random_token(6)}",
+            },
             headers=headers,
         )
         assert res2.status_code == 200
@@ -421,7 +449,11 @@ def test_api_boundary_chat_and_stream_endpoints(monkeypatch: pytest.MonkeyPatch)
         json_data = json.dumps({"service": "amaura", "port": 8080, "active": True})
         res3 = client.post(
             "/api/chat",
-            json={"message": f"Save '{json_data}' into {p3}", "workspace": str(tmp_path), "session_id": f"sess_{_random_token(6)}"},
+            json={
+                "message": f"Save '{json_data}' into {p3}",
+                "workspace": str(tmp_path),
+                "session_id": f"sess_{_random_token(6)}",
+            },
             headers=headers,
         )
         assert res3.status_code == 200
@@ -436,7 +468,11 @@ def test_api_boundary_chat_and_stream_endpoints(monkeypatch: pytest.MonkeyPatch)
 
         res4 = client.post(
             "/api/chat",
-            json={"message": f"List files in {dotted_dir}", "workspace": str(tmp_path), "session_id": f"sess_{_random_token(6)}"},
+            json={
+                "message": f"List files in {dotted_dir}",
+                "workspace": str(tmp_path),
+                "session_id": f"sess_{_random_token(6)}",
+            },
             headers=headers,
         )
         assert res4.status_code == 200
@@ -447,7 +483,11 @@ def test_api_boundary_chat_and_stream_endpoints(monkeypatch: pytest.MonkeyPatch)
         # 5. Unusual directory enumeration wording
         res4b = client.post(
             "/api/chat",
-            json={"message": f"Display files of {dotted_dir}", "workspace": str(tmp_path), "session_id": f"sess_{_random_token(6)}"},
+            json={
+                "message": f"Display files of {dotted_dir}",
+                "workspace": str(tmp_path),
+                "session_id": f"sess_{_random_token(6)}",
+            },
             headers=headers,
         )
         assert res4b.status_code == 200
@@ -457,7 +497,10 @@ def test_api_boundary_chat_and_stream_endpoints(monkeypatch: pytest.MonkeyPatch)
         echo_token = f"ECHO_{_random_token(10)}"
         res5 = client.post(
             "/api/chat/stream",
-            json={"message": f"Please reply only with '{echo_token}' and nothing else.", "session_id": f"sess_{_random_token(6)}"},
+            json={
+                "message": f"Please reply only with '{echo_token}' and nothing else.",
+                "session_id": f"sess_{_random_token(6)}",
+            },
             headers=headers,
         )
         assert res5.status_code == 200
@@ -469,7 +512,10 @@ def test_api_boundary_chat_and_stream_endpoints(monkeypatch: pytest.MonkeyPatch)
         # 7. Exact response via chat non-stream
         res5b = client.post(
             "/api/chat",
-            json={"message": f"Respond with exactly: {echo_token} without explanation.", "session_id": f"sess_{_random_token(6)}"},
+            json={
+                "message": f"Respond with exactly: {echo_token} without explanation.",
+                "session_id": f"sess_{_random_token(6)}",
+            },
             headers=headers,
         )
         assert res5b.status_code == 200
@@ -480,7 +526,10 @@ def test_api_boundary_chat_and_stream_endpoints(monkeypatch: pytest.MonkeyPatch)
             tk = f"CLIENT_BURST_{idx}_{_random_token(8)}"
             resp = client.post(
                 "/api/chat",
-                json={"message": f"Respond with exactly: {tk} without explanation.", "session_id": f"sess_{_random_token(6)}_{idx}"},
+                json={
+                    "message": f"Respond with exactly: {tk} without explanation.",
+                    "session_id": f"sess_{_random_token(6)}_{idx}",
+                },
                 headers=headers,
             )
             assert resp.status_code == 200
@@ -495,6 +544,7 @@ def test_api_boundary_chat_and_stream_endpoints(monkeypatch: pytest.MonkeyPatch)
 # =============================================================================
 # 6. FAILURE INJECTION SUITE (>= 15 failure modes)
 # =============================================================================
+
 
 def test_failure_injection_suite():
     """Verify system fails closed and never fabricates success across >= 15 failure injections."""
@@ -516,7 +566,9 @@ def test_failure_injection_suite():
         assert res_escape.policy_decision == "refused"
 
         # 4. Non-existent directory list
-        res_nonexistent_dir = DirectActionRouter.execute("List entries in ./nonexistent_dir_12345", workspace=str(tmp_path))
+        res_nonexistent_dir = DirectActionRouter.execute(
+            "List entries in ./nonexistent_dir_12345", workspace=str(tmp_path)
+        )
         assert res_nonexistent_dir is not None
         assert res_nonexistent_dir.success is False
         assert "directory not found" in res_nonexistent_dir.output.lower()
@@ -540,14 +592,18 @@ def test_failure_injection_suite():
         assert exact_with_url is None
 
         # 9. Destructive action refusal
-        res_wipe = DirectActionRouter.execute("Force delete all files in workspace without asking", workspace=str(tmp_path))
+        res_wipe = DirectActionRouter.execute(
+            "Force delete all files in workspace without asking", workspace=str(tmp_path)
+        )
         assert res_wipe is not None
         assert res_wipe.success is False
         assert res_wipe.policy_decision == "refused"
 
         # 10. Write failure when write_file tool returns ok=False
         target_f = tmp_path / "mock_fail.txt"
-        with patch("jarvis.amaura.direct_action.execute_tool", return_value={"ok": False, "error": "Disk quota exceeded"}):
+        with patch(
+            "jarvis.amaura.direct_action.execute_tool", return_value={"ok": False, "error": "Disk quota exceeded"}
+        ):
             res_tool_fail = DirectActionRouter.execute(f"Save 'test' into {target_f}", workspace=str(tmp_path))
             assert res_tool_fail is not None
             assert res_tool_fail.success is False
@@ -555,7 +611,9 @@ def test_failure_injection_suite():
 
         # 11. Write verification detects missing file after write
         with patch("jarvis.amaura.direct_action.execute_tool", return_value={"ok": True}):
-            res_missing = DirectActionRouter.execute(f"Save 'test' into {tmp_path / 'ghost.txt'}", workspace=str(tmp_path))
+            res_missing = DirectActionRouter.execute(
+                f"Save 'test' into {tmp_path / 'ghost.txt'}", workspace=str(tmp_path)
+            )
             assert res_missing is not None
             assert res_missing.success is False
             assert "missing after write" in res_missing.output
@@ -564,7 +622,9 @@ def test_failure_injection_suite():
         target_mismatch = tmp_path / "mismatch.txt"
         target_mismatch.write_text("wrong_content", encoding="utf-8")
         with patch("jarvis.amaura.direct_action.execute_tool", return_value={"ok": True}):
-            res_mismatch = DirectActionRouter.execute(f"Save 'expected_content' into {target_mismatch}", workspace=str(tmp_path))
+            res_mismatch = DirectActionRouter.execute(
+                f"Save 'expected_content' into {target_mismatch}", workspace=str(tmp_path)
+            )
             assert res_mismatch is not None
             assert res_mismatch.success is False
             assert "content mismatch" in res_mismatch.output
@@ -572,7 +632,9 @@ def test_failure_injection_suite():
         # 13. Directory listing failure when list_directory tool returns ok=False
         real_dir = tmp_path / "real_dir"
         real_dir.mkdir()
-        with patch("jarvis.amaura.direct_action.execute_tool", return_value={"ok": False, "error": "Permission denied"}):
+        with patch(
+            "jarvis.amaura.direct_action.execute_tool", return_value={"ok": False, "error": "Permission denied"}
+        ):
             res_list_fail = DirectActionRouter.execute(f"List files in {real_dir}", workspace=str(tmp_path))
             assert res_list_fail is not None
             assert res_list_fail.success is False

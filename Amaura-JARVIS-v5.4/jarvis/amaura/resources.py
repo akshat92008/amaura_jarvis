@@ -513,7 +513,23 @@ class CapabilityRouter:
 
     def mac_8gb_profile(self) -> dict[str, Any]:
         always_on = ["amaura_builtin", "sqlite", "git"]
-        on_demand = ["playwright", "crawl4ai", "searxng", "pymupdf", "qdrant_fastembed", "ffmpeg", "yt_dlp", "faster_whisper", "kokoro", "docling", "paddleocr", "remotion", "docker", "ollama", "comfyui"]
+        on_demand = [
+            "playwright",
+            "crawl4ai",
+            "searxng",
+            "pymupdf",
+            "qdrant_fastembed",
+            "ffmpeg",
+            "yt_dlp",
+            "faster_whisper",
+            "kokoro",
+            "docling",
+            "paddleocr",
+            "remotion",
+            "docker",
+            "ollama",
+            "comfyui",
+        ]
         return {
             "strategy": "control-plane-local-heavy-work-on-demand",
             "always_on": always_on,
@@ -524,7 +540,19 @@ class CapabilityRouter:
             "pressure_limit_mb": int(os.environ.get("AMAURA_RAM_PRESSURE_LIMIT_MB", "1000")),
             "heavy_workers_max": 1,
             "idle_heavy_services": 0,
-            "avoid_simultaneous": ["ollama", "docker", "playwright", "crawl4ai", "browser_use", "faster_whisper", "docling", "paddleocr", "remotion", "comfyui", "local_video_generation"],
+            "avoid_simultaneous": [
+                "ollama",
+                "docker",
+                "playwright",
+                "crawl4ai",
+                "browser_use",
+                "faster_whisper",
+                "docling",
+                "paddleocr",
+                "remotion",
+                "comfyui",
+                "local_video_generation",
+            ],
             "recommended_concurrent_agent_runs": 2,
             "reason": "The control plane stays resident; heavy capabilities are disposable, pressure-aware and serialized. Local LLM + browser/media/model jobs should not overlap on 8 GB.",
         }

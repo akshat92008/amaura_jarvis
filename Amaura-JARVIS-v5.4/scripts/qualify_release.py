@@ -7,6 +7,7 @@ compiles distributable Python sources, runs the repository security scanner, and
 executes the static source-certification gate. All reports are generated from the
 same in-memory result so version and test totals cannot drift.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -48,12 +49,20 @@ def _sha256(path: Path) -> str:
 
 def _git() -> dict[str, Any]:
     commit = subprocess.run(
-        ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True,
-        capture_output=True, text=True, timeout=15,
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=15,
     ).stdout.strip()
     status = subprocess.run(
-        ["git", "status", "--porcelain"], cwd=ROOT, check=True,
-        capture_output=True, text=True, timeout=15,
+        ["git", "status", "--porcelain"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=15,
     ).stdout.strip()
     return {"available": True, "commit": commit, "dirty": bool(status), "status": status.splitlines()}
 
@@ -68,15 +77,22 @@ def _run(command: list[str], *, timeout: int, log_path: Path) -> dict[str, Any]:
     }
     try:
         result = subprocess.run(
-            command, cwd=ROOT, env=env, text=True, capture_output=True,
-            timeout=timeout, check=False,
+            command,
+            cwd=ROOT,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            check=False,
         )
         returncode = int(result.returncode)
         output = (result.stdout or "") + (result.stderr or "")
         timed_out = False
     except subprocess.TimeoutExpired as exc:
         returncode = 124
-        output = ((exc.stdout or "") if isinstance(exc.stdout, str) else "") + ((exc.stderr or "") if isinstance(exc.stderr, str) else "")
+        output = ((exc.stdout or "") if isinstance(exc.stdout, str) else "") + (
+            (exc.stderr or "") if isinstance(exc.stderr, str) else ""
+        )
         timed_out = True
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text(output, encoding="utf-8")
@@ -132,11 +148,7 @@ def _write_final_reports(
     security = scan_repository(ROOT)
     static_gate = release_gate_run(True)
     shard_total = (len(nodes) + shard_size - 1) // shard_size
-    tests_passed = (
-        len(shards) == shard_total
-        and verified == len(nodes)
-        and all(item.get("passed") for item in shards)
-    )
+    tests_passed = len(shards) == shard_total and verified == len(nodes) and all(item.get("passed") for item in shards)
     source_certified = bool(
         tests_passed
         and compile_record["passed"]
@@ -239,14 +251,20 @@ def _write_final_reports(
         "".join(f"{_sha256(output / name)}  {name}\n" for name in REPORT_NAMES),
         encoding="utf-8",
     )
-    print(json.dumps({
-        "version": version,
-        "source_certified": source_certified,
-        "tests": {"collected": len(nodes), "verified": verified},
-        "security_ok": security.get("ok"),
-        "static_gate_ok": static_gate.get("source_certified"),
-        "output": str(output),
-    }, indent=2, sort_keys=True))
+    print(
+        json.dumps(
+            {
+                "version": version,
+                "source_certified": source_certified,
+                "tests": {"collected": len(nodes), "verified": verified},
+                "security_ok": security.get("ok"),
+                "static_gate_ok": static_gate.get("source_certified"),
+                "output": str(output),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return source_certified
 
 
@@ -265,6 +283,7 @@ def main() -> int:
     output = args.output.expanduser().resolve()
     if not args.shard_index and not args.finalize and output.exists():
         import shutil
+
         shutil.rmtree(output)
     output.mkdir(parents=True, exist_ok=True)
     logs = output / "logs"
@@ -283,29 +302,35 @@ def main() -> int:
         index = int(args.shard_index)
         if not 1 <= index <= shard_total:
             raise SystemExit(f"--shard-index must be between 1 and {shard_total}")
-        count = len(nodes[(index - 1) * shard_size:index * shard_size])
+        count = len(nodes[(index - 1) * shard_size : index * shard_size])
         started_at = datetime.now(UTC).isoformat()
         record = _run(
             [
-                sys.executable, "scripts/run_verified_tests.py",
-                "--shard-size", str(shard_size),
-                "--timeout", str(args.shard_timeout),
-                "--shard-index", str(index),
+                sys.executable,
+                "scripts/run_verified_tests.py",
+                "--shard-size",
+                str(shard_size),
+                "--timeout",
+                str(args.shard_timeout),
+                "--shard-index",
+                str(index),
             ],
             timeout=args.shard_timeout + 90,
             log_path=logs / f"pytest-shard-{index}.log",
         )
-        record.update({
-            "index": index,
-            "tests": count,
-            "version": version,
-            "git_commit": git["commit"],
-            "collected_tests": len(nodes),
-            "shard_size": shard_size,
-            "shard_total": shard_total,
-            "started_at": started_at,
-            "finished_at": datetime.now(UTC).isoformat(),
-        })
+        record.update(
+            {
+                "index": index,
+                "tests": count,
+                "version": version,
+                "git_commit": git["commit"],
+                "collected_tests": len(nodes),
+                "shard_size": shard_size,
+                "shard_total": shard_total,
+                "started_at": started_at,
+                "finished_at": datetime.now(UTC).isoformat(),
+            }
+        )
         target = output / f"shard-{index}.json"
         target.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print(json.dumps(record, indent=2, sort_keys=True))
@@ -332,7 +357,63 @@ def main() -> int:
             if record.get("log_sha256") != _sha256(logs / f"pytest-shard-{index}.log"):
                 raise SystemExit(f"Shard {index} log digest mismatch")
             shards.append(record)
-        return 0 if _write_final_reports(
+        return (
+            0
+            if _write_final_reports(
+                output=output,
+                logs=logs,
+                version=version,
+                git=git,
+                nodes=nodes,
+                collection=collection,
+                shard_size=shard_size,
+                shards=shards,
+                allow_dirty=args.allow_dirty,
+            )
+            else 1
+        )
+
+    shards = []
+    for index in range(1, shard_total + 1):
+        count = len(nodes[(index - 1) * shard_size : index * shard_size])
+        started_at = datetime.now(UTC).isoformat()
+        record = _run(
+            [
+                sys.executable,
+                "scripts/run_verified_tests.py",
+                "--shard-size",
+                str(shard_size),
+                "--timeout",
+                str(args.shard_timeout),
+                "--shard-index",
+                str(index),
+            ],
+            timeout=args.shard_timeout + 90,
+            log_path=logs / f"pytest-shard-{index}.log",
+        )
+        record.update(
+            {
+                "index": index,
+                "tests": count,
+                "version": version,
+                "git_commit": git["commit"],
+                "collected_tests": len(nodes),
+                "shard_size": shard_size,
+                "shard_total": shard_total,
+                "started_at": started_at,
+                "finished_at": datetime.now(UTC).isoformat(),
+            }
+        )
+        (output / f"shard-{index}.json").write_text(
+            json.dumps(record, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        shards.append(record)
+        if not record["passed"]:
+            break
+    return (
+        0
+        if _write_final_reports(
             output=output,
             logs=logs,
             version=version,
@@ -342,51 +423,9 @@ def main() -> int:
             shard_size=shard_size,
             shards=shards,
             allow_dirty=args.allow_dirty,
-        ) else 1
-
-    shards = []
-    for index in range(1, shard_total + 1):
-        count = len(nodes[(index - 1) * shard_size:index * shard_size])
-        started_at = datetime.now(UTC).isoformat()
-        record = _run(
-            [
-                sys.executable, "scripts/run_verified_tests.py",
-                "--shard-size", str(shard_size),
-                "--timeout", str(args.shard_timeout),
-                "--shard-index", str(index),
-            ],
-            timeout=args.shard_timeout + 90,
-            log_path=logs / f"pytest-shard-{index}.log",
         )
-        record.update({
-            "index": index,
-            "tests": count,
-            "version": version,
-            "git_commit": git["commit"],
-            "collected_tests": len(nodes),
-            "shard_size": shard_size,
-            "shard_total": shard_total,
-            "started_at": started_at,
-            "finished_at": datetime.now(UTC).isoformat(),
-        })
-        (output / f"shard-{index}.json").write_text(
-            json.dumps(record, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        shards.append(record)
-        if not record["passed"]:
-            break
-    return 0 if _write_final_reports(
-        output=output,
-        logs=logs,
-        version=version,
-        git=git,
-        nodes=nodes,
-        collection=collection,
-        shard_size=shard_size,
-        shards=shards,
-        allow_dirty=args.allow_dirty,
-    ) else 1
+        else 1
+    )
 
 
 if __name__ == "__main__":

@@ -11,11 +11,11 @@ Provides:
 """
 
 import asyncio
-from contextlib import asynccontextmanager
-import hmac
 import hashlib
+import hmac
 import json
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -29,35 +29,35 @@ from pydantic import BaseModel, Field
 from jarvis.agent import JarvisAgent
 from jarvis.amaura import commands as cmd
 from jarvis.amaura.runtime import load_amaura_env
+from jarvis.amaura.tool_governance import legacy_tool_allowed, legacy_tool_mode
 from jarvis.memory import ConversationMemory
 from jarvis.models import DEFAULT_MODEL, list_models
 from jarvis.network_security import (
     MIN_API_KEY_LENGTH,
     api_key_matches,
-    effective_bind_host,
-    is_loopback_host,
     scope_is_remote,
     supplied_api_key,
     validate_bind_security,
 )
 from jarvis.tools.registry import ALL_TOOL_DEFINITIONS, execute_tool, get_tool_count
-from jarvis.amaura.tool_governance import legacy_tool_allowed, legacy_tool_mode
 from jarvis.user_memory import UserMemory
 from jarvis.voice.engine import VoiceEngine
 from jarvis.voice.speaker import Speaker, get_speaker
 
 load_amaura_env()
 
+
 def _fetch_build_id() -> str:
     # 1. Check development Git tree hash
     try:
         import subprocess
+
         res = subprocess.run(
             ["git", "rev-parse", "HEAD^{tree}"],
             capture_output=True,
             text=True,
             timeout=1,
-            cwd=os.path.dirname(os.path.abspath(__file__))
+            cwd=os.path.dirname(os.path.abspath(__file__)),
         )
         if res.returncode == 0 and res.stdout.strip():
             return res.stdout.strip()
@@ -67,15 +67,17 @@ def _fetch_build_id() -> str:
     # 2. Check for release validation manifest
     try:
         import json
+
         manifest_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "RELEASE_VERIFICATION.json")
         if os.path.exists(manifest_path):
-            with open(manifest_path, "r") as f:
+            with open(manifest_path) as f:
                 data = json.load(f)
                 return data.get("version", "unknown") + "_release"
     except Exception:
         pass
-    
+
     return "unknown"
+
 
 BUILD_ID = _fetch_build_id()
 
@@ -93,6 +95,7 @@ _RUNTIME_OBSERVABILITY: dict[str, str] = {
 
 # ── App Setup ──────────────────────────────────────────────────────────────────
 
+
 async def _mission_runner_loop() -> None:
     """Advance durable JARVIS missions independently of originating requests."""
     interval = max(1, min(float(os.environ.get("AMAURA_JARVIS_MISSION_POLL_SECONDS", "5")), 60.0))
@@ -100,6 +103,7 @@ async def _mission_runner_loop() -> None:
     while True:
         try:
             from jarvis.amaura.mission_runner import MissionRunner
+
             result = await asyncio.to_thread(MissionRunner(_amaura_control()).tick, max_goals=max_goals)
             _RUNTIME_OBSERVABILITY["mission_runner_last_error"] = ""
             _RUNTIME_OBSERVABILITY["mission_runner_last_tick_at"] = datetime.now().isoformat()
@@ -122,6 +126,7 @@ async def _proactive_cognition_loop() -> None:
     while True:
         try:
             from jarvis.amaura.cognition import ProactiveCognition
+
             await asyncio.to_thread(
                 ProactiveCognition(_amaura_control()).tick,
                 auto_investigate=auto_investigate,
@@ -139,39 +144,46 @@ async def _proactive_cognition_loop() -> None:
 async def _company_autopilot_loop() -> None:
     """Run the same durable Company Autopilot used by the daemon while desktop/server is alive."""
     interval = max(15, min(float(os.environ.get("AMAURA_COMPANY_AUTOPILOT_POLL_SECONDS", "60")), 3600.0))
-    _RUNTIME_OBSERVABILITY.update({
-        "company_autopilot_state": "starting",
-        "company_autopilot_started_at": datetime.now().isoformat(),
-        "company_autopilot_last_error": "",
-    })
+    _RUNTIME_OBSERVABILITY.update(
+        {
+            "company_autopilot_state": "starting",
+            "company_autopilot_started_at": datetime.now().isoformat(),
+            "company_autopilot_last_error": "",
+        }
+    )
     while True:
         await asyncio.sleep(interval)
         try:
             from jarvis.amaura.autopilot import AutonomousCompanyRuntime
+
             result = await asyncio.to_thread(
                 AutonomousCompanyRuntime(_amaura_control(), worker_id="jarvis-desktop-autopilot").tick,
                 max_work_units=max(1, min(int(os.environ.get("AMAURA_COMPANY_AUTOPILOT_WORK_UNITS", "1")), 10)),
                 max_new_programmes=max(1, min(int(os.environ.get("AMAURA_COMPANY_AUTOPILOT_NEW_PROGRAMMES", "2")), 10)),
                 max_signals=max(1, min(int(os.environ.get("AMAURA_COMPANY_AUTOPILOT_SIGNALS", "2")), 10)),
             )
-            _RUNTIME_OBSERVABILITY.update({
-                "company_autopilot_state": "online" if result.get("status") != "standby" else "standby",
-                "company_autopilot_last_tick_at": datetime.now().isoformat(),
-                "company_autopilot_last_status": str(result.get("status") or "completed"),
-                "company_autopilot_last_error": "",
-            })
+            _RUNTIME_OBSERVABILITY.update(
+                {
+                    "company_autopilot_state": "online" if result.get("status") != "standby" else "standby",
+                    "company_autopilot_last_tick_at": datetime.now().isoformat(),
+                    "company_autopilot_last_status": str(result.get("status") or "completed"),
+                    "company_autopilot_last_error": "",
+                }
+            )
         except asyncio.CancelledError:
             _RUNTIME_OBSERVABILITY["company_autopilot_state"] = "stopped"
             raise
         except Exception as exc:
             # Keep the desktop/server alive, but expose the real failure instead of
             # making a configured runtime look healthy. The next cycle retries.
-            _RUNTIME_OBSERVABILITY.update({
-                "company_autopilot_state": "degraded",
-                "company_autopilot_last_tick_at": datetime.now().isoformat(),
-                "company_autopilot_last_status": "failed",
-                "company_autopilot_last_error": f"{type(exc).__name__}: {str(exc)[:500]}",
-            })
+            _RUNTIME_OBSERVABILITY.update(
+                {
+                    "company_autopilot_state": "degraded",
+                    "company_autopilot_last_tick_at": datetime.now().isoformat(),
+                    "company_autopilot_last_status": "failed",
+                    "company_autopilot_last_error": f"{type(exc).__name__}: {str(exc)[:500]}",
+                }
+            )
 
 
 @asynccontextmanager
@@ -201,10 +213,10 @@ async def app_lifespan(_app: FastAPI):
         sessions.clear()
         try:
             from jarvis.tools.amaura import reset_control_plane
+
             reset_control_plane()
         except Exception:
             pass
-
 
 
 app = FastAPI(
@@ -215,9 +227,9 @@ app = FastAPI(
 )
 
 _cors_origins = [
-    origin.strip() for origin in os.environ.get(
-        "JARVIS_CORS_ORIGINS", "http://127.0.0.1:8000,http://localhost:8000"
-    ).split(",") if origin.strip()
+    origin.strip()
+    for origin in os.environ.get("JARVIS_CORS_ORIGINS", "http://127.0.0.1:8000,http://localhost:8000").split(",")
+    if origin.strip()
 ]
 app.add_middleware(
     CORSMiddleware,
@@ -241,8 +253,12 @@ speaker = get_speaker()
 user_memory = UserMemory()
 
 _GENERAL_MUTATION_PATHS = (
-    "/api/chat", "/api/tool", "/api/system/command", "/api/memory",
-    "/api/voice/", "/api/fable/generate",
+    "/api/chat",
+    "/api/tool",
+    "/api/system/command",
+    "/api/memory",
+    "/api/voice/",
+    "/api/fable/generate",
 )
 
 
@@ -301,7 +317,9 @@ async def protect_http_api(request: Request, call_next):
 
         if remote:
             if len(expected) < MIN_API_KEY_LENGTH:
-                return JSONResponse(status_code=503, content={"detail": "Strong JARVIS_API_KEY is required for remote access"})
+                return JSONResponse(
+                    status_code=503, content={"detail": "Strong JARVIS_API_KEY is required for remote access"}
+                )
             if not api_key_matches(supplied, expected):
                 return JSONResponse(status_code=403, content={"detail": "Invalid JARVIS API key"})
         elif expected and local_auth_enabled:
@@ -314,7 +332,9 @@ async def protect_http_api(request: Request, call_next):
 
     return await call_next(request)
 
+
 # ── Models ─────────────────────────────────────────────────────────────────────
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -324,9 +344,11 @@ class ChatRequest(BaseModel):
     autonomy: str = "execute_until_approval"
     coding_backend: str = "antigravity"
 
+
 class ToolRequest(BaseModel):
     name: str
     args: dict = {}
+
 
 class VoiceRequest(BaseModel):
     text: str = ""
@@ -336,14 +358,17 @@ class VoiceRequest(BaseModel):
     coding_backend: str = "antigravity"
     wake_word: str = "Hey JARVIS"
 
+
 class MemoryRequest(BaseModel):
     fact: str = ""
     key: str = ""
     value: str = ""
 
+
 class SystemCommand(BaseModel):
     command: str
     args: dict = {}
+
 
 class AmauraProgrammeRequest(BaseModel):
     objective: str
@@ -354,8 +379,10 @@ class AmauraProgrammeRequest(BaseModel):
     deadline: str = ""
     inputs: dict = {}
 
+
 class AmauraRunRequest(BaseModel):
     max_iterations: int = 12
+
 
 class AmauraSupervisorRequest(BaseModel):
     workflow_id: str = ""
@@ -392,6 +419,7 @@ class AmauraDepartmentStateRequest(BaseModel):
 class AmauraAutopilotStateRequest(BaseModel):
     enabled: bool
     reason: str
+
 
 class AmauraVentureOpportunityRequest(BaseModel):
     title: str
@@ -479,9 +507,11 @@ class AmauraReviewRequest(BaseModel):
     findings: str
     attestation: dict | None = None
 
+
 class AmauraApprovalRequest(BaseModel):
     decision: str
     reason: str
+
 
 class AmauraCampaignRequest(BaseModel):
     campaign_id: str
@@ -495,6 +525,7 @@ class AmauraCampaignRequest(BaseModel):
     maximum_followups: int = 2
     config: dict = {}
 
+
 class AmauraLeadRequest(BaseModel):
     campaign_id: str
     company_name: str
@@ -504,12 +535,14 @@ class AmauraLeadRequest(BaseModel):
     industry: str = ""
     metadata: dict = Field(default_factory=dict)
 
+
 class AmauraEvidenceRequest(BaseModel):
     claim_type: str
     claim: str
     source_url: str
     source_excerpt: str
     confidence: float
+
 
 class AmauraLeadScoreRequest(BaseModel):
     campaign_fit: int
@@ -518,10 +551,12 @@ class AmauraLeadScoreRequest(BaseModel):
     contactability: int
     portfolio_match: int
 
+
 class AmauraTransitionRequest(BaseModel):
     to_stage: str
     actor: str = "jarvis"
     reason: str
+
 
 class AmauraMessageRequest(BaseModel):
     recipient: str
@@ -530,9 +565,11 @@ class AmauraMessageRequest(BaseModel):
     subject: str = ""
     body: str
 
+
 class AmauraMessageDecisionRequest(BaseModel):
     approve: bool
     reason: str
+
 
 class AmauraSendConfirmationRequest(BaseModel):
     provider_receipt: dict = {}
@@ -540,13 +577,16 @@ class AmauraSendConfirmationRequest(BaseModel):
     thread_id: str = ""
     actor: str = "jarvis"
 
+
 class AmauraDeliverMessageRequest(BaseModel):
     recipient: str
     actor: str = "jarvis"
 
+
 class AmauraKillSwitchRequest(BaseModel):
     enabled: bool
     reason: str
+
 
 class AmauraIntegrationActionRequest(BaseModel):
     provider: str
@@ -555,13 +595,16 @@ class AmauraIntegrationActionRequest(BaseModel):
     risk: str | None = None
     idempotency_key: str = ""
 
+
 class AmauraIntegrationDecisionRequest(BaseModel):
     approve: bool
     reason: str
 
+
 class AmauraAssistedSendRequest(BaseModel):
     external_message_id: str
     thread_id: str = ""
+
 
 class AmauraDiscoveryRunRequest(BaseModel):
     campaign_id: str
@@ -570,10 +613,12 @@ class AmauraDiscoveryRunRequest(BaseModel):
     country: str = ""
     industry: str = ""
 
+
 class AmauraInboxSyncRequest(BaseModel):
     max_results: int = 25
     query: str = "is:unread"
     mark_read: bool = True
+
 
 class AmauraInvoiceRequest(BaseModel):
     client_name: str
@@ -585,14 +630,17 @@ class AmauraInvoiceRequest(BaseModel):
     note: str = ""
     idempotency_key: str = ""
 
+
 class AmauraInvoiceStatusRequest(BaseModel):
     status: str
     reference: str = ""
+
 
 class AmauraOutboxReconciliationRequest(BaseModel):
     resolution: str
     reason: str
     provider_receipt: dict = {}
+
 
 class AmauraContentCampaignRequest(BaseModel):
     campaign_id: str
@@ -600,6 +648,7 @@ class AmauraContentCampaignRequest(BaseModel):
     audience: str
     business_objective: str
     config: dict = {}
+
 
 class AmauraContentAssetRequest(BaseModel):
     asset_type: str
@@ -611,11 +660,13 @@ class AmauraContentAssetRequest(BaseModel):
     status: str = "draft"
     metadata: dict = Field(default_factory=dict)
 
+
 class AmauraContentMetricsRequest(BaseModel):
     platform: str
     window: str
     metrics: dict[str, float]
     captured_at: str = ""
+
 
 class AmauraPrivatePublicationRequest(BaseModel):
     payload: dict
@@ -666,22 +717,36 @@ class JarvisAntigravityHandoffRequest(BaseModel):
 
 
 AMAURA_MUTATING_TOOLS = {
-    "amaura_create_program", "amaura_run_task", "amaura_review_task", "amaura_record_decision", "amaura_pause_agent",
-    "amaura_create_campaign", "amaura_discover_lead", "amaura_score_lead",
+    "amaura_create_program",
+    "amaura_run_task",
+    "amaura_review_task",
+    "amaura_record_decision",
+    "amaura_pause_agent",
+    "amaura_create_campaign",
+    "amaura_discover_lead",
+    "amaura_score_lead",
     "amaura_supervisor_tick",
     # Previously missing mutation tools (P0-4)
-    "amaura_record_lead_evidence", "amaura_transition_lead",
-    "amaura_stage_outreach", "amaura_register_content_asset",
+    "amaura_record_lead_evidence",
+    "amaura_transition_lead",
+    "amaura_stage_outreach",
+    "amaura_register_content_asset",
 }
 AMAURA_PROTECTED_TOOLS = AMAURA_MUTATING_TOOLS | {
-    "amaura_list_agents", "amaura_list_tasks", "amaura_task_packet",
-    "amaura_pending_approvals", "amaura_daily_briefing", "amaura_revenue_dashboard",
+    "amaura_list_agents",
+    "amaura_list_tasks",
+    "amaura_task_packet",
+    "amaura_pending_approvals",
+    "amaura_daily_briefing",
+    "amaura_revenue_dashboard",
     "amaura_supervisor_status",
     # Sensitive reads also require operator authentication
-    "amaura_read_evidence", "amaura_get_campaign_context",
+    "amaura_read_evidence",
+    "amaura_get_campaign_context",
 }
 
 # ── Helper Functions ───────────────────────────────────────────────────────────
+
 
 def get_or_create_agent(session_id: str, model_key: str = DEFAULT_MODEL) -> JarvisAgent:
     """Get or create a bounded local agent session."""
@@ -697,7 +762,9 @@ def get_or_create_agent(session_id: str, model_key: str = DEFAULT_MODEL) -> Jarv
         )
     return sessions[normalized]
 
+
 # ── REST Endpoints ─────────────────────────────────────────────────────────────
+
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
@@ -712,6 +779,7 @@ async def index():
 async def favicon():
     """Favicon endpoint to prevent 404 noise."""
     from fastapi.responses import Response
+
     return Response(content="", media_type="image/x-icon")
 
 
@@ -791,9 +859,7 @@ async def chat(
     """
     agent = get_or_create_agent(req.session_id, req.model)
     expected_operator = os.environ.get("AMAURA_OPERATOR_KEY", "")
-    operator_valid = bool(
-        operator_key and expected_operator and hmac.compare_digest(operator_key, expected_operator)
-    )
+    operator_valid = bool(operator_key and expected_operator and hmac.compare_digest(operator_key, expected_operator))
     if operator_key and not operator_valid:
         raise HTTPException(status_code=403, detail="Invalid Amaura operator key")
     if operator_valid:
@@ -838,9 +904,7 @@ async def chat_stream(
     """NDJSON token stream for the desktop; missions may still emit one final chunk."""
     agent = get_or_create_agent(req.session_id, req.model)
     expected_operator = os.environ.get("AMAURA_OPERATOR_KEY", "")
-    operator_valid = bool(
-        operator_key and expected_operator and hmac.compare_digest(operator_key, expected_operator)
-    )
+    operator_valid = bool(operator_key and expected_operator and hmac.compare_digest(operator_key, expected_operator))
     if operator_key and not operator_valid:
         raise HTTPException(status_code=403, detail="Invalid Amaura operator key")
     if operator_valid:
@@ -868,22 +932,24 @@ async def chat_stream(
                     on_token=on_token,
                 )
                 provenance = executive.get("model_provenance") or {}
-                await token_queue.put({
-                    "type": "complete",
-                    "response": executive.get("message", ""),
-                    "session_id": req.session_id,
-                    "model": provenance.get("model") or agent.model_cfg["name"],
-                    "model_key": provenance.get("model") or agent.model_key,
-                    "model_provider": provenance.get("provider") or "legacy",
-                    "model_fallback_used": bool(provenance.get("fallback_used")),
-                    "model_fallback_reason": provenance.get("fallback_reason") or "",
-                    "model_latency_ms": int(provenance.get("latency_ms") or 0),
-                    "model_ttft_ms": int(provenance.get("ttft_ms") or 0),
-                    "intent": executive.get("intent", "conversation"),
-                    "goal_id": executive.get("goal_id", ""),
-                    "state": executive.get("state", ""),
-                    "executive": executive,
-                })
+                await token_queue.put(
+                    {
+                        "type": "complete",
+                        "response": executive.get("message", ""),
+                        "session_id": req.session_id,
+                        "model": provenance.get("model") or agent.model_cfg["name"],
+                        "model_key": provenance.get("model") or agent.model_key,
+                        "model_provider": provenance.get("provider") or "legacy",
+                        "model_fallback_used": bool(provenance.get("fallback_used")),
+                        "model_fallback_reason": provenance.get("fallback_reason") or "",
+                        "model_latency_ms": int(provenance.get("latency_ms") or 0),
+                        "model_ttft_ms": int(provenance.get("ttft_ms") or 0),
+                        "intent": executive.get("intent", "conversation"),
+                        "goal_id": executive.get("goal_id", ""),
+                        "state": executive.get("state", ""),
+                        "executive": executive,
+                    }
+                )
             except Exception as exc:
                 await token_queue.put({"type": "error", "error": str(exc)})
             finally:
@@ -930,10 +996,12 @@ async def list_tools():
         name = t["function"]["name"]
         if not legacy_tool_allowed(name):
             continue
-        tools.append({
-            "name": name,
-            "description": t["function"]["description"],
-        })
+        tools.append(
+            {
+                "name": name,
+                "description": t["function"]["description"],
+            }
+        )
     return {"tools": tools, "count": len(tools)}
 
 
@@ -941,6 +1009,7 @@ async def list_tools():
 async def system_info():
     """Get system information."""
     from jarvis.tools.desktop import tool_get_system_info
+
     info = tool_get_system_info()
     return {"info": info}
 
@@ -957,6 +1026,7 @@ async def system_command(
         raise HTTPException(status_code=403, detail="Desktop command execution is disabled")
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.tools.desktop import DESKTOP_DISPATCH
+
     if req.command in DESKTOP_DISPATCH and legacy_tool_allowed(req.command):
         result = execute_tool(req.command, req.args)
         return {"result": result}
@@ -977,7 +1047,11 @@ async def get_memory():
 
     service = UnifiedMemoryService(_amaura_control())
     items = service.list(scope="personal", limit=300)
-    return {"summary": f"{len(items)} personal memory item(s)", "items": items, "facts": [row.get("value") for row in items]}
+    return {
+        "summary": f"{len(items)} personal memory item(s)",
+        "items": items,
+        "facts": [row.get("value") for row in items],
+    }
 
 
 @app.post("/api/memory")
@@ -992,7 +1066,9 @@ async def update_memory(
     service = UnifiedMemoryService(_amaura_control())
     if req.fact:
         key = hashlib.sha256(req.fact.encode("utf-8")).hexdigest()[:20]
-        item = service.remember(key=f"fact_{key}", value=req.fact, scope="personal", actor="founder", source="legacy_api")
+        item = service.remember(
+            key=f"fact_{key}", value=req.fact, scope="personal", actor="founder", source="legacy_api"
+        )
         return {"status": "added", "fact": req.fact, "memory": item}
     if req.key:
         item = service.remember(key=req.key, value=req.value, scope="personal", actor="founder", source="legacy_api")
@@ -1132,6 +1208,7 @@ async def set_voice(req: VoiceRequest):
 
 # ── Fable-5 Engine REST Endpoints ──────────────────────────────────────────────
 
+
 def _require_fable_enabled() -> None:
     if os.environ.get("JARVIS_ENABLE_FABLE", "0") != "1":
         raise HTTPException(
@@ -1145,6 +1222,7 @@ async def fable_status():
     """Check Fable-5 Engine status."""
     _require_fable_enabled()
     from jarvis.fable_engine import MultiProviderRouter
+
     router = MultiProviderRouter()
     return {
         "status": "online",
@@ -1158,6 +1236,7 @@ async def fable_workspace():
     """Get AST symbol graph and workspace files."""
     _require_fable_enabled()
     from jarvis.fable_engine import ASTIndexer, WorkspaceExecutor
+
     executor = WorkspaceExecutor()
     indexer = ASTIndexer()
     files = executor.list_workspace()
@@ -1176,13 +1255,16 @@ async def fable_generate(req: ChatRequest):
 
 # ── Amaura Studio Company OS ──────────────────────────────────────────────────
 
+
 def _amaura_bus():
     from jarvis.amaura.bus import CommandBus
+
     return CommandBus(_amaura_control())
 
 
 def _amaura_control():
     from jarvis.tools.amaura import get_control_plane
+
     return get_control_plane()
 
 
@@ -1197,8 +1279,8 @@ def _require_amaura_key(environment_name: str, supplied: str, authority: str) ->
 def _resolve_reviewer_from_key(reviewer_key: str) -> str | None:
     """Resolve reviewer identity exclusively from a configured secret key."""
     from jarvis.amaura.auth import resolve_reviewer_identity
-    return resolve_reviewer_identity(reviewer_key)
 
+    return resolve_reviewer_identity(reviewer_key)
 
 
 @app.get("/api/amaura/company/status")
@@ -1279,6 +1361,7 @@ async def amaura_ventures_status(
     """Read the separate Amaura Ventures portfolio and operating constraints."""
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.ventures import VentureStudio
+
     return VentureStudio(_amaura_control()).dashboard()
 
 
@@ -1299,6 +1382,7 @@ async def amaura_ventures_add_opportunity(
 ):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.ventures import VentureStudio
+
     try:
         return VentureStudio(_amaura_control()).create_opportunity(
             title=req.title,
@@ -1325,6 +1409,7 @@ async def amaura_ventures_start(
 ):
     _require_amaura_key("AMAURA_APPROVAL_KEY", approval_key, "founder approval")
     from jarvis.amaura.ventures import VentureStudio
+
     try:
         return VentureStudio(_amaura_control()).start_validation(
             opportunity_id=req.opportunity_id,
@@ -1347,6 +1432,7 @@ async def amaura_ventures_metric(
 ):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.ventures import VentureStudio
+
     try:
         return VentureStudio(_amaura_control()).record_metric(
             req.experiment_id,
@@ -1368,10 +1454,9 @@ async def amaura_ventures_decision(
 ):
     _require_amaura_key("AMAURA_APPROVAL_KEY", approval_key, "founder approval")
     from jarvis.amaura.ventures import VentureStudio
+
     try:
-        return VentureStudio(_amaura_control()).decide(
-            req.experiment_id, decision=req.decision, reason=req.reason
-        )
+        return VentureStudio(_amaura_control()).decide(req.experiment_id, decision=req.decision, reason=req.reason)
     except (KeyError, ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1382,6 +1467,7 @@ async def amaura_ventures_cashflow_dashboard(
 ):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.ventures_cashflow import CashflowEngine
+
     return CashflowEngine(_amaura_control()).dashboard()
 
 
@@ -1391,6 +1477,7 @@ async def amaura_ventures_cashflow_tick(
 ):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.ventures_cashflow import CashflowEngine
+
     try:
         return CashflowEngine(_amaura_control()).tick(actor="jarvis")
     except (KeyError, ValueError, RuntimeError) as exc:
@@ -1404,6 +1491,7 @@ async def amaura_ventures_cashflow_create_stream(
 ):
     _require_amaura_key("AMAURA_APPROVAL_KEY", approval_key, "founder approval")
     from jarvis.amaura.ventures_cashflow import CashflowEngine
+
     try:
         return CashflowEngine(_amaura_control()).create_stream(**req.model_dump())
     except (KeyError, ValueError, RuntimeError) as exc:
@@ -1417,6 +1505,7 @@ async def amaura_ventures_cashflow_stream_status(
 ):
     _require_amaura_key("AMAURA_APPROVAL_KEY", approval_key, "founder approval")
     from jarvis.amaura.ventures_cashflow import CashflowEngine
+
     try:
         return CashflowEngine(_amaura_control()).set_stream_status(req.stream_id, status=req.status, reason=req.reason)
     except (KeyError, ValueError, RuntimeError) as exc:
@@ -1430,6 +1519,7 @@ async def amaura_ventures_cashflow_financial_event(
 ):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.ventures_cashflow import CashflowEngine
+
     try:
         payload = req.model_dump()
         stream_id = payload.pop("stream_id")
@@ -1448,6 +1538,7 @@ async def amaura_ventures_cashflow_founder_financial_event(
     """Founder-certified manual transaction path, kept distinct from provider-verified automation."""
     _require_amaura_key("AMAURA_APPROVAL_KEY", approval_key, "founder approval")
     from jarvis.amaura.ventures_cashflow import CashflowEngine
+
     try:
         payload = req.model_dump()
         stream_id = payload.pop("stream_id")
@@ -1469,8 +1560,11 @@ async def amaura_ventures_cashflow_action_status(
     if req.status in {"approved", "cancelled"}:
         raise HTTPException(status_code=403, detail="Founder approval endpoint is required for approval/cancellation")
     from jarvis.amaura.ventures_cashflow import CashflowEngine
+
     try:
-        return CashflowEngine(_amaura_control()).set_action_status(req.action_id, status=req.status, reason=req.reason, result=req.result, actor="jarvis")
+        return CashflowEngine(_amaura_control()).set_action_status(
+            req.action_id, status=req.status, reason=req.reason, result=req.result, actor="jarvis"
+        )
     except (KeyError, ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1482,8 +1576,11 @@ async def amaura_ventures_cashflow_founder_action_status(
 ):
     _require_amaura_key("AMAURA_APPROVAL_KEY", approval_key, "founder approval")
     from jarvis.amaura.ventures_cashflow import CashflowEngine
+
     try:
-        return CashflowEngine(_amaura_control()).set_action_status(req.action_id, status=req.status, reason=req.reason, result=req.result, actor=_amaura_control().founder_id)
+        return CashflowEngine(_amaura_control()).set_action_status(
+            req.action_id, status=req.status, reason=req.reason, result=req.result, actor=_amaura_control().founder_id
+        )
     except (KeyError, ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1496,6 +1593,7 @@ async def amaura_runtime_status(
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     control = _amaura_control()
     from jarvis.amaura.antigravity_bridge import AntigravityDeliveryAdapter
+
     antigravity = AntigravityDeliveryAdapter()
     configured = os.environ.get("AMAURA_COMPANY_AUTOPILOT_RUNTIME", "1") == "1"
     return {
@@ -1528,20 +1626,18 @@ async def amaura_cognition_status(
     """
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.model_gateway import CognitiveModelGateway
+
     provider = (
-        os.environ.get("AMAURA_MODEL_PROVIDER", "").strip()
-        or os.environ.get("AMAURA_JARVIS_PROVIDER", "").strip()
+        os.environ.get("AMAURA_MODEL_PROVIDER", "").strip() or os.environ.get("AMAURA_JARVIS_PROVIDER", "").strip()
     )
     try:
         status = CognitiveModelGateway.status(purpose="general")
     except Exception as exc:
         status = {"available": False, "gateway": "unknown", "status": "ERROR", "error": str(exc)[:120]}
     # Strip any accidental key bleed
-    key_val = (os.environ.get("AMAURA_OMNIROUTE_API_KEY", "")
-               or os.environ.get("OMNIROUTE_API_KEY", ""))
+    key_val = os.environ.get("AMAURA_OMNIROUTE_API_KEY", "") or os.environ.get("OMNIROUTE_API_KEY", "")
     if key_val:
-        status = {k: str(v).replace(key_val, "[REDACTED]") if isinstance(v, str) else v
-                  for k, v in status.items()}
+        status = {k: str(v).replace(key_val, "[REDACTED]") if isinstance(v, str) else v for k, v in status.items()}
     return {
         "provider": provider or status.get("provider", "unset"),
         "gateway": status.get("gateway", "unknown"),
@@ -1551,12 +1647,9 @@ async def amaura_cognition_status(
         "available": bool(status.get("available")),
         "reason": status.get("reason", ""),
         "omniroute_configured": bool(
-            os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip()
-            or os.environ.get("OMNIROUTE_API_KEY", "")
-        ) and bool(
-            os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
-            or os.environ.get("OMNIROUTE_BASE_URL", "")
-        ),
+            os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "")
+        )
+        and bool(os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "")),
     }
 
 
@@ -1665,7 +1758,8 @@ async def jarvis_list_goals(
     """List dynamic JARVIS missions created from natural-language founder goals."""
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     goals = [
-        item for item in _amaura_control().store.list_work_items(item_type="programme", limit=500)
+        item
+        for item in _amaura_control().store.list_work_items(item_type="programme", limit=500)
         if (item.get("metadata") or {}).get("dynamic_goal")
     ]
     return {"goals": goals}
@@ -1714,6 +1808,7 @@ async def jarvis_activate_goal(
 ):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.brain import JarvisBrain
+
     try:
         return JarvisBrain(_amaura_control()).activate(goal_id, actor="founder")
     except (KeyError, ValueError, RuntimeError) as exc:
@@ -1728,6 +1823,7 @@ async def jarvis_pause_goal(
 ):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.brain import JarvisBrain
+
     try:
         return JarvisBrain(_amaura_control()).pause(goal_id, actor="founder", reason=req.reason)
     except (KeyError, ValueError, RuntimeError) as exc:
@@ -1742,6 +1838,7 @@ async def jarvis_cancel_goal(
 ):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.brain import JarvisBrain
+
     try:
         return JarvisBrain(_amaura_control()).cancel(goal_id, actor="founder", reason=req.reason)
     except (KeyError, ValueError, RuntimeError) as exc:
@@ -1765,7 +1862,8 @@ async def jarvis_engineering_status(
         "antigravity": antigravity,
         "noryx": {
             "configured": noryx.configured,
-            "enabled": os.environ.get("AMAURA_ENABLE_EXPERIMENTAL_NORYX", "0").strip().lower() in {"1", "true", "yes", "on"},
+            "enabled": os.environ.get("AMAURA_ENABLE_EXPERIMENTAL_NORYX", "0").strip().lower()
+            in {"1", "true", "yes", "on"},
             "role": "experimental_disabled_by_default",
         },
         "executive_cognition": CognitiveModelGateway.status(purpose="general"),
@@ -1780,6 +1878,7 @@ async def jarvis_runner_status(
 ):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.mission_runner import MissionRunner
+
     runner = MissionRunner(_amaura_control())
     goals = runner.runnable_goals(limit=100)
     return {"enabled": os.environ.get("AMAURA_JARVIS_MISSION_RUNNER", "1") == "1", "runnable_goals": goals}
@@ -1848,6 +1947,7 @@ async def jarvis_proactive_insights(
     control = _amaura_control()
     if refresh:
         from jarvis.amaura.cognition import ProactiveCognition
+
         return {"insights": ProactiveCognition(control).scan()}
     try:
         latest = control.store.get_knowledge("jarvis.proactive", "latest").get("value") or {}
@@ -1916,7 +2016,8 @@ async def amaura_agents(operator_key: str = Header(default="", alias="X-Amaura-O
 
 @app.get("/api/amaura/tasks")
 async def amaura_tasks(
-    state: str = "", owner_id: str = "",
+    state: str = "",
+    owner_id: str = "",
     operator_key: str = Header(default="", alias="X-Amaura-Operator-Key"),
 ):
     """List company tasks with optional state and employee filters."""
@@ -1946,7 +2047,6 @@ async def amaura_create_programme(
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     try:
         cmd_obj = cmd.CreateProgramCommand(
-            
             objective=req.objective,
             success_metric=req.success_metric,
             workflow_key=req.workflow_key,
@@ -1963,12 +2063,14 @@ async def amaura_create_programme(
 
 @app.post("/api/amaura/tasks/{task_id}/run")
 async def amaura_run_task(
-    task_id: str, req: AmauraRunRequest,
+    task_id: str,
+    req: AmauraRunRequest,
     operator_key: str = Header(default="", alias="X-Amaura-Operator-Key"),
 ):
     """Dispatch a ready task to its specialist inside JARVIS policy boundaries."""
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.executor import GovernedTaskRunner
+
     try:
         return await asyncio.to_thread(GovernedTaskRunner(_amaura_control()).run, task_id, req.max_iterations)
     except (KeyError, ValueError, RuntimeError) as exc:
@@ -1982,6 +2084,7 @@ async def amaura_supervisor_status(
     """Return durable worker leases, queue depth, and approval boundaries."""
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.supervisor import AmauraSupervisor
+
     return AmauraSupervisor(_amaura_control(), worker_id="jarvis-api").status()
 
 
@@ -1993,6 +2096,7 @@ async def amaura_supervisor_tick(
     """Advance one crash-resumable execution or independent review."""
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.supervisor import AmauraSupervisor
+
     supervisor = AmauraSupervisor(
         _amaura_control(),
         worker_id="jarvis-api",
@@ -2009,7 +2113,8 @@ async def amaura_supervisor_tick(
 
 @app.post("/api/amaura/tasks/{task_id}/review")
 async def amaura_review_task(
-    task_id: str, req: AmauraReviewRequest,
+    task_id: str,
+    req: AmauraReviewRequest,
     operator_key: str = Header(default="", alias="X-Amaura-Operator-Key"),
     reviewer_key: str = Header(default="", alias="X-Amaura-Reviewer-Key"),
 ):
@@ -2022,16 +2127,24 @@ async def amaura_review_task(
         reviewer_id = _resolve_reviewer_from_key(reviewer_key)
     except Exception as exc:
         from jarvis.amaura.models import GovernanceError
+
         if not isinstance(exc, (ValueError, GovernanceError)):
             raise
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     if reviewer_id is None:
         raise HTTPException(status_code=403, detail="Invalid Amaura reviewer key")
     try:
-        return _amaura_bus().execute(cmd.ReviewTaskCommand(task_id=task_id, actor=reviewer_id, approve=req.approve, findings=req.findings, attestation=req.attestation))
+        return _amaura_bus().execute(
+            cmd.ReviewTaskCommand(
+                task_id=task_id,
+                actor=reviewer_id,
+                approve=req.approve,
+                findings=req.findings,
+                attestation=req.attestation,
+            )
+        )
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
 
 
 @app.get("/api/amaura/approvals")
@@ -2061,7 +2174,8 @@ async def amaura_decide_approval(
 
 @app.get("/api/amaura/events")
 async def amaura_events(
-    event_type: str = "", limit: int = 100,
+    event_type: str = "",
+    limit: int = 100,
     operator_key: str = Header(default="", alias="X-Amaura-Operator-Key"),
 ):
     """Return the durable company event stream."""
@@ -2116,6 +2230,7 @@ async def amaura_prometheus_metrics(
 
 # -- Free-first integrations and inbound webhooks -----------------------------
 
+
 @app.get("/api/amaura/webhooks/meta")
 async def amaura_meta_webhook_verify(request: Request):
     mode = request.query_params.get("hub.mode", "")
@@ -2126,6 +2241,7 @@ async def amaura_meta_webhook_verify(request: Request):
         raise HTTPException(status_code=403, detail="Meta webhook verification failed")
     return PlainTextResponse(challenge)
 
+
 @app.post("/api/amaura/webhooks/meta")
 async def amaura_meta_webhook(request: Request):
     length = int(request.headers.get("content-length", "0") or 0)
@@ -2135,6 +2251,7 @@ async def amaura_meta_webhook(request: Request):
     if len(raw) > 1_000_000:
         raise HTTPException(status_code=413, detail="Webhook body too large")
     from jarvis.amaura.inbox import InboxService, parse_meta_webhook, verify_meta_signature
+
     try:
         verify_meta_signature(raw, request.headers.get("x-hub-signature-256", ""))
         payload = json.loads(raw.decode("utf-8"))
@@ -2150,31 +2267,49 @@ async def amaura_meta_webhook(request: Request):
         return {"accepted": True, "messages": records}
     except (ValueError, UnicodeDecodeError, json.JSONDecodeError, Exception) as exc:
         from jarvis.amaura.models import GovernanceError
+
         if isinstance(exc, GovernanceError):
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+
 @app.get("/api/amaura/integration-actions")
-async def amaura_list_integration_actions(status: str = "", operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_list_integration_actions(
+    status: str = "", operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     return {"actions": _amaura_control().store.list_integration_actions(status=status or None)}
 
+
 @app.post("/api/amaura/integration-actions")
-async def amaura_stage_integration_action(req: AmauraIntegrationActionRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_stage_integration_action(
+    req: AmauraIntegrationActionRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.integration_control import IntegrationActionController
+
     try:
         return IntegrationActionController(_amaura_control().store, _amaura_control().founder_id).stage(
-            provider=req.provider, operation=req.operation, payload=req.payload, risk=req.risk,
-            idempotency_key=req.idempotency_key, requested_by="jarvis",
+            provider=req.provider,
+            operation=req.operation,
+            payload=req.payload,
+            risk=req.risk,
+            idempotency_key=req.idempotency_key,
+            requested_by="jarvis",
         )
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+
 @app.post("/api/amaura/integration-actions/{action_id}/decision")
-async def amaura_decide_integration_action(action_id: str, req: AmauraIntegrationDecisionRequest, approval_key: str = Header(default="", alias="X-Amaura-Approval-Key")):
+async def amaura_decide_integration_action(
+    action_id: str,
+    req: AmauraIntegrationDecisionRequest,
+    approval_key: str = Header(default="", alias="X-Amaura-Approval-Key"),
+):
     _require_amaura_key("AMAURA_APPROVAL_KEY", approval_key, "founder approval")
     from jarvis.amaura.integration_control import IntegrationActionController
+
     control = _amaura_control()
     try:
         return IntegrationActionController(control.store, control.founder_id).decide(
@@ -2183,10 +2318,14 @@ async def amaura_decide_integration_action(action_id: str, req: AmauraIntegratio
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+
 @app.post("/api/amaura/inbox/gmail/sync")
-async def amaura_sync_gmail_inbox(req: AmauraInboxSyncRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_sync_gmail_inbox(
+    req: AmauraInboxSyncRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.inbox import InboxService
+
     control = _amaura_control()
     records = InboxService(control.store, control.founder_id).sync_gmail(
         max_results=req.max_results,
@@ -2195,29 +2334,39 @@ async def amaura_sync_gmail_inbox(req: AmauraInboxSyncRequest, operator_key: str
     )
     return {"inserted": len(records), "messages": records}
 
+
 @app.post("/api/amaura/inbox/{inbound_id}/process")
-async def amaura_process_inbound(inbound_id: str, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_process_inbound(
+    inbound_id: str, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.inbox import InboxService
+
     control = _amaura_control()
     try:
         return InboxService(control.store, control.founder_id).process(inbound_id, stage_reply=True)
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+
 @app.post("/api/amaura/invoices")
-async def amaura_create_invoice(req: AmauraInvoiceRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_create_invoice(
+    req: AmauraInvoiceRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.billing import InvoiceService
+
     try:
         return InvoiceService(_amaura_control().store).create(**req.model_dump())
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+
 @app.get("/api/amaura/invoices")
 async def amaura_list_invoices(status: str = "", operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     return {"invoices": _amaura_control().store.list_invoices(status=status or None)}
+
 
 @app.post("/api/amaura/invoices/{invoice_id}/status")
 async def amaura_update_invoice_status(
@@ -2228,6 +2377,7 @@ async def amaura_update_invoice_status(
     _require_amaura_key("AMAURA_APPROVAL_KEY", approval_key, "founder approval")
     from jarvis.amaura.billing import InvoiceService
     from jarvis.amaura.models import GovernanceError
+
     control = _amaura_control()
     try:
         return InvoiceService(control.store).mark_status(
@@ -2239,7 +2389,9 @@ async def amaura_update_invoice_status(
     except (GovernanceError, KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+
 # -- Revenue pipeline ----------------------------------------------------------
+
 
 @app.get("/api/amaura/revenue")
 async def amaura_revenue_dashboard(operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
@@ -2248,7 +2400,9 @@ async def amaura_revenue_dashboard(operator_key: str = Header(default="", alias=
 
 
 @app.post("/api/amaura/revenue/campaigns")
-async def amaura_create_campaign(req: AmauraCampaignRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_create_campaign(
+    req: AmauraCampaignRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     try:
         return _amaura_bus().execute(cmd.CreateCampaignCommand(**req.model_dump()))
@@ -2257,20 +2411,28 @@ async def amaura_create_campaign(req: AmauraCampaignRequest, operator_key: str =
 
 
 @app.post("/api/amaura/revenue/discovery/run")
-async def amaura_run_free_discovery(req: AmauraDiscoveryRunRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_run_free_discovery(
+    req: AmauraDiscoveryRunRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     from jarvis.amaura.public_sources import AcquisitionDiscoveryRunner
+
     control = _amaura_control()
     return {"results": AcquisitionDiscoveryRunner(control.acquisition).run(**req.model_dump())}
 
+
 @app.get("/api/amaura/revenue/leads")
-async def amaura_list_leads(campaign_id: str = "", stage: str = "", operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_list_leads(
+    campaign_id: str = "", stage: str = "", operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     return {"leads": _amaura_control().store.list_leads(campaign_id or None, stage or None)}
 
 
 @app.post("/api/amaura/revenue/leads")
-async def amaura_discover_pipeline_lead(req: AmauraLeadRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_discover_pipeline_lead(
+    req: AmauraLeadRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     try:
         return _amaura_bus().execute(cmd.DiscoverLeadCommand(**req.model_dump()))
@@ -2279,7 +2441,9 @@ async def amaura_discover_pipeline_lead(req: AmauraLeadRequest, operator_key: st
 
 
 @app.post("/api/amaura/revenue/leads/{lead_id}/evidence")
-async def amaura_add_lead_evidence(lead_id: str, req: AmauraEvidenceRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_add_lead_evidence(
+    lead_id: str, req: AmauraEvidenceRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     try:
         return _amaura_bus().execute(cmd.AddEvidenceCommand(lead_id=lead_id, **req.model_dump()))
@@ -2288,16 +2452,22 @@ async def amaura_add_lead_evidence(lead_id: str, req: AmauraEvidenceRequest, ope
 
 
 @app.post("/api/amaura/revenue/leads/{lead_id}/score")
-async def amaura_score_pipeline_lead(lead_id: str, req: AmauraLeadScoreRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_score_pipeline_lead(
+    lead_id: str, req: AmauraLeadScoreRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     try:
-        return _amaura_bus().execute(cmd.ScoreLeadCommand(lead_id=lead_id, components=req.model_dump(), actor="qualification_bot"))
+        return _amaura_bus().execute(
+            cmd.ScoreLeadCommand(lead_id=lead_id, components=req.model_dump(), actor="qualification_bot")
+        )
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/amaura/revenue/leads/{lead_id}/transition")
-async def amaura_transition_pipeline_lead(lead_id: str, req: AmauraTransitionRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_transition_pipeline_lead(
+    lead_id: str, req: AmauraTransitionRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     try:
         return _amaura_bus().execute(cmd.TransitionLeadCommand(lead_id=lead_id, **req.model_dump()))
@@ -2306,7 +2476,9 @@ async def amaura_transition_pipeline_lead(lead_id: str, req: AmauraTransitionReq
 
 
 @app.post("/api/amaura/revenue/leads/{lead_id}/messages")
-async def amaura_stage_pipeline_message(lead_id: str, req: AmauraMessageRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_stage_pipeline_message(
+    lead_id: str, req: AmauraMessageRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     try:
         return _amaura_bus().execute(cmd.StageMessageCommand(lead_id=lead_id, **req.model_dump()))
@@ -2315,8 +2487,11 @@ async def amaura_stage_pipeline_message(lead_id: str, req: AmauraMessageRequest,
 
 
 @app.post("/api/amaura/revenue/messages/{message_id}/decision")
-async def amaura_decide_pipeline_message(message_id: str, req: AmauraMessageDecisionRequest,
-                                         approval_key: str = Header(default="", alias="X-Amaura-Approval-Key")):
+async def amaura_decide_pipeline_message(
+    message_id: str,
+    req: AmauraMessageDecisionRequest,
+    approval_key: str = Header(default="", alias="X-Amaura-Approval-Key"),
+):
     _require_amaura_key("AMAURA_APPROVAL_KEY", approval_key, "founder approval")
     control = _amaura_control()
     try:
@@ -2326,7 +2501,11 @@ async def amaura_decide_pipeline_message(message_id: str, req: AmauraMessageDeci
 
 
 @app.post("/api/amaura/revenue/messages/{message_id}/assisted-sent")
-async def amaura_confirm_assisted_send(message_id: str, req: AmauraAssistedSendRequest, approval_key: str = Header(default="", alias="X-Amaura-Approval-Key")):
+async def amaura_confirm_assisted_send(
+    message_id: str,
+    req: AmauraAssistedSendRequest,
+    approval_key: str = Header(default="", alias="X-Amaura-Approval-Key"),
+):
     _require_amaura_key("AMAURA_APPROVAL_KEY", approval_key, "founder approval")
     control = _amaura_control()
     try:
@@ -2336,9 +2515,13 @@ async def amaura_confirm_assisted_send(message_id: str, req: AmauraAssistedSendR
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+
 @app.post("/api/amaura/revenue/messages/{message_id}/sent")
-async def amaura_confirm_pipeline_send(message_id: str, req: AmauraSendConfirmationRequest,
-                                       operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_confirm_pipeline_send(
+    message_id: str,
+    req: AmauraSendConfirmationRequest,
+    operator_key: str = Header(default="", alias="X-Amaura-Operator-Key"),
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     try:
         values = req.model_dump()
@@ -2369,8 +2552,9 @@ async def amaura_deliver_pipeline_message(
 
 
 @app.post("/api/amaura/revenue/kill-switch")
-async def amaura_pipeline_kill_switch(req: AmauraKillSwitchRequest,
-                                      approval_key: str = Header(default="", alias="X-Amaura-Approval-Key")):
+async def amaura_pipeline_kill_switch(
+    req: AmauraKillSwitchRequest, approval_key: str = Header(default="", alias="X-Amaura-Approval-Key")
+):
     _require_amaura_key("AMAURA_APPROVAL_KEY", approval_key, "founder approval")
     control = _amaura_control()
     return control.acquisition.set_kill_switch(req.enabled, actor=control.founder_id, reason=req.reason)
@@ -2418,9 +2602,11 @@ async def amaura_reconcile_outbox_event(
 
 # -- Content factory -----------------------------------------------------------
 
+
 @app.post("/api/amaura/content/campaigns")
-async def amaura_create_content_campaign(req: AmauraContentCampaignRequest,
-                                         operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_create_content_campaign(
+    req: AmauraContentCampaignRequest, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     try:
         return _amaura_bus().execute(cmd.ContentCreateCampaignCommand(**req.model_dump()))
@@ -2429,27 +2615,34 @@ async def amaura_create_content_campaign(req: AmauraContentCampaignRequest,
 
 
 @app.post("/api/amaura/content/campaigns/{campaign_id}/assets")
-async def amaura_register_content_asset(campaign_id: str, req: AmauraContentAssetRequest,
-                                        operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_register_content_asset(
+    campaign_id: str,
+    req: AmauraContentAssetRequest,
+    operator_key: str = Header(default="", alias="X-Amaura-Operator-Key"),
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     try:
-        return _amaura_bus().execute(cmd.RegisterAssetCommand(
-            campaign_id=campaign_id,
-            asset_type=req.asset_type,
-            uri=req.uri,
-            sha256=req.sha256,
-            source_url=req.source_url,
-            creator=req.creator,
-            licence=req.licence,
-            status=req.status,
-            metadata=req.metadata,
-        ))
+        return _amaura_bus().execute(
+            cmd.RegisterAssetCommand(
+                campaign_id=campaign_id,
+                asset_type=req.asset_type,
+                uri=req.uri,
+                sha256=req.sha256,
+                source_url=req.source_url,
+                creator=req.creator,
+                licence=req.licence,
+                status=req.status,
+                metadata=req.metadata,
+            )
+        )
     except (KeyError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/amaura/content/campaigns/{campaign_id}/readiness")
-async def amaura_content_readiness(campaign_id: str, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_content_readiness(
+    campaign_id: str, operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     try:
         return _amaura_control().content_factory.publication_readiness(campaign_id)
@@ -2458,8 +2651,11 @@ async def amaura_content_readiness(campaign_id: str, operator_key: str = Header(
 
 
 @app.post("/api/amaura/content/campaigns/{campaign_id}/metrics")
-async def amaura_record_content_metrics(campaign_id: str, req: AmauraContentMetricsRequest,
-                                        operator_key: str = Header(default="", alias="X-Amaura-Operator-Key")):
+async def amaura_record_content_metrics(
+    campaign_id: str,
+    req: AmauraContentMetricsRequest,
+    operator_key: str = Header(default="", alias="X-Amaura-Operator-Key"),
+):
     _require_amaura_key("AMAURA_OPERATOR_KEY", operator_key, "operator")
     data = req.model_dump()
     data["captured_at"] = data["captured_at"] or None
@@ -2504,15 +2700,20 @@ async def amaura_create_private_publication_draft(
 
 # ── WebSocket — Streaming Chat ─────────────────────────────────────────────────
 
+
 @app.websocket("/ws/chat")
 async def websocket_chat(websocket: WebSocket):
     """WebSocket endpoint for real-time streaming chat with Jarvis."""
     expected = os.environ.get("JARVIS_API_KEY", "").strip()
     supplied = supplied_api_key(websocket.headers, websocket.query_params)
-    allowed_origins = {origin.strip() for origin in os.environ.get(
-        "JARVIS_WS_ORIGINS",
-        "http://127.0.0.1:8000,http://localhost:8000",
-    ).split(",") if origin.strip()}
+    allowed_origins = {
+        origin.strip()
+        for origin in os.environ.get(
+            "JARVIS_WS_ORIGINS",
+            "http://127.0.0.1:8000,http://localhost:8000",
+        ).split(",")
+        if origin.strip()
+    }
     origin = websocket.headers.get("origin", "")
     if origin and origin not in allowed_origins:
         await websocket.close(code=1008, reason="Origin is not allowed")
@@ -2529,13 +2730,15 @@ async def websocket_chat(websocket: WebSocket):
     agent = get_or_create_agent(session_id)
 
     # Send welcome
-    await websocket.send_json({
-        "type": "system",
-        "content": "J.A.R.V.I.S. interface online. Governed operations remain readiness-gated.",
-        "session_id": session_id,
-        "model": agent.model_cfg["name"],
-        "timestamp": datetime.now().isoformat(),
-    })
+    await websocket.send_json(
+        {
+            "type": "system",
+            "content": "J.A.R.V.I.S. interface online. Governed operations remain readiness-gated.",
+            "session_id": session_id,
+            "model": agent.model_cfg["name"],
+            "timestamp": datetime.now().isoformat(),
+        }
+    )
 
     try:
         while True:
@@ -2548,21 +2751,26 @@ async def websocket_chat(websocket: WebSocket):
 
             if msg_type in ("chat", "voice") and content:
                 # Send acknowledgment
-                await websocket.send_json({
-                    "type": "user_echo" if msg_type == "chat" else "voice_echo",
-                    "content": content,
-                    "timestamp": datetime.now().isoformat(),
-                })
+                await websocket.send_json(
+                    {
+                        "type": "user_echo" if msg_type == "chat" else "voice_echo",
+                        "content": content,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
 
                 loop = asyncio.get_running_loop()
+
                 def on_event(evt, loop=loop):
                     asyncio.run_coroutine_threadsafe(
-                        websocket.send_json({
-                            "type": "agent_event",
-                            "event": evt,
-                            "timestamp": datetime.now().isoformat(),
-                        }),
-                        loop
+                        websocket.send_json(
+                            {
+                                "type": "agent_event",
+                                "event": evt,
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                        ),
+                        loop,
                     )
 
                 # Process with agent
@@ -2570,7 +2778,8 @@ async def websocket_chat(websocket: WebSocket):
                     supplied_operator = str(data.get("operator_key") or "")
                     expected_operator = os.environ.get("AMAURA_OPERATOR_KEY", "")
                     operator_valid = bool(
-                        supplied_operator and expected_operator
+                        supplied_operator
+                        and expected_operator
                         and hmac.compare_digest(supplied_operator, expected_operator)
                     )
                     if supplied_operator and not operator_valid:
@@ -2578,7 +2787,10 @@ async def websocket_chat(websocket: WebSocket):
                     if operator_valid:
                         agent.set_amaura_session_token(supplied_operator)
                     executive = await asyncio.to_thread(
-                        agent.run_executive, content, control=_amaura_control(), session_id=session_id,
+                        agent.run_executive,
+                        content,
+                        control=_amaura_control(),
+                        session_id=session_id,
                         workspace=str(data.get("workspace") or ""),
                         autonomy=str(data.get("autonomy") or "execute_until_approval"),
                         coding_backend=str(data.get("coding_backend") or "antigravity"),
@@ -2586,22 +2798,26 @@ async def websocket_chat(websocket: WebSocket):
                     )
                     response = str(executive.get("message") or "")
 
-                    await websocket.send_json({
-                        "type": "response",
-                        "content": response,
-                        "executive": executive,
-                        "timestamp": datetime.now().isoformat(),
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "response",
+                            "content": response,
+                            "executive": executive,
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
 
                     if voice_engine.enabled and response:
                         speaker.speak_async(response)
 
                 except Exception as e:
-                    await websocket.send_json({
-                        "type": "error",
-                        "content": f"Error processing request: {str(e)}",
-                        "timestamp": datetime.now().isoformat(),
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "content": f"Error processing request: {str(e)}",
+                            "timestamp": datetime.now().isoformat(),
+                        }
+                    )
 
             elif msg_type == "command":
                 # Handle slash commands
@@ -2611,20 +2827,24 @@ async def websocket_chat(websocket: WebSocket):
                     await websocket.send_json(result)
 
             elif msg_type == "tool":
-                await websocket.send_json({
-                    "type": "error",
-                    "content": "Direct WebSocket tool execution is disabled. Create a governed Amaura programme.",
-                    "timestamp": datetime.now().isoformat(),
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "content": "Direct WebSocket tool execution is disabled. Create a governed Amaura programme.",
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
 
     except WebSocketDisconnect:
         pass
     except Exception as e:
         try:
-            await websocket.send_json({
-                "type": "error",
-                "content": f"WebSocket error: {str(e)}",
-            })
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "content": f"WebSocket error: {str(e)}",
+                }
+            )
         except Exception:
             pass
 
@@ -2686,20 +2906,23 @@ async def _handle_ws_command(cmd: str, agent: JarvisAgent, websocket: WebSocket)
 
     elif command == "/remember" and arg:
         user_memory.add_fact(arg)
-        return {"type": "system", "content": f"Noted and remembered: \"{arg}\""}
+        return {"type": "system", "content": f'Noted and remembered: "{arg}"'}
 
     elif command == "/status":
         from jarvis.tools.desktop import tool_get_system_info
+
         info = tool_get_system_info()
         return {"type": "system_info", "content": info}
 
     elif command == "/tools":
         tools = []
         for t in ALL_TOOL_DEFINITIONS:
-            tools.append({
-                "name": t["function"]["name"],
-                "desc": t["function"]["description"][:100],
-            })
+            tools.append(
+                {
+                    "name": t["function"]["name"],
+                    "desc": t["function"]["description"][:100],
+                }
+            )
         return {"type": "tools_list", "tools": tools, "count": len(tools)}
 
     elif command == "/company":
@@ -2716,6 +2939,7 @@ async def _handle_ws_command(cmd: str, agent: JarvisAgent, websocket: WebSocket)
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
+
 
 def main():
     """Start the JARVIS server."""

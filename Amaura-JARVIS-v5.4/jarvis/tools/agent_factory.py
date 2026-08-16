@@ -7,15 +7,15 @@ on tasks, coordinate with other agents, and be exported as standalone
 Python projects.
 """
 
+import json
 import os
 import re
-import json
 import uuid
-from pathlib import Path
-from jarvis.paths import get_data_dir
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
+from jarvis.paths import get_data_dir
 
 # ── Agent Storage ────────────────────────────────────────────────────────────
 
@@ -95,16 +95,28 @@ AGENT_FACTORY_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "name": {"type": "string", "description": "Agent name (e.g., 'CodeReviewer', 'DataAnalyst', 'SecurityAuditor')."},
+                    "name": {
+                        "type": "string",
+                        "description": "Agent name (e.g., 'CodeReviewer', 'DataAnalyst', 'SecurityAuditor').",
+                    },
                     "description": {"type": "string", "description": "What this agent does."},
-                    "system_prompt": {"type": "string", "description": "The agent's system prompt defining its behavior, expertise, and rules."},
-                    "personality": {"type": "string", "description": "Personality traits (e.g., 'meticulous and thorough', 'fast and concise')."},
+                    "system_prompt": {
+                        "type": "string",
+                        "description": "The agent's system prompt defining its behavior, expertise, and rules.",
+                    },
+                    "personality": {
+                        "type": "string",
+                        "description": "Personality traits (e.g., 'meticulous and thorough', 'fast and concise').",
+                    },
                     "tools": {
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Which Jarvis tools this agent can use (e.g., ['read_file', 'write_file', 'run_command']). Use 'all' for all tools.",
                     },
-                    "model": {"type": "string", "description": "Model to use (default: llama-3.1-70b). Options: deepseek-v4, kimi-k3, glm-5.2, etc."},
+                    "model": {
+                        "type": "string",
+                        "description": "Model to use (default: llama-3.1-70b). Options: deepseek-v4, kimi-k3, glm-5.2, etc.",
+                    },
                     "workspace": {"type": "string", "description": "Working directory for the agent."},
                 },
                 "required": ["name", "description", "system_prompt"],
@@ -177,8 +189,14 @@ AGENT_FACTORY_TOOL_DEFINITIONS = [
                     "agent_id": {"type": "string", "description": "Agent ID to add the tool to."},
                     "tool_name": {"type": "string", "description": "Name of the custom tool."},
                     "description": {"type": "string", "description": "What the tool does."},
-                    "tool_type": {"type": "string", "description": "Type: 'command' (shell command) or 'python' (Python function)."},
-                    "command_template": {"type": "string", "description": "For command type: shell command with {arg} placeholders."},
+                    "tool_type": {
+                        "type": "string",
+                        "description": "Type: 'command' (shell command) or 'python' (Python function).",
+                    },
+                    "command_template": {
+                        "type": "string",
+                        "description": "For command type: shell command with {arg} placeholders.",
+                    },
                     "python_code": {"type": "string", "description": "For python type: Python function code."},
                     "parameters": {
                         "type": "array",
@@ -207,8 +225,14 @@ AGENT_FACTORY_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "agent_id": {"type": "string", "description": "Agent ID or name to export."},
-                    "output_path": {"type": "string", "description": "Directory to export to (default: ~/Desktop/agents/<name>)."},
-                    "include_api_key": {"type": "boolean", "description": "Include API key in config (default: false for security)."},
+                    "output_path": {
+                        "type": "string",
+                        "description": "Directory to export to (default: ~/Desktop/agents/<name>).",
+                    },
+                    "include_api_key": {
+                        "type": "boolean",
+                        "description": "Include API key in config (default: false for security).",
+                    },
                 },
                 "required": ["agent_id"],
             },
@@ -232,12 +256,19 @@ AGENT_FACTORY_TOOL_DEFINITIONS = [
                                 "name": {"type": "string", "description": "Agent name."},
                                 "role": {"type": "string", "description": "Agent's role/specialty."},
                                 "system_prompt": {"type": "string", "description": "Agent's system prompt."},
-                                "tools": {"type": "array", "items": {"type": "string"}, "description": "Tools this agent can use."},
+                                "tools": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "description": "Tools this agent can use.",
+                                },
                             },
                         },
                         "description": "List of worker agents to create.",
                     },
-                    "orchestrator_prompt": {"type": "string", "description": "Custom orchestrator prompt (auto-generated if omitted)."},
+                    "orchestrator_prompt": {
+                        "type": "string",
+                        "description": "Custom orchestrator prompt (auto-generated if omitted).",
+                    },
                 },
                 "required": ["name", "description", "agents"],
             },
@@ -248,7 +279,8 @@ AGENT_FACTORY_TOOL_DEFINITIONS = [
 
 # ── Helper Functions ─────────────────────────────────────────────────────────
 
-def _find_agent(identifier: str) -> Optional[AgentDefinition]:
+
+def _find_agent(identifier: str) -> AgentDefinition | None:
     """Find an agent by ID or name."""
     # Try direct ID match
     agent = AgentDefinition.load(identifier)
@@ -272,6 +304,7 @@ def _find_agent(identifier: str) -> Optional[AgentDefinition]:
 
 # ── Tool Implementations ─────────────────────────────────────────────────────
 
+
 def tool_create_agent(
     name: str,
     description: str,
@@ -283,13 +316,15 @@ def tool_create_agent(
 ) -> str:
     """Create a new AI agent."""
     # Validate name
-    if not name or not re.match(r'^[A-Za-z][A-Za-z0-9_-]*$', name):
+    if not name or not re.match(r"^[A-Za-z][A-Za-z0-9_-]*$", name):
         return "❌ Invalid agent name. Use alphanumeric characters, hyphens, and underscores."
 
     # Check for duplicate names
     existing = _find_agent(name)
     if existing:
-        return f"❌ Agent '{name}' already exists (ID: {existing.agent_id}). Delete it first or choose a different name."
+        return (
+            f"❌ Agent '{name}' already exists (ID: {existing.agent_id}). Delete it first or choose a different name."
+        )
 
     agent = AgentDefinition(
         name=name,
@@ -345,10 +380,14 @@ def tool_list_agents() -> str:
 
     lines = [f"# Created Agents ({len(agents)})\n"]
     for a in agents:
-        status_icon = {"ready": "🟢", "running": "🔵", "error": "🔴", "stopped": "⚪"}.get(a.get("status", "ready"), "⚪")
+        status_icon = {"ready": "🟢", "running": "🔵", "error": "🔴", "stopped": "⚪"}.get(
+            a.get("status", "ready"), "⚪"
+        )
         lines.append(f"{status_icon} **{a['name']}** (`{a['agent_id']}`)")
         lines.append(f"   {a.get('description', 'No description')}")
-        lines.append(f"   Model: {a.get('model', 'default')} | Tools: {len(a.get('tools', []))} | Created: {a.get('created_at', '?')[:10]}")
+        lines.append(
+            f"   Model: {a.get('model', 'default')} | Tools: {len(a.get('tools', []))} | Created: {a.get('created_at', '?')[:10]}"
+        )
         lines.append("")
 
     return "\n".join(lines)
@@ -422,14 +461,20 @@ def tool_run_agent(agent_id: str, task: str, max_iterations: int = 20) -> str:
 
             if tool_calls:
                 # Record assistant message
-                messages.append({
-                    "role": "assistant",
-                    "content": content or None,
-                    "tool_calls": [
-                        {"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
-                        for tc in tool_calls
-                    ],
-                })
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": content or None,
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+                            }
+                            for tc in tool_calls
+                        ],
+                    }
+                )
 
                 # Execute tools
                 for tc in tool_calls:
@@ -520,6 +565,7 @@ def tool_delete_agent(agent_id: str) -> str:
         return f"❌ Agent not found: {agent_id}"
 
     import shutil
+
     agent_dir = AGENTS_DIR / agent.agent_id
     if agent_dir.exists():
         shutil.rmtree(agent_dir)
@@ -575,7 +621,7 @@ def tool_export_agent(agent_id: str, output_path: str = "", include_api_key: boo
         return f"❌ Agent not found: {agent_id}"
 
     if not output_path:
-        safe_name = re.sub(r'[^a-z0-9_]', '_', agent.name.lower())
+        safe_name = re.sub(r"[^a-z0-9_]", "_", agent.name.lower())
         output_path = str(Path.home() / "Desktop" / "agents" / safe_name)
 
     out = Path(output_path).expanduser().resolve()
@@ -587,15 +633,22 @@ def tool_export_agent(agent_id: str, output_path: str = "", include_api_key: boo
     # Generate the standalone agent
     _write_agent_file(out, "requirements.txt", "openai>=1.30.0\nrich>=13.7.0\nhttpx>=0.27.0")
 
-    _write_agent_file(out, "config.json", json.dumps({
-        "name": agent.name,
-        "model": agent.model,
-        "api_base_url": "https://integrate.api.nvidia.com/v1",
-        "api_key_env": "NVIDIA_API_KEY",
-        "api_key": os.environ.get("NVIDIA_API_KEY", "") if include_api_key else "",
-        "max_iterations": 30,
-        "temperature": 0.2,
-    }, indent=2))
+    _write_agent_file(
+        out,
+        "config.json",
+        json.dumps(
+            {
+                "name": agent.name,
+                "model": agent.model,
+                "api_base_url": "https://integrate.api.nvidia.com/v1",
+                "api_key_env": "NVIDIA_API_KEY",
+                "api_key": os.environ.get("NVIDIA_API_KEY", "") if include_api_key else "",
+                "max_iterations": 30,
+                "temperature": 0.2,
+            },
+            indent=2,
+        ),
+    )
 
     # System prompt file
     _write_agent_file(out, "system_prompt.txt", agent.system_prompt)
@@ -789,7 +842,10 @@ if __name__ == "__main__":
 
     _write_agent_file(out, "main.py", main_code)
 
-    _write_agent_file(out, "README.md", f"""# {agent.name}
+    _write_agent_file(
+        out,
+        "README.md",
+        f"""# {agent.name}
 
 {agent.description}
 
@@ -823,7 +879,8 @@ Edit `system_prompt.txt` to modify the agent's behavior.
 
 ---
 *Generated by J.A.R.V.I.S. Agent Factory*
-""")
+""",
+    )
 
     _write_agent_file(out, ".gitignore", "__pycache__/\n.venv/\n.env\n*.pyc")
 
@@ -882,10 +939,7 @@ def tool_create_multi_agent_system(
 
     # Create orchestrator
     if not orchestrator_prompt:
-        worker_descriptions = "\n".join(
-            f"- **{a.name}** (ID: {a.agent_id}): {a.description}"
-            for a in created_agents
-        )
+        worker_descriptions = "\n".join(f"- **{a.name}** (ID: {a.agent_id}): {a.description}" for a in created_agents)
         orchestrator_prompt = f"""You are the Orchestrator of the '{name}' multi-agent system.
 
 Your job is to coordinate the following worker agents to accomplish tasks:
@@ -937,16 +991,31 @@ Be strategic about task delegation — use each agent's specialization effective
 
 AGENT_FACTORY_DISPATCH = {
     "create_agent": lambda **kw: tool_create_agent(
-        kw.get("name", ""), kw.get("description", ""), kw.get("system_prompt", ""),
-        kw.get("personality", ""), kw.get("tools"), kw.get("model", ""), kw.get("workspace", "")),
+        kw.get("name", ""),
+        kw.get("description", ""),
+        kw.get("system_prompt", ""),
+        kw.get("personality", ""),
+        kw.get("tools"),
+        kw.get("model", ""),
+        kw.get("workspace", ""),
+    ),
     "list_agents": lambda **kw: tool_list_agents(),
     "run_agent": lambda **kw: tool_run_agent(kw.get("agent_id", ""), kw.get("task", ""), kw.get("max_iterations", 20)),
     "agent_status": lambda **kw: tool_agent_status(kw.get("agent_id", "")),
     "delete_agent": lambda **kw: tool_delete_agent(kw.get("agent_id", "")),
     "create_agent_tool": lambda **kw: tool_create_agent_tool(
-        kw.get("agent_id", ""), kw.get("tool_name", ""), kw.get("description", ""),
-        kw.get("tool_type", "command"), kw.get("command_template", ""), kw.get("python_code", ""), kw.get("parameters")),
-    "export_agent": lambda **kw: tool_export_agent(kw.get("agent_id", ""), kw.get("output_path", ""), kw.get("include_api_key", False)),
+        kw.get("agent_id", ""),
+        kw.get("tool_name", ""),
+        kw.get("description", ""),
+        kw.get("tool_type", "command"),
+        kw.get("command_template", ""),
+        kw.get("python_code", ""),
+        kw.get("parameters"),
+    ),
+    "export_agent": lambda **kw: tool_export_agent(
+        kw.get("agent_id", ""), kw.get("output_path", ""), kw.get("include_api_key", False)
+    ),
     "create_multi_agent_system": lambda **kw: tool_create_multi_agent_system(
-        kw.get("name", ""), kw.get("description", ""), kw.get("agents", []), kw.get("orchestrator_prompt", "")),
+        kw.get("name", ""), kw.get("description", ""), kw.get("agents", []), kw.get("orchestrator_prompt", "")
+    ),
 }

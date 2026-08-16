@@ -1,9 +1,9 @@
 """Compatibility tests proving legacy healthy paths cannot bypass Phase 9 safety."""
+
 from pathlib import Path
 
 from jarvis.amaura import direct_action as da
 from jarvis.amaura.semantic_core import SemanticAction, SemanticParser
-
 
 EXTENSIONS = da.RequestPreprocessor.KNOWN_EXTENSIONS
 

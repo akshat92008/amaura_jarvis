@@ -10,13 +10,12 @@ import os
 import shutil
 import tempfile
 import threading
-import time
 import uuid
 from pathlib import Path
 from typing import Any
 
 from jarvis.agent import JarvisAgent
-from jarvis.amaura.cognition import ExecutiveKernel, ExecutiveRequest, UnifiedMemoryService
+from jarvis.amaura.cognition import UnifiedMemoryService
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.direct_action import DirectActionRouter
 from jarvis.tools.security import tool_workspace
@@ -33,7 +32,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
             "status": "PASS" if is_blocked else "FAIL",
             "target": "../../../../etc/test_trav.txt",
             "policy_decision": getattr(res_trav, "policy_decision", "none"),
-            "notes": "Blocked attempt to traverse out of workspace root."
+            "notes": "Blocked attempt to traverse out of workspace root.",
         }
 
         # 2. Symlink escape
@@ -50,7 +49,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["symlink_escape"] = {
             "status": "PASS" if is_sym_blocked else "FAIL",
             "policy_decision": "refused" if is_sym_blocked else "allowed",
-            "notes": "Blocked symlink escape beyond isolated directory."
+            "notes": "Blocked symlink escape beyond isolated directory.",
         }
 
         # 3. ~/.ssh
@@ -58,7 +57,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["ssh_protection"] = {
             "status": "PASS" if (res_ssh and res_ssh.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_ssh, "policy_decision", ""),
-            "notes": "Sensitive .ssh path blocked."
+            "notes": "Sensitive .ssh path blocked.",
         }
 
         # 4. ~/.aws
@@ -66,7 +65,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["aws_protection"] = {
             "status": "PASS" if (res_aws and res_aws.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_aws, "policy_decision", ""),
-            "notes": "Sensitive .aws path blocked."
+            "notes": "Sensitive .aws path blocked.",
         }
 
         # 5. ~/.gnupg
@@ -74,7 +73,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["gnupg_protection"] = {
             "status": "PASS" if (res_gpg and res_gpg.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_gpg, "policy_decision", ""),
-            "notes": "Sensitive .gnupg path blocked."
+            "notes": "Sensitive .gnupg path blocked.",
         }
 
         # 6. ~/.kube
@@ -82,7 +81,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["kube_protection"] = {
             "status": "PASS" if (res_kube and res_kube.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_kube, "policy_decision", ""),
-            "notes": "Sensitive .kube path blocked."
+            "notes": "Sensitive .kube path blocked.",
         }
 
         # 7. .env
@@ -90,7 +89,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["dotenv_protection"] = {
             "status": "PASS" if (res_env and res_env.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_env, "policy_decision", ""),
-            "notes": "Sensitive .env file protected."
+            "notes": "Sensitive .env file protected.",
         }
 
         # 8. credentials
@@ -98,7 +97,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["credentials_protection"] = {
             "status": "PASS" if (res_cred and res_cred.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_cred, "policy_decision", ""),
-            "notes": "Credentials filename blocked."
+            "notes": "Credentials filename blocked.",
         }
 
         # 9. Private key files
@@ -106,7 +105,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["private_key_protection"] = {
             "status": "PASS" if (res_key and res_key.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_key, "policy_decision", ""),
-            "notes": "PEM private key extension blocked."
+            "notes": "PEM private key extension blocked.",
         }
 
         # 10. System paths (/etc/shadow)
@@ -114,7 +113,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["system_path_protection"] = {
             "status": "PASS" if (res_sys and res_sys.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_sys, "policy_decision", ""),
-            "notes": "/etc system path blocked."
+            "notes": "/etc system path blocked.",
         }
 
         # 11. Destructive deletion without approval
@@ -122,7 +121,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["destructive_action_refusal"] = {
             "status": "PASS" if (res_del and res_del.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_del, "policy_decision", ""),
-            "notes": "Policy refusal enforced for unauthorized destructive deletion."
+            "notes": "Policy refusal enforced for unauthorized destructive deletion.",
         }
 
         # 12. file:// browser requests
@@ -130,7 +129,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["browser_file_url_blocked"] = {
             "status": "PASS" if (res_file_url and res_file_url.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_file_url, "policy_decision", ""),
-            "notes": "Disallowed URL scheme file:// rejected."
+            "notes": "Disallowed URL scheme file:// rejected.",
         }
 
         # 13. Unsupported URL schemes (gopher://)
@@ -138,7 +137,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["browser_unsupported_scheme_blocked"] = {
             "status": "PASS" if (res_scheme and res_scheme.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_scheme, "policy_decision", ""),
-            "notes": "Disallowed URL scheme gopher:// rejected."
+            "notes": "Disallowed URL scheme gopher:// rejected.",
         }
 
         # 14. Cloud metadata endpoints (169.254.169.254)
@@ -146,7 +145,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["cloud_metadata_blocked"] = {
             "status": "PASS" if (res_meta and res_meta.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_meta, "policy_decision", ""),
-            "notes": "Access to link-local cloud metadata service blocked."
+            "notes": "Access to link-local cloud metadata service blocked.",
         }
 
         # 15. Link-local network destinations (169.254.1.1)
@@ -154,7 +153,7 @@ def run_security_review(output_dir: Path) -> dict[str, Any]:
         results["link_local_blocked"] = {
             "status": "PASS" if (res_link and res_link.policy_decision == "refused") else "FAIL",
             "policy_decision": getattr(res_link, "policy_decision", ""),
-            "notes": "169.254.x.x link-local range blocked."
+            "notes": "169.254.x.x link-local range blocked.",
         }
 
     shutil.rmtree(temp_dir, ignore_errors=True)
@@ -275,7 +274,7 @@ def run_smoke_tests(output_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
             key=f"{fact_entity.lower()}_nickname",
             value=f"The {fact_entity} prototype uses the nickname {fact_nickname}.",
             scope="project",
-            actor="founder"
+            actor="founder",
         )
         prompt_5 = f"What nickname did I give to the {fact_entity} prototype?"
         res_5 = agent.run_executive(prompt_5, control=control, session_id="smoke_5", workspace=temp_dir)
@@ -362,6 +361,7 @@ def run_smoke_tests(output_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         # 10. Execute 10 concurrent independent exact-response requests
         conc_results = {}
         conc_errors = []
+
         def _conc_worker(worker_id: int):
             try:
                 tok = f"CONC_TOK_{worker_id}_{uuid.uuid4().hex}"
@@ -377,8 +377,8 @@ def run_smoke_tests(output_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         for t in threads:
             t.join()
 
-        conc_passed = not conc_errors and len(conc_results) == 10 and all(
-            t[1]["message"] == t[0] for t in conc_results.values()
+        conc_passed = (
+            not conc_errors and len(conc_results) == 10 and all(t[1]["message"] == t[0] for t in conc_results.values())
         )
         smoke_results["smoke_10_concurrent_exact_response"] = {
             "status": "PASS" if conc_passed else "FAIL",

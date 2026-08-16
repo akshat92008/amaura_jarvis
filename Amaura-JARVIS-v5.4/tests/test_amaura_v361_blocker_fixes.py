@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import os
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -152,7 +151,10 @@ def test_invoice_idempotency_and_state_machine(tmp_path: Path, monkeypatch: pyte
             service.mark_status(first["id"], status="approved", actor="jarvis")
 
         assert service.mark_status(first["id"], status="approved", actor="founder")["status"] == "approved"
-        assert service.mark_status(first["id"], status="sent", actor="founder", reference="gmail-message-1")["status"] == "sent"
+        assert (
+            service.mark_status(first["id"], status="sent", actor="founder", reference="gmail-message-1")["status"]
+            == "sent"
+        )
         with pytest.raises(GovernanceError, match="requires a reference"):
             service.mark_status(first["id"], status="paid", actor="founder")
         paid = service.mark_status(first["id"], status="paid", actor="founder", reference="upi-transaction-1")
@@ -197,22 +199,26 @@ def test_gmail_sync_paginates_and_acknowledges_durable_messages(tmp_path: Path) 
             return 200, {"id": parsed.path.split("/")[-2], "labelIds": ["INBOX"]}, {}
         message_id = parsed.path.rsplit("/", 1)[-1]
         number = int(message_id.removeprefix("m"))
-        return 200, {
-            "id": message_id,
-            "threadId": f"thread-{number}",
-            "historyId": str(100 + number),
-            "internalDate": str(int(datetime(2026, 8, number, tzinfo=UTC).timestamp() * 1000)),
-            "labelIds": ["INBOX", "UNREAD"],
-            "payload": {
-                "mimeType": "text/plain",
-                "headers": [
-                    {"name": "From", "value": f"Lead {number} <lead{number}@example.com>"},
-                    {"name": "To", "value": "Akshat <akshat@example.com>"},
-                    {"name": "Subject", "value": f"Reply {number}"},
-                ],
-                "body": {"data": encoded(f"Reply body {number}")},
+        return (
+            200,
+            {
+                "id": message_id,
+                "threadId": f"thread-{number}",
+                "historyId": str(100 + number),
+                "internalDate": str(int(datetime(2026, 8, number, tzinfo=UTC).timestamp() * 1000)),
+                "labelIds": ["INBOX", "UNREAD"],
+                "payload": {
+                    "mimeType": "text/plain",
+                    "headers": [
+                        {"name": "From", "value": f"Lead {number} <lead{number}@example.com>"},
+                        {"name": "To", "value": "Akshat <akshat@example.com>"},
+                        {"name": "Subject", "value": f"Reply {number}"},
+                    ],
+                    "body": {"data": encoded(f"Reply body {number}")},
+                },
             },
-        }, {}
+            {},
+        )
 
     control = AmauraControlPlane(tmp_path / "amaura.sqlite3", founder_id="founder")
     try:

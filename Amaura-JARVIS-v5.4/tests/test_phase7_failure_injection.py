@@ -4,15 +4,12 @@ import json
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
-import pytest
 
-from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.cognition import ExecutiveKernel, ExecutiveRequest
+from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.direct_action import (
-    DirectActionRouter,
-    WriteActionParser,
-    ExactResponseParser,
     RepositoryDiagnosticEngine,
+    WriteActionParser,
 )
 
 
@@ -102,7 +99,11 @@ def test_failure_injection_screenshot_permission_denial():
             resp = kernel.handle(req)
             assert resp is not None
             assert resp.state in ("failed", "refused")
-            assert "permission" in resp.message.lower() or "denied" in resp.message.lower() or "failed" in resp.message.lower()
+            assert (
+                "permission" in resp.message.lower()
+                or "denied" in resp.message.lower()
+                or "failed" in resp.message.lower()
+            )
 
 
 def test_failure_injection_negated_action():
@@ -115,13 +116,14 @@ def test_failure_injection_negated_action():
         kernel = ExecutiveKernel(control)
 
         executed_tools = []
+
         def mock_track_tools(tool_name, args):
             executed_tools.append(tool_name)
             return json.dumps({"ok": True, "data": {}})
 
         with patch("jarvis.amaura.direct_action.execute_tool", side_effect=mock_track_tools):
             req = ExecutiveRequest(text=prompt, session_id="fail_negated", workspace=str(ws))
-            resp = kernel.handle(req)
+            kernel.handle(req)
             assert "take_screenshot" not in executed_tools
 
 

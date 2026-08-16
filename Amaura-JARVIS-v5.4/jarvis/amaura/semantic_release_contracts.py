@@ -11,6 +11,7 @@ Transformation writes remain guarded by the semantic effect scope. An output is
 accepted only when mutation language explicitly binds that exact path; path
 position never authorizes a side effect.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -47,12 +48,14 @@ def install_semantic_release_contracts() -> None:
     def _transform_contract(text: str, known_extensions: tuple[str, ...]) -> tuple[str, str] | None:
         paths = core.extract_paths(text, known_extensions)
         output = _explicit_transform_output(text, paths)
-        has_transform = bool(re.search(
-            r"\b(?:read|load|fetch)\b.*\b(?:extract|convert|transform)\b|"
-            r"\b(?:extract|convert|transform)\b.*\b(?:save|write|create|export)\b",
-            text,
-            re.IGNORECASE | re.DOTALL,
-        ))
+        has_transform = bool(
+            re.search(
+                r"\b(?:read|load|fetch)\b.*\b(?:extract|convert|transform)\b|"
+                r"\b(?:extract|convert|transform)\b.*\b(?:save|write|create|export)\b",
+                text,
+                re.IGNORECASE | re.DOTALL,
+            )
+        )
         inputs = [path for path in paths if path != output]
         if not has_transform or not output or len(inputs) != 1:
             return None

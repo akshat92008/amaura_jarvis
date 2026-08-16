@@ -44,9 +44,13 @@ class DockerSandbox:
             and all(character in "0123456789abcdef" for character in configured_digest[7:].lower())
         ):
             raise GovernanceError("AMAURA_SANDBOX_IMAGE_DIGEST must be a sha256:<64 hex> image ID")
-        self.image = configured_digest or image or os.environ.get(
-            "AMAURA_SANDBOX_IMAGE",
-            "amaura-sandbox:3.6.0",
+        self.image = (
+            configured_digest
+            or image
+            or os.environ.get(
+                "AMAURA_SANDBOX_IMAGE",
+                "amaura-sandbox:3.6.0",
+            )
         )
 
     @property
@@ -62,24 +66,15 @@ class DockerSandbox:
         environment: Mapping[str, str] | None = None,
     ) -> SandboxResult:
         if not self.docker_binary:
-            raise GovernanceError(
-                "Docker isolation is required for employee commands but Docker "
-                "is unavailable"
-            )
+            raise GovernanceError("Docker isolation is required for employee commands but Docker is unavailable")
         root = Path(workspace).expanduser().resolve()
         if not root.is_dir():
             raise GovernanceError("Sandbox workspace does not exist")
-        tokens = (
-            tuple(shlex.split(command))
-            if isinstance(command, str)
-            else tuple(str(item) for item in command)
-        )
+        tokens = tuple(shlex.split(command)) if isinstance(command, str) else tuple(str(item) for item in command)
         if not tokens:
             raise GovernanceError("Sandbox command is empty")
         safe_environment = {
-            key: value
-            for key, value in (environment or {}).items()
-            if key in {"CI", "LANG", "LC_ALL", "PYTHONPATH"}
+            key: value for key, value in (environment or {}).items() if key in {"CI", "LANG", "LC_ALL", "PYTHONPATH"}
         }
         arguments = [
             self.docker_binary,
@@ -117,9 +112,7 @@ class DockerSandbox:
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise GovernanceError(
-                f"Sandboxed command timed out after {timeout} seconds"
-            ) from exc
+            raise GovernanceError(f"Sandboxed command timed out after {timeout} seconds") from exc
         except OSError as exc:
             raise GovernanceError("Docker sandbox could not be started") from exc
         return SandboxResult(
@@ -153,14 +146,18 @@ class StatefulDockerSandbox:
             and all(character in "0123456789abcdef" for character in configured_digest[7:].lower())
         ):
             raise GovernanceError("AMAURA_SANDBOX_IMAGE_DIGEST must be a sha256:<64 hex> image ID")
-        self.image = configured_digest or image or os.environ.get(
-            "AMAURA_SANDBOX_IMAGE",
-            "amaura-sandbox:3.6.0",
+        self.image = (
+            configured_digest
+            or image
+            or os.environ.get(
+                "AMAURA_SANDBOX_IMAGE",
+                "amaura-sandbox:3.6.0",
+            )
         )
         self.workspace = Path(workspace).expanduser().resolve()
         if not self.workspace.is_dir():
             raise GovernanceError("Sandbox workspace does not exist")
-        
+
         self.container_name = f"amaura-sandbox-{uuid.uuid4().hex[:8]}"
         self.environment = environment or {}
         self._running = False
@@ -169,36 +166,44 @@ class StatefulDockerSandbox:
     def _start_container(self) -> None:
         if not self.docker_binary:
             raise GovernanceError("Docker isolation is required but unavailable")
-        
+
         safe_environment = {
-            key: value
-            for key, value in self.environment.items()
-            if key in {"CI", "LANG", "LC_ALL", "PYTHONPATH"}
+            key: value for key, value in self.environment.items() if key in {"CI", "LANG", "LC_ALL", "PYTHONPATH"}
         }
-        
+
         arguments = [
             self.docker_binary,
             "run",
             "-d",
             "--rm",
-            "--name", self.container_name,
-            "--network", "none",
+            "--name",
+            self.container_name,
+            "--network",
+            "none",
             "--read-only",
-            "--cap-drop", "ALL",
-            "--security-opt", "no-new-privileges",
-            "--pids-limit", "256",
-            "--memory", os.environ.get("AMAURA_SANDBOX_MEMORY", "1g"),
-            "--cpus", os.environ.get("AMAURA_SANDBOX_CPUS", "1.5"),
-            "--tmpfs", "/tmp:rw,noexec,nosuid,size=128m",
-            "--mount", f"type=bind,src={self.workspace},dst=/workspace,rw",
-            "--workdir", "/workspace",
+            "--cap-drop",
+            "ALL",
+            "--security-opt",
+            "no-new-privileges",
+            "--pids-limit",
+            "256",
+            "--memory",
+            os.environ.get("AMAURA_SANDBOX_MEMORY", "1g"),
+            "--cpus",
+            os.environ.get("AMAURA_SANDBOX_CPUS", "1.5"),
+            "--tmpfs",
+            "/tmp:rw,noexec,nosuid,size=128m",
+            "--mount",
+            f"type=bind,src={self.workspace},dst=/workspace,rw",
+            "--workdir",
+            "/workspace",
         ]
         for key, value in sorted(safe_environment.items()):
             arguments.extend(("--env", f"{key}={value}"))
-        
+
         # Keep container alive
         arguments.extend((self.image, "tail", "-f", "/dev/null"))
-        
+
         try:
             subprocess.run(
                 arguments,
@@ -238,18 +243,15 @@ class StatefulDockerSandbox:
         if not self._running or not self.docker_binary:
             raise GovernanceError("Sandbox is not running")
 
-        tokens = (
-            tuple(shlex.split(command))
-            if isinstance(command, str)
-            else tuple(str(item) for item in command)
-        )
+        tokens = tuple(shlex.split(command)) if isinstance(command, str) else tuple(str(item) for item in command)
         if not tokens:
             raise GovernanceError("Sandbox command is empty")
 
         arguments = [
             self.docker_binary,
             "exec",
-            "-w", "/workspace",
+            "-w",
+            "/workspace",
             self.container_name,
         ]
         arguments.extend(tokens)
@@ -263,9 +265,7 @@ class StatefulDockerSandbox:
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise GovernanceError(
-                f"Sandboxed command timed out after {timeout} seconds"
-            ) from exc
+            raise GovernanceError(f"Sandboxed command timed out after {timeout} seconds") from exc
         except OSError as exc:
             raise GovernanceError("Sandboxed command could not execute") from exc
 
@@ -296,9 +296,7 @@ def run_governed_command(
             environment={"CI": "1", "LANG": "C.UTF-8"},
         )
     if mode != "host" or os.environ.get("AMAURA_ALLOW_HOST_EXECUTION") != "1":
-        raise GovernanceError(
-            "Host command execution is disabled; configure Docker isolation"
-        )
+        raise GovernanceError("Host command execution is disabled; configure Docker isolation")
     tokens = tuple(shlex.split(command))
     allowed_environment = {
         key: value
@@ -318,9 +316,7 @@ def run_governed_command(
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
-        raise GovernanceError(
-            f"Break-glass host command timed out after {timeout} seconds"
-        ) from exc
+        raise GovernanceError(f"Break-glass host command timed out after {timeout} seconds") from exc
     except OSError as exc:
         raise GovernanceError("Break-glass host command could not execute") from exc
     return SandboxResult(

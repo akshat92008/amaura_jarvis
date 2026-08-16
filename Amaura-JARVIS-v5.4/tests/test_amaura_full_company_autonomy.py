@@ -165,12 +165,13 @@ def test_paused_department_blocks_objective_and_signal_planning(monkeypatch):
         try:
             engine = CompanyAutonomyEngine(control)
             bootstrap = engine.bootstrap_company(repository_path=temp)
-            engine.set_department(
-                "growth_media", enabled=False, reason="quality investigation"
-            )
+            engine.set_department("growth_media", enabled=False, reason="quality investigation")
             now = datetime(2026, 8, 5, tzinfo=UTC)
             planned = MissionControl(control).plan_due_work(now=now, max_new_programmes=20)
-            assert all(item["programme"]["workflow_id"] not in {"content_factory", "distribution_optimization_cycle"} for item in planned)
+            assert all(
+                item["programme"]["workflow_id"] not in {"content_factory", "distribution_optimization_cycle"}
+                for item in planned
+            )
             engine.ingest_signal(
                 signal_type="content_underperformance",
                 source="analytics",
@@ -254,9 +255,7 @@ def test_invalid_signal_and_non_founder_department_change_are_rejected(monkeypat
                     actor=control.founder_id,
                 )
             with pytest.raises(GovernanceError, match="founder"):
-                engine.set_department(
-                    "finance", enabled=False, reason="test", actor="jarvis"
-                )
+                engine.set_department("finance", enabled=False, reason="test", actor="jarvis")
         finally:
             control.close()
 
@@ -306,9 +305,7 @@ def test_self_observation_detects_alert_failed_task_and_weak_content(monkeypatch
                 workflow_key="engineering_reliability_cycle",
                 inputs={"repository_path": temp},
             )
-            control.store.update_work_item(
-                programme["tasks"][0]["id"], state="failed", summary="compile failed"
-            )
+            control.store.update_work_item(programme["tasks"][0]["id"], state="failed", summary="compile failed")
             control.content_factory.create_campaign(
                 campaign_id="weak-content",
                 title="Weak content",
@@ -347,9 +344,7 @@ def test_self_observation_detects_monthly_cost_pressure(monkeypatch):
                 inputs={"research_theme": "efficient models"},
             )
             task = programme["tasks"][0]
-            control.record_cost(
-                task["id"], task["owner_id"], 50, "model_api", units=1000, unit_name="tokens"
-            )
+            control.record_cost(task["id"], task["owner_id"], 50, "model_api", units=1000, unit_name="tokens")
             detected = engine.detect_signals(now=datetime.now(UTC))
             assert any(item["signal_type"] == "runway_risk" for item in detected)
         finally:
@@ -383,8 +378,6 @@ def test_autopilot_backup_can_be_disabled(monkeypatch):
         control = _control(monkeypatch, temp)
         try:
             runtime = AutonomousCompanyRuntime(control)
-            assert runtime.ensure_daily_backup(datetime(2026, 8, 5, tzinfo=UTC)) == {
-                "status": "disabled"
-            }
+            assert runtime.ensure_daily_backup(datetime(2026, 8, 5, tzinfo=UTC)) == {"status": "disabled"}
         finally:
             control.close()

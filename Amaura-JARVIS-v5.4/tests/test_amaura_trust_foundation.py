@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import hashlib
-from contextlib import closing
-import hmac
 import json
 import multiprocessing as mp
 import os
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
@@ -65,7 +64,9 @@ def test_audit_chain_is_atomic_across_processes(tmp_path, monkeypatch):
     monkeypatch.setenv("AMAURA_AUDIT_CHECKPOINT_PATH", str(checkpoint))
     CompanyStore(db).close()
     ctx = mp.get_context("spawn")
-    processes = [ctx.Process(target=_audit_writer, args=(str(db), str(checkpoint), key, worker, 25)) for worker in range(16)]
+    processes = [
+        ctx.Process(target=_audit_writer, args=(str(db), str(checkpoint), key, worker, 25)) for worker in range(16)
+    ]
     for process in processes:
         process.start()
     for process in processes:
@@ -96,15 +97,29 @@ def test_recomputed_history_is_rejected_by_hmac_and_checkpoint(tmp_path, monkeyp
     store.close()
     # Simulate a database writer rewriting history and recomputing ordinary SHA-256.
     with closing(sqlite3.connect(db)) as connection:
-        rows = connection.execute("SELECT sequence,actor,action,resource_type,resource_id,outcome,details,created_at FROM audit_logs ORDER BY sequence").fetchall()
+        rows = connection.execute(
+            "SELECT sequence,actor,action,resource_type,resource_id,outcome,details,created_at FROM audit_logs ORDER BY sequence"
+        ).fetchall()
         previous = ""
         for sequence, actor, action, resource_type, resource_id, outcome, details, created_at in rows:
             if sequence == 1:
                 actor = "attacker"
                 connection.execute("UPDATE audit_logs SET actor=? WHERE sequence=?", (actor, sequence))
-            entry = {"actor": actor, "action": action, "resource_type": resource_type, "resource_id": resource_id, "outcome": outcome, "details": details, "created_at": created_at}
-            entry_hash = hashlib.sha256((previous + json.dumps(entry, sort_keys=True, separators=(",", ":"))).encode()).hexdigest()
-            connection.execute("UPDATE audit_logs SET prev_hash=?,entry_hash=? WHERE sequence=?", (previous, entry_hash, sequence))
+            entry = {
+                "actor": actor,
+                "action": action,
+                "resource_type": resource_type,
+                "resource_id": resource_id,
+                "outcome": outcome,
+                "details": details,
+                "created_at": created_at,
+            }
+            entry_hash = hashlib.sha256(
+                (previous + json.dumps(entry, sort_keys=True, separators=(",", ":"))).encode()
+            ).hexdigest()
+            connection.execute(
+                "UPDATE audit_logs SET prev_hash=?,entry_hash=? WHERE sequence=?", (previous, entry_hash, sequence)
+            )
             previous = entry_hash
         connection.commit()
     store = CompanyStore(db)
@@ -147,7 +162,10 @@ def test_request_transport_receives_only_prevalidated_ip(monkeypatch):
         return 200, b'{"ok":true}', {"content-type": "application/json"}
 
     destination = validate_public_url("http://example.com/api", resolver=resolver)
-    with patch("jarvis.amaura.network.validate_public_url", return_value=destination), patch("jarvis.amaura.network._pinned_request", side_effect=pinned):
+    with (
+        patch("jarvis.amaura.network.validate_public_url", return_value=destination),
+        patch("jarvis.amaura.network._pinned_request", side_effect=pinned),
+    ):
         status, payload, _headers = request_json("http://example.com/api", method="GET")
     assert status == 200 and payload == {"ok": True}
     assert resolver_calls == ["example.com"]
@@ -159,7 +177,7 @@ def test_hud_escapes_model_html_and_server_sets_strict_csp(monkeypatch):
     index_html = (Path(__file__).parents[1] / "jarvis" / "static" / "index.html").read_text()
     assert "marked.parse(content)" not in app_js
     assert "renderSafeMarkdown(content)" in app_js
-    assert ".replaceAll(\"<\", \"&lt;\")" in app_js
+    assert '.replaceAll("<", "&lt;")' in app_js
     assert "https://cdn.jsdelivr.net" not in index_html
     assert "https://cdnjs.cloudflare.com" not in index_html
     with TestClient(app) as client:
@@ -177,7 +195,10 @@ def test_local_amaura_reads_require_operator_key(monkeypatch):
     try:
         with TestClient(app) as client:
             assert client.get("/api/amaura/dashboard").status_code == 403
-            assert client.get("/api/amaura/dashboard", headers={"X-Amaura-Operator-Key": "operator-secret"}).status_code == 200
+            assert (
+                client.get("/api/amaura/dashboard", headers={"X-Amaura-Operator-Key": "operator-secret"}).status_code
+                == 200
+            )
     finally:
         reset_control_plane()
 
@@ -186,22 +207,24 @@ def test_venture_slot_admission_is_atomic_across_processes(tmp_path):
     db = tmp_path / "company.db"
     store = CompanyStore(db)
     opportunity_id = "opp-1"
-    store.create_venture_opportunity({
-        "id": opportunity_id,
-        "title": "Bounded product",
-        "problem": "problem",
-        "target_user": "user",
-        "product_type": "micro_saas",
-        "source": "verified",
-        "evidence": [],
-        "score_components": {},
-        "total_score": 80,
-        "estimated_build_days": 7,
-        "monetization": "subscription",
-        "distribution_channel": "owned",
-        "status": "selected",
-        "strategic_fit": "fit",
-    })
+    store.create_venture_opportunity(
+        {
+            "id": opportunity_id,
+            "title": "Bounded product",
+            "problem": "problem",
+            "target_user": "user",
+            "product_type": "micro_saas",
+            "source": "verified",
+            "evidence": [],
+            "score_components": {},
+            "total_score": 80,
+            "estimated_build_days": 7,
+            "monetization": "subscription",
+            "distribution_channel": "owned",
+            "status": "selected",
+            "strategic_fit": "fit",
+        }
+    )
     store.close()
     ctx = mp.get_context("spawn")
     processes = [ctx.Process(target=_slot_writer, args=(str(db), opportunity_id)) for _ in range(12)]

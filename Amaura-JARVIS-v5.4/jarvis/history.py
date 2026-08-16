@@ -7,8 +7,8 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from jarvis.paths import get_data_dir
 
+from jarvis.paths import get_data_dir
 
 HISTORY_DIR = get_data_dir() / "history"
 
@@ -30,7 +30,7 @@ class FileHistory:
         cf = self._changes_file()
         if cf.exists():
             try:
-                with open(cf, "r") as f:
+                with open(cf) as f:
                     self.changes = json.load(f)
             except (json.JSONDecodeError, OSError):
                 self.changes = []

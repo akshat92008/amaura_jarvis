@@ -112,7 +112,7 @@ def send_imessage_local(to: str, message: str) -> str:
         return "❌ Invalid iMessage recipient"
     if not body or len(body.encode("utf-8")) > 20_000:
         return "❌ Invalid iMessage body"
-    script = r'''
+    script = r"""
     on run argv
         set targetRecipient to item 1 of argv
         set targetMessage to item 2 of argv
@@ -122,7 +122,7 @@ def send_imessage_local(to: str, message: str) -> str:
             send targetMessage to targetBuddy
         end tell
     end run
-    '''
+    """
     result = _run_applescript(script, recipient, body)
     if result.startswith("❌"):
         return result
@@ -148,7 +148,7 @@ def tool_add_reminder(title: str, notes: str = "") -> str:
         return "❌ Invalid reminder title"
     if len(reminder_notes.encode()) > 10_000:
         return "❌ Invalid reminder notes"
-    script = r'''
+    script = r"""
     on run argv
         set reminderTitle to item 1 of argv
         set reminderNotes to item 2 of argv
@@ -158,10 +158,10 @@ def tool_add_reminder(title: str, notes: str = "") -> str:
             make new reminder at targetList with properties {name:reminderTitle, body:reminderNotes}
         end tell
     end run
-    '''
+    """
     result = _run_applescript(script, reminder_title, reminder_notes)
     if result.startswith("❌"):
-        fallback = r'''
+        fallback = r"""
         on run argv
             set reminderTitle to item 1 of argv
             set reminderNotes to item 2 of argv
@@ -171,13 +171,13 @@ def tool_add_reminder(title: str, notes: str = "") -> str:
                 make new reminder at targetList with properties {name:reminderTitle, body:reminderNotes}
             end tell
         end run
-        '''
+        """
         result = _run_applescript(fallback, reminder_title, reminder_notes)
     return result if result.startswith("❌") else f"✅ Reminder added: {reminder_title}"
 
 
 def tool_get_reminders() -> str:
-    script = '''
+    script = """
     tell application "Reminders"
         launch
         set reminderList to {}
@@ -186,10 +186,10 @@ def tool_get_reminders() -> str:
         end repeat
         return reminderList
     end tell
-    '''
+    """
     result = _run_applescript(script)
     if result.startswith("❌"):
-        fallback = '''
+        fallback = """
         tell application "Reminders"
             launch
             set reminderList to {}
@@ -198,7 +198,7 @@ def tool_get_reminders() -> str:
             end repeat
             return reminderList
         end tell
-        '''
+        """
         result = _run_applescript(fallback)
     if result.startswith("❌"):
         return result
@@ -263,7 +263,7 @@ def tool_add_calendar_event(title: str, date: str, duration_hours: float = 1, no
         start = _parse_calendar_datetime(date)
     except ValueError as exc:
         return f"❌ Invalid calendar date: {exc}"
-    script = r'''
+    script = r"""
     on run argv
         set eventTitle to item 1 of argv
         set eventNotes to item 2 of argv
@@ -288,12 +288,23 @@ def tool_add_calendar_event(title: str, date: str, duration_hours: float = 1, no
             end tell
         end tell
     end run
-    '''
+    """
     result = _run_applescript(
-        script, event_title, event_notes, str(start.year), str(start.month), str(start.day),
-        str(start.hour), str(start.minute), str(int(round(duration * 3600))),
+        script,
+        event_title,
+        event_notes,
+        str(start.year),
+        str(start.month),
+        str(start.day),
+        str(start.hour),
+        str(start.minute),
+        str(int(round(duration * 3600))),
     )
-    return result if result.startswith("❌") else f"✅ Calendar event added: {event_title} on {start.isoformat(timespec='minutes')}"
+    return (
+        result
+        if result.startswith("❌")
+        else f"✅ Calendar event added: {event_title} on {start.isoformat(timespec='minutes')}"
+    )
 
 
 def tool_automate_macos_app(script: str) -> str:

@@ -1,9 +1,0 @@
-AUTH BLOCKER ANALYSIS:
-Option A: agy is already authenticated and usable.
-Option E: JARVIS preflight rejected legitimate configuration due to false positive in _global_customization_status scanning plugin skill files in ~/.gemini/config/plugins.
-
-Raw proof of agy authentication:
-Direct non-interactive prompt `agy -p "Respond ONLY with the JSON object {"test":"ok"}" --output-format json` executed successfully with status SUCCESS.
-
-Defect Resolution:
-Fixed _global_customization_status in jarvis/amaura/antigravity_bridge.py to exclude static plugin skill definitions and include only active hooks. Bumped version to v5.4.2 per Version Discipline rules.

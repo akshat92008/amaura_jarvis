@@ -13,11 +13,12 @@ import asyncio
 import contextlib
 import hashlib
 import importlib
-import importlib.util
 import importlib.metadata
+import importlib.util
 import inspect
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -25,9 +26,10 @@ import tempfile
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 from urllib.parse import urlencode, urljoin, urlsplit
 
 import httpx
@@ -195,9 +197,7 @@ def _run(
                     terminate_process_tree(proc.pid)
                     with contextlib.suppress(Exception):
                         proc.wait(timeout=2)
-                    raise CapabilityExecutionError(
-                        "Capability stopped because macOS/host memory pressure became red"
-                    )
+                    raise CapabilityExecutionError("Capability stopped because macOS/host memory pressure became red")
 
             try:
                 stdout, stderr = proc.communicate(timeout=0.25)
@@ -272,8 +272,8 @@ def _jsonable(value: Any) -> Any:
             return _jsonable(value.to_dict())
         except Exception:
             pass
-    if hasattr(value, "json") and not callable(getattr(value, "json")):
-        return _jsonable(getattr(value, "json"))
+    if hasattr(value, "json") and not callable(value.json):
+        return _jsonable(value.json)
     return _bounded_text(value, 50_000)
 
 
@@ -325,6 +325,7 @@ class PlaywrightAdapter(_BaseAdapter):
             return False, "Python package 'playwright' is not installed"
         try:
             from playwright.sync_api import sync_playwright  # type: ignore
+
             with sync_playwright() as p:
                 executable = Path(p.chromium.executable_path)
                 if not executable.is_file():
@@ -392,13 +393,15 @@ class PlaywrightAdapter(_BaseAdapter):
                     text = page.locator(selector).inner_text(timeout=timeout_ms)
                     title = page.title()
                     return self._result(
-                        operation, started=started,
+                        operation,
+                        started=started,
                         output={"url": final_url, "title": title, "text": _bounded_text(text)},
                     )
                 output_path = _safe_local_output(str(params.get("output_path", "playwright-screenshot.png")))
                 page.screenshot(path=str(output_path), full_page=bool(params.get("full_page", True)))
                 return self._result(
-                    operation, started=started,
+                    operation,
+                    started=started,
                     output={"url": final_url, "title": page.title(), "path": str(output_path)},
                     artifacts=[_artifact(output_path)],
                 )
@@ -451,7 +454,9 @@ class Crawl4AIAdapter(_BaseAdapter):
                     result = await crawler.arun(url=url, config=run_config)
                     success = bool(getattr(result, "success", True))
                     if not success:
-                        raise CapabilityExecutionError(_bounded_text(getattr(result, "error_message", "Crawl failed"), 5_000))
+                        raise CapabilityExecutionError(
+                            _bounded_text(getattr(result, "error_message", "Crawl failed"), 5_000)
+                        )
                     final_url = str(getattr(result, "url", url))
                     validate_public_url(final_url, resolve=True)
                     if urlsplit(final_url).scheme != "https":
@@ -485,15 +490,27 @@ class BrowserUseAdapter(_BaseAdapter):
     )
 
     _READ_ONLY_EXCLUDES = [
-        "click", "input", "upload_file", "send_keys", "evaluate",
-        "switch", "close", "dropdown_options", "select_dropdown",
-        "write_file", "read_file", "replace_file",
+        "click",
+        "input",
+        "upload_file",
+        "send_keys",
+        "evaluate",
+        "switch",
+        "close",
+        "dropdown_options",
+        "select_dropdown",
+        "write_file",
+        "read_file",
+        "replace_file",
     ]
 
     def available(self) -> tuple[bool, str]:
         enabled = os.environ.get("AMAURA_BROWSER_USE_AGENT_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
         if not enabled:
-            return False, "Agentic browser research is disabled by default; set AMAURA_BROWSER_USE_AGENT_ENABLED=1 to opt in"
+            return (
+                False,
+                "Agentic browser research is disabled by default; set AMAURA_BROWSER_USE_AGENT_ENABLED=1 to opt in",
+            )
         if not _module_available("browser_use"):
             return False, "Python package 'browser-use' is not installed"
         try:
@@ -505,10 +522,18 @@ class BrowserUseAdapter(_BaseAdapter):
         if missing:
             return False, f"Installed Browser Use lacks hardened APIs: {', '.join(missing)}"
         free_cloud = any(os.environ.get(key) for key in ("GOOGLE_API_KEY", "GROQ_API_KEY", "CEREBRAS_API_KEY"))
-        paid_allowed = os.environ.get("AMAURA_BROWSER_USE_ALLOW_PAID", "0").strip().lower() in {"1", "true", "yes", "on"}
+        paid_allowed = os.environ.get("AMAURA_BROWSER_USE_ALLOW_PAID", "0").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
         paid_route = paid_allowed and bool(os.environ.get("OPENROUTER_API_KEY"))
         if not free_cloud and not shutil.which("ollama") and not paid_route:
-            return False, "Browser Use needs a configured free cloud route, local Ollama fallback, or explicitly approved paid route"
+            return (
+                False,
+                "Browser Use needs a configured free cloud route, local Ollama fallback, or explicitly approved paid route",
+            )
         return True, "installed; hardened read-only APIs and model route available"
 
     @staticmethod
@@ -517,16 +542,25 @@ class BrowserUseAdapter(_BaseAdapter):
         # Prefer remote/free inference on an 8 GB Mac. Local Ollama is an offline/fallback
         # route so browser + local LLM are not selected together unnecessarily.
         if os.environ.get("GROQ_API_KEY") and hasattr(browser_use, "ChatGroq"):
-            return browser_use.ChatGroq(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "meta-llama/llama-4-maverick-17b-128e-instruct"))
+            return browser_use.ChatGroq(
+                model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "meta-llama/llama-4-maverick-17b-128e-instruct")
+            )
         if os.environ.get("CEREBRAS_API_KEY") and hasattr(browser_use, "ChatCerebras"):
             return browser_use.ChatCerebras(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "llama3.3-70b"))
         if os.environ.get("GOOGLE_API_KEY") and hasattr(browser_use, "ChatGoogle"):
             return browser_use.ChatGoogle(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "gemini-2.5-flash"))
         if shutil.which("ollama") and hasattr(browser_use, "ChatOllama"):
             return browser_use.ChatOllama(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "qwen2.5:3b"), num_ctx=8192)
-        paid_allowed = os.environ.get("AMAURA_BROWSER_USE_ALLOW_PAID", "0").strip().lower() in {"1", "true", "yes", "on"}
+        paid_allowed = os.environ.get("AMAURA_BROWSER_USE_ALLOW_PAID", "0").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
         if paid_allowed and os.environ.get("OPENROUTER_API_KEY") and hasattr(browser_use, "ChatOpenRouter"):
-            return browser_use.ChatOpenRouter(model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "google/gemini-2.5-flash"))
+            return browser_use.ChatOpenRouter(
+                model=os.environ.get("AMAURA_BROWSER_USE_MODEL", "google/gemini-2.5-flash")
+            )
         raise CapabilityUnavailable("No supported Browser Use model route is configured")
 
     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
@@ -593,7 +627,17 @@ class BrowserUseAdapter(_BaseAdapter):
                     "result": _bounded_text(final_result),
                     "successful": bool(successful),
                     "allowed_domains": domains,
-                    "read_only_actions": ["search", "navigate", "go_back", "wait", "scroll", "find_text", "extract", "screenshot", "done"],
+                    "read_only_actions": [
+                        "search",
+                        "navigate",
+                        "go_back",
+                        "wait",
+                        "scroll",
+                        "find_text",
+                        "extract",
+                        "screenshot",
+                        "done",
+                    ],
                 }
 
         output = _run_async(_run_agent)
@@ -615,7 +659,10 @@ class SearXNGAdapter(_BaseAdapter):
     )
 
     def available(self) -> tuple[bool, str]:
-        return (bool(os.environ.get("SEARXNG_URL", "").strip()), "configured" if os.environ.get("SEARXNG_URL", "").strip() else "SEARXNG_URL is not configured")
+        return (
+            bool(os.environ.get("SEARXNG_URL", "").strip()),
+            "configured" if os.environ.get("SEARXNG_URL", "").strip() else "SEARXNG_URL is not configured",
+        )
 
     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
         self._check_operation(operation)
@@ -657,14 +704,18 @@ class SearXNGAdapter(_BaseAdapter):
             url = str(item.get("url", ""))
             with contextlib.suppress(Exception):
                 _safe_public_url(url)
-                results.append({
-                    "title": str(item.get("title", "")),
-                    "url": url,
-                    "content": _bounded_text(item.get("content", ""), 8_000),
-                    "engine": str(item.get("engine", "")),
-                    "score": item.get("score"),
-                })
-        return self._result(operation, started=started, output={"query": query, "results": results, "count": len(results)})
+                results.append(
+                    {
+                        "title": str(item.get("title", "")),
+                        "url": url,
+                        "content": _bounded_text(item.get("content", ""), 8_000),
+                        "engine": str(item.get("engine", "")),
+                        "score": item.get("score"),
+                    }
+                )
+        return self._result(
+            operation, started=started, output={"query": query, "results": results, "count": len(results)}
+        )
 
 
 class DoclingAdapter(_BaseAdapter):
@@ -680,7 +731,10 @@ class DoclingAdapter(_BaseAdapter):
     )
 
     def available(self) -> tuple[bool, str]:
-        return (_module_available("docling"), "installed" if _module_available("docling") else "Python package 'docling' is not installed")
+        return (
+            _module_available("docling"),
+            "installed" if _module_available("docling") else "Python package 'docling' is not installed",
+        )
 
     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
         self._check_operation(operation)
@@ -721,7 +775,10 @@ class PyMuPDFAdapter(_BaseAdapter):
     )
 
     def available(self) -> tuple[bool, str]:
-        return (_module_available("fitz"), "installed" if _module_available("fitz") else "Python package 'PyMuPDF' is not installed")
+        return (
+            _module_available("fitz"),
+            "installed" if _module_available("fitz") else "Python package 'PyMuPDF' is not installed",
+        )
 
     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
         self._check_operation(operation)
@@ -737,7 +794,11 @@ class PyMuPDFAdapter(_BaseAdapter):
             if operation == "extract_text":
                 max_pages = max(1, min(int(params.get("max_pages", 100)), 500))
                 pages = [doc[i].get_text("text") for i in range(min(len(doc), max_pages))]
-                return self._result(operation, started=started, output={"text": _bounded_text("\n".join(pages)), "pages": min(len(doc), max_pages)})
+                return self._result(
+                    operation,
+                    started=started,
+                    output={"text": _bounded_text("\n".join(pages)), "pages": min(len(doc), max_pages)},
+                )
             page_index = int(params.get("page", 0))
             if page_index < 0 or page_index >= len(doc):
                 raise GovernanceError("PDF page index is out of range")
@@ -745,7 +806,12 @@ class PyMuPDFAdapter(_BaseAdapter):
             scale = max(0.5, min(float(params.get("scale", 1.5)), 4.0))
             pix = doc[page_index].get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
             pix.save(str(output_path))
-            return self._result(operation, started=started, output={"output_path": str(output_path), "page": page_index}, artifacts=[_artifact(output_path)])
+            return self._result(
+                operation,
+                started=started,
+                output={"output_path": str(output_path), "page": page_index},
+                artifacts=[_artifact(output_path)],
+            )
         finally:
             doc.close()
 
@@ -763,7 +829,10 @@ class PaddleOCRAdapter(_BaseAdapter):
     )
 
     def available(self) -> tuple[bool, str]:
-        return (_module_available("paddleocr"), "installed" if _module_available("paddleocr") else "Python package 'paddleocr' is not installed")
+        return (
+            _module_available("paddleocr"),
+            "installed" if _module_available("paddleocr") else "Python package 'paddleocr' is not installed",
+        )
 
     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
         self._check_operation(operation)
@@ -794,7 +863,9 @@ class PaddleOCRAdapter(_BaseAdapter):
             output_path = _safe_local_output(output_path_raw)
             output_path.write_text(json.dumps(serialized, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
             artifacts.append(_artifact(output_path))
-        return self._result(operation, started=started, output={"results": serialized, "count": len(serialized)}, artifacts=artifacts)
+        return self._result(
+            operation, started=started, output={"results": serialized, "count": len(serialized)}, artifacts=artifacts
+        )
 
 
 class FastEmbedQdrantAdapter(_BaseAdapter):
@@ -849,13 +920,19 @@ class FastEmbedQdrantAdapter(_BaseAdapter):
             if len(ids) != len(documents):
                 raise GovernanceError("ids must align with documents")
             client.add(collection_name=collection, documents=documents, metadata=metadata, ids=ids)
-            return self._result(operation, started=started, output={"collection": collection, "count": len(documents), "ids": [str(v) for v in ids]})
+            return self._result(
+                operation,
+                started=started,
+                output={"collection": collection, "count": len(documents), "ids": [str(v) for v in ids]},
+            )
         query = str(params.get("query", "")).strip()
         if not query:
             raise GovernanceError("Qdrant query requires text")
         limit = max(1, min(int(params.get("limit", 8)), 25))
         hits = client.query(collection_name=collection, query_text=query, limit=limit)
-        return self._result(operation, started=started, output={"collection": collection, "query": query, "results": _jsonable(hits)})
+        return self._result(
+            operation, started=started, output={"collection": collection, "query": query, "results": _jsonable(hits)}
+        )
 
 
 class LlamaIndexAdapter(_BaseAdapter):
@@ -906,7 +983,10 @@ class FasterWhisperAdapter(_BaseAdapter):
     )
 
     def available(self) -> tuple[bool, str]:
-        return (_module_available("faster_whisper"), "installed" if _module_available("faster_whisper") else "Python package 'faster-whisper' is not installed")
+        return (
+            _module_available("faster_whisper"),
+            "installed" if _module_available("faster_whisper") else "Python package 'faster-whisper' is not installed",
+        )
 
     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
         self._check_operation(operation)
@@ -934,8 +1014,7 @@ class FasterWhisperAdapter(_BaseAdapter):
         )
         segments = list(segments_gen)
         output_segments = [
-            {"start": float(s.start), "end": float(s.end), "text": str(s.text).strip()}
-            for s in segments
+            {"start": float(s.start), "end": float(s.end), "text": str(s.text).strip()} for s in segments
         ]
         text = " ".join(item["text"] for item in output_segments).strip()
         return self._result(
@@ -987,7 +1066,12 @@ class KokoroAdapter(_BaseAdapter):
             raise CapabilityExecutionError("Kokoro produced no audio")
         audio = np.concatenate(chunks)
         sf.write(str(output_path), audio, 24000)
-        return self._result(operation, started=started, output={"output_path": str(output_path), "sample_rate": 24000}, artifacts=[_artifact(output_path)])
+        return self._result(
+            operation,
+            started=started,
+            output={"output_path": str(output_path), "sample_rate": 24000},
+            artifacts=[_artifact(output_path)],
+        )
 
 
 class FFmpegAdapter(_BaseAdapter):
@@ -1013,7 +1097,9 @@ class FFmpegAdapter(_BaseAdapter):
         started = time.monotonic()
         if operation == "probe":
             source = _safe_local_input(str(params.get("source_path", "")))
-            proc = _run(["ffprobe", "-v", "error", "-show_format", "-show_streams", "-of", "json", str(source)], timeout=60)
+            proc = _run(
+                ["ffprobe", "-v", "error", "-show_format", "-show_streams", "-of", "json", str(source)], timeout=60
+            )
             if proc.returncode != 0:
                 raise CapabilityExecutionError(_bounded_text(proc.stderr, 8_000))
             try:
@@ -1050,32 +1136,65 @@ class FFmpegAdapter(_BaseAdapter):
             if not 1 <= len(sources) <= 100:
                 raise GovernanceError("FFmpeg concat requires 1-100 source paths")
             output = _safe_local_output(str(params.get("output_path", "concatenated.mp4")))
-            with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, dir=str(workspace_root()), encoding="utf-8") as handle:
+            with tempfile.NamedTemporaryFile(
+                "w", suffix=".txt", delete=False, dir=str(workspace_root()), encoding="utf-8"
+            ) as handle:
                 concat_file = Path(handle.name)
                 for source in sources:
                     safe = str(source).replace("'", "'\\''")
                     handle.write(f"file '{safe}'\n")
             try:
-                argv = ["ffmpeg", "-y", "-nostdin", "-f", "concat", "-safe", "0", "-i", str(concat_file), "-c", "copy", str(output)]
+                argv = [
+                    "ffmpeg",
+                    "-y",
+                    "-nostdin",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    str(concat_file),
+                    "-c",
+                    "copy",
+                    str(output),
+                ]
                 proc = _run(argv, timeout=int(params.get("timeout", 900)))
             finally:
                 concat_file.unlink(missing_ok=True)
             if proc.returncode != 0:
                 raise CapabilityExecutionError(_bounded_text(proc.stderr, 12_000))
-            return self._result(operation, started=started, output={"output_path": str(output)}, artifacts=[_artifact(output)])
+            return self._result(
+                operation, started=started, output={"output_path": str(output)}, artifacts=[_artifact(output)]
+            )
         else:
             source = _safe_local_input(str(params.get("source_path", "")))
             audio = _safe_local_input(str(params.get("audio_path", "")))
             output = _safe_local_output(str(params.get("output_path", "muxed.mp4")))
             argv = [
-                "ffmpeg", "-y", "-nostdin", "-i", str(source), "-i", str(audio),
-                "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy",
-                "-c:a", str(params.get("audio_codec", "aac")), "-shortest", str(output),
+                "ffmpeg",
+                "-y",
+                "-nostdin",
+                "-i",
+                str(source),
+                "-i",
+                str(audio),
+                "-map",
+                "0:v:0",
+                "-map",
+                "1:a:0",
+                "-c:v",
+                "copy",
+                "-c:a",
+                str(params.get("audio_codec", "aac")),
+                "-shortest",
+                str(output),
             ]
         proc = _run(argv, timeout=int(params.get("timeout", 900)))
         if proc.returncode != 0:
             raise CapabilityExecutionError(_bounded_text(proc.stderr, 12_000))
-        return self._result(operation, started=started, output={"output_path": str(output)}, artifacts=[_artifact(output)])
+        return self._result(
+            operation, started=started, output={"output_path": str(output)}, artifacts=[_artifact(output)]
+        )
 
 
 class RemotionAdapter(_BaseAdapter):
@@ -1116,14 +1235,23 @@ class RemotionAdapter(_BaseAdapter):
         }
         return {
             "package.json": json.dumps(package, indent=2) + "\n",
-            "tsconfig.json": json.dumps({
-                "compilerOptions": {
-                    "target": "ES2022", "lib": ["DOM", "ES2022"], "jsx": "react-jsx",
-                    "module": "ESNext", "moduleResolution": "Bundler", "strict": True,
-                    "skipLibCheck": True, "noEmit": True,
+            "tsconfig.json": json.dumps(
+                {
+                    "compilerOptions": {
+                        "target": "ES2022",
+                        "lib": ["DOM", "ES2022"],
+                        "jsx": "react-jsx",
+                        "module": "ESNext",
+                        "moduleResolution": "Bundler",
+                        "strict": True,
+                        "skipLibCheck": True,
+                        "noEmit": True,
+                    },
+                    "include": ["src"],
                 },
-                "include": ["src"],
-            }, indent=2) + "\n",
+                indent=2,
+            )
+            + "\n",
             "src/index.tsx": """import {registerRoot} from 'remotion';
 import {Root} from './Root';
 registerRoot(Root);
@@ -1242,13 +1370,17 @@ export const AmauraVideo: React.FC<Props> = ({title, subtitle, scenes = []}) => 
             for package_name in ("remotion", "@remotion/cli"):
                 package_json = project / "node_modules" / package_name / "package.json"
                 if not package_json.is_file():
-                    raise CapabilityUnavailable("Remotion node_modules is not installed; run npm ci --ignore-scripts in the verified project")
+                    raise CapabilityUnavailable(
+                        "Remotion node_modules is not installed; run npm ci --ignore-scripts in the verified project"
+                    )
                 try:
                     installed = json.loads(package_json.read_text(encoding="utf-8"))
                 except (OSError, json.JSONDecodeError) as exc:
                     raise GovernanceError(f"Invalid installed package metadata for {package_name}") from exc
                 if str(installed.get("version", "")) != version:
-                    raise GovernanceError(f"Installed {package_name} version does not match locked Remotion version {version}")
+                    raise GovernanceError(
+                        f"Installed {package_name} version does not match locked Remotion version {version}"
+                    )
         return manifest
 
     @staticmethod
@@ -1283,7 +1415,9 @@ export const AmauraVideo: React.FC<Props> = ({title, subtitle, scenes = []}) => 
                     if key == "imageUrl" and text:
                         parsed = urlsplit(text)
                         if parsed.scheme in {"http", "https"}:
-                            raise GovernanceError("Remote imageUrl is disabled; render from local/embedded approved assets")
+                            raise GovernanceError(
+                                "Remote imageUrl is disabled; render from local/embedded approved assets"
+                            )
                         if parsed.scheme not in {"", "data"}:
                             raise GovernanceError("Unsupported Remotion imageUrl scheme")
                     clean[key] = text
@@ -1312,7 +1446,9 @@ export const AmauraVideo: React.FC<Props> = ({title, subtitle, scenes = []}) => 
         project = resolve_workspace_path(str(params.get("project_path", "amaura-remotion")), must_exist=False)
         if operation == "bootstrap_project":
             if project.exists() and any(project.iterdir()) and not bool(params.get("overwrite", False)):
-                raise GovernanceError("Remotion project directory is not empty; set overwrite=true only for an Amaura-owned template directory")
+                raise GovernanceError(
+                    "Remotion project directory is not empty; set overwrite=true only for an Amaura-owned template directory"
+                )
             project.mkdir(parents=True, exist_ok=True)
             version = str(params.get("version", os.environ.get("AMAURA_REMOTION_VERSION", "4.0.477"))).strip()
             if not version or not all(part.isdigit() for part in version.split(".")):
@@ -1326,7 +1462,8 @@ export const AmauraVideo: React.FC<Props> = ({title, subtitle, scenes = []}) => 
             manifest_path = self._write_manifest(project, version)
             artifacts.append(_artifact(manifest_path))
             return self._result(
-                operation, started=started,
+                operation,
+                started=started,
                 output={
                     "project_path": str(project),
                     "template_id": self._TEMPLATE_ID,
@@ -1344,20 +1481,25 @@ export const AmauraVideo: React.FC<Props> = ({title, subtitle, scenes = []}) => 
             if not npm:
                 raise CapabilityUnavailable("npm is required to create package-lock.json")
             env = {
-                key: value for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "SSL_CERT_FILE", "SSL_CERT_DIR")
+                key: value
+                for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "SSL_CERT_FILE", "SSL_CERT_DIR")
                 if (value := os.environ.get(key))
             }
             env["npm_config_ignore_scripts"] = "true"
             proc = _run(
                 [npm, "install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"],
-                cwd=project, timeout=int(params.get("timeout", 600)), env=env, max_rss_mb=800,
+                cwd=project,
+                timeout=int(params.get("timeout", 600)),
+                env=env,
+                max_rss_mb=800,
             )
             lock_path = project / "package-lock.json"
             if proc.returncode != 0 or not lock_path.is_file():
                 raise CapabilityExecutionError(_bounded_text(proc.stderr or proc.stdout, 16_000))
             manifest_path = self._write_manifest(project, str(manifest["remotion_version"]), _sha256(lock_path))
             return self._result(
-                operation, started=started,
+                operation,
+                started=started,
                 output={
                     "project_path": str(project),
                     "package_lock_sha256": _sha256(lock_path),
@@ -1382,19 +1524,23 @@ export const AmauraVideo: React.FC<Props> = ({title, subtitle, scenes = []}) => 
         if not local_cli.is_file():
             raise CapabilityUnavailable("Verified local Remotion CLI is missing; run npm ci --ignore-scripts")
         argv = [
-            str(local_cli), "render", "src/index.tsx", composition, str(output),
-            "--props", json.dumps(props, separators=(",", ":")),
+            str(local_cli),
+            "render",
+            "src/index.tsx",
+            composition,
+            str(output),
+            "--props",
+            json.dumps(props, separators=(",", ":")),
         ]
         argv = self._media_sandbox(argv)
-        env = {
-            key: value for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL")
-            if (value := os.environ.get(key))
-        }
+        env = {key: value for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL") if (value := os.environ.get(key))}
         env["NODE_ENV"] = "production"
         proc = _run(argv, cwd=project, timeout=int(params.get("timeout", 1200)), env=env)
         if proc.returncode != 0 or not output.is_file():
             raise CapabilityExecutionError(_bounded_text(proc.stderr or proc.stdout, 16_000))
-        return self._result(operation, started=started, output={"output_path": str(output)}, artifacts=[_artifact(output)])
+        return self._result(
+            operation, started=started, output={"output_path": str(output)}, artifacts=[_artifact(output)]
+        )
 
 
 class ImageTransformAdapter(_BaseAdapter):
@@ -1439,7 +1585,9 @@ class ImageTransformAdapter(_BaseAdapter):
         proc = _run(argv, timeout=120)
         if proc.returncode != 0 or not output.is_file():
             raise CapabilityExecutionError(_bounded_text(proc.stderr or proc.stdout, 8_000))
-        return self._result(operation, started=started, output={"output_path": str(output)}, artifacts=[_artifact(output)])
+        return self._result(
+            operation, started=started, output={"output_path": str(output)}, artifacts=[_artifact(output)]
+        )
 
 
 class YtDlpAdapter(_BaseAdapter):
@@ -1474,7 +1622,12 @@ class YtDlpAdapter(_BaseAdapter):
         if not available:
             raise CapabilityUnavailable(reason)
         if operation == "download":
-            enabled = os.environ.get("AMAURA_MEDIA_DOWNLOADS_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
+            enabled = os.environ.get("AMAURA_MEDIA_DOWNLOADS_ENABLED", "0").strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
             if not enabled:
                 raise GovernanceError(
                     "Media downloads are disabled. Set AMAURA_MEDIA_DOWNLOADS_ENABLED=1 only for media you are authorised to download."
@@ -1499,10 +1652,24 @@ class YtDlpAdapter(_BaseAdapter):
             compact = {
                 key: payload.get(key)
                 for key in (
-                    "id", "title", "description", "duration", "timestamp", "upload_date",
-                    "uploader", "uploader_id", "channel", "channel_id", "webpage_url",
-                    "extractor", "availability", "live_status", "view_count", "like_count",
-                    "thumbnail", "ext",
+                    "id",
+                    "title",
+                    "description",
+                    "duration",
+                    "timestamp",
+                    "upload_date",
+                    "uploader",
+                    "uploader_id",
+                    "channel",
+                    "channel_id",
+                    "webpage_url",
+                    "extractor",
+                    "availability",
+                    "live_status",
+                    "view_count",
+                    "like_count",
+                    "thumbnail",
+                    "ext",
                 )
                 if key in payload
             }
@@ -1511,8 +1678,14 @@ class YtDlpAdapter(_BaseAdapter):
         output = _safe_local_output(str(params.get("output_path", "media-download.%(ext)s")))
         max_filesize_mb = max(1, min(int(params.get("max_filesize_mb", 500)), 2_000))
         argv = [
-            *base, "--no-playlist", "--no-overwrites", "--no-part",
-            "--max-filesize", f"{max_filesize_mb}M", "-o", str(output),
+            *base,
+            "--no-playlist",
+            "--no-overwrites",
+            "--no-part",
+            "--max-filesize",
+            f"{max_filesize_mb}M",
+            "-o",
+            str(output),
         ]
         mode = str(params.get("mode", "video")).strip().lower()
         if mode == "audio":
@@ -1561,7 +1734,10 @@ class ComfyUIAdapter(_BaseAdapter):
         local = host in {"localhost", "127.0.0.1", "::1"}
         allow_local = os.environ.get("AMAURA_ALLOW_LOCAL_COMFYUI", "0").strip().lower() in {"1", "true", "yes", "on"}
         if local and not allow_local:
-            return False, "Local ComfyUI is disabled by default on the 8 GB Mac profile; use a remote endpoint or set AMAURA_ALLOW_LOCAL_COMFYUI=1"
+            return (
+                False,
+                "Local ComfyUI is disabled by default on the 8 GB Mac profile; use a remote endpoint or set AMAURA_ALLOW_LOCAL_COMFYUI=1",
+            )
         if not local:
             try:
                 validate_public_url(url, resolve=True)
@@ -1583,7 +1759,16 @@ class ComfyUIAdapter(_BaseAdapter):
         token = os.environ.get("COMFYUI_API_TOKEN", "").strip()
         return {"Authorization": f"Bearer {token}"} if token else {}
 
-    def _json(self, base: str, local: bool, path: str, *, method: str = "GET", payload: dict[str, Any] | None = None, timeout: float = 30.0) -> dict[str, Any]:
+    def _json(
+        self,
+        base: str,
+        local: bool,
+        path: str,
+        *,
+        method: str = "GET",
+        payload: dict[str, Any] | None = None,
+        timeout: float = 30.0,
+    ) -> dict[str, Any]:
         url = f"{base}{path}"
         headers = self._headers()
         if not local:
@@ -1592,7 +1777,9 @@ class ComfyUIAdapter(_BaseAdapter):
                 raise CapabilityExecutionError(f"ComfyUI returned HTTP {status}")
             return data
         try:
-            response = httpx.request(method, url, json=payload, headers=headers, timeout=timeout, follow_redirects=False)
+            response = httpx.request(
+                method, url, json=payload, headers=headers, timeout=timeout, follow_redirects=False
+            )
             response.raise_for_status()
             data = response.json()
         except (httpx.HTTPError, ValueError) as exc:
@@ -1605,7 +1792,9 @@ class ComfyUIAdapter(_BaseAdapter):
         url = f"{base}{path}"
         headers = self._headers()
         if not local:
-            status, data, _ = request_bytes(url, method="GET", headers=headers, timeout=30, max_response_bytes=max_bytes)
+            status, data, _ = request_bytes(
+                url, method="GET", headers=headers, timeout=30, max_response_bytes=max_bytes
+            )
             if not 200 <= status < 300:
                 raise CapabilityExecutionError(f"ComfyUI artifact returned HTTP {status}")
             return data
@@ -1651,11 +1840,13 @@ class ComfyUIAdapter(_BaseAdapter):
                 filename = Path(str(image.get("filename", ""))).name
                 if not filename:
                     continue
-                found.append({
-                    "filename": filename,
-                    "subfolder": str(image.get("subfolder", "")),
-                    "type": str(image.get("type", "output")),
-                })
+                found.append(
+                    {
+                        "filename": filename,
+                        "subfolder": str(image.get("subfolder", "")),
+                        "type": str(image.get("type", "output")),
+                    }
+                )
         return found
 
     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
@@ -1667,7 +1858,9 @@ class ComfyUIAdapter(_BaseAdapter):
             if not isinstance(workflow, dict) or not workflow:
                 raise GovernanceError("ComfyUI workflow operation requires an API-format workflow object")
             client_id = str(params.get("client_id", uuid.uuid4()))
-            payload = self._json(base, local, "/prompt", method="POST", payload={"prompt": workflow, "client_id": client_id}, timeout=30)
+            payload = self._json(
+                base, local, "/prompt", method="POST", payload={"prompt": workflow, "client_id": client_id}, timeout=30
+            )
             prompt_id = str(payload.get("prompt_id", "")).strip()
             if not prompt_id:
                 raise CapabilityExecutionError("ComfyUI returned no prompt_id")
@@ -1703,7 +1896,8 @@ class ComfyUIAdapter(_BaseAdapter):
                 artifacts.append(_artifact(destination))
                 downloaded.append(str(destination))
             return self._result(
-                operation, started=started,
+                operation,
+                started=started,
                 output={
                     "prompt_id": prompt_id,
                     "client_id": client_id,
@@ -1746,7 +1940,9 @@ class MCPAdapter(_BaseAdapter):
         if operation == "call_tool":
             enabled = os.environ.get("AMAURA_MCP_TOOL_CALLS_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
             if not enabled:
-                raise GovernanceError("MCP tool calls are disabled; set AMAURA_MCP_TOOL_CALLS_ENABLED=1 only for a founder-approved integration")
+                raise GovernanceError(
+                    "MCP tool calls are disabled; set AMAURA_MCP_TOOL_CALLS_ENABLED=1 only for a founder-approved integration"
+                )
             if not bool(params.get("founder_approved", False)):
                 raise GovernanceError("MCP tool calls require founder_approved=true")
         server_id = str(params.get("server_id", "")).strip()
@@ -1802,7 +1998,11 @@ class LangfuseAdapter(_BaseAdapter):
     )
 
     def available(self) -> tuple[bool, str]:
-        ok = _module_available("langfuse") and bool(os.environ.get("LANGFUSE_PUBLIC_KEY")) and bool(os.environ.get("LANGFUSE_SECRET_KEY"))
+        ok = (
+            _module_available("langfuse")
+            and bool(os.environ.get("LANGFUSE_PUBLIC_KEY"))
+            and bool(os.environ.get("LANGFUSE_SECRET_KEY"))
+        )
         return ok, "configured" if ok else "Langfuse SDK/credentials are not configured"
 
     def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
@@ -1867,8 +2067,13 @@ class AntigravityAdapter(_BaseAdapter):
         }
         output_path = _safe_local_output(str(params.get("output_path", ".amaura-antigravity-handoff.json")))
         output_path.write_text(json.dumps(packet, indent=2, sort_keys=True), encoding="utf-8")
-        return self._result(operation, started=started, output={"packet": packet, "output_path": str(output_path)}, artifacts=[_artifact(output_path)])
-import re
+        return self._result(
+            operation,
+            started=started,
+            output={"packet": packet, "output_path": str(output_path)},
+            artifacts=[_artifact(output_path)],
+        )
+
 
 class MacOSAppAdapter(_BaseAdapter):
     descriptor = CapabilityDescriptor(
@@ -1885,9 +2090,23 @@ class MacOSAppAdapter(_BaseAdapter):
     )
 
     ALLOWED_APPS = {
-        "safari", "finder", "spotify", "terminal", "iterm", "iterm2", 
-        "music", "calculator", "notes", "mail", "messages", "textedit",
-        "system settings", "calendar", "photos", "slack", "discord"
+        "safari",
+        "finder",
+        "spotify",
+        "terminal",
+        "iterm",
+        "iterm2",
+        "music",
+        "calculator",
+        "notes",
+        "mail",
+        "messages",
+        "textedit",
+        "system settings",
+        "calendar",
+        "photos",
+        "slack",
+        "discord",
     }
 
     def available(self) -> tuple[bool, str]:
@@ -1900,28 +2119,24 @@ class MacOSAppAdapter(_BaseAdapter):
         available, reason = self.available()
         if not available:
             raise CapabilityUnavailable(reason)
-        
+
         raw_app_name = str(params.get("name", "")).strip()
         if not raw_app_name:
             raise GovernanceError("Application name is required")
-            
+
         app_name = raw_app_name.lower()
         if app_name not in self.ALLOWED_APPS:
             raise GovernanceError(f"Application '{raw_app_name}' is not in the strict allowlist.")
-            
+
         if not re.match(r"^[A-Za-z0-9 -]{1,30}$", raw_app_name):
             raise GovernanceError(f"Application name '{raw_app_name}' failed security validation.")
-            
+
         started = time.monotonic()
-        
+
         try:
             if operation in ("open", "activate"):
                 result = subprocess.run(
-                    ["open", "-a", raw_app_name],
-                    capture_output=True,
-                    text=True,
-                    timeout=10,
-                    shell=False
+                    ["open", "-a", raw_app_name], capture_output=True, text=True, timeout=10, shell=False
                 )
                 if result.returncode != 0:
                     raise CapabilityExecutionError(f"Failed to open '{raw_app_name}': {result.stderr.strip()}")
@@ -1929,35 +2144,26 @@ class MacOSAppAdapter(_BaseAdapter):
                 # osa script tell app to quit safely
                 script = f'tell application "{raw_app_name}" to quit'
                 result = subprocess.run(
-                    ["osascript", "-e", script],
-                    capture_output=True,
-                    text=True,
-                    timeout=10,
-                    shell=False
+                    ["osascript", "-e", script], capture_output=True, text=True, timeout=10, shell=False
                 )
                 if result.returncode != 0:
                     raise CapabilityExecutionError(f"Failed to close '{raw_app_name}': {result.stderr.strip()}")
-                    
+
             # Verify app status
             check = subprocess.run(
-                ["pgrep", "-ix", raw_app_name],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                shell=False
+                ["pgrep", "-ix", raw_app_name], capture_output=True, text=True, timeout=5, shell=False
             )
             is_running = check.returncode == 0
-            
-            return self._result(
-                operation, 
-                started=started, 
-                output={"app": raw_app_name, "is_running": is_running, "returncode": result.returncode}
-            )
-        except subprocess.TimeoutExpired:
-            raise CapabilityExecutionError(f"Command timed out for application '{raw_app_name}'.")
-        except Exception as e:
-            raise CapabilityExecutionError(f"Execution error for application '{raw_app_name}': {e}")
 
+            return self._result(
+                operation,
+                started=started,
+                output={"app": raw_app_name, "is_running": is_running, "returncode": result.returncode},
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise CapabilityExecutionError(f"Command timed out for application '{raw_app_name}'.") from exc
+        except Exception as e:
+            raise CapabilityExecutionError(f"Execution error for application '{raw_app_name}': {e}") from e
 
 
 ADAPTER_TYPES: tuple[type[_BaseAdapter], ...] = (
@@ -2007,7 +2213,10 @@ CAPABILITY_OPERATION_CONTRACTS: dict[str, dict[str, dict[str, tuple[str, ...]]]]
         "render_page": {"required": ("source_path", "output_path"), "optional": ("page", "scale")},
     },
     "paddleocr": {
-        "ocr": {"required": ("source_path",), "optional": ("output_path", "lang", "device", "cpu_threads", "ocr_version")},
+        "ocr": {
+            "required": ("source_path",),
+            "optional": ("output_path", "lang", "device", "cpu_threads", "ocr_version"),
+        },
     },
     "llamaindex": {
         "chunk": {"required": ("text",), "optional": ("chunk_size", "chunk_overlap")},
@@ -2017,14 +2226,29 @@ CAPABILITY_OPERATION_CONTRACTS: dict[str, dict[str, dict[str, tuple[str, ...]]]]
         "query": {"required": ("query",), "optional": ("collection", "limit")},
     },
     "faster_whisper": {
-        "transcribe": {"required": ("source_path",), "optional": ("model", "device", "compute_type", "cpu_threads", "beam_size", "vad_filter", "word_timestamps", "language")},
+        "transcribe": {
+            "required": ("source_path",),
+            "optional": (
+                "model",
+                "device",
+                "compute_type",
+                "cpu_threads",
+                "beam_size",
+                "vad_filter",
+                "word_timestamps",
+                "language",
+            ),
+        },
     },
     "kokoro": {
         "synthesize": {"required": ("text", "output_path"), "optional": ("lang_code", "voice", "speed")},
     },
     "ffmpeg": {
         "probe": {"required": ("source_path",), "optional": ()},
-        "transcode": {"required": ("source_path", "output_path"), "optional": ("video_codec", "audio_codec", "width", "height", "timeout")},
+        "transcode": {
+            "required": ("source_path", "output_path"),
+            "optional": ("video_codec", "audio_codec", "width", "height", "timeout"),
+        },
         "burn_subtitles": {"required": ("source_path", "subtitle_path", "output_path"), "optional": ("timeout",)},
         "concat": {"required": ("source_paths", "output_path"), "optional": ("timeout",)},
         "mux_audio": {"required": ("source_path", "audio_path", "output_path"), "optional": ("audio_codec", "timeout")},
@@ -2040,12 +2264,18 @@ CAPABILITY_OPERATION_CONTRACTS: dict[str, dict[str, dict[str, tuple[str, ...]]]]
     },
     "yt_dlp": {
         "metadata": {"required": ("url",), "optional": ("timeout",)},
-        "download": {"required": ("url", "output_path", "rights_confirmed"), "optional": ("mode", "audio_format", "max_filesize_mb", "timeout")},
+        "download": {
+            "required": ("url", "output_path", "rights_confirmed"),
+            "optional": ("mode", "audio_format", "max_filesize_mb", "timeout"),
+        },
     },
     "comfyui": {
         "queue_workflow": {"required": ("workflow",), "optional": ("client_id",)},
         "history": {"required": ("prompt_id",), "optional": ()},
-        "run_workflow": {"required": ("workflow", "output_dir"), "optional": ("client_id", "timeout", "poll_interval", "max_artifacts")},
+        "run_workflow": {
+            "required": ("workflow", "output_dir"),
+            "optional": ("client_id", "timeout", "poll_interval", "max_artifacts"),
+        },
     },
     "mcp": {
         "list_tools": {"required": ("server_id",), "optional": ()},
@@ -2056,31 +2286,55 @@ CAPABILITY_OPERATION_CONTRACTS: dict[str, dict[str, dict[str, tuple[str, ...]]]]
         "event": {"required": ("name",), "optional": ("metadata",)},
     },
     "antigravity": {
-        "prepare_handoff": {"required": ("repo_path", "objective", "output_path"), "optional": ("constraints", "acceptance_criteria", "test_commands", "context")},
+        "prepare_handoff": {
+            "required": ("repo_path", "objective", "output_path"),
+            "optional": ("constraints", "acceptance_criteria", "test_commands", "context"),
+        },
     },
 }
 
 
-ISOLATED_PYTHON_CAPABILITIES = frozenset({
-    "playwright", "crawl4ai", "browser_use", "docling", "paddleocr",
-    "qdrant_fastembed", "faster_whisper", "kokoro"
-})
+ISOLATED_PYTHON_CAPABILITIES = frozenset(
+    {"playwright", "crawl4ai", "browser_use", "docling", "paddleocr", "qdrant_fastembed", "faster_whisper", "kokoro"}
+)
 
-_BASE_WORKER_ENV = frozenset({
-    "PATH", "HOME", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL", "LC_CTYPE",
-    "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE",
-    "HF_HOME", "HF_HUB_CACHE", "TRANSFORMERS_CACHE", "XDG_CACHE_HOME",
-})
+_BASE_WORKER_ENV = frozenset(
+    {
+        "PATH",
+        "HOME",
+        "TMPDIR",
+        "TMP",
+        "TEMP",
+        "LANG",
+        "LC_ALL",
+        "LC_CTYPE",
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "REQUESTS_CA_BUNDLE",
+        "CURL_CA_BUNDLE",
+        "HF_HOME",
+        "HF_HUB_CACHE",
+        "TRANSFORMERS_CACHE",
+        "XDG_CACHE_HOME",
+    }
+)
 
 CAPABILITY_ENV_ALLOWLIST: dict[str, frozenset[str]] = {
     "playwright": frozenset({"PLAYWRIGHT_BROWSERS_PATH", "AMAURA_BROWSER_MAX_RESPONSE_MB"}),
     "crawl4ai": frozenset({"PLAYWRIGHT_BROWSERS_PATH", "AMAURA_BROWSER_MAX_RESPONSE_MB"}),
-    "browser_use": frozenset({
-        "AMAURA_BROWSER_USE_AGENT_ENABLED", "AMAURA_BROWSER_USE_MODEL",
-        "AMAURA_BROWSER_USE_ALLOW_PAID", "GOOGLE_API_KEY", "GROQ_API_KEY",
-        "CEREBRAS_API_KEY", "OPENROUTER_API_KEY", "OLLAMA_HOST",
-        "PLAYWRIGHT_BROWSERS_PATH",
-    }),
+    "browser_use": frozenset(
+        {
+            "AMAURA_BROWSER_USE_AGENT_ENABLED",
+            "AMAURA_BROWSER_USE_MODEL",
+            "AMAURA_BROWSER_USE_ALLOW_PAID",
+            "GOOGLE_API_KEY",
+            "GROQ_API_KEY",
+            "CEREBRAS_API_KEY",
+            "OPENROUTER_API_KEY",
+            "OLLAMA_HOST",
+            "PLAYWRIGHT_BROWSERS_PATH",
+        }
+    ),
     "docling": frozenset({"DOCLING_ARTIFACTS_PATH", "DOCLING_CACHE_DIR"}),
     "paddleocr": frozenset({"PADDLE_HOME", "PADDLE_PDX_CACHE_HOME"}),
     "qdrant_fastembed": frozenset({"QDRANT_URL", "QDRANT_API_KEY", "AMAURA_QDRANT_PATH", "FASTEMBED_CACHE_PATH"}),
@@ -2130,11 +2384,11 @@ def _cross_process_heavy_lock(timeout: float):
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 acquired = True
                 break
-            except BlockingIOError:
+            except BlockingIOError as exc:
                 if time.monotonic() >= deadline:
                     raise CapabilityExecutionError(
                         "Another heavy Amaura capability is already running; retry after it completes"
-                    )
+                    ) from exc
                 time.sleep(0.1)
         yield
     finally:
@@ -2142,8 +2396,6 @@ def _cross_process_heavy_lock(timeout: float):
             with contextlib.suppress(OSError):
                 fcntl.flock(fd, fcntl.LOCK_UN)
         os.close(fd)
-
-
 
 
 class CapabilityScheduler:
@@ -2230,23 +2482,39 @@ class CapabilityScheduler:
 
 
 _MODULE_BY_CAPABILITY = {
-    "playwright": "playwright", "crawl4ai": "crawl4ai", "browser_use": "browser_use",
-    "docling": "docling", "pymupdf": "fitz", "paddleocr": "paddleocr",
-    "llamaindex": "llama_index.core", "qdrant_fastembed": "qdrant_client",
-    "faster_whisper": "faster_whisper", "kokoro": "kokoro", "mcp": "mcp",
+    "playwright": "playwright",
+    "crawl4ai": "crawl4ai",
+    "browser_use": "browser_use",
+    "docling": "docling",
+    "pymupdf": "fitz",
+    "paddleocr": "paddleocr",
+    "llamaindex": "llama_index.core",
+    "qdrant_fastembed": "qdrant_client",
+    "faster_whisper": "faster_whisper",
+    "kokoro": "kokoro",
+    "mcp": "mcp",
     "langfuse": "langfuse",
 }
 
 _PACKAGE_BY_CAPABILITY = {
-    "playwright": "playwright", "crawl4ai": "crawl4ai", "browser_use": "browser-use",
-    "docling": "docling", "pymupdf": "PyMuPDF", "paddleocr": "paddleocr",
-    "llamaindex": "llama-index-core", "qdrant_fastembed": "qdrant-client",
-    "faster_whisper": "faster-whisper", "kokoro": "kokoro", "mcp": "mcp",
+    "playwright": "playwright",
+    "crawl4ai": "crawl4ai",
+    "browser_use": "browser-use",
+    "docling": "docling",
+    "pymupdf": "PyMuPDF",
+    "paddleocr": "paddleocr",
+    "llamaindex": "llama-index-core",
+    "qdrant_fastembed": "qdrant-client",
+    "faster_whisper": "faster-whisper",
+    "kokoro": "kokoro",
+    "mcp": "mcp",
     "langfuse": "langfuse",
 }
 
 _EXECUTABLE_BY_CAPABILITY = {
-    "ffmpeg": "ffmpeg", "remotion": "node", "yt_dlp": "yt-dlp",
+    "ffmpeg": "ffmpeg",
+    "remotion": "node",
+    "yt_dlp": "yt-dlp",
 }
 
 
@@ -2288,12 +2556,14 @@ def _deep_probe(key: str, adapter: CapabilityAdapter) -> tuple[bool, str]:
     try:
         if key == "playwright":
             from playwright.sync_api import sync_playwright  # type: ignore
+
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
                 browser.close()
             return True, "Chromium launched and exited successfully"
         if key == "pymupdf":
             import fitz  # type: ignore
+
             document = fitz.open()
             document.close()
             return True, "PyMuPDF opened an in-memory document"
@@ -2302,24 +2572,47 @@ def _deep_probe(key: str, adapter: CapabilityAdapter) -> tuple[bool, str]:
             if not executable:
                 return False, "ffmpeg executable is missing"
             proc = _run([executable, "-version"], timeout=10, max_rss_mb=256)
-            return proc.returncode == 0, "ffmpeg -version succeeded" if proc.returncode == 0 else _bounded_text(proc.stderr, 500)
+            return proc.returncode == 0, "ffmpeg -version succeeded" if proc.returncode == 0 else _bounded_text(
+                proc.stderr, 500
+            )
         if key == "image_tools":
             executable = shutil.which("magick") or shutil.which("vipsthumbnail")
             if not executable:
                 return False, "image executable is missing"
             proc = _run([executable, "-version"], timeout=10, max_rss_mb=256)
-            return proc.returncode == 0, "image tool version probe succeeded" if proc.returncode == 0 else _bounded_text(proc.stderr, 500)
+            return (
+                proc.returncode == 0,
+                "image tool version probe succeeded" if proc.returncode == 0 else _bounded_text(proc.stderr, 500),
+            )
         if key == "llamaindex":
             from llama_index.core import Document  # type: ignore
             from llama_index.core.node_parser import SentenceSplitter  # type: ignore
-            nodes = SentenceSplitter(chunk_size=128, chunk_overlap=0).get_nodes_from_documents([Document(text="Amaura probe sentence.")])
+
+            nodes = SentenceSplitter(chunk_size=128, chunk_overlap=0).get_nodes_from_documents(
+                [Document(text="Amaura probe sentence.")]
+            )
             return bool(nodes), "LlamaIndex chunk smoke succeeded"
         if key == "comfyui":
             base, local = adapter._base()  # type: ignore[attr-defined]
             adapter._json(base, local, "/system_stats", timeout=10)  # type: ignore[attr-defined]
             return True, "ComfyUI /system_stats succeeded"
-        if key in {"crawl4ai", "browser_use", "searxng", "qdrant_fastembed", "faster_whisper", "kokoro", "paddleocr", "docling", "remotion", "mcp", "langfuse"}:
-            return False, "Installed/configured, but execution readiness requires an explicit fixture/service/model-specific smoke job"
+        if key in {
+            "crawl4ai",
+            "browser_use",
+            "searxng",
+            "qdrant_fastembed",
+            "faster_whisper",
+            "kokoro",
+            "paddleocr",
+            "docling",
+            "remotion",
+            "mcp",
+            "langfuse",
+        }:
+            return (
+                False,
+                "Installed/configured, but execution readiness requires an explicit fixture/service/model-specific smoke job",
+            )
         if key == "antigravity":
             return True, "Structured handoff adapter is ready"
         return False, "No deep probe is defined"
@@ -2345,18 +2638,20 @@ class CapabilityRuntime:
             healthy, verification = _deep_probe(key, adapter)
             execution_ready = bool(healthy)
         row = asdict(adapter.descriptor)
-        row.update({
-            "installed": bool(installed),
-            "configured": bool(available),
-            "healthy": healthy,
-            "execution_ready": bool(execution_ready),
-            "verified_at": time.time() if deep else None,
-            "version": _package_version(key),
-            # Backward-compatible field, now explicitly means configured/admissible prerequisites.
-            "available": bool(available),
-            "reason": reason,
-            "verification": verification,
-        })
+        row.update(
+            {
+                "installed": bool(installed),
+                "configured": bool(available),
+                "healthy": healthy,
+                "execution_ready": bool(execution_ready),
+                "verified_at": time.time() if deep else None,
+                "version": _package_version(key),
+                # Backward-compatible field, now explicitly means configured/admissible prerequisites.
+                "available": bool(available),
+                "reason": reason,
+                "verification": verification,
+            }
+        )
         return row
 
     def inventory(self, *, deep: bool = False) -> list[dict[str, Any]]:
@@ -2429,14 +2724,27 @@ class CapabilityRuntime:
                 ("antigravity", "prepare_handoff", "Create the founder-reviewed engineering packet for Antigravity."),
             ],
             "observability": [
-                ("langfuse", "event", "Mirror non-authoritative execution telemetry while Amaura audit remains source of truth."),
+                (
+                    "langfuse",
+                    "event",
+                    "Mirror non-authoritative execution telemetry while Amaura audit remains source of truth.",
+                ),
             ],
         }
         aliases = {
-            "research": "web_research", "browser_research": "web_research", "lead": "lead_research",
-            "pdf": "document_ingest", "documents": "document_ingest", "rag": "document_ingest",
-            "memory": "knowledge_query", "audio": "voiceover", "short": "reel", "shorts": "reel",
-            "video": "youtube_video", "image": "generate_image", "coding": "engineering",
+            "research": "web_research",
+            "browser_research": "web_research",
+            "lead": "lead_research",
+            "pdf": "document_ingest",
+            "documents": "document_ingest",
+            "rag": "document_ingest",
+            "memory": "knowledge_query",
+            "audio": "voiceover",
+            "short": "reel",
+            "shorts": "reel",
+            "video": "youtube_video",
+            "image": "generate_image",
+            "coding": "engineering",
         }
         key = aliases.get(key, key)
         if key not in pipelines:
@@ -2445,12 +2753,18 @@ class CapabilityRuntime:
         for capability, operation, purpose in pipelines[key]:
             adapter = self.adapters[capability]
             available, reason = adapter.available()
-            steps.append({
-                "capability": capability, "operation": operation, "purpose": purpose,
-                "available": available, "availability_reason": reason,
-                "ram_mb": adapter.descriptor.ram_mb, "heavy": adapter.descriptor.heavy,
-                "contract": CAPABILITY_OPERATION_CONTRACTS.get(capability, {}).get(operation, {}),
-            })
+            steps.append(
+                {
+                    "capability": capability,
+                    "operation": operation,
+                    "purpose": purpose,
+                    "available": available,
+                    "availability_reason": reason,
+                    "ram_mb": adapter.descriptor.ram_mb,
+                    "heavy": adapter.descriptor.heavy,
+                    "contract": CAPABILITY_OPERATION_CONTRACTS.get(capability, {}).get(operation, {}),
+                }
+            )
         return {
             "intent": key,
             "steps": steps,
@@ -2480,8 +2794,13 @@ class CapabilityRuntime:
             timeout = max(30, min(int(params.get("timeout", 1800)), 3600))
             proc = _run(
                 [
-                    sys.executable, "-m", "jarvis.amaura.capability_worker",
-                    "--request", str(request_path), "--response", str(response_path),
+                    sys.executable,
+                    "-m",
+                    "jarvis.amaura.capability_worker",
+                    "--request",
+                    str(request_path),
+                    "--response",
+                    str(response_path),
                 ],
                 cwd=root,
                 timeout=timeout,
@@ -2521,16 +2840,15 @@ class CapabilityRuntime:
         contract = CAPABILITY_OPERATION_CONTRACTS.get(key, {}).get(operation)
         if contract is None:
             raise GovernanceError(f"Unsupported capability operation: {key}/{operation}")
-        missing = [name for name in contract.get("required", ()) if name not in params or params.get(name) in (None, "")]
+        missing = [
+            name for name in contract.get("required", ()) if name not in params or params.get(name) in (None, "")
+        ]
         if missing:
             raise GovernanceError(f"{key}/{operation} is missing required params: {', '.join(missing)}")
         wait_seconds = max(0.1, min(float(params.get("scheduler_wait_seconds", 120.0)), 300.0))
         with self.scheduler.reserve(adapter.descriptor, timeout=wait_seconds):
             try:
-                isolate = (
-                    key in ISOLATED_PYTHON_CAPABILITIES
-                    and os.environ.get("AMAURA_CAPABILITY_WORKER", "0") != "1"
-                )
+                isolate = key in ISOLATED_PYTHON_CAPABILITIES and os.environ.get("AMAURA_CAPABILITY_WORKER", "0") != "1"
                 if isolate:
                     return self._execute_isolated(key, operation, params)
                 return adapter.execute(operation, params).to_dict()

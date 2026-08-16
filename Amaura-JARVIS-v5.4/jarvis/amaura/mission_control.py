@@ -108,9 +108,7 @@ class MissionControl:
             raise GovernanceError(f"Objective workflow requires input(s): {', '.join(missing)}")
         workflow_budget = sum(step.budget_cents for step in workflow.steps)
         if budget_cents and workflow_budget > budget_cents:
-            raise GovernanceError(
-                f"Objective budget {budget_cents}c is below workflow maximum {workflow_budget}c"
-            )
+            raise GovernanceError(f"Objective budget {budget_cents}c is below workflow maximum {workflow_budget}c")
 
         objective_id = _id("obj")
         created = self.control.store.create_objective(
@@ -288,9 +286,7 @@ class MissionControl:
 
             key = _cadence_key(snapshot["cadence"], now)
             workflow = get_workflow(snapshot["workflow_key"])
-            if self.control.store.get_control(
-                f"autonomy.department.{workflow.department}", "enabled"
-            ) != "enabled":
+            if self.control.store.get_control(f"autonomy.department.{workflow.department}", "enabled") != "enabled":
                 continue
             workflow_budget = sum(step.budget_cents for step in workflow.steps)
             objective_cap = int(snapshot["budget_cents"] or workflow_budget)
@@ -313,23 +309,16 @@ class MissionControl:
                     continue
 
                 programmes = self._programmes_for_objective(objective["id"])
-                if any(
-                    (item.get("metadata") or {}).get("inputs", {}).get("cadence_key") == key
-                    for item in programmes
-                ):
+                if any((item.get("metadata") or {}).get("inputs", {}).get("cadence_key") == key for item in programmes):
                     self.control.store.update_objective(
                         objective["id"], last_planned_key=key, last_planned_at=now.isoformat()
                     )
                     continue
-                active_count = sum(
-                    item["state"] not in _TERMINAL_PROGRAMME_STATES for item in programmes
-                )
+                active_count = sum(item["state"] not in _TERMINAL_PROGRAMME_STATES for item in programmes)
                 if active_count >= int(objective["max_active_programmes"]):
                     continue
 
-                already_reserved = self.control.store.objective_cadence_budget_for_date(
-                    now.date().isoformat()
-                )
+                already_reserved = self.control.store.objective_cadence_budget_for_date(now.date().isoformat())
                 if daily_budget_cap and already_reserved + workflow_budget > daily_budget_cap:
                     continue
                 claimed = self.control.store.claim_objective_cadence(
@@ -360,9 +349,7 @@ class MissionControl:
                     inputs=inputs,
                 )
                 programme_id = programme["programme"]["id"]
-                self.control.store.complete_objective_cadence(
-                    objective["id"], key, programme_id=programme_id
-                )
+                self.control.store.complete_objective_cadence(objective["id"], key, programme_id=programme_id)
                 self.control.store.update_objective(
                     objective["id"], last_planned_key=key, last_planned_at=now.isoformat()
                 )
@@ -393,9 +380,7 @@ class MissionControl:
         """
         updates: list[dict[str, Any]] = []
         limit = max(1, min(int(max_updates), 1000))
-        for run in self.control.store.list_objective_cadence_runs(
-            status="created", limit=limit
-        ):
+        for run in self.control.store.list_objective_cadence_runs(status="created", limit=limit):
             programme_id = str(run.get("programme_id") or "")
             if not programme_id:
                 continue
@@ -411,10 +396,8 @@ class MissionControl:
             related = [
                 item
                 for item in self.control.store.list_work_items(limit=5000)
-                if (item.get("metadata") or {}).get("inputs", {}).get("objective_id")
-                == objective_id
-                and (item.get("metadata") or {}).get("inputs", {}).get("cadence_key")
-                == cadence_key
+                if (item.get("metadata") or {}).get("inputs", {}).get("objective_id") == objective_id
+                and (item.get("metadata") or {}).get("inputs", {}).get("cadence_key") == cadence_key
             ]
             task_evidence = [
                 {
@@ -454,9 +437,7 @@ class MissionControl:
 
             result: dict[str, Any] | None = None
             with self.control.store.atomic_block():
-                current_run = self.control.store.get_objective_cadence_run(
-                    objective_id, cadence_key
-                )
+                current_run = self.control.store.get_objective_cadence_run(objective_id, cadence_key)
                 if not current_run or current_run["status"] != "created":
                     continue
                 objective = self.control.store.get_objective(objective_id)
@@ -526,19 +507,13 @@ class MissionControl:
                     **objective,
                     "progress_percent": progress,
                     "programme_count": len(programmes),
-                    "active_programmes": sum(
-                        item["state"] not in _TERMINAL_PROGRAMME_STATES
-                        for item in programmes
-                    ),
+                    "active_programmes": sum(item["state"] not in _TERMINAL_PROGRAMME_STATES for item in programmes),
                 }
             )
         return {
             "autopilot_enabled": self.control.store.get_control("autopilot_enabled", "1") == "1",
             "objectives": rows,
-            "counts": {
-                status: sum(item["status"] == status for item in rows)
-                for status in sorted(OBJECTIVE_STATUSES)
-            },
+            "counts": {status: sum(item["status"] == status for item in rows) for status in sorted(OBJECTIVE_STATUSES)},
         }
 
     def set_autopilot(self, enabled: bool, *, reason: str, actor: str | None = None) -> dict[str, Any]:

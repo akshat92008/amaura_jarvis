@@ -7,6 +7,7 @@ The capability implementations remain reusable adapters, but they no longer
 compete to reinterpret the same user sentence.  Filesystem mutations are denied
 unless the graph proves an explicit mutation action, output role and payload.
 """
+
 from __future__ import annotations
 
 import ast
@@ -17,12 +18,12 @@ import operator
 import re
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
 from typing import Any
 
 
-class SemanticAction(str, Enum):
+class SemanticAction(StrEnum):
     UNKNOWN = "unknown"
     EXACT_LITERAL = "exact_literal"
     FILE_READ = "file_read"
@@ -37,7 +38,7 @@ class SemanticAction(str, Enum):
     POLICY_REFUSAL = "policy_refusal"
 
 
-class SemanticPathRole(str, Enum):
+class SemanticPathRole(StrEnum):
     INPUT = "input"
     SECONDARY_INPUT = "secondary_input"
     OUTPUT = "output"
@@ -112,8 +113,36 @@ _MUTATING_TOOLS = {
 }
 
 _STOP_WORDS = {
-    "the", "a", "an", "this", "that", "it", "its", "to", "in", "into", "at", "from", "for", "with", "by", "of",
-    "as", "is", "be", "are", "was", "were", "and", "or", "but", "so", "if", "only", "exactly", "verbatim",
+    "the",
+    "a",
+    "an",
+    "this",
+    "that",
+    "it",
+    "its",
+    "to",
+    "in",
+    "into",
+    "at",
+    "from",
+    "for",
+    "with",
+    "by",
+    "of",
+    "as",
+    "is",
+    "be",
+    "are",
+    "was",
+    "were",
+    "and",
+    "or",
+    "but",
+    "so",
+    "if",
+    "only",
+    "exactly",
+    "verbatim",
 }
 
 
@@ -165,13 +194,27 @@ def _response_mode(text: str) -> str:
     # Raw-file contracts outrank generic scalar wording such as "only the contents".
     if "exact raw" in lower or "byte-for-byte" in lower or "exact file contents" in lower:
         return "EXACT_RAW"
-    if "raw file" in lower or "raw contents" in lower or "without line numbers" in lower or "just the contents" in lower:
+    if (
+        "raw file" in lower
+        or "raw contents" in lower
+        or "without line numbers" in lower
+        or "just the contents" in lower
+    ):
         return "RAW"
-    if re.search(r"\b(?:reply|respond|return|output|answer|give)\b.*\bonly\b.*\bnumber\b", lower) or "number only" in lower:
+    if (
+        re.search(r"\b(?:reply|respond|return|output|answer|give)\b.*\bonly\b.*\bnumber\b", lower)
+        or "number only" in lower
+    ):
         return "NUMBER_ONLY"
     if (
-        re.search(r"\b(?:reply|respond|return|output|answer|give)\b.*\b(?:only|just)\b.*\b(?:value|text|title|content|token|marker|code)\b", lower)
-        or re.search(r"\b(?:reply|respond|return|output|answer|give)\b\s+(?:with\s+)?(?:only|just)\s+(?:the\s+)?(?:value|text|title|content|token|marker|code)\b", lower)
+        re.search(
+            r"\b(?:reply|respond|return|output|answer|give)\b.*\b(?:only|just)\b.*\b(?:value|text|title|content|token|marker|code)\b",
+            lower,
+        )
+        or re.search(
+            r"\b(?:reply|respond|return|output|answer|give)\b\s+(?:with\s+)?(?:only|just)\s+(?:the\s+)?(?:value|text|title|content|token|marker|code)\b",
+            lower,
+        )
         or any(phrase in lower for phrase in ("value only", "title only", "text only", "content only"))
     ):
         return "VALUE_ONLY"
@@ -189,14 +232,38 @@ def _execution_dependency(text: str, known_extensions: tuple[str, ...]) -> bool:
     if "://" in text:
         return True
     paths = extract_paths(text, known_extensions)
-    if paths and any(phrase in lower for phrase in (
-        "from the file", "in the file", "file contents", "contents of", "raw file", "text stored in", "value in",
-        "number in", "read ", "open ", "load ", "repository", "repo", "codebase",
-    )):
+    if paths and any(
+        phrase in lower
+        for phrase in (
+            "from the file",
+            "in the file",
+            "file contents",
+            "contents of",
+            "raw file",
+            "text stored in",
+            "value in",
+            "number in",
+            "read ",
+            "open ",
+            "load ",
+            "repository",
+            "repo",
+            "codebase",
+        )
+    ):
         return True
-    return any(phrase in lower for phrase in (
-        "from memory", "stored in memory", "remembered", "recalled", "from the browser", "from the page", "css selector",
-    ))
+    return any(
+        phrase in lower
+        for phrase in (
+            "from memory",
+            "stored in memory",
+            "remembered",
+            "recalled",
+            "from the browser",
+            "from the page",
+            "css selector",
+        )
+    )
 
 
 def _parse_exact_literal(text: str, known_extensions: tuple[str, ...]) -> str | None:
@@ -205,10 +272,16 @@ def _parse_exact_literal(text: str, known_extensions: tuple[str, ...]) -> str | 
     if not clean or _execution_dependency(clean, known_extensions):
         return None
     masked = _mask_quoted(clean).lower()
-    exact_signal = bool(re.search(
-        r"\b(?:reply|respond|return|say|echo|repeat|print|output|answer)\b[^\n]{0,60}\b(?:only|exactly|verbatim|nothing\s+(?:else|more))\b",
-        masked,
-    )) or bool(re.search(r"\b(?:make|set)\s+(?:the\s+)?(?:response|reply|output|answer)\s+(?:equal\s+to|equals?|to|be)\b", masked))
+    exact_signal = bool(
+        re.search(
+            r"\b(?:reply|respond|return|say|echo|repeat|print|output|answer)\b[^\n]{0,60}\b(?:only|exactly|verbatim|nothing\s+(?:else|more))\b",
+            masked,
+        )
+    ) or bool(
+        re.search(
+            r"\b(?:make|set)\s+(?:the\s+)?(?:response|reply|output|answer)\s+(?:equal\s+to|equals?|to|be)\b", masked
+        )
+    )
     exact_signal = exact_signal or bool(re.match(r"^\s*(?:echo|repeat)\s*[:\-]", clean, re.IGNORECASE))
     if not exact_signal:
         return None
@@ -270,7 +343,9 @@ def _write_payload_candidates(text: str, target: str) -> list[str]:
             candidates.append(match.group(1).strip())
 
     # "write <literal> to <path>" form.
-    m = re.search(r"\bwrite\s+['\"`]([^'\"`\n]*)['\"`]\s+(?:to|into)\s+['\"`]?" + re.escape(target), text, re.IGNORECASE)
+    m = re.search(
+        r"\bwrite\s+['\"`]([^'\"`\n]*)['\"`]\s+(?:to|into)\s+['\"`]?" + re.escape(target), text, re.IGNORECASE
+    )
     if m:
         candidates.append(m.group(1))
 
@@ -396,13 +471,26 @@ class SemanticParser:
         paths = extract_paths(clean, known_extensions)
 
         if any(v in lower for v in ("delete", "remove", "wipe", "destroy", "purge")) and any(
-            term in lower for term in ("without asking", "bypass", "force", "protected", "silently", "override policy", "no confirmation")
+            term in lower
+            for term in (
+                "without asking",
+                "bypass",
+                "force",
+                "protected",
+                "silently",
+                "override policy",
+                "no confirmation",
+            )
         ):
-            return SemanticRequestGraph(clean, SemanticAction.POLICY_REFUSAL, response_mode=mode, evidence=["destructive_bypass_request"])
+            return SemanticRequestGraph(
+                clean, SemanticAction.POLICY_REFUSAL, response_mode=mode, evidence=["destructive_bypass_request"]
+            )
 
         browser = _parse_browser(clean)
         if browser is not None:
-            return SemanticRequestGraph(clean, SemanticAction.BROWSER, response_mode=mode, browser=browser, evidence=["explicit_url"])
+            return SemanticRequestGraph(
+                clean, SemanticAction.BROWSER, response_mode=mode, browser=browser, evidence=["explicit_url"]
+            )
 
         arithmetic = _parse_arithmetic(clean, paths)
         if arithmetic is not None:
@@ -411,10 +499,24 @@ class SemanticParser:
                 PathBinding(arithmetic.right_path, SemanticPathRole.SECONDARY_INPUT, arithmetic.right_role),
             ]
             if arithmetic.output_path:
-                bindings.append(PathBinding(arithmetic.output_path, SemanticPathRole.OUTPUT, "explicit_result_destination"))
-            return SemanticRequestGraph(clean, SemanticAction.ARITHMETIC, mode, bindings, arithmetic=arithmetic, evidence=[arithmetic.provenance])
+                bindings.append(
+                    PathBinding(arithmetic.output_path, SemanticPathRole.OUTPUT, "explicit_result_destination")
+                )
+            return SemanticRequestGraph(
+                clean,
+                SemanticAction.ARITHMETIC,
+                mode,
+                bindings,
+                arithmetic=arithmetic,
+                evidence=[arithmetic.provenance],
+            )
 
-        inspect = bool(re.search(r"\b(?:review|inspect|diagnose|audit|analy[sz]e|trace|investigate|find\s+(?:the\s+)?bug|locate\s+(?:the\s+)?bug)\b", masked))
+        inspect = bool(
+            re.search(
+                r"\b(?:review|inspect|diagnose|audit|analy[sz]e|trace|investigate|find\s+(?:the\s+)?bug|locate\s+(?:the\s+)?bug)\b",
+                masked,
+            )
+        )
         mutating = bool(re.search(r"\b(?:write|edit|modify|delete|remove|create|save|store)\b", masked))
         if inspect and paths and not mutating:
             return SemanticRequestGraph(
@@ -443,7 +545,9 @@ class SemanticParser:
                 graph.errors.append("write request has no unambiguous explicit output path")
                 return graph
             payloads = _write_payload_candidates(clean, target)
-            explicit_empty = bool(re.search(r"\b(?:empty|zero[- ]byte|blank)\s+file\b|\bfile\s+(?:empty|blank)\b", lower))
+            explicit_empty = bool(
+                re.search(r"\b(?:empty|zero[- ]byte|blank)\s+file\b|\bfile\s+(?:empty|blank)\b", lower)
+            )
             if len(payloads) > 1:
                 graph.paths.append(PathBinding(target, SemanticPathRole.OUTPUT, "explicit_write_target"))
                 graph.errors.append("ambiguous write payload: multiple distinct payloads were provided")
@@ -456,7 +560,10 @@ class SemanticParser:
             graph.write_payload = payloads[0] if payloads else ""
             return graph
 
-        if paths and re.search(r"\b(?:list|enumerate)\b|\b(?:directory|folder)\s+(?:contents|entries|children)\b|\bwhat\s+(?:files|entries|children)\b", masked):
+        if paths and re.search(
+            r"\b(?:list|enumerate)\b|\b(?:directory|folder)\s+(?:contents|entries|children)\b|\bwhat\s+(?:files|entries|children)\b",
+            masked,
+        ):
             return SemanticRequestGraph(
                 clean,
                 SemanticAction.DIRECTORY_LIST,
@@ -465,7 +572,9 @@ class SemanticParser:
                 evidence=["directory_list_grammar"],
             )
 
-        if paths and re.search(r"\b(?:read|open|show|display|cat|fetch|view|print)\b|\b(?:contents?|text)\s+of\b", masked):
+        if paths and re.search(
+            r"\b(?:read|open|show|display|cat|fetch|view|print)\b|\b(?:contents?|text)\s+of\b", masked
+        ):
             return SemanticRequestGraph(
                 clean,
                 SemanticAction.FILE_READ,
@@ -477,7 +586,10 @@ class SemanticParser:
         if any(term in lower for term in ("from memory", "remembered", "recall", "stored in memory", "memory value")):
             return SemanticRequestGraph(clean, SemanticAction.MEMORY_RECALL, mode, evidence=["memory_recall_grammar"])
 
-        if any(term in lower for term in ("schedule", "calendar", "book an appointment", "add to calendar", "book a meeting")):
+        if any(
+            term in lower
+            for term in ("schedule", "calendar", "book an appointment", "add to calendar", "book a meeting")
+        ):
             return SemanticRequestGraph(clean, SemanticAction.CALENDAR, mode, evidence=["calendar_grammar"])
 
         return SemanticRequestGraph(clean, SemanticAction.UNKNOWN, response_mode=mode)
@@ -493,7 +605,12 @@ class EffectAuthorizer:
                 return False, frozenset(), frozenset(), "file mutation requires explicit output path and payload"
             return True, frozenset({"write_file"}), frozenset({graph.output_path}), "explicit_write"
         if graph.action == SemanticAction.ARITHMETIC and graph.arithmetic and graph.arithmetic.output_path:
-            return True, frozenset({"write_file"}), frozenset({graph.arithmetic.output_path}), "explicit_arithmetic_output"
+            return (
+                True,
+                frozenset({"write_file"}),
+                frozenset({graph.arithmetic.output_path}),
+                "explicit_arithmetic_output",
+            )
         if graph.action == SemanticAction.SCREENSHOT:
             return True, frozenset({"take_screenshot"}), frozenset({graph.output_path}), "explicit_screenshot"
         if graph.action == SemanticAction.CALENDAR:
@@ -560,10 +677,22 @@ def _execute_file_read(da: Any, graph: SemanticRequestGraph, workspace: str) -> 
             execution_type="semantic_graph",
             tool_name="read_file",
             provider="local-filesystem",
-            telemetry={"path": str(path), "value": raw, "verification_passed": True, "semantic_action": graph.action.value},
+            telemetry={
+                "path": str(path),
+                "value": raw,
+                "verification_passed": True,
+                "semantic_action": graph.action.value,
+            },
         )
     except (PermissionError, FileNotFoundError) as exc:
-        return da.DirectActionResult(False, f"File read failed: {exc}", execution_type="semantic_graph", tool_name="read_file", provider="local-filesystem", telemetry={"reason": "read_failed", "error": str(exc)})
+        return da.DirectActionResult(
+            False,
+            f"File read failed: {exc}",
+            execution_type="semantic_graph",
+            tool_name="read_file",
+            provider="local-filesystem",
+            telemetry={"reason": "read_failed", "error": str(exc)},
+        )
 
 
 def _execute_file_write(da: Any, graph: SemanticRequestGraph, workspace: str) -> Any:
@@ -586,10 +715,24 @@ def _execute_file_write(da: Any, graph: SemanticRequestGraph, workspace: str) ->
             execution_type="semantic_graph",
             tool_name="write_file",
             provider="local-filesystem",
-            telemetry={"path": str(path), "output_path": str(path), "payload": payload, "content_match": True, "verification_passed": True, "semantic_action": graph.action.value},
+            telemetry={
+                "path": str(path),
+                "output_path": str(path),
+                "payload": payload,
+                "content_match": True,
+                "verification_passed": True,
+                "semantic_action": graph.action.value,
+            },
         )
     except Exception as exc:
-        return da.DirectActionResult(False, f"File write failed: {exc}", execution_type="semantic_graph", tool_name="write_file", provider="local-filesystem", telemetry={"reason": "write_failed", "error": str(exc), "verification_passed": False})
+        return da.DirectActionResult(
+            False,
+            f"File write failed: {exc}",
+            execution_type="semantic_graph",
+            tool_name="write_file",
+            provider="local-filesystem",
+            telemetry={"reason": "write_failed", "error": str(exc), "verification_passed": False},
+        )
 
 
 def _execute_directory_list(da: Any, graph: SemanticRequestGraph, workspace: str) -> Any:
@@ -601,9 +744,28 @@ def _execute_directory_list(da: Any, graph: SemanticRequestGraph, workspace: str
         if not path.is_dir():
             raise FileNotFoundError(f"not a directory: {path_str}")
         entries = sorted(child.name for child in path.iterdir())
-        return da.DirectActionResult(True, "\n".join(entries), execution_type="semantic_graph", tool_name="list_directory", provider="local-filesystem", telemetry={"path": str(path), "value": entries, "verification_passed": True, "semantic_action": graph.action.value})
+        return da.DirectActionResult(
+            True,
+            "\n".join(entries),
+            execution_type="semantic_graph",
+            tool_name="list_directory",
+            provider="local-filesystem",
+            telemetry={
+                "path": str(path),
+                "value": entries,
+                "verification_passed": True,
+                "semantic_action": graph.action.value,
+            },
+        )
     except (PermissionError, FileNotFoundError) as exc:
-        return da.DirectActionResult(False, f"Directory list failed: {exc}", execution_type="semantic_graph", tool_name="list_directory", provider="local-filesystem", telemetry={"reason": "list_failed", "error": str(exc)})
+        return da.DirectActionResult(
+            False,
+            f"Directory list failed: {exc}",
+            execution_type="semantic_graph",
+            tool_name="list_directory",
+            provider="local-filesystem",
+            telemetry={"reason": "list_failed", "error": str(exc)},
+        )
 
 
 def _execute_arithmetic(da: Any, graph: SemanticRequestGraph, workspace: str) -> Any:
@@ -643,13 +805,25 @@ def _execute_arithmetic(da: Any, graph: SemanticRequestGraph, workspace: str) ->
         if plan.output_path:
             with da.tool_workspace(ws):
                 output = da.resolve_workspace_path(plan.output_path, must_exist=False)
-                tool_res = da.parse_tool_result(da.execute_tool("write_file", {"path": str(output), "content": rendered}))
+                tool_res = da.parse_tool_result(
+                    da.execute_tool("write_file", {"path": str(output), "content": rendered})
+                )
             if not tool_res.ok:
                 raise RuntimeError(tool_res.error or "write tool failed")
             observed = output.read_text(encoding="utf-8", errors="replace")
             # Independent semantic verification: recompute from role-bound operands,
             # then compare that postcondition to the persisted value.
-            expected = str(_normalize_number(left + right if plan.operation == "add" else left - right if plan.operation == "subtract" else left * right if plan.operation == "multiply" else left / right))
+            expected = str(
+                _normalize_number(
+                    left + right
+                    if plan.operation == "add"
+                    else left - right
+                    if plan.operation == "subtract"
+                    else left * right
+                    if plan.operation == "multiply"
+                    else left / right
+                )
+            )
             if observed != expected:
                 raise RuntimeError(f"semantic postcondition failed: expected {expected}, observed {observed}")
             output_msg = f"Successfully executed {plan.operation} and verified {output}."
@@ -676,7 +850,14 @@ def _execute_arithmetic(da: Any, graph: SemanticRequestGraph, workspace: str) ->
             },
         )
     except Exception as exc:
-        return da.DirectActionResult(False, f"Arithmetic execution failed: {exc}", execution_type="semantic_graph", tool_name="semantic_arithmetic", provider="local-filesystem", telemetry={"reason": "arithmetic_failed", "error": str(exc), "verification_passed": False})
+        return da.DirectActionResult(
+            False,
+            f"Arithmetic execution failed: {exc}",
+            execution_type="semantic_graph",
+            tool_name="semantic_arithmetic",
+            provider="local-filesystem",
+            telemetry={"reason": "arithmetic_failed", "error": str(exc), "verification_passed": False},
+        )
 
 
 def _execute_browser(da: Any, graph: SemanticRequestGraph) -> Any:
@@ -692,11 +873,15 @@ def _execute_browser(da: Any, graph: SemanticRequestGraph) -> Any:
             if isinstance(nav_value, dict) and nav_value.get("title") is not None:
                 fields["title"] = nav_value.get("title")
             else:
-                title_res = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": "title"}))
+                title_res = da.parse_tool_result(
+                    da.execute_tool("browser_extract_content", {"url": plan.url, "selector": "title"})
+                )
                 if title_res.ok:
                     fields["title"] = _tool_output(title_res)
         for selector in plan.selectors:
-            selected = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": selector}))
+            selected = da.parse_tool_result(
+                da.execute_tool("browser_extract_content", {"url": plan.url, "selector": selector})
+            )
             if not selected.ok:
                 raise RuntimeError(f"selector {selector!r} failed: {selected.error or 'unknown error'}")
             value = _tool_output(selected)
@@ -704,7 +889,9 @@ def _execute_browser(da: Any, graph: SemanticRequestGraph) -> Any:
                 value = value.get("content", value.get("text", value))
             fields[selector] = value
         if plan.want_text:
-            body = da.parse_tool_result(da.execute_tool("browser_extract_content", {"url": plan.url, "selector": "body"}))
+            body = da.parse_tool_result(
+                da.execute_tool("browser_extract_content", {"url": plan.url, "selector": "body"})
+            )
             if not body.ok:
                 raise RuntimeError(body.error or "body extraction failed")
             fields["content"] = _tool_output(body)
@@ -722,17 +909,48 @@ def _execute_browser(da: Any, graph: SemanticRequestGraph) -> Any:
             execution_type="semantic_graph",
             tool_name="browser_extract_content",
             provider="browser-automation",
-            telemetry={"url": plan.url, "value": value, "structured_result": fields, "selectors": plan.selectors, "verification_passed": True, "semantic_action": graph.action.value},
+            telemetry={
+                "url": plan.url,
+                "value": value,
+                "structured_result": fields,
+                "selectors": plan.selectors,
+                "verification_passed": True,
+                "semantic_action": graph.action.value,
+            },
         )
     except Exception as exc:
-        return da.DirectActionResult(False, f"Browser execution failed: {exc}", execution_type="semantic_graph", tool_name="browser_extract_content", provider="browser-automation", telemetry={"reason": "browser_failed", "error": str(exc)})
+        return da.DirectActionResult(
+            False,
+            f"Browser execution failed: {exc}",
+            execution_type="semantic_graph",
+            tool_name="browser_extract_content",
+            provider="browser-automation",
+            telemetry={"reason": "browser_failed", "error": str(exc)},
+        )
 
 
-_BINOPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv, ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod, ast.Pow: operator.pow}
-_CMPOPS = {ast.Eq: operator.eq, ast.NotEq: operator.ne, ast.Lt: operator.lt, ast.LtE: operator.le, ast.Gt: operator.gt, ast.GtE: operator.ge}
+_BINOPS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod,
+    ast.Pow: operator.pow,
+}
+_CMPOPS = {
+    ast.Eq: operator.eq,
+    ast.NotEq: operator.ne,
+    ast.Lt: operator.lt,
+    ast.LtE: operator.le,
+    ast.Gt: operator.gt,
+    ast.GtE: operator.ge,
+}
 
 
-def _eval_expr(node: ast.AST, env: dict[str, Any], functions: dict[str, ast.FunctionDef], overrides: dict[str, str], depth: int) -> Any:
+def _eval_expr(
+    node: ast.AST, env: dict[str, Any], functions: dict[str, ast.FunctionDef], overrides: dict[str, str], depth: int
+) -> Any:
     if depth > 12:
         raise ValueError("semantic evaluation depth exceeded")
     if isinstance(node, ast.Constant):
@@ -748,13 +966,16 @@ def _eval_expr(node: ast.AST, env: dict[str, Any], functions: dict[str, ast.Func
         if isinstance(node.op, ast.Not):
             return not value
     if isinstance(node, ast.BinOp) and type(node.op) in _BINOPS:
-        return _BINOPS[type(node.op)](_eval_expr(node.left, env, functions, overrides, depth + 1), _eval_expr(node.right, env, functions, overrides, depth + 1))
+        return _BINOPS[type(node.op)](
+            _eval_expr(node.left, env, functions, overrides, depth + 1),
+            _eval_expr(node.right, env, functions, overrides, depth + 1),
+        )
     if isinstance(node, ast.BoolOp):
         values = [_eval_expr(v, env, functions, overrides, depth + 1) for v in node.values]
         return all(values) if isinstance(node.op, ast.And) else any(values)
     if isinstance(node, ast.Compare):
         left = _eval_expr(node.left, env, functions, overrides, depth + 1)
-        for op_node, comparator in zip(node.ops, node.comparators):
+        for op_node, comparator in zip(node.ops, node.comparators, strict=False):
             right = _eval_expr(comparator, env, functions, overrides, depth + 1)
             if type(op_node) not in _CMPOPS or not _CMPOPS[type(op_node)](left, right):
                 return False
@@ -772,11 +993,13 @@ def _eval_expr(node: ast.AST, env: dict[str, Any], functions: dict[str, ast.Func
     raise ValueError(f"unsupported AST expression: {type(node).__name__}")
 
 
-def _eval_function(name: str, args: list[Any], functions: dict[str, ast.FunctionDef], overrides: dict[str, str], depth: int = 0) -> tuple[Any, dict[str, Any]]:
+def _eval_function(
+    name: str, args: list[Any], functions: dict[str, ast.FunctionDef], overrides: dict[str, str], depth: int = 0
+) -> tuple[Any, dict[str, Any]]:
     fn = functions[name]
     if len(args) != len(fn.args.args):
         raise ValueError("arity mismatch")
-    env = {arg.arg: value for arg, value in zip(fn.args.args, args)}
+    env = {arg.arg: value for arg, value in zip(fn.args.args, args, strict=False)}
     for stmt in fn.body:
         if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name):
             env[stmt.targets[0].id] = _eval_expr(stmt.value, env, functions, overrides, depth + 1)
@@ -814,7 +1037,9 @@ def _value_flow_findings(repo_path: Path, base_result: dict[str, Any]) -> list[d
                             expected = ast.literal_eval(node.test.comparators[0])
                         except Exception:
                             continue
-                        assertions.append({"function": call.func.id, "args": args, "expected": expected, "file": str(py_file)})
+                        assertions.append(
+                            {"function": call.func.id, "args": args, "expected": expected, "file": str(py_file)}
+                        )
         else:
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):
@@ -833,7 +1058,11 @@ def _value_flow_findings(repo_path: Path, base_result: dict[str, Any]) -> list[d
         if actual == expected:
             continue
         fn = functions[fn_name]
-        local_calls = [node.func.id for node in ast.walk(fn) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in functions]
+        local_calls = [
+            node.func.id
+            for node in ast.walk(fn)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in functions
+        ]
 
         # Wrong helper: prove a sibling substitution satisfies the test contract.
         for called in local_calls:
@@ -845,16 +1074,18 @@ def _value_flow_findings(repo_path: Path, base_result: dict[str, Any]) -> list[d
                 except Exception:
                     continue
                 if candidate == expected:
-                    findings.append({
-                        "function": fn_name,
-                        "category": "wrong_helper_call",
-                        "called_helper": called,
-                        "expected_helper": sibling,
-                        "description": f"Function '{fn_name}' calls '{called}', but substituting '{sibling}' satisfies the observed test contract ({expected!r}).",
-                        "reason": "symbolic value-flow substitution reproduces expected assertion",
-                        "confidence": 1.0,
-                        "file": function_file.get(fn_name, ""),
-                    })
+                    findings.append(
+                        {
+                            "function": fn_name,
+                            "category": "wrong_helper_call",
+                            "called_helper": called,
+                            "expected_helper": sibling,
+                            "description": f"Function '{fn_name}' calls '{called}', but substituting '{sibling}' satisfies the observed test contract ({expected!r}).",
+                            "reason": "symbolic value-flow substitution reproduces expected assertion",
+                            "confidence": 1.0,
+                            "file": function_file.get(fn_name, ""),
+                        }
+                    )
                     break
             if findings and findings[-1].get("function") == fn_name:
                 break
@@ -863,20 +1094,24 @@ def _value_flow_findings(repo_path: Path, base_result: dict[str, Any]) -> list[d
             continue
 
         # Wrong return variable: an already-computed local equals the contract.
-        returned_names = [node.value.id for node in ast.walk(fn) if isinstance(node, ast.Return) and isinstance(node.value, ast.Name)]
+        returned_names = [
+            node.value.id for node in ast.walk(fn) if isinstance(node, ast.Return) and isinstance(node.value, ast.Name)
+        ]
         for returned in returned_names:
             matching = [name for name, value in env.items() if name != returned and value == expected]
             if matching:
-                findings.append({
-                    "function": fn_name,
-                    "category": "wrong_returned_variable",
-                    "returned_variable": returned,
-                    "expected_variable": matching[0],
-                    "description": f"Function '{fn_name}' returns '{returned}' ({actual!r}) although computed local '{matching[0]}' equals the required result ({expected!r}).",
-                    "reason": "symbolic local-value flow matches failing assertion",
-                    "confidence": 1.0,
-                    "file": function_file.get(fn_name, ""),
-                })
+                findings.append(
+                    {
+                        "function": fn_name,
+                        "category": "wrong_returned_variable",
+                        "returned_variable": returned,
+                        "expected_variable": matching[0],
+                        "description": f"Function '{fn_name}' returns '{returned}' ({actual!r}) although computed local '{matching[0]}' equals the required result ({expected!r}).",
+                        "reason": "symbolic local-value flow matches failing assertion",
+                        "confidence": 1.0,
+                        "file": function_file.get(fn_name, ""),
+                    }
+                )
 
     return findings
 
@@ -894,14 +1129,21 @@ def install_semantic_core() -> None:
     def guarded_execute_tool(name: str, arguments: dict[str, Any] | None = None, *args: Any, **kwargs: Any) -> Any:
         arguments = dict(arguments or {})
         if name in _MUTATING_TOOLS and name not in _EFFECT_SCOPE.get():
-            raise da.GovernanceError(f"semantic effect firewall blocked {name}: action was not authorized by request graph")
+            raise da.GovernanceError(
+                f"semantic effect firewall blocked {name}: action was not authorized by request graph"
+            )
         if name == "write_file":
             requested = str(arguments.get("path", ""))
             allowed = _OUTPUT_SCOPE.get()
             if allowed and requested:
                 requested_path = Path(requested).expanduser()
-                if not any(requested_path == Path(candidate).expanduser() or requested_path.name == Path(candidate).name for candidate in allowed):
-                    raise da.GovernanceError(f"semantic effect firewall blocked write_file target {requested!r}: not an authorized output role")
+                if not any(
+                    requested_path == Path(candidate).expanduser() or requested_path.name == Path(candidate).name
+                    for candidate in allowed
+                ):
+                    raise da.GovernanceError(
+                        f"semantic effect firewall blocked write_file target {requested!r}: not an authorized output role"
+                    )
         return original_execute_tool(name, arguments, *args, **kwargs)
 
     da.execute_tool = guarded_execute_tool
@@ -923,7 +1165,9 @@ def install_semantic_core() -> None:
         lower = text.lower()
         if paths and re.search(r"\b(?:review|inspect|diagnose|audit|analy[sz]e|trace|investigate)\b", lower):
             args["repo_path"] = paths[0]
-        if paths and any(term in lower for term in ("directory", "folder", "list files", "list entries", "contents of")):
+        if paths and any(
+            term in lower for term in ("directory", "folder", "list files", "list entries", "contents of")
+        ):
             args["directory"] = paths[0]
         if len(paths) == 1 and not output:
             args["path"] = paths[0]
@@ -968,9 +1212,28 @@ def install_semantic_core() -> None:
         token_output = _OUTPUT_SCOPE.set(outputs)
         try:
             if graph.action == SemanticAction.EXACT_LITERAL:
-                result = da.DirectActionResult(True, graph.literal_payload, execution_type="semantic_graph", tool_name="exact_response", provider="semantic-core", telemetry={"side_effects": "none", "verification_passed": True, "semantic_action": graph.action.value})
+                result = da.DirectActionResult(
+                    True,
+                    graph.literal_payload,
+                    execution_type="semantic_graph",
+                    tool_name="exact_response",
+                    provider="semantic-core",
+                    telemetry={
+                        "side_effects": "none",
+                        "verification_passed": True,
+                        "semantic_action": graph.action.value,
+                    },
+                )
             elif graph.action == SemanticAction.POLICY_REFUSAL:
-                result = da.DirectActionResult(False, "I cannot perform that destructive action while bypassing approval or policy.", execution_type="semantic_graph", tool_name="policy", provider="semantic-core", policy_decision="refused", telemetry={"reason": "destructive_action_unauthorized", "semantic_action": graph.action.value})
+                result = da.DirectActionResult(
+                    False,
+                    "I cannot perform that destructive action while bypassing approval or policy.",
+                    execution_type="semantic_graph",
+                    tool_name="policy",
+                    provider="semantic-core",
+                    policy_decision="refused",
+                    telemetry={"reason": "destructive_action_unauthorized", "semantic_action": graph.action.value},
+                )
             elif graph.action == SemanticAction.FILE_READ:
                 result = _execute_file_read(da, graph, workspace)
             elif graph.action == SemanticAction.FILE_WRITE:

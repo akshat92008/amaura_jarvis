@@ -1,1 +1,0 @@
-❌ Error: Application 'the URL 'https://example.com' in the default web browser.' is not in the strict allowlist.

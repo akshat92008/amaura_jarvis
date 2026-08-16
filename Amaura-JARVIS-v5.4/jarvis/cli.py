@@ -16,9 +16,14 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from typing import TYPE_CHECKING
 
-from jarvis.models import resolve_model, DEFAULT_MODEL, list_models
 from jarvis import ui
+from jarvis.models import DEFAULT_MODEL, list_models, resolve_model
+
+if TYPE_CHECKING:
+    from jarvis.agent import JarvisAgent
+    from jarvis.voice.engine import VoiceEngine
 
 
 def parse_args():
@@ -50,7 +55,9 @@ Environment:
     parser.add_argument("--no-web", action="store_true", help="Disable automatic launch of JARVIS Web Interface")
     parser.add_argument("--telegram", "-t", action="store_true", help="Start Telegram bot")
     parser.add_argument("--amaura", action="store_true", help="Start the Amaura Autonomous Workforce Daemon")
-    parser.add_argument("--fable", "-f", action="store_true", help="Execute Claude Fable 5 Mythos CoT reasoning planning engine")
+    parser.add_argument(
+        "--fable", "-f", action="store_true", help="Execute Claude Fable 5 Mythos CoT reasoning planning engine"
+    )
     parser.add_argument("--list-models", action="store_true", help="List available models")
     return parser.parse_args()
 
@@ -119,7 +126,7 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
     elif command == "/remember":
         if arg:
             agent.user_mem.add_fact(arg)
-            ui.print_success(f"Noted and remembered: \"{arg}\"")
+            ui.print_success(f'Noted and remembered: "{arg}"')
         else:
             ui.print_info("Usage: /remember <fact about you>")
         return True
@@ -148,6 +155,7 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
 
     elif command == "/undo":
         from jarvis.history import get_history
+
         success, msg = get_history().undo_last_change()
         if success:
             ui.print_success(msg)
@@ -157,19 +165,23 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
 
     elif command == "/changes":
         from jarvis.history import get_history
+
         summary = get_history().get_change_summary()
         ui.console.print(summary)
         return True
 
     elif command == "/status":
         from jarvis.tools.desktop import tool_get_system_info
+
         info = tool_get_system_info()
         ui.console.print(info)
         return True
 
     elif command in ("/company", "/briefing", "/approvals"):
         import json
+
         from jarvis.tools.amaura import get_control_plane
+
         control = get_control_plane()
         if command == "/company":
             result = control.dashboard()
@@ -184,6 +196,7 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
         ui.print_info("Starting Telegram bot...")
         try:
             from jarvis.telegram.bot import start_telegram_bot
+
             start_telegram_bot(agent)
         except ImportError:
             ui.print_error("Telegram bot dependencies not installed. Run: pip install python-telegram-bot")
@@ -194,17 +207,18 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
     elif command == "/desktop":
         ui.console.print(f"\n  [{ui.GOLD}]Desktop Commands:[/]")
         ui.console.print(f"    [{ui.WHITE}]Just ask naturally:[/]")
-        ui.console.print(f"    [{ui.DIM}]• \"Open Safari\"[/]")
-        ui.console.print(f"    [{ui.DIM}]• \"Set volume to 50\"[/]")
-        ui.console.print(f"    [{ui.DIM}]• \"Take a screenshot\"[/]")
-        ui.console.print(f"    [{ui.DIM}]• \"What apps are running?\"[/]")
-        ui.console.print(f"    [{ui.DIM}]• \"Lock my screen\"[/]")
-        ui.console.print(f"    [{ui.DIM}]• \"Show system status\"[/]")
+        ui.console.print(f'    [{ui.DIM}]• "Open Safari"[/]')
+        ui.console.print(f'    [{ui.DIM}]• "Set volume to 50"[/]')
+        ui.console.print(f'    [{ui.DIM}]• "Take a screenshot"[/]')
+        ui.console.print(f'    [{ui.DIM}]• "What apps are running?"[/]')
+        ui.console.print(f'    [{ui.DIM}]• "Lock my screen"[/]')
+        ui.console.print(f'    [{ui.DIM}]• "Show system status"[/]')
         ui.console.print()
         return True
 
     elif command == "/agents":
         from jarvis.tools.agent_factory import tool_list_agents
+
         result = tool_list_agents()
         ui.console.print(result)
         return True
@@ -220,6 +234,7 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
 
     elif command == "/tools":
         from jarvis.tools.registry import get_tool_count
+
         counts = get_tool_count()
         ui.console.print(f"\n  [{ui.GOLD}]⚡ J.A.R.V.I.S. Tool Arsenal[/]")
         ui.console.print(f"    [{ui.CYAN}]Core Coding:[/]      [{ui.WHITE}]{counts.get('coding', 0)} tools[/]")
@@ -237,7 +252,9 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
     elif command == "/project":
         if not arg:
             ui.print_info("Usage: /project <template> <name>")
-            ui.print_info("Templates: python-cli, python-api, flask, react, nextjs, vue, express, go, rust, django, fullstack")
+            ui.print_info(
+                "Templates: python-cli, python-api, flask, react, nextjs, vue, express, go, rust, django, fullstack"
+            )
             return True
         agent.run(f"Generate a project using the generate_project tool: {arg}")
         return True
@@ -251,11 +268,11 @@ def handle_natural_or_slash_command(user_input: str, agent: JarvisAgent, voice_e
     Returns True if handled locally, False if it should be passed to the LLM agent.
     """
     clean = user_input.strip().lower()
-    
+
     # Direct slash commands
     if user_input.startswith("/"):
         return handle_slash_command(user_input, agent, voice_engine)
-    
+
     # Natural language shortcuts mapping to commands
     natural_mappings = {
         "tools": "/tools",
@@ -305,22 +322,22 @@ def handle_natural_or_slash_command(user_input: str, agent: JarvisAgent, voice_e
         "list agents": "/agents",
         "show agents": "/agents",
     }
-    
+
     if clean in natural_mappings:
         return handle_slash_command(natural_mappings[clean], agent, voice_engine)
-    
+
     # Handle natural "switch to model <X>" or "use model <X>"
     if clean.startswith("switch model to ") or clean.startswith("use model "):
         model_arg = clean.replace("switch model to ", "").replace("use model ", "").strip()
         return handle_slash_command(f"/model {model_arg}", agent, voice_engine)
-    
+
     # Handle natural "remember that <X>" or "remember <X>"
     if clean.startswith("remember that ") or clean.startswith("remember "):
-        fact_arg = user_input.strip()[len("remember "):].strip()
+        fact_arg = user_input.strip()[len("remember ") :].strip()
         if fact_arg.lower().startswith("that "):
             fact_arg = fact_arg[5:].strip()
         return handle_slash_command(f"/remember {fact_arg}", agent, voice_engine)
-        
+
     return False
 
 
@@ -514,6 +531,7 @@ def main():
 
         # Check if already running
         import socket
+
         is_running = False
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -525,10 +543,12 @@ def main():
         if is_running:
             ui.print_success(f"JARVIS Web Interface already running at {url}")
             import webbrowser
+
             webbrowser.open(browser_url, new=2)
             return
 
         import threading
+
         threading.Thread(
             target=_open_browser_when_ready,
             args=(url_host, port, browser_url),
@@ -538,6 +558,7 @@ def main():
 
         ui.print_success(f"JARVIS Web Interface running at {url}")
         from jarvis.server import main as start_server
+
         start_server()
         return
 
@@ -546,6 +567,7 @@ def main():
         ui.print_info("Starting Telegram bot mode...")
         try:
             from jarvis.telegram.bot import start_telegram_bot
+
             start_telegram_bot(agent)
         except ImportError:
             ui.print_error("Install python-telegram-bot: pip install python-telegram-bot")

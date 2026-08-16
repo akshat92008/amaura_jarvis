@@ -2,7 +2,8 @@
 Voice Engine — orchestrates the listen → think → speak cycle.
 """
 
-from jarvis.voice.listener import listen, is_available as stt_available
+from jarvis.voice.listener import is_available as stt_available
+from jarvis.voice.listener import listen
 from jarvis.voice.speaker import get_speaker
 
 

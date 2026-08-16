@@ -43,9 +43,7 @@ class OAuthTokenProvider:
         self.token_endpoint = token_endpoint
         self.token_transport = token_transport
         self._access_token = (
-            access_token
-            if access_token is not None
-            else os.environ.get(f"{normalized}_ACCESS_TOKEN", "")
+            access_token if access_token is not None else os.environ.get(f"{normalized}_ACCESS_TOKEN", "")
         ).strip()
         self._client_id = os.environ.get(f"{normalized}_CLIENT_ID", "").strip()
         self._client_secret = os.environ.get(f"{normalized}_CLIENT_SECRET", "").strip()
@@ -74,10 +72,7 @@ class OAuthTokenProvider:
             if (
                 self._access_token
                 and not force_refresh
-                and (
-                    self._expires_at is None
-                    or self._expires_at > datetime.now(UTC) + timedelta(seconds=60)
-                )
+                and (self._expires_at is None or self._expires_at > datetime.now(UTC) + timedelta(seconds=60))
             ):
                 return self._access_token
             if not self.has_refresh_credentials:
@@ -95,14 +90,10 @@ class OAuthTokenProvider:
                 timeout=20,
             )
             if status != 200:
-                raise GovernanceError(
-                    f"{self.prefix} OAuth refresh failed with HTTP {status}"
-                )
+                raise GovernanceError(f"{self.prefix} OAuth refresh failed with HTTP {status}")
             token = str(response.get("access_token", "")).strip()
             if not token:
-                raise GovernanceError(
-                    f"{self.prefix} OAuth refresh returned no access token"
-                )
+                raise GovernanceError(f"{self.prefix} OAuth refresh returned no access token")
             expires_in = response.get("expires_in", 3600)
             try:
                 lifetime = max(60, min(int(expires_in), 86_400))

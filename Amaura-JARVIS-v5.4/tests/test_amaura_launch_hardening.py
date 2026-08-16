@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import subprocess
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -426,8 +425,10 @@ class TestGitDeliverySafety:
 
 class TestHealthBuildIdProtection:
     def test_health_endpoint_includes_build_id_and_pid(self):
-        from jarvis.server import app, BUILD_ID
         from fastapi.testclient import TestClient
+
+        from jarvis.server import BUILD_ID, app
+
         client = TestClient(app)
         response = client.get("/api/health")
         assert response.status_code == 200
@@ -440,14 +441,8 @@ class TestHealthBuildIdProtection:
         assert isinstance(data.get("pid"), int)
 
     def test_stale_backend_build_id_mismatch_rejected(self):
-        health_payload = {
-            "status": "online",
-            "version": "5.4.1",
-            "build_id": "stale_tree_hash_12345",
-            "pid": 99999
-        }
+        health_payload = {"status": "online", "version": "5.4.1", "build_id": "stale_tree_hash_12345", "pid": 99999}
         current_expected_build_id = "current_tree_hash_67890"
         # A stale backend of the same version (5.4.1) but different build_id must be rejected
         build_matches = health_payload.get("build_id") == current_expected_build_id
         assert build_matches is False
-

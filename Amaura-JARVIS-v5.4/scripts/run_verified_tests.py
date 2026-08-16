@@ -11,6 +11,7 @@ fails. This keeps the release gate truthful while exposing the complete current
 regression surface in one CI run. A non-zero aggregate exit is returned only
 after all selected shards have reported.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -46,11 +47,7 @@ def _collect(extra: list[str]) -> list[str]:
     if result.returncode != 0:
         sys.stderr.write(result.stdout + result.stderr)
         raise SystemExit(result.returncode)
-    nodes = [
-        line.strip()
-        for line in result.stdout.splitlines()
-        if "::" in line and not line.startswith("<")
-    ]
+    nodes = [line.strip() for line in result.stdout.splitlines() if "::" in line and not line.startswith("<")]
     if not nodes:
         raise SystemExit("No maintained tests were collected")
     return nodes
@@ -143,14 +140,21 @@ def main() -> int:
                 print(f"Shard {index + 1} exceeded {args.timeout}s and was terminated", file=sys.stderr, flush=True)
             elif returncode != 0:
                 failed.append((index + 1, returncode))
-                print(f"Shard {index + 1} failed with exit code {returncode}; continuing to expose remaining shards", file=sys.stderr, flush=True)
+                print(
+                    f"Shard {index + 1} failed with exit code {returncode}; continuing to expose remaining shards",
+                    file=sys.stderr,
+                    flush=True,
+                )
 
     if timed_out or failed:
         if failed:
             print("Failed shards: " + ", ".join(f"{idx}(exit={code})" for idx, code in failed), file=sys.stderr)
         if timed_out:
             print("Timed out shards: " + ", ".join(map(str, timed_out)), file=sys.stderr)
-        print(f"Executed {verified} maintained tests across all selected isolated shards; release gate remains failed", file=sys.stderr)
+        print(
+            f"Executed {verified} maintained tests across all selected isolated shards; release gate remains failed",
+            file=sys.stderr,
+        )
         return 124 if timed_out else 1
 
     print(f"Verified {verified} maintained tests in isolated shards", flush=True)

@@ -5,6 +5,7 @@ must not be stolen by generic show/display read grammar.  This adapter only
 retypes a request as DIRECTORY_LIST when directory/list language is explicit and
 a syntactically valid target path is present.  It authorizes no side effects.
 """
+
 from __future__ import annotations
 
 import re
@@ -18,7 +19,6 @@ def install_semantic_list_compat() -> None:
     if _INSTALLED:
         return
 
-    from jarvis.amaura import direct_action as da
     from jarvis.amaura import semantic_core as core
 
     current_parse = core.SemanticParser.parse.__func__
@@ -30,17 +30,19 @@ def install_semantic_list_compat() -> None:
     ) -> Any:
         graph = current_parse(cls, text, known_extensions)
         lower = text.lower()
-        explicit_list = bool(re.search(
-            r"\b(?:"
-            r"show\s+(?:me\s+)?(?:the\s+)?contents\s+of|"
-            r"display\s+(?:the\s+)?entries\s+inside|"
-            r"what\s+is\s+inside\s+(?:the\s+)?(?:directory|folder)|"
-            r"what\s+(?:files|entries)\s+are\s+in|"
-            r"list\s+(?:all\s+)?(?:files|entries|items)|"
-            r"directory\s+contents|folder\s+contents"
-            r")\b",
-            lower,
-        ))
+        explicit_list = bool(
+            re.search(
+                r"\b(?:"
+                r"show\s+(?:me\s+)?(?:the\s+)?contents\s+of|"
+                r"display\s+(?:the\s+)?entries\s+inside|"
+                r"what\s+is\s+inside\s+(?:the\s+)?(?:directory|folder)|"
+                r"what\s+(?:files|entries)\s+are\s+in|"
+                r"list\s+(?:all\s+)?(?:files|entries|items)|"
+                r"directory\s+contents|folder\s+contents"
+                r")\b",
+                lower,
+            )
+        )
         if not explicit_list:
             return graph
 

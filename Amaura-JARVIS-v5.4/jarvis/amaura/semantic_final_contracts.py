@@ -4,6 +4,7 @@ Compatibility is admitted only when grammar proves semantic roles. Mutating
 contracts use the same effect firewall as the semantic core and independently
 verify persisted state before reporting success.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -136,10 +137,12 @@ def install_semantic_final_contracts() -> None:
                         graph.evidence.append("explicit_bare_css_selector")
 
         repo_noun = bool(re.search(r"\b(?:repo|repository|codebase|project\s+repository)\b", lower))
-        inspection = bool(re.search(
-            r"\b(?:check|examine|inspect|review|analy[sz]e|diagnose|audit|investigate|find\s+(?:the\s+)?bug)\b",
-            lower,
-        ))
+        inspection = bool(
+            re.search(
+                r"\b(?:check|examine|inspect|review|analy[sz]e|diagnose|audit|investigate|find\s+(?:the\s+)?bug)\b",
+                lower,
+            )
+        )
         mutating = bool(re.search(r"\b(?:write|edit|modify|delete|remove|create|save|store)\b", lower))
         if repo_noun and inspection and not mutating:
             paths = core.extract_paths(text, known_extensions)
@@ -148,7 +151,9 @@ def install_semantic_final_contracts() -> None:
                     original_text=text,
                     action=core.SemanticAction.REPOSITORY,
                     response_mode=core._response_mode(text),
-                    paths=[core.PathBinding(paths[0], core.SemanticPathRole.REPOSITORY, "explicit_repo_inspection_clause")],
+                    paths=[
+                        core.PathBinding(paths[0], core.SemanticPathRole.REPOSITORY, "explicit_repo_inspection_clause")
+                    ],
                     evidence=["repo_noun_plus_inspection_verb"],
                 )
         return graph
@@ -259,11 +264,13 @@ def install_semantic_final_contracts() -> None:
             ok, error = _verified_write(ws, output, payload)
             if not ok:
                 raise RuntimeError(error)
-            expected_again = _format_number(_compute(
-                operation,
-                _numbers(inputs[0].read_text(encoding="utf-8", errors="replace")),
-                _numbers(inputs[1].read_text(encoding="utf-8", errors="replace")),
-            ))
+            expected_again = _format_number(
+                _compute(
+                    operation,
+                    _numbers(inputs[0].read_text(encoding="utf-8", errors="replace")),
+                    _numbers(inputs[1].read_text(encoding="utf-8", errors="replace")),
+                )
+            )
             observed = output.read_text(encoding="utf-8", errors="replace")
             actual_hash = hashlib.sha256(observed.encode()).hexdigest()
             if observed.strip() != expected_again:
@@ -296,9 +303,23 @@ def install_semantic_final_contracts() -> None:
         except PermissionError as exc:
             return _policy_failure(da, exc)
         except FileNotFoundError as exc:
-            return da.DirectActionResult(False, f"Arithmetic workflow input not found: {exc}", execution_type="workflow", tool_name="multi_step_workflow", provider="local-filesystem", telemetry={"reason": "input_file_not_found", "error": str(exc), "verification_passed": False})
+            return da.DirectActionResult(
+                False,
+                f"Arithmetic workflow input not found: {exc}",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="local-filesystem",
+                telemetry={"reason": "input_file_not_found", "error": str(exc), "verification_passed": False},
+            )
         except Exception as exc:
-            return da.DirectActionResult(False, f"Arithmetic workflow failed: {exc}", execution_type="workflow", tool_name="multi_step_workflow", provider="local-filesystem", telemetry={"reason": "arithmetic_workflow_failed", "error": str(exc), "verification_passed": False})
+            return da.DirectActionResult(
+                False,
+                f"Arithmetic workflow failed: {exc}",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="local-filesystem",
+                telemetry={"reason": "arithmetic_workflow_failed", "error": str(exc), "verification_passed": False},
+            )
         finally:
             core._OUTPUT_SCOPE.reset(output_token)
             core._EFFECT_SCOPE.reset(effect_token)
@@ -335,19 +356,38 @@ def install_semantic_final_contracts() -> None:
             expected_again = prefix + inputs[0].read_text(encoding="utf-8", errors="replace")
             observed = output.read_text(encoding="utf-8", errors="replace")
             if observed != expected_again:
-                return da.DirectActionResult(False, "Prefix workflow verification failed: persisted output differs from recomputed transform.", execution_type="workflow", tool_name="multi_step_workflow", provider="local-filesystem", telemetry={"reason": "content_mismatch", "verification_passed": False})
+                return da.DirectActionResult(
+                    False,
+                    "Prefix workflow verification failed: persisted output differs from recomputed transform.",
+                    execution_type="workflow",
+                    tool_name="multi_step_workflow",
+                    provider="local-filesystem",
+                    telemetry={"reason": "content_mismatch", "verification_passed": False},
+                )
             return da.DirectActionResult(
                 True,
                 f"Prefixed {inputs[0]} and independently verified {output}.",
                 execution_type="workflow",
                 tool_name="multi_step_workflow",
                 provider="local-filesystem",
-                telemetry={"verification_passed": True, "input_path": str(inputs[0]), "output_path": str(output), "semantic_verifier": "fresh_source_plus_prefix_equals_persisted_output"},
+                telemetry={
+                    "verification_passed": True,
+                    "input_path": str(inputs[0]),
+                    "output_path": str(output),
+                    "semantic_verifier": "fresh_source_plus_prefix_equals_persisted_output",
+                },
             )
         except PermissionError as exc:
             return _policy_failure(da, exc)
         except Exception as exc:
-            return da.DirectActionResult(False, f"Prefix workflow failed: {exc}", execution_type="workflow", tool_name="multi_step_workflow", provider="local-filesystem", telemetry={"reason": "prefix_workflow_failed", "error": str(exc), "verification_passed": False})
+            return da.DirectActionResult(
+                False,
+                f"Prefix workflow failed: {exc}",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="local-filesystem",
+                telemetry={"reason": "prefix_workflow_failed", "error": str(exc), "verification_passed": False},
+            )
         finally:
             core._OUTPUT_SCOPE.reset(output_token)
             core._EFFECT_SCOPE.reset(effect_token)
@@ -389,13 +429,15 @@ def install_semantic_final_contracts() -> None:
             raise ValueError("delimited table has no data rows")
         header = rows[0]
         separator = rows[1]
-        if len(separator) != len(header) or not all(re.fullmatch(r":?-{2,}:?", cell.replace(" ", "")) for cell in separator):
+        if len(separator) != len(header) or not all(
+            re.fullmatch(r":?-{2,}:?", cell.replace(" ", "")) for cell in separator
+        ):
             raise ValueError("delimited table header separator is invalid")
         result: list[dict[str, Any]] = []
         for row in rows[2:]:
             if len(row) != len(header):
                 raise ValueError("delimited table row width does not match header")
-            result.append({key.strip(): _scalar(value) for key, value in zip(header, row)})
+            result.append({key.strip(): _scalar(value) for key, value in zip(header, row, strict=False)})
         return result
 
     def _execute_table_workflow(text: str, workspace: str) -> Any | None:
@@ -415,19 +457,39 @@ def install_semantic_final_contracts() -> None:
             expected_again = _parse_markdown_table(inputs[0].read_text(encoding="utf-8", errors="replace"))
             observed = json.loads(output.read_text(encoding="utf-8"))
             if observed != expected_again:
-                return da.DirectActionResult(False, "Table workflow verification failed: persisted JSON differs from recomputed table transform.", execution_type="workflow", tool_name="multi_step_workflow", provider="local-filesystem", telemetry={"reason": "content_mismatch", "verification_passed": False})
+                return da.DirectActionResult(
+                    False,
+                    "Table workflow verification failed: persisted JSON differs from recomputed table transform.",
+                    execution_type="workflow",
+                    tool_name="multi_step_workflow",
+                    provider="local-filesystem",
+                    telemetry={"reason": "content_mismatch", "verification_passed": False},
+                )
             return da.DirectActionResult(
                 True,
                 f"Converted {inputs[0]} to JSON and independently verified {output}.",
                 execution_type="workflow",
                 tool_name="multi_step_workflow",
                 provider="local-filesystem",
-                telemetry={"verification_passed": True, "input_path": str(inputs[0]), "output_path": str(output), "value": observed, "semantic_verifier": "fresh_table_parse_equals_persisted_json"},
+                telemetry={
+                    "verification_passed": True,
+                    "input_path": str(inputs[0]),
+                    "output_path": str(output),
+                    "value": observed,
+                    "semantic_verifier": "fresh_table_parse_equals_persisted_json",
+                },
             )
         except PermissionError as exc:
             return _policy_failure(da, exc)
         except Exception as exc:
-            return da.DirectActionResult(False, f"Table workflow failed: {exc}", execution_type="workflow", tool_name="multi_step_workflow", provider="local-filesystem", telemetry={"reason": "table_workflow_failed", "error": str(exc), "verification_passed": False})
+            return da.DirectActionResult(
+                False,
+                f"Table workflow failed: {exc}",
+                execution_type="workflow",
+                tool_name="multi_step_workflow",
+                provider="local-filesystem",
+                telemetry={"reason": "table_workflow_failed", "error": str(exc), "verification_passed": False},
+            )
         finally:
             core._OUTPUT_SCOPE.reset(output_token)
             core._EFFECT_SCOPE.reset(effect_token)
@@ -518,10 +580,21 @@ def install_semantic_final_contracts() -> None:
 
     def _is_raw_read(text: str) -> bool:
         lower = text.lower()
-        return any(phrase in lower for phrase in (
-            "verbatim", "exact contents", "only the contents", "raw content", "raw contents",
-            "without explanation", "without line numbers", "just the contents", "exact raw", "byte-for-byte",
-        ))
+        return any(
+            phrase in lower
+            for phrase in (
+                "verbatim",
+                "exact contents",
+                "only the contents",
+                "raw content",
+                "raw contents",
+                "without explanation",
+                "without line numbers",
+                "just the contents",
+                "exact raw",
+                "byte-for-byte",
+            )
+        )
 
     def _restore_public_metadata(result: Any, text: str) -> Any:
         if result is None:
@@ -557,7 +630,9 @@ def install_semantic_final_contracts() -> None:
             values = structured.values() if isinstance(structured, dict) else []
             if any("no elements matched" in str(value).lower() for value in values):
                 result.success = False
-                result.output = "Browser selector verification failed: one or more requested selectors matched no elements."
+                result.output = (
+                    "Browser selector verification failed: one or more requested selectors matched no elements."
+                )
                 telemetry["reason"] = "selector_not_found"
                 telemetry["verification_passed"] = False
         return result
@@ -592,7 +667,10 @@ def install_semantic_final_contracts() -> None:
             return None
         if not getattr(result, "success", False) and getattr(result, "policy_decision", "") == "refused":
             error_text = str((getattr(result, "telemetry", {}) or {}).get("error", result.output)).lower()
-            if any(marker in error_text for marker in ("outside workspace", "workspace", "escape", "sensitive", "permission")):
+            if any(
+                marker in error_text
+                for marker in ("outside workspace", "workspace", "escape", "sensitive", "permission")
+            ):
                 result.execution_type = "policy_enforcement"
                 result.provider = "security-policy"
                 result.telemetry["reason"] = "workspace_escape"

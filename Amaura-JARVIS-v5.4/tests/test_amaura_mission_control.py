@@ -100,12 +100,16 @@ def test_progress_requires_evidence_and_completes_target(monkeypatch):
             with pytest.raises(GovernanceError, match="evidence"):
                 mission.record_progress(objective["id"], delta=1, note="First decision", evidence_refs=[])
             first = mission.record_progress(
-                objective["id"], delta=1, note="First decision",
+                objective["id"],
+                delta=1,
+                note="First decision",
                 evidence_refs=[{"type": "decision", "reference": "artifact://decision/1"}],
             )
             assert first["objective"]["status"] == "active"
             second = mission.record_progress(
-                objective["id"], delta=1, note="Second decision",
+                objective["id"],
+                delta=1,
+                note="Second decision",
                 evidence_refs=[{"type": "decision", "reference": "artifact://decision/2"}],
             )
             assert second["objective"]["status"] == "completed"
@@ -120,7 +124,9 @@ def test_objective_budget_cannot_underfund_workflow(monkeypatch):
         try:
             with pytest.raises(GovernanceError, match="below workflow maximum"):
                 MissionControl(control).create_objective(
-                    title="Underfunded content", objective="Create content", success_metric="Complete",
+                    title="Underfunded content",
+                    objective="Create content",
+                    success_metric="Complete",
                     workflow_key="content_factory",
                     inputs={"campaign_id": "underfunded", "audience": "Builders", "business_objective": "Awareness"},
                     budget_cents=1,
@@ -149,8 +155,11 @@ def test_autopilot_kill_switch_stops_planning_and_execution(monkeypatch):
         try:
             mission = MissionControl(control)
             mission.create_objective(
-                title="Daily discovery", objective="Validate opportunity for {date}", success_metric="Decision created",
-                workflow_key="product_discovery", cadence="daily",
+                title="Daily discovery",
+                objective="Validate opportunity for {date}",
+                success_metric="Decision created",
+                workflow_key="product_discovery",
+                cadence="daily",
                 inputs={"problem_space": "AI", "target_user": "Developers"},
             )
             mission.set_autopilot(False, reason="Founder pause")
@@ -171,14 +180,19 @@ def test_autopilot_plans_objective_and_respects_work_unit_limit(monkeypatch):
         try:
             mission = MissionControl(control)
             mission.create_objective(
-                title="Daily product discovery", objective="Validate opportunity for {date}", success_metric="Decision created",
-                workflow_key="product_discovery", cadence="daily",
+                title="Daily product discovery",
+                objective="Validate opportunity for {date}",
+                success_metric="Decision created",
+                workflow_key="product_discovery",
+                cadence="daily",
                 inputs={"problem_space": "AI", "target_user": "Developers"},
             )
             runtime = AutonomousCompanyRuntime(control)
             runtime.supervisor = MagicMock()
             runtime.supervisor.tick.side_effect = [
-                {"status": "executed"}, {"status": "executed"}, {"status": "idle"},
+                {"status": "executed"},
+                {"status": "executed"},
+                {"status": "idle"},
             ]
             runtime.supervisor.status.return_value = {"ready_tasks": 0}
             result = runtime.tick(now=datetime(2026, 8, 5, tzinfo=UTC), max_work_units=3)
@@ -203,10 +217,12 @@ def test_cadence_claim_is_cross_connection_idempotent(monkeypatch):
             )
             now = datetime(2026, 8, 5, tzinfo=UTC)
             with ThreadPoolExecutor(max_workers=2) as pool:
-                results = list(pool.map(
-                    lambda mission: mission.plan_due_work(now=now),
-                    (MissionControl(first_control), MissionControl(second_control)),
-                ))
+                results = list(
+                    pool.map(
+                        lambda mission: mission.plan_due_work(now=now),
+                        (MissionControl(first_control), MissionControl(second_control)),
+                    )
+                )
             assert sum(len(result) for result in results) == 1
             programmes = MissionControl(first_control)._programmes_for_objective(objective["id"])
             assert len(programmes) == 1
@@ -295,11 +311,13 @@ def test_autonomous_mission_runs_to_founder_boundary_then_credits_after_approval
                 task_id,
                 actor=task["owner_id"],
                 summary="Completed with bounded test evidence.",
-                evidence=[{
-                    "type": "test_report",
-                    "reference": f"artifact://{task_id}/report",
-                    "success": True,
-                }],
+                evidence=[
+                    {
+                        "type": "test_report",
+                        "reference": f"artifact://{task_id}/report",
+                        "success": True,
+                    }
+                ],
             )
             return {"status": submitted["state"], "task_id": task_id}
 
@@ -329,9 +347,7 @@ def test_autonomous_mission_runs_to_founder_boundary_then_credits_after_approval
 
     with TemporaryDirectory() as temp:
         control = _control(monkeypatch, temp)
-        monkeypatch.setattr(
-            "jarvis.amaura.evidence.verify_review_attestation", lambda attestation: True
-        )
+        monkeypatch.setattr("jarvis.amaura.evidence.verify_review_attestation", lambda attestation: True)
         try:
             mission = MissionControl(control)
             objective = mission.create_objective(
@@ -361,9 +377,9 @@ def test_autonomous_mission_runs_to_founder_boundary_then_credits_after_approval
             assert result["execution"]["status"] == "idle"
             programme_id = result["objective_programmes_created"][0]
             related = [
-                task for task in control.list_tasks()
-                if (task.get("metadata") or {}).get("inputs", {}).get("objective_id")
-                == objective["id"]
+                task
+                for task in control.list_tasks()
+                if (task.get("metadata") or {}).get("inputs", {}).get("objective_id") == objective["id"]
             ]
             assert sum(task["state"] == "completed" for task in related) == 3
             founder_task = next(task for task in related if task["reviewer_id"] == "founder")
@@ -372,8 +388,7 @@ def test_autonomous_mission_runs_to_founder_boundary_then_credits_after_approval
             assert control.store.get_objective(objective["id"])["current_value"] == 0
 
             approval = next(
-                item for item in control.store.list_approvals("pending")
-                if item["task_id"] == founder_task["id"]
+                item for item in control.store.list_approvals("pending") if item["task_id"] == founder_task["id"]
             )
             control.decide_approval(
                 approval["id"],

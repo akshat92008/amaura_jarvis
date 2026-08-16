@@ -87,7 +87,9 @@ def create_handoff(
         created_at = str(existing.get("created_at", created_at))
         canonical["created_at"] = created_at
     else:
-        json_path.write_text(json.dumps({**canonical, "payload_sha256": digest}, indent=2, default=str) + "\n", encoding="utf-8")
+        json_path.write_text(
+            json.dumps({**canonical, "payload_sha256": digest}, indent=2, default=str) + "\n", encoding="utf-8"
+        )
     if not markdown_path.exists():
         lines = [
             f"# {provider} handoff: {objective}",

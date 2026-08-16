@@ -27,10 +27,13 @@ fails structural constraints:
   - absolute path
   - remaining_failures present
 """
+
 from __future__ import annotations
 
 import json
 import unittest
+
+from pydantic import ValidationError
 
 from jarvis.amaura.antigravity_bridge import AntigravityDeliveryAdapter, AntigravityResultContract
 from jarvis.amaura.models import GovernanceError
@@ -117,17 +120,20 @@ class TestExtractContractRejectByExtractor(unittest.TestCase):
 
     def test_success_false(self):
         """success=False means the fallback can't match; schema path won't fire."""
-        d = _make_valid(); d["success"] = False
+        d = _make_valid()
+        d["success"] = False
         self._should_raise(json.dumps(d))
 
     def test_success_string_true(self):
         """String 'true' is not `is True`, fallback rejects; schema path rejects."""
-        d = _make_valid(); d["success"] = "true"
+        d = _make_valid()
+        d["success"] = "true"
         self._should_raise(json.dumps(d))
 
     def test_success_integer_one(self):
         """Truthy int 1 is not `is True`, fallback rejects."""
-        d = _make_valid(); d["success"] = 1
+        d = _make_valid()
+        d["success"] = 1
         self._should_raise(json.dumps(d))
 
     def test_summary_too_short_in_fallback(self):
@@ -144,12 +150,14 @@ class TestExtractContractRejectByExtractor(unittest.TestCase):
     def test_missing_changed_files_and_no_schema(self):
         """No schema field, no changed_files → fallback can't match → reject."""
         d = _make_valid()
-        del d["schema"]; del d["changed_files"]
+        del d["schema"]
+        del d["changed_files"]
         self._should_raise(json.dumps(d))
 
     def test_missing_verification_commands_and_no_schema(self):
         d = _make_valid()
-        del d["schema"]; del d["verification_commands"]
+        del d["schema"]
+        del d["verification_commands"]
         self._should_raise(json.dumps(d))
 
 
@@ -167,62 +175,62 @@ class TestExtractContractRejectByModelValidate(unittest.TestCase):
     def test_inline_python_c_rejected(self):
         d = _make_valid()
         d["verification_commands"] = ['python3 -c "import greet"']
-        with self.assertRaises(Exception):
+        with self.assertRaises((ValidationError, GovernanceError, ValueError)):
             self._full_validate(d)
 
     def test_path_traversal_in_changed_files_rejected(self):
         d = _make_valid()
         d["changed_files"] = ["../../../etc/passwd"]
-        with self.assertRaises(Exception):
+        with self.assertRaises((ValidationError, GovernanceError, ValueError)):
             self._full_validate(d)
 
     def test_absolute_path_in_changed_files_rejected(self):
         d = _make_valid()
         d["changed_files"] = ["/usr/local/bin/secret"]
-        with self.assertRaises(Exception):
+        with self.assertRaises((ValidationError, GovernanceError, ValueError)):
             self._full_validate(d)
 
     def test_remaining_failures_blocks_success(self):
         d = _make_valid()
         d["remaining_failures"] = ["test_foo still fails"]
-        with self.assertRaises(Exception):
+        with self.assertRaises((ValidationError, GovernanceError, ValueError)):
             self._full_validate(d)
 
     def test_missing_changed_files_with_schema_present(self):
         """Extractor finds it via schema path, model_validate rejects missing field."""
         d = _make_valid()
         del d["changed_files"]
-        with self.assertRaises(Exception):
+        with self.assertRaises((ValidationError, GovernanceError, ValueError)):
             self._full_validate(d)
 
     def test_empty_changed_files_with_schema_present(self):
         d = _make_valid()
         d["changed_files"] = []
-        with self.assertRaises(Exception):
+        with self.assertRaises((ValidationError, GovernanceError, ValueError)):
             self._full_validate(d)
 
     def test_changed_files_string_not_list_with_schema(self):
         d = _make_valid()
         d["changed_files"] = "src/greet.py"
-        with self.assertRaises(Exception):
+        with self.assertRaises((ValidationError, GovernanceError, ValueError)):
             self._full_validate(d)
 
     def test_missing_verification_commands_with_schema_present(self):
         d = _make_valid()
         del d["verification_commands"]
-        with self.assertRaises(Exception):
+        with self.assertRaises((ValidationError, GovernanceError, ValueError)):
             self._full_validate(d)
 
     def test_empty_verification_commands_with_schema_present(self):
         d = _make_valid()
         d["verification_commands"] = []
-        with self.assertRaises(Exception):
+        with self.assertRaises((ValidationError, GovernanceError, ValueError)):
             self._full_validate(d)
 
     def test_verification_commands_string_not_list_with_schema(self):
         d = _make_valid()
         d["verification_commands"] = "python -m unittest"
-        with self.assertRaises(Exception):
+        with self.assertRaises((ValidationError, GovernanceError, ValueError)):
             self._full_validate(d)
 
     def test_schema_omission_normalised_passes_model_validate(self):

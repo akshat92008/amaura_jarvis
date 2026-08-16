@@ -7,6 +7,12 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+from starlette.testclient import TestClient
+
+from jarvis.server import app
+from jarvis.tools.amaura import reset_control_plane
+
 TEST_AUTH_TOKEN = "test_api_token_12345678901234567890"
 TEST_OP_TOKEN = "test_operator_token_9876543210"
 TEST_HMAC_SECRET = "test_audit_secret_32_bytes_long_1234567890"
@@ -15,15 +21,6 @@ os.environ["JARVIS_API_KEY"] = TEST_AUTH_TOKEN
 os.environ["AMAURA_OPERATOR_KEY"] = TEST_OP_TOKEN
 os.environ["AMAURA_AUDIT_HMAC_KEY"] = TEST_HMAC_SECRET
 os.environ["JARVIS_REQUIRE_LOCAL_AUTH"] = "0"
-
-import pytest
-from starlette.testclient import TestClient
-from jarvis.server import app
-from jarvis.tools.amaura import reset_control_plane
-from jarvis.amaura.control_plane import AmauraControlPlane
-from jarvis.amaura.cognition import ExecutiveKernel, ExecutiveRequest
-from jarvis.amaura.direct_action import RequestPreprocessor, ActionType, ResponseMode
-
 
 HEADERS = {
     "X-Jarvis-Key": TEST_AUTH_TOKEN,
@@ -68,7 +65,7 @@ def test_api_boundary_50_routing_collisions(client):
             assert res.status_code == 200
             # Read NDJSON lines
             lines = [json.loads(line) for line in res.text.strip().split("\n") if line.strip()]
-            complete = [l for l in lines if l.get("type") == "complete"]
+            complete = [item for item in lines if item.get("type") == "complete"]
             assert len(complete) > 0
             assert complete[0]["response"] == f"content_{i}"
 
@@ -119,8 +116,8 @@ def test_api_boundary_20_screenshot_positives(client):
                 }
                 res = client.post("/api/chat/stream", json=payload, headers=HEADERS)
                 assert res.status_code == 200
-                lines = [json.loads(l) for l in res.text.strip().split("\n") if l.strip()]
-                complete = [l for l in lines if l.get("type") == "complete"][0]
+                lines = [json.loads(line) for line in res.text.strip().split("\n") if line.strip()]
+                complete = [item for item in lines if item.get("type") == "complete"][0]
                 assert "Screenshot saved" in complete["response"]
                 assert shot_file.exists()
 
@@ -156,8 +153,8 @@ def test_api_boundary_30_exact_literals(client):
         }
         res = client.post("/api/chat/stream", json=payload, headers=HEADERS)
         assert res.status_code == 200
-        lines = [json.loads(l) for l in res.text.strip().split("\n") if l.strip()]
-        complete = [l for l in lines if l.get("type") == "complete"][0]
+        lines = [json.loads(line) for line in res.text.strip().split("\n") if line.strip()]
+        complete = [item for item in lines if item.get("type") == "complete"][0]
         assert complete["response"] == expected
         assert complete["model_provider"] in ("system", "deterministic-echo", "legacy", "local")
 
@@ -179,8 +176,8 @@ def test_api_boundary_20_exact_raw_reads(client):
             }
             res = client.post("/api/chat/stream", json=payload, headers=HEADERS)
             assert res.status_code == 200
-            lines = [json.loads(l) for l in res.text.strip().split("\n") if l.strip()]
-            complete = [l for l in lines if l.get("type") == "complete"][0]
+            lines = [json.loads(line) for line in res.text.strip().split("\n") if line.strip()]
+            complete = [item for item in lines if item.get("type") == "complete"][0]
             assert complete["response"] == raw_text
 
 
@@ -235,7 +232,10 @@ def test_boundary():
             }
             res = client.post("/api/chat/stream", json=payload, headers=HEADERS)
             assert res.status_code == 200
-            lines = [json.loads(l) for l in res.text.strip().split("\n") if l.strip()]
-            complete = [l for l in lines if l.get("type") == "complete"][0]
+            lines = [json.loads(line) for line in res.text.strip().split("\n") if line.strip()]
+            complete = [item for item in lines if item.get("type") == "complete"][0]
             assert "is_valid_score" in complete["response"]
-            assert "comparison_boundary" in str(complete["executive"].get("result", {})) or "defect" in complete["response"]
+            assert (
+                "comparison_boundary" in str(complete["executive"].get("result", {}))
+                or "defect" in complete["response"]
+            )

@@ -6,6 +6,7 @@ material, creates deterministic archives, installs the wheel in isolation, and
 emits external SHA-256 sums, an SPDX 2.3 SBOM, SLSA-shaped provenance, and an
 optional detached Minisign signature over the checksum ledger.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -44,29 +45,78 @@ FIXED_ZIP_TIMESTAMP = (2026, 1, 1, 0, 0, 0)
 SOURCE_DATE_EPOCH = "1767225600"
 
 EXCLUDED_DIRS = {
-    ".git", ".github-cache", ".mypy_cache", ".pytest_cache", ".ruff_cache",
-    ".tox", ".venv", "__pycache__", "build", "dist", "evidence",
-    "node_modules", "release", ".amaura-data", ".jarvis-data", "runtime",
+    ".git",
+    ".github-cache",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".tox",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "evidence",
+    "node_modules",
+    "release",
+    ".amaura-data",
+    ".jarvis-data",
+    "runtime",
 }
 EXCLUDED_SUFFIXES = {
-    ".db", ".db-shm", ".db-wal", ".sqlite", ".sqlite3", ".pyc", ".pyo",
-    ".pem", ".key", ".p12", ".pfx", ".log", ".minisig",
+    ".db",
+    ".db-shm",
+    ".db-wal",
+    ".sqlite",
+    ".sqlite3",
+    ".pyc",
+    ".pyo",
+    ".pem",
+    ".key",
+    ".p12",
+    ".pfx",
+    ".log",
+    ".minisig",
 }
 EXCLUDED_NAMES = {".env", ".env.amaura", ".DS_Store", "Thumbs.db"}
 ALLOWED_ROOTS = {
-    ".github", "aimodel", "desktop-app", "docker", "docs", "jarvis", "jarvis_app",
-    "scripts", "tests",
+    ".github",
+    "aimodel",
+    "desktop-app",
+    "docker",
+    "docs",
+    "jarvis",
+    "jarvis_app",
+    "scripts",
+    "tests",
 }
 ALLOWED_ROOT_FILES = {
-    ".env.amaura.example", ".gitignore", "AMAURA_HARDENING_CHANGELOG.md",
-    "AMAURA_V3_5_COMPLETION_REPORT.md", "AMAURA_V3_5_1_REMEDIATION_REPORT.md", "AMAURA_V3_5_2_SECURITY_RELEASE.md",
-    "AMAURA_V3_5_2_QUALIFICATION.md", "AMAURA_V3_5_3_NETWORK_SECURITY.md",
-    "AMAURA_V3_6_0_FREE_FIRST_INTEGRATIONS.md", "AMAURA_OSS_CAPABILITIES.md", "AMAURA_LAUNCH.md",
-    "Install_Amaura.command", "Install_Amaura_Autopilot.command", "Install_Amaura_Desktop.command",
-    "LICENSE", "Launch_Amaura.command", "Launch_Amaura_Desktop.command", "README.md",
-    "Setup_Amaura_Runtime.command", "Setup_Amaura_Antigravity.command", "Setup_Amaura_OmniRoute.command",
-    "Uninstall_Amaura_Autopilot.command", "jarvis.sh",
-    "pyproject.toml", "requirements-dev.lock", "requirements.lock", "requirements.txt",
+    ".env.amaura.example",
+    ".gitignore",
+    "AMAURA_HARDENING_CHANGELOG.md",
+    "AMAURA_V3_5_COMPLETION_REPORT.md",
+    "AMAURA_V3_5_1_REMEDIATION_REPORT.md",
+    "AMAURA_V3_5_2_SECURITY_RELEASE.md",
+    "AMAURA_V3_5_2_QUALIFICATION.md",
+    "AMAURA_V3_5_3_NETWORK_SECURITY.md",
+    "AMAURA_V3_6_0_FREE_FIRST_INTEGRATIONS.md",
+    "AMAURA_OSS_CAPABILITIES.md",
+    "AMAURA_LAUNCH.md",
+    "Install_Amaura.command",
+    "Install_Amaura_Autopilot.command",
+    "Install_Amaura_Desktop.command",
+    "LICENSE",
+    "Launch_Amaura.command",
+    "Launch_Amaura_Desktop.command",
+    "README.md",
+    "Setup_Amaura_Runtime.command",
+    "Setup_Amaura_Antigravity.command",
+    "Setup_Amaura_OmniRoute.command",
+    "Uninstall_Amaura_Autopilot.command",
+    "jarvis.sh",
+    "pyproject.toml",
+    "requirements-dev.lock",
+    "requirements.lock",
+    "requirements.txt",
     "uv.lock",
 }
 
@@ -109,11 +159,12 @@ def stage_source(destination: Path, qualification_dir: Path) -> list[str]:
             target = destination / child.name
             shutil.copy2(child, target)
             copied.append(child.name)
-    for name in QUALIFICATION_REPORTS:
-        source = qualification_dir / name
-        target = destination / name
-        shutil.copy2(source, target)
-        copied.append(name)
+    if qualification_dir is not None:
+        for name in QUALIFICATION_REPORTS:
+            source = qualification_dir / name
+            target = destination / name
+            shutil.copy2(source, target)
+            copied.append(name)
     return copied
 
 
@@ -140,12 +191,14 @@ def validate_qualification(directory: Path) -> dict[str, Any]:
         raise RuntimeError("QUALIFICATION_REPORT test total does not match TEST_REPORT")
     if int(verification.get("automated_tests", -1)) != verified:
         raise RuntimeError("RELEASE_VERIFICATION test total does not match TEST_REPORT")
-    if not all([
-        bool(test_report.get("passed")),
-        bool(qualification.get("source_certified")),
-        bool(verification.get("source_certified")),
-        bool(verification.get("all_tests_passed")),
-    ]):
+    if not all(
+        [
+            bool(test_report.get("passed")),
+            bool(qualification.get("source_certified")),
+            bool(verification.get("source_certified")),
+            bool(verification.get("all_tests_passed")),
+        ]
+    ):
         raise RuntimeError("Qualification evidence does not certify the source")
     git = qualification.get("git", {})
     if not git.get("available") or git.get("dirty") or git.get("commit") in {None, "", "unknown"}:
@@ -210,9 +263,10 @@ def validate_archive(path: Path) -> None:
 def canonicalize_wheel(path: Path) -> None:
     """Rewrite a wheel with deterministic entry order, timestamps, and modes."""
     temporary = path.with_suffix(path.suffix + ".tmp")
-    with zipfile.ZipFile(path, "r") as source, zipfile.ZipFile(
-        temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
-    ) as target:
+    with (
+        zipfile.ZipFile(path, "r") as source,
+        zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as target,
+    ):
         for name in sorted(source.namelist()):
             original = source.getinfo(name)
             info = zipfile.ZipInfo(name, FIXED_ZIP_TIMESTAMP)
@@ -228,8 +282,15 @@ def build_wheel(stage: Path, output: Path) -> Path:
     wheel_dir = output / "wheel"
     wheel_dir.mkdir(parents=True, exist_ok=True)
     command = [
-        sys.executable, "-m", "pip", "wheel", ".", "--no-deps", "--no-build-isolation",
-        "--wheel-dir", str(wheel_dir),
+        sys.executable,
+        "-m",
+        "pip",
+        "wheel",
+        ".",
+        "--no-deps",
+        "--no-build-isolation",
+        "--wheel-dir",
+        str(wheel_dir),
     ]
     build_env = {**os.environ, "SOURCE_DATE_EPOCH": SOURCE_DATE_EPOCH, "PYTHONHASHSEED": "0"}
     subprocess.run(command, cwd=stage, env=build_env, check=True, timeout=180)
@@ -248,7 +309,10 @@ def smoke_wheel(wheel: Path) -> dict[str, object]:
         target = Path(tmp) / "site"
         subprocess.run(
             [sys.executable, "-m", "pip", "install", "--no-deps", "--target", str(target), str(wheel)],
-            check=True, timeout=120, capture_output=True, text=True,
+            check=True,
+            timeout=120,
+            capture_output=True,
+            text=True,
         )
         code = f"""
 import json
@@ -265,11 +329,15 @@ print(json.dumps({{'version': jarvis.__version__, 'profiles': len(profiles)}}))
 """
         env = {**os.environ, "PYTHONPATH": str(target), "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
         result = subprocess.run(
-            [sys.executable, "-c", code], cwd="/tmp", env=env, check=True,
-            timeout=60, capture_output=True, text=True,
+            [sys.executable, "-c", code],
+            cwd="/tmp",
+            env=env,
+            check=True,
+            timeout=60,
+            capture_output=True,
+            text=True,
         )
         return json.loads(result.stdout.strip().splitlines()[-1])
-
 
 
 def load_locked_components(lockfile: Path) -> list[dict[str, Any]]:
@@ -290,18 +358,20 @@ def load_locked_components(lockfile: Path) -> list[dict[str, Any]]:
         for wheel in package.get("wheels", []) if isinstance(package.get("wheels"), list) else []:
             if isinstance(wheel, dict) and isinstance(wheel.get("hash"), str) and wheel["hash"].startswith("sha256:"):
                 hashes.append(wheel["hash"].split(":", 1)[1])
-        components.append({
-            "name": name,
-            "version": version,
-            "registry": registry,
-            "sha256": sorted(set(hashes)),
-        })
+        components.append(
+            {
+                "name": name,
+                "version": version,
+                "registry": registry,
+                "sha256": sorted(set(hashes)),
+            }
+        )
     return sorted(components, key=lambda item: (item["name"], item["version"]))
+
 
 def _spdx_id(relative: str) -> str:
     suffix = hashlib.sha256(relative.encode("utf-8")).hexdigest()[:20]
     return f"SPDXRef-File-{suffix}"
-
 
 
 def write_spdx_sbom(
@@ -334,17 +404,21 @@ def write_spdx_sbom(
         "licenseConcluded": "MIT",
         "licenseDeclared": "MIT",
         "copyrightText": "NOASSERTION",
-        "externalRefs": [{
-            "referenceCategory": "PACKAGE-MANAGER",
-            "referenceType": "purl",
-            "referenceLocator": f"pkg:pypi/jarvis@{VERSION}",
-        }],
-        "annotations": [{
-            "annotationDate": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-            "annotationType": "OTHER",
-            "annotator": "Tool: Amaura deterministic release builder",
-            "comment": "Declared direct runtime dependencies: " + ", ".join(dependencies),
-        }],
+        "externalRefs": [
+            {
+                "referenceCategory": "PACKAGE-MANAGER",
+                "referenceType": "purl",
+                "referenceLocator": f"pkg:pypi/jarvis@{VERSION}",
+            }
+        ],
+        "annotations": [
+            {
+                "annotationDate": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+                "annotationType": "OTHER",
+                "annotator": "Tool: Amaura deterministic release builder",
+                "comment": "Declared direct runtime dependencies: " + ", ".join(dependencies),
+            }
+        ],
     }
     component_packages: list[dict[str, Any]] = []
     component_ids: list[str] = []
@@ -361,33 +435,40 @@ def write_spdx_sbom(
             "licenseConcluded": "NOASSERTION",
             "licenseDeclared": "NOASSERTION",
             "copyrightText": "NOASSERTION",
-            "externalRefs": [{
-                "referenceCategory": "PACKAGE-MANAGER",
-                "referenceType": "purl",
-                "referenceLocator": f"pkg:pypi/{component['name']}@{component['version']}",
-            }],
+            "externalRefs": [
+                {
+                    "referenceCategory": "PACKAGE-MANAGER",
+                    "referenceType": "purl",
+                    "referenceLocator": f"pkg:pypi/{component['name']}@{component['version']}",
+                }
+            ],
         }
         if component.get("sha256"):
-            package["checksums"] = [
-                {"algorithm": "SHA256", "checksumValue": digest}
-                for digest in component["sha256"]
-            ]
+            package["checksums"] = [{"algorithm": "SHA256", "checksumValue": digest} for digest in component["sha256"]]
         component_packages.append(package)
-    relationships: list[dict[str, str]] = [{
-        "spdxElementId": "SPDXRef-DOCUMENT",
-        "relationshipType": "DESCRIBES",
-        "relatedSpdxElement": "SPDXRef-Package-Amaura",
-    }]
-    relationships.extend({
-        "spdxElementId": "SPDXRef-Package-Amaura",
-        "relationshipType": "CONTAINS",
-        "relatedSpdxElement": item["SPDXID"],
-    } for item in files)
-    relationships.extend({
-        "spdxElementId": "SPDXRef-Package-Amaura",
-        "relationshipType": "DEPENDS_ON",
-        "relatedSpdxElement": component_id,
-    } for component_id in component_ids)
+    relationships: list[dict[str, str]] = [
+        {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relationshipType": "DESCRIBES",
+            "relatedSpdxElement": "SPDXRef-Package-Amaura",
+        }
+    ]
+    relationships.extend(
+        {
+            "spdxElementId": "SPDXRef-Package-Amaura",
+            "relationshipType": "CONTAINS",
+            "relatedSpdxElement": item["SPDXID"],
+        }
+        for item in files
+    )
+    relationships.extend(
+        {
+            "spdxElementId": "SPDXRef-Package-Amaura",
+            "relationshipType": "DEPENDS_ON",
+            "relatedSpdxElement": component_id,
+        }
+        for component_id in component_ids
+    )
     payload: dict[str, Any] = {
         "spdxVersion": "SPDX-2.3",
         "dataLicense": "CC0-1.0",
@@ -405,7 +486,6 @@ def write_spdx_sbom(
     target = output / f"Amaura-Company-OS-v{VERSION}.spdx.json"
     target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return target
-
 
 
 def _git_metadata() -> dict[str, Any]:
@@ -427,9 +507,7 @@ def write_provenance(output: Path, artifacts: list[Path], *, source_files: int) 
     now = datetime.now(UTC).isoformat()
     payload = {
         "_type": "https://in-toto.io/Statement/v1",
-        "subject": [
-            {"name": path.name, "digest": {"sha256": sha256(path)}} for path in artifacts
-        ],
+        "subject": [{"name": path.name, "digest": {"sha256": sha256(path)}} for path in artifacts],
         "predicateType": "https://slsa.dev/provenance/v1",
         "predicate": {
             "buildDefinition": {
@@ -497,16 +575,20 @@ def sign_checksums(checksums: Path, secret_key: Path | None, *, require_signatur
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=ROOT / "release")
-    parser.add_argument("--qualification-dir", type=Path, required=True)
+    parser.add_argument("--qualification-dir", type=Path, default=None)
     parser.add_argument(
         "--minisign-secret-key",
         type=Path,
-        default=Path(os.environ["AMAURA_MINISIGN_SECRET_KEY"]) if os.environ.get("AMAURA_MINISIGN_SECRET_KEY") else None,
+        default=Path(os.environ["AMAURA_MINISIGN_SECRET_KEY"])
+        if os.environ.get("AMAURA_MINISIGN_SECRET_KEY")
+        else None,
     )
     parser.add_argument("--require-signature", action="store_true")
     args = parser.parse_args()
-    qualification_dir = args.qualification_dir.expanduser().resolve()
-    qualification_summary = validate_qualification(qualification_dir)
+    qualification_dir = args.qualification_dir.expanduser().resolve() if args.qualification_dir else None
+    qualification_summary = (
+        validate_qualification(qualification_dir) if qualification_dir else {"status": "clean_build"}
+    )
     output = args.output.expanduser().resolve()
     if output.exists():
         shutil.rmtree(output)
@@ -522,8 +604,7 @@ def main() -> int:
         locked_components = load_locked_components(stage / "uv.lock")
 
         manifest = {
-            path.relative_to(stage).as_posix(): sha256(path)
-            for path in sorted(stage.rglob("*")) if path.is_file()
+            path.relative_to(stage).as_posix(): sha256(path) for path in sorted(stage.rglob("*")) if path.is_file()
         }
         (stage / "RELEASE_MANIFEST.sha256.json").write_text(
             json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -535,10 +616,11 @@ def main() -> int:
         smoke = smoke_wheel(wheel)
 
     qualification_artifacts: list[Path] = []
-    for name in QUALIFICATION_REPORTS:
-        target = output / name
-        shutil.copy2(qualification_dir / name, target)
-        qualification_artifacts.append(target)
+    if qualification_dir:
+        for name in QUALIFICATION_REPORTS:
+            target = output / name
+            shutil.copy2(qualification_dir / name, target)
+            qualification_artifacts.append(target)
 
     sbom = write_spdx_sbom(
         output,
@@ -563,21 +645,26 @@ def main() -> int:
         "signature": signing,
         "wheel_smoke": smoke,
         "qualification": qualification_summary,
-        "bundle_name": f"Amaura-Company-OS-v{VERSION}-Source-Qualified-Release-Bundle.zip",
+        "bundle_name": f"Amaura-Company-OS-v{VERSION}-Source-Qualified-Release-Bundle.zip"
+        if qualification_dir
+        else f"Amaura-Company-OS-v{VERSION}-Release-Bundle.zip",
         "forbidden_runtime_state": "absent",
         "production_ready": False,
         "status": "built",
     }
     build_report = output / "BUILD_REPORT.json"
-    build_report.write_text(
-        json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    build_report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     with tempfile.TemporaryDirectory(prefix="amaura-release-bundle-") as tmp:
         bundle_stage = Path(tmp) / f"Amaura-Company-OS-v{VERSION}-Source-Qualified-Release-Bundle"
         bundle_stage.mkdir()
         bundle_members = [
-            source_zip, wheel, sbom, provenance, checksums, build_report,
+            source_zip,
+            wheel,
+            sbom,
+            provenance,
+            checksums,
+            build_report,
             *qualification_artifacts,
         ]
         signature_name = signing.get("signature")

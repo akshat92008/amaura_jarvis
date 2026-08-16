@@ -1,1 +1,0 @@
-What is the title and name of the currently active application window?

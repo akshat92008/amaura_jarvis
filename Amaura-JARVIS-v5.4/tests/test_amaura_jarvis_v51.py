@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import stat
 import subprocess
 from pathlib import Path
@@ -42,7 +41,7 @@ def _git_repo(path: Path) -> Path:
 def _fake_agy(path: Path, *, test_command: str = "python -m py_compile agy_fix.py") -> Path:
     script = path / "agy"
     script.write_text(
-        f'''#!/usr/bin/env python3
+        f"""#!/usr/bin/env python3
 import json, pathlib, sys
 if "--version" in sys.argv or (len(sys.argv) > 1 and sys.argv[1] == "version"):
     print("Antigravity CLI v1.1.11"); raise SystemExit(0)
@@ -65,7 +64,7 @@ assert "Strict Sandbox Constraints" in prompt
 repo=pathlib.Path.cwd(); (repo/"agy_fix.py").write_text("VALUE = 51\\n")
 result={{"schema":"amaura.antigravity-result.v1","success":True,"summary":"Implemented the requested change","changed_files":["agy_fix.py"],"verification_commands":[{test_command!r}],"remaining_failures":[],"models_used":["gemini-fixture"],"conversation_id":"agy-fixture-1"}}
 print(json.dumps({{"result": result, "usage": {{"total_tokens": 42}}}}))
-''',
+""",
         encoding="utf-8",
     )
     script.chmod(script.stat().st_mode | stat.S_IXUSR)
@@ -101,16 +100,21 @@ def test_antigravity_verifier_rejects_inline_python_and_path_alias():
     with pytest.raises(GovernanceError, match="Inline Python"):
         SecureVerifierRunner.parse_command('python -c "print(1)"')
     with pytest.raises(GovernanceError, match="not a path"):
-        SecureVerifierRunner.parse_command('/tmp/python -m pytest')
+        SecureVerifierRunner.parse_command("/tmp/python -m pytest")
 
 
 def test_antigravity_is_runnable_backend_not_handoff_by_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     repo = _git_repo(tmp_path / "repo")
     control = AmauraControlPlane(tmp_path / "amaura.db")
     try:
-        result = JarvisBrain(control).submit(GoalRequest(
-            objective="Build a tested dashboard", workspace=str(repo), autonomy="execute", coding_backend="antigravity"
-        ))
+        result = JarvisBrain(control).submit(
+            GoalRequest(
+                objective="Build a tested dashboard",
+                workspace=str(repo),
+                autonomy="execute",
+                coding_backend="antigravity",
+            )
+        )
         assert result["state"] == "queued"
         goal = control.store.get_work_item(result["goal"]["id"])
         assert goal["metadata"]["mission_runnable"] is True
@@ -203,24 +207,34 @@ def test_manual_antigravity_handoff_remains_available(tmp_path: Path, monkeypatc
     monkeypatch.setenv("AMAURA_HANDOFF_DIR", str(tmp_path / "handoffs"))
     control = AmauraControlPlane(tmp_path / "amaura.db")
     try:
-        result = JarvisBrain(control).submit(GoalRequest(
-            objective="Build a dashboard", workspace=str(repo), autonomy="execute", coding_backend="antigravity"
-        ))
+        result = JarvisBrain(control).submit(
+            GoalRequest(
+                objective="Build a dashboard", workspace=str(repo), autonomy="execute", coding_backend="antigravity"
+            )
+        )
         assert result["state"] == "handoff_required"
         assert result["requires_founder_action"] is True
         assert not MissionRunner(control).runnable_goals()
     finally:
         control.close()
 
-def test_antigravity_settings_reject_unsandboxed_and_global_file_or_web_allows(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+
+def test_antigravity_settings_reject_unsandboxed_and_global_file_or_web_allows(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     settings = tmp_path / "settings.json"
-    settings.write_text(json.dumps({
-        "toolPermission": "proceed-in-sandbox",
-        "artifactReviewPolicy": "always-proceed",
-        "allowNonWorkspaceAccess": False,
-        "enableTerminalSandbox": True,
-        "permissions": {"allow": ["unsandboxed(git push)", "read_url(*)", "write_file(*)"]},
-    }), encoding="utf-8")
+    settings.write_text(
+        json.dumps(
+            {
+                "toolPermission": "proceed-in-sandbox",
+                "artifactReviewPolicy": "always-proceed",
+                "allowNonWorkspaceAccess": False,
+                "enableTerminalSandbox": True,
+                "permissions": {"allow": ["unsandboxed(git push)", "read_url(*)", "write_file(*)"]},
+            }
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setenv("AMAURA_ANTIGRAVITY_SETTINGS", str(settings))
     status = AntigravityDeliveryAdapter.settings_status()
     assert status["automation_ready"] is False
@@ -231,5 +245,6 @@ def test_antigravity_settings_reject_unsandboxed_and_global_file_or_web_allows(t
 
 def test_default_executive_coding_backend_is_antigravity():
     from jarvis.amaura.cognition import ExecutiveRequest
+
     assert ExecutiveRequest(text="Build the app").coding_backend == "antigravity"
     assert GoalRequest(objective="Build the app").coding_backend == "antigravity"

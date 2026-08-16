@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import tempfile
 import unittest
-
-import pytest
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.evidence import deterministic_evidence_review
@@ -123,9 +123,7 @@ class TestAmauraSupervisor(unittest.TestCase):
             self.control.store.get_work_item(first["id"])["state"],
             TaskState.COMPLETED.value,
         )
-        self.assertEqual(
-            self.control.store.execution_status()["counts"]["succeeded"], 1
-        )
+        self.assertEqual(self.control.store.execution_status()["counts"]["succeeded"], 1)
 
     def test_transient_failures_retry_once_then_fail_closed(self):
         first = self._programme()["tasks"][0]
@@ -150,9 +148,7 @@ class TestAmauraSupervisor(unittest.TestCase):
             self.control.store.get_work_item(first["id"])["state"],
             TaskState.FAILED.value,
         )
-        self.assertEqual(
-            len(self.control.store.list_executions(task_id=first["id"])), 2
-        )
+        self.assertEqual(len(self.control.store.list_executions(task_id=first["id"])), 2)
 
     def test_expired_worker_lease_is_recovered(self):
         first = self._programme()["tasks"][0]
@@ -214,9 +210,7 @@ class TestAmauraSupervisor(unittest.TestCase):
             attestation=self._attestation(content_task["id"], content_task["reviewer_id"]),
         )
         approval = self.control.store.list_approvals("pending")[0]
-        self.control.store.update_work_item(
-            content_task["id"], summary="Tampered draft v2"
-        )
+        self.control.store.update_work_item(content_task["id"], summary="Tampered draft v2")
 
         with self.assertRaisesRegex(GovernanceError, "payload changed"):
             self.control.decide_approval(
@@ -410,7 +404,12 @@ def test_cloud_reviewer_rejects_same_worker_model(monkeypatch, tmp_path):
             summary="Completed.",
             evidence=[
                 {"type": "test_report", "reference": report.reference, "sha256": report.sha256, "success": True},
-                {"type": "model_execution_receipt", "reference": receipt.reference, "sha256": receipt.sha256, "success": True},
+                {
+                    "type": "model_execution_receipt",
+                    "reference": receipt.reference,
+                    "sha256": receipt.sha256,
+                    "success": True,
+                },
             ],
         )
         with pytest.raises(GovernanceError, match="must differ"):

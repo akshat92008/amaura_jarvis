@@ -3,16 +3,23 @@
 Phase 3 — JARVIS Server lifecycle helper.
 Starts server, waits for /api/health, returns the process + API key.
 """
-import os, sys, subprocess, time, json, signal
+
+import json
+import os
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from jarvis.amaura.runtime import load_amaura_env
+
 load_amaura_env()
 
 JARVIS_HOST = os.environ.get("JARVIS_HOST", "127.0.0.1")
 JARVIS_PORT = int(os.environ.get("JARVIS_PORT", "8000"))
 BASE_URL = f"http://{JARVIS_HOST}:{JARVIS_PORT}"
+
 
 def get_api_key():
     """Read API key from .amaura-data or env."""
@@ -32,13 +39,16 @@ def get_api_key():
                 return content
     return ""
 
+
 def is_server_up():
     try:
         import httpx
+
         r = httpx.get(f"{BASE_URL}/api/health", timeout=3)
         return r.status_code == 200
     except Exception:
         return False
+
 
 def start_server(env_dir: Path, timeout: int = 30):
     """Start JARVIS server process, return (proc, api_key, base_url)."""
@@ -49,7 +59,7 @@ def start_server(env_dir: Path, timeout: int = 30):
     venv_python = env_dir / ".venv" / "bin" / "python"
     cmd = [str(venv_python), "-m", "jarvis.server"]
     env = os.environ.copy()
-    
+
     proc = subprocess.Popen(
         cmd,
         cwd=str(env_dir),
@@ -58,7 +68,7 @@ def start_server(env_dir: Path, timeout: int = 30):
         stderr=subprocess.PIPE,
         text=True,
     )
-    
+
     deadline = time.time() + timeout
     while time.time() < deadline:
         if is_server_up():
@@ -70,10 +80,11 @@ def start_server(env_dir: Path, timeout: int = 30):
             print(f"  Server exited early: stdout={out[:500]} stderr={err[:500]}")
             return None, "", ""
         time.sleep(0.5)
-    
+
     proc.terminate()
     print(f"  Server did not start within {timeout}s")
     return None, "", ""
+
 
 def stop_server(proc):
     if proc and proc.poll() is None:
@@ -83,6 +94,7 @@ def stop_server(proc):
         except Exception:
             proc.kill()
         print(f"  Server stopped (pid={proc.pid})")
+
 
 if __name__ == "__main__":
     project_dir = Path(__file__).parent.parent

@@ -9,6 +9,7 @@ strong Noryx bridge verifies Git/test evidence first; this harness then executes
 case-owned verification commands independently. Keep real benchmark cases private
 so the coding backend cannot train against the release qualification set.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -36,7 +37,7 @@ def main() -> int:
         if not line.strip():
             continue
         case = json.loads(line)
-        case_id = str(case.get("id") or f"case-{len(rows)+1}")
+        case_id = str(case.get("id") or f"case-{len(rows) + 1}")
         source = Path(str(case["repository"])).expanduser().resolve()
         started = time.monotonic()
         row = {"id": case_id, "objective": case["objective"], "passed": False, "verification": []}
@@ -57,8 +58,13 @@ def main() -> int:
                     if not isinstance(command, list) or not command:
                         raise ValueError("verify entries must be non-empty argv lists")
                     completed = subprocess.run(
-                        [str(v) for v in command], cwd=repo, stdin=subprocess.DEVNULL,
-                        capture_output=True, text=True, timeout=600, check=False,
+                        [str(v) for v in command],
+                        cwd=repo,
+                        stdin=subprocess.DEVNULL,
+                        capture_output=True,
+                        text=True,
+                        timeout=600,
+                        check=False,
                     )
                     check = {
                         "argv": command,

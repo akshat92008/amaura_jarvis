@@ -3,8 +3,8 @@
 import json
 import random
 import string
-import pytest
-from jarvis.amaura.direct_action import WriteActionParser, WriteAction
+
+from jarvis.amaura.direct_action import WriteActionParser
 
 
 def _random_identifier(length: int = 8) -> str:
@@ -22,23 +22,27 @@ def generate_write_cases(count: int = 1600):
         # Cat 0: Quoted payload with target after
         if cat == 0:
             payload = f"Payload content {i} with unicode: 🚀 — {_random_identifier(10)}"
-            prompt = random.choice([
-                f'write "{payload}" to {tgt}',
-                f'save the text "{payload}" in {tgt}',
-                f'put "{payload}" into {tgt}',
-                f'record "{payload}" at {tgt}',
-            ])
+            prompt = random.choice(
+                [
+                    f'write "{payload}" to {tgt}',
+                    f'save the text "{payload}" in {tgt}',
+                    f'put "{payload}" into {tgt}',
+                    f'record "{payload}" at {tgt}',
+                ]
+            )
             cases.append((prompt, tgt, payload, False, False))
 
         # Cat 1: Target first with semicolon / period
         elif cat == 1:
             payload = f"Clause content {i} with numbers 42 and symbols %$#@!"
-            prompt = random.choice([
-                f"create {tgt}; contents must be {payload}",
-                f"create {tgt}. Its body should be {payload}",
-                f"write to {tgt}; set content to {payload}",
-                f"at {tgt}, store {payload}",
-            ])
+            prompt = random.choice(
+                [
+                    f"create {tgt}; contents must be {payload}",
+                    f"create {tgt}. Its body should be {payload}",
+                    f"write to {tgt}; set content to {payload}",
+                    f"at {tgt}, store {payload}",
+                ]
+            )
             cases.append((prompt, tgt, payload, False, False))
 
         # Cat 2: Balanced JSON Object payload
@@ -51,11 +55,13 @@ def generate_write_cases(count: int = 1600):
             }
             json_str = json.dumps(json_dict)
             tgt_json = f"/tmp/json_store_{i}.json"
-            prompt = random.choice([
-                f"store this JSON text in {tgt_json}: {json_str}",
-                f"save to {tgt_json} the following json: {json_str}",
-                f"write {json_str} into {tgt_json}",
-            ])
+            prompt = random.choice(
+                [
+                    f"store this JSON text in {tgt_json}: {json_str}",
+                    f"save to {tgt_json} the following json: {json_str}",
+                    f"write {json_str} into {tgt_json}",
+                ]
+            )
             cases.append((prompt, tgt_json, json_str, False, False))
 
         # Cat 3: Balanced JSON Array payload
@@ -76,23 +82,27 @@ def generate_write_cases(count: int = 1600):
 
         # Cat 5: Explicit Empty File
         elif cat == 5:
-            prompt = random.choice([
-                f"create an empty file at {tgt}",
-                f"make 0-byte file in {tgt}",
-                f"put nothing inside {tgt}",
-                f"save a blank file to {tgt}",
-            ])
+            prompt = random.choice(
+                [
+                    f"create an empty file at {tgt}",
+                    f"make 0-byte file in {tgt}",
+                    f"put nothing inside {tgt}",
+                    f"save a blank file to {tgt}",
+                ]
+            )
             cases.append((prompt, tgt, "", True, False))
 
         # Cat 6: Directives with 'only', 'verbatim', 'strictly'
         elif cat == 6:
             payload = f"Strict token: auth_{_random_identifier(12)}_{i}"
-            prompt = random.choice([
-                f'write verbatim "{payload}" to {tgt}',
-                f'save only the quoted text "{payload}" in {tgt}',
-                f'strictly output "{payload}" into {tgt}',
-                f'store exactly "{payload}" at {tgt}',
-            ])
+            prompt = random.choice(
+                [
+                    f'write verbatim "{payload}" to {tgt}',
+                    f'save only the quoted text "{payload}" in {tgt}',
+                    f'strictly output "{payload}" into {tgt}',
+                    f'store exactly "{payload}" at {tgt}',
+                ]
+            )
             cases.append((prompt, tgt, payload, False, False))
 
         # Cat 7: Ambiguous Requests (MUST FAIL CLOSED)
@@ -126,7 +136,9 @@ def test_write_parser_property_1500_cases():
         else:
             assert action.is_invalid is False, f"Valid prompt rejected as invalid: {action.invalid_reason} ({prompt})"
             assert action.target_path == expected_tgt, f"Target mismatch: got {action.target_path} vs {expected_tgt}"
-            assert action.content == expected_payload, f"Payload mismatch: got {repr(action.content)} vs {repr(expected_payload)}"
+            assert action.content == expected_payload, (
+                f"Payload mismatch: got {repr(action.content)} vs {repr(expected_payload)}"
+            )
             success_count += 1
 
     assert success_count >= 1300

@@ -15,25 +15,16 @@ Validates:
 
 import concurrent.futures
 import hashlib
-import json
-import os
 import random
 import string
-import tempfile
 import textwrap
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from jarvis.amaura.direct_action import (
-    DirectActionResult,
     DirectActionRouter,
     ExactResponseParser,
-    FilesystemActionClassifier,
-    FilesystemActionType,
-    PathExtractor,
-    WriteAction,
     WriteActionParser,
 )
 
@@ -43,7 +34,7 @@ def _rnd(n: int = 10) -> str:
 
 
 def _rnd_payload() -> str:
-    return f"{_rnd(6)}-{_rnd(4)}-{random.randint(1000,9999)}::{random.randint(100000,999999)}"
+    return f"{_rnd(6)}-{_rnd(4)}-{random.randint(1000, 9999)}::{random.randint(100000, 999999)}"
 
 
 # =============================================================================
@@ -54,27 +45,28 @@ def _rnd_payload() -> str:
 class TestWriteParserSecondSentencePayload:
     """FAIL 01 fix: 'Make the file X. Use this as its complete body: PAYLOAD'"""
 
-    @pytest.mark.parametrize("intro_phrase", [
-        "Use this as its complete body:",
-        "Use this as its exact content:",
-        "Use this as its entire text:",
-        "Use this as its full payload:",
-        "Use this as the body:",
-        "Use this as the content:",
-        "Use this as its body:",
-        "Use it as the body:",
-        "Use the following as its content:",
-        "Use this as its verbatim body:",
-    ])
+    @pytest.mark.parametrize(
+        "intro_phrase",
+        [
+            "Use this as its complete body:",
+            "Use this as its exact content:",
+            "Use this as its entire text:",
+            "Use this as its full payload:",
+            "Use this as the body:",
+            "Use this as the content:",
+            "Use this as its body:",
+            "Use it as the body:",
+            "Use the following as its content:",
+            "Use this as its verbatim body:",
+        ],
+    )
     def test_second_sentence_unquoted_payload(self, intro_phrase, tmp_path):
         path = str(tmp_path / "ledger.txt")
         payload = _rnd_payload()
         prompt = f'Make the file "{path}". {intro_phrase} {payload}'
         result = WriteActionParser.parse(prompt, default_workspace=str(tmp_path))
         assert result is not None, f"Parse returned None for: {prompt!r}"
-        assert result.content == payload, (
-            f"Expected payload {payload!r}, got {result.content!r}\n  prompt={prompt!r}"
-        )
+        assert result.content == payload, f"Expected payload {payload!r}, got {result.content!r}\n  prompt={prompt!r}"
 
     @pytest.mark.parametrize("verb", ["Make", "Create", "Write", "Save", "Put", "Store", "Generate"])
     def test_second_sentence_various_verbs(self, verb, tmp_path):
@@ -125,20 +117,23 @@ class TestWriteParserSecondSentencePayload:
 class TestWriteParserQuotedPayloadStripping:
     """FAIL 02 fix: 'Store only the quoted value "PAYLOAD" in file X'"""
 
-    @pytest.mark.parametrize("instruction_prefix,quoted_payload", [
-        ("only the quoted value", "heather-brook-3998 9402"),
-        ("only the literal value", "reed-ferry-1234::567890"),
-        ("only the exact value", "maple-plaza-5678::234567"),
-        ("just the quoted value", "flint-stream-9999::111222"),
-        ("only the verbatim value", "amber-yard-4444::333444"),
-        ("solely the quoted value", "ginger-edge-7777::555666"),
-        ("exactly the quoted value", "jasper-mill-2222::777888"),
-        ("only the following value", "kelp-ferry-1111::999000"),
-        ("only the quoted text", "denim-brook-3333::111333"),
-        ("only the quoted string", "pearl-plaza-5555::222444"),
-        ("only the quoted payload", "topaz-stream-9999::444666"),
-        ("precisely the quoted value", "reed-heights-4444::666888"),
-    ])
+    @pytest.mark.parametrize(
+        "instruction_prefix,quoted_payload",
+        [
+            ("only the quoted value", "heather-brook-3998 9402"),
+            ("only the literal value", "reed-ferry-1234::567890"),
+            ("only the exact value", "maple-plaza-5678::234567"),
+            ("just the quoted value", "flint-stream-9999::111222"),
+            ("only the verbatim value", "amber-yard-4444::333444"),
+            ("solely the quoted value", "ginger-edge-7777::555666"),
+            ("exactly the quoted value", "jasper-mill-2222::777888"),
+            ("only the following value", "kelp-ferry-1111::999000"),
+            ("only the quoted text", "denim-brook-3333::111333"),
+            ("only the quoted string", "pearl-plaza-5555::222444"),
+            ("only the quoted payload", "topaz-stream-9999::444666"),
+            ("precisely the quoted value", "reed-heights-4444::666888"),
+        ],
+    )
     def test_instruction_metadata_stripped(self, instruction_prefix, quoted_payload, tmp_path):
         path = str(tmp_path / "quoted.blob")
         prompt = f'Store {instruction_prefix} "{quoted_payload}" in file "{path}".'
@@ -188,18 +183,21 @@ class TestWriteParserQuotedPayloadStripping:
 class TestWriteParserMultilineBlock:
     """FAIL 03 fix: 'Create X with this exact text block:\\nLINE1\\nLINE2'"""
 
-    @pytest.mark.parametrize("intro_phrase", [
-        "with this exact text block:",
-        "with this exact text body:",
-        "with this exact content:",
-        "with this verbatim text block:",
-        "with this complete text block:",
-        "with this full text block:",
-        "with this exact block:",
-        "with the following text block:",
-        "with this exact text:",
-        "containing this exact text block:",
-    ])
+    @pytest.mark.parametrize(
+        "intro_phrase",
+        [
+            "with this exact text block:",
+            "with this exact text body:",
+            "with this exact content:",
+            "with this verbatim text block:",
+            "with this complete text block:",
+            "with this full text block:",
+            "with this exact block:",
+            "with the following text block:",
+            "with this exact text:",
+            "containing this exact text block:",
+        ],
+    )
     def test_multiline_block_various_introducers(self, intro_phrase, tmp_path):
         path = str(tmp_path / "multi.txt")
         payload = "flint-edge-1701\n22 eagle-mill-9710\nmaple-edge-1151"
@@ -259,26 +257,27 @@ class TestWriteParserMultilineBlock:
 class TestScreenshotRouting:
     """FAIL 15 fix: 'Capture the screen now and save the PNG to X'"""
 
-    @pytest.mark.parametrize("prompt", [
-        "Capture the screen now and save the PNG to /tmp/cap.png.",
-        "Capture the screen and write it to /tmp/cap.png.",
-        "Screen capture to /tmp/cap.png.",
-        "Take a screen capture and save to /tmp/cap.png.",
-        "Grab the screen now, save as /tmp/cap.png.",
-        "Capture the display and write to /tmp/cap.png.",
-        "Take a screenshot and save the PNG to /tmp/cap.png.",
-        "screenshot of the current display save to /tmp/cap.png",
-        "Snap the screen to /tmp/cap.png.",
-        "Grab the display and save as /tmp/cap.png.",
-        "Screen image to /tmp/cap.png.",
-        "capture current display, output /tmp/cap.png",
-        "save the screen to /tmp/cap.png",
-        "take a screen shot and save to /tmp/cap.png",
-    ])
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            "Capture the screen now and save the PNG to /tmp/cap.png.",
+            "Capture the screen and write it to /tmp/cap.png.",
+            "Screen capture to /tmp/cap.png.",
+            "Take a screen capture and save to /tmp/cap.png.",
+            "Grab the screen now, save as /tmp/cap.png.",
+            "Capture the display and write to /tmp/cap.png.",
+            "Take a screenshot and save the PNG to /tmp/cap.png.",
+            "screenshot of the current display save to /tmp/cap.png",
+            "Snap the screen to /tmp/cap.png.",
+            "Grab the display and save as /tmp/cap.png.",
+            "Screen image to /tmp/cap.png.",
+            "capture current display, output /tmp/cap.png",
+            "save the screen to /tmp/cap.png",
+            "take a screen shot and save to /tmp/cap.png",
+        ],
+    )
     def test_screenshot_phrases_detected(self, prompt):
-        assert DirectActionRouter._is_screenshot_request(prompt), (
-            f"Expected screenshot detection for: {prompt!r}"
-        )
+        assert DirectActionRouter._is_screenshot_request(prompt), f"Expected screenshot detection for: {prompt!r}"
 
     def test_capture_screen_not_write_PNG(self, tmp_path):
         path = str(tmp_path / "cap.png")
@@ -286,9 +285,7 @@ class TestScreenshotRouting:
         assert DirectActionRouter._is_screenshot_request(prompt)
         wr = WriteActionParser.parse(prompt, default_workspace=str(tmp_path))
         if wr is not None:
-            assert wr.content.strip() != "PNG", (
-                "WriteActionParser incorrectly extracted 'PNG' as content"
-            )
+            assert wr.content.strip() != "PNG", "WriteActionParser incorrectly extracted 'PNG' as content"
 
     def test_100_screenshot_paraphrase_forms(self):
         screen_words = ["screen", "display", "desktop", "monitor"]
@@ -327,41 +324,45 @@ class TestScreenshotRouting:
 class TestExactResponseGrammarPhase6:
     """FAIL 16 fix: strip suffix/prefix noise."""
 
-    @pytest.mark.parametrize("prompt,expected", [
-        ("reply with only reed-ferry-9770::305616; add nothing", "reed-ferry-9770::305616"),
-        ("return amber-yard-1234::567890; add nothing", "amber-yard-1234::567890"),
-        ("echo flint-stream-7777::888999; add nothing.", "flint-stream-7777::888999"),
-        ("send back kelp-ferry-2222::333444, add nothing", "kelp-ferry-2222::333444"),
-        ("reply with jasper-stream-7170::757266 only", "jasper-stream-7170::757266"),
-        ("output cinder-plaza-5555::666777 only", "cinder-plaza-5555::666777"),
-        ("send pearl-terrace-8888::999000 only", "pearl-terrace-8888::999000"),
-        ("and nothing more: jasper-garden-3417::222546", "jasper-garden-3417::222546"),
-        ("and nothing more: reed-brook-1220::773369", "reed-brook-1220::773369"),
-        ("the following string: heather-heights-9802::686112", "heather-heights-9802::686112"),
-        ("the following string: eagle-yard-6904::907536", "eagle-yard-6904::907536"),
-        ("the following token: indigo-landing-8291::495667", "indigo-landing-8291::495667"),
-        ("the following value: cinder-stream-3587::875230", "cinder-stream-3587::875230"),
-        ("reply with maple-plaza-1284::190338,", "maple-plaza-1284::190338"),
-        ("output kelp-landing-8088::892018,", "kelp-landing-8088::892018"),
-        ("reply with reed-ferry-3838::542858; add nothing", "reed-ferry-3838::542858"),
-    ])
+    @pytest.mark.parametrize(
+        "prompt,expected",
+        [
+            ("reply with only reed-ferry-9770::305616; add nothing", "reed-ferry-9770::305616"),
+            ("return amber-yard-1234::567890; add nothing", "amber-yard-1234::567890"),
+            ("echo flint-stream-7777::888999; add nothing.", "flint-stream-7777::888999"),
+            ("send back kelp-ferry-2222::333444, add nothing", "kelp-ferry-2222::333444"),
+            ("reply with jasper-stream-7170::757266 only", "jasper-stream-7170::757266"),
+            ("output cinder-plaza-5555::666777 only", "cinder-plaza-5555::666777"),
+            ("send pearl-terrace-8888::999000 only", "pearl-terrace-8888::999000"),
+            ("and nothing more: jasper-garden-3417::222546", "jasper-garden-3417::222546"),
+            ("and nothing more: reed-brook-1220::773369", "reed-brook-1220::773369"),
+            ("the following string: heather-heights-9802::686112", "heather-heights-9802::686112"),
+            ("the following string: eagle-yard-6904::907536", "eagle-yard-6904::907536"),
+            ("the following token: indigo-landing-8291::495667", "indigo-landing-8291::495667"),
+            ("the following value: cinder-stream-3587::875230", "cinder-stream-3587::875230"),
+            ("reply with maple-plaza-1284::190338,", "maple-plaza-1284::190338"),
+            ("output kelp-landing-8088::892018,", "kelp-landing-8088::892018"),
+            ("reply with reed-ferry-3838::542858; add nothing", "reed-ferry-3838::542858"),
+        ],
+    )
     def test_suffix_prefix_stripping(self, prompt, expected):
         result = ExactResponseParser.parse(prompt)
         assert result is not None, f"Parse returned None for: {prompt!r}"
-        assert result.output == expected, (
-            f"Expected {expected!r}, got {result.output!r}\n  prompt={prompt!r}"
-        )
+        assert result.output == expected, f"Expected {expected!r}, got {result.output!r}\n  prompt={prompt!r}"
 
-    @pytest.mark.parametrize("suffix", [
-        "; add nothing",
-        ", add nothing",
-        "; add nothing.",
-        " only",
-        " only.",
-    ])
+    @pytest.mark.parametrize(
+        "suffix",
+        [
+            "; add nothing",
+            ", add nothing",
+            "; add nothing.",
+            " only",
+            " only.",
+        ],
+    )
     def test_suffix_stripping_generative(self, suffix):
         failures = []
-        for i in range(20):
+        for _i in range(20):
             payload = _rnd_payload()
             prompt = f"reply with {payload}{suffix}"
             r = ExactResponseParser.parse(prompt)
@@ -369,15 +370,18 @@ class TestExactResponseGrammarPhase6:
                 failures.append(f"suffix={suffix!r} payload={payload!r} got={r.output if r else None!r}")
         assert not failures
 
-    @pytest.mark.parametrize("prefix", [
-        "and nothing more: ",
-        "the following string: ",
-        "the following token: ",
-        "the following value: ",
-    ])
+    @pytest.mark.parametrize(
+        "prefix",
+        [
+            "and nothing more: ",
+            "the following string: ",
+            "the following token: ",
+            "the following value: ",
+        ],
+    )
     def test_leading_modifier_prefix_generative(self, prefix):
         failures = []
-        for i in range(20):
+        for _i in range(20):
             payload = _rnd_payload()
             prompt = f"{prefix}{payload}"
             r = ExactResponseParser.parse(prompt)
@@ -387,8 +391,17 @@ class TestExactResponseGrammarPhase6:
 
     def test_1000_exact_response_variants(self):
         command_verbs = [
-            "reply with", "respond with", "return", "say", "echo", "output",
-            "send", "send back", "give back", "produce", "print",
+            "reply with",
+            "respond with",
+            "return",
+            "say",
+            "echo",
+            "output",
+            "send",
+            "send back",
+            "give back",
+            "produce",
+            "print",
         ]
         modifier_prefixes = ["", "only ", "just ", "exactly ", "verbatim "]
         suffix_qualifiers = ["", " and nothing else", " only", "; add nothing"]
@@ -421,7 +434,8 @@ class TestRepositoryDiagnosisWrongHelper:
     def _make_wrong_helper_repo(self, tmp_path: Path, fn_suffix: str = "12345") -> Path:
         repo = tmp_path / f"repo_helper_{fn_suffix}"
         repo.mkdir()
-        (repo / "billing.py").write_text(textwrap.dedent(f"""\
+        (repo / "billing.py").write_text(
+            textwrap.dedent(f"""\
             def apply_discount_{fn_suffix}(amount):
                 \"\"\"Apply a discount (subtracts 10%).\"\"\"
                 return amount * 0.9
@@ -433,17 +447,21 @@ class TestRepositoryDiagnosisWrongHelper:
             def final_price_{fn_suffix}(base):
                 \"\"\"Calculate the final price by applying a discount.\"\"\"
                 return apply_surcharge_{fn_suffix}(base)
-        """))
-        (repo / "test_billing.py").write_text(textwrap.dedent(f"""\
+        """)
+        )
+        (repo / "test_billing.py").write_text(
+            textwrap.dedent(f"""\
             from billing import final_price_{fn_suffix}
 
             def test_final_price():
                 assert final_price_{fn_suffix}(100) == 90.0
-        """))
+        """)
+        )
         return repo
 
     def test_wrong_helper_diagnosis_found(self, tmp_path):
         from jarvis.amaura.direct_action import RepositoryDiagnosticEngine
+
         repo = self._make_wrong_helper_repo(tmp_path, fn_suffix="99001")
         result = RepositoryDiagnosticEngine.diagnose(repo)
         findings = result["findings"]
@@ -453,6 +471,7 @@ class TestRepositoryDiagnosisWrongHelper:
 
     def test_read_only_verified_on_helper_repos(self, tmp_path):
         from jarvis.amaura.direct_action import RepositoryDiagnosticEngine
+
         repo = self._make_wrong_helper_repo(tmp_path, fn_suffix="99003")
         pre_hashes = {}
         for py_f in repo.glob("*.py"):
@@ -464,12 +483,13 @@ class TestRepositoryDiagnosisWrongHelper:
 
     def test_10_wrong_helper_repos(self, tmp_path):
         from jarvis.amaura.direct_action import RepositoryDiagnosticEngine
+
         failures = []
         for i in range(10):
-            repo = self._make_wrong_helper_repo(tmp_path, fn_suffix=f"{10000+i}")
+            repo = self._make_wrong_helper_repo(tmp_path, fn_suffix=f"{10000 + i}")
             result = RepositoryDiagnosticEngine.diagnose(repo)
             if not result["findings"]:
-                failures.append(f"repo_{10000+i}: no findings")
+                failures.append(f"repo_{10000 + i}: no findings")
         assert not failures, "Repos with no findings:\n" + "\n".join(failures)
 
 
@@ -479,7 +499,6 @@ class TestRepositoryDiagnosisWrongHelper:
 
 
 class TestConcurrencyPhase6:
-
     def _run_burst(self, burst_size: int):
         payloads = [_rnd_payload() for _ in range(burst_size)]
         prompts = [f"reply with {p}" for p in payloads]
@@ -520,40 +539,45 @@ class TestConcurrencyPhase6:
 
 
 class TestFailureInjectionPhase6:
-
-    @pytest.mark.parametrize("bad_prompt", [
-        "",
-        " ",
-        "\n\n\n",
-        "a" * 5000,
-        "???",
-        "write to",
-        "create",
-        "save",
-        "make file",
-        "put content in",
-        '""',
-        "''",
-        "write \"\" to /tmp/empty.txt",
-        "Create /tmp/f.txt: ",
-        "make /tmp/x.txt with text block:\n",
-    ])
+    @pytest.mark.parametrize(
+        "bad_prompt",
+        [
+            "",
+            " ",
+            "\n\n\n",
+            "a" * 5000,
+            "???",
+            "write to",
+            "create",
+            "save",
+            "make file",
+            "put content in",
+            '""',
+            "''",
+            'write "" to /tmp/empty.txt',
+            "Create /tmp/f.txt: ",
+            "make /tmp/x.txt with text block:\n",
+        ],
+    )
     def test_write_parser_no_crash(self, bad_prompt, tmp_path):
         try:
             WriteActionParser.parse(bad_prompt, default_workspace=str(tmp_path))
         except Exception as exc:
             pytest.fail(f"WriteActionParser raised on {bad_prompt!r:.60}: {exc}")
 
-    @pytest.mark.parametrize("bad_prompt", [
-        "",
-        " ",
-        "hello world",
-        "what is the weather",
-        "navigate to http://example.com",
-        "list directory /tmp",
-        "write hello to /tmp/x.txt",
-        "random text with no grammar",
-    ])
+    @pytest.mark.parametrize(
+        "bad_prompt",
+        [
+            "",
+            " ",
+            "hello world",
+            "what is the weather",
+            "navigate to http://example.com",
+            "list directory /tmp",
+            "write hello to /tmp/x.txt",
+            "random text with no grammar",
+        ],
+    )
     def test_exact_response_no_crash(self, bad_prompt):
         try:
             r = ExactResponseParser.parse(bad_prompt)
@@ -562,15 +586,18 @@ class TestFailureInjectionPhase6:
         except Exception as exc:
             pytest.fail(f"ExactResponseParser raised on {bad_prompt!r}: {exc}")
 
-    @pytest.mark.parametrize("bad_prompt", [
-        "",
-        " ",
-        "take a photo",
-        "shoot the scene",
-        "grab the apple",
-        "save /tmp/file.png",
-        "output image.png",
-    ])
+    @pytest.mark.parametrize(
+        "bad_prompt",
+        [
+            "",
+            " ",
+            "take a photo",
+            "shoot the scene",
+            "grab the apple",
+            "save /tmp/file.png",
+            "output image.png",
+        ],
+    )
     def test_screenshot_no_crash(self, bad_prompt):
         try:
             DirectActionRouter._is_screenshot_request(bad_prompt)

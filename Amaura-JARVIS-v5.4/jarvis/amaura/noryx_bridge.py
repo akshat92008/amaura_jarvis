@@ -4,6 +4,7 @@ A process exit code is not proof of engineering success.  Noryx must return a
 v2 result contract and Amaura independently verifies that contract against the
 Git worktree before the task can enter review.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -25,6 +26,7 @@ from jarvis.amaura.verification import SecureVerifierRunner
 
 def _receipt(**kwargs: Any):
     from jarvis.amaura.integrations import ProviderReceipt
+
     return ProviderReceipt.issue(**kwargs)
 
 
@@ -60,7 +62,7 @@ class NoryxTestEvidence(BaseModel):
     summary: str = Field(default="", max_length=8000)
 
     @model_validator(mode="after")
-    def _must_pass(self) -> "NoryxTestEvidence":
+    def _must_pass(self) -> NoryxTestEvidence:
         if self.exit_code != 0 or not self.passed:
             raise ValueError("successful Noryx result cannot contain a failing test command")
         return self
@@ -80,7 +82,9 @@ class NoryxResultContract(BaseModel):
 
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    schema_version: Literal["amaura.noryx-result.v2"] = Field(default="amaura.noryx-result.v2", alias="schema", serialization_alias="schema")
+    schema_version: Literal["amaura.noryx-result.v2"] = Field(
+        default="amaura.noryx-result.v2", alias="schema", serialization_alias="schema"
+    )
     success: Literal[True]
     summary: str = Field(min_length=3, max_length=20_000)
     changed_files: list[str] = Field(min_length=1, max_length=1000)
@@ -117,7 +121,7 @@ class NoryxResultContract(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def _no_known_failures(self) -> "NoryxResultContract":
+    def _no_known_failures(self) -> NoryxResultContract:
         if self.remaining_failures:
             raise ValueError("success=true cannot include remaining_failures")
         return self
@@ -151,13 +155,32 @@ class NoryxDeliveryAdapter:
 
     DEFAULT_ENV_ALLOWLIST = frozenset(
         {
-            "PATH", "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "TEMP", "TMP",
-            "LANG", "LC_ALL", "TERM", "COLORTERM", "PYTHONPATH", "VIRTUAL_ENV",
-            "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE",
+            "PATH",
+            "HOME",
+            "USER",
+            "LOGNAME",
+            "SHELL",
+            "TMPDIR",
+            "TEMP",
+            "TMP",
+            "LANG",
+            "LC_ALL",
+            "TERM",
+            "COLORTERM",
+            "PYTHONPATH",
+            "VIRTUAL_ENV",
+            "SSL_CERT_FILE",
+            "SSL_CERT_DIR",
+            "REQUESTS_CA_BUNDLE",
             # Explicit coding-model credentials only. Governance, approval,
             # audit, provider-signing and desktop bootstrap secrets are excluded.
-            "NVIDIA_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "OLLAMA_URL",
-            "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY",
+            "NVIDIA_API_KEY",
+            "GROQ_API_KEY",
+            "OPENROUTER_API_KEY",
+            "OLLAMA_URL",
+            "ANTHROPIC_API_KEY",
+            "OPENAI_API_KEY",
+            "GOOGLE_API_KEY",
         }
     )
 
@@ -177,21 +200,19 @@ class NoryxDeliveryAdapter:
         return bool(parts and (Path(parts[0]).is_file() or shutil.which(parts[0])))
 
     def _environment(self, idempotency_key: str) -> dict[str, str]:
-        extra = {
-            item.strip()
-            for item in os.environ.get("AMAURA_NORYX_ENV_ALLOWLIST", "").split(",")
-            if item.strip()
-        }
+        extra = {item.strip() for item in os.environ.get("AMAURA_NORYX_ENV_ALLOWLIST", "").split(",") if item.strip()}
         # Explicit operator additions are supported, but dangerous Amaura keys
         # remain denied even if accidentally named in the allowlist.
         denied_prefixes = (
-            "AMAURA_APPROVAL", "AMAURA_AUDIT", "AMAURA_REVIEWER", "AMAURA_OPERATOR",
-            "AMAURA_DESKTOP_BOOTSTRAP", "AMAURA_PROVIDER_RECEIPT", "JARVIS_API_KEY",
+            "AMAURA_APPROVAL",
+            "AMAURA_AUDIT",
+            "AMAURA_REVIEWER",
+            "AMAURA_OPERATOR",
+            "AMAURA_DESKTOP_BOOTSTRAP",
+            "AMAURA_PROVIDER_RECEIPT",
+            "JARVIS_API_KEY",
         )
-        allowed = {
-            key for key in (self.DEFAULT_ENV_ALLOWLIST | extra)
-            if not key.startswith(denied_prefixes)
-        }
+        allowed = {key for key in (self.DEFAULT_ENV_ALLOWLIST | extra) if not key.startswith(denied_prefixes)}
         env = {key: value for key, value in os.environ.items() if key in allowed}
         env["AMAURA_NORYX_TASK_ID"] = idempotency_key
         env["AMAURA_NEXUS_TASK_ID"] = idempotency_key  # legacy Noryx/Nexus builds
@@ -239,15 +260,18 @@ class NoryxDeliveryAdapter:
         # Include untracked files that are not represented in git diff.
         for relative in changed_files:
             path = repository / relative
-            tracked = subprocess.run(
-                ["git", "ls-files", "--error-unmatch", relative],
-                cwd=repository,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=10,
-                check=False,
-            ).returncode == 0
+            tracked = (
+                subprocess.run(
+                    ["git", "ls-files", "--error-unmatch", relative],
+                    cwd=repository,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=10,
+                    check=False,
+                ).returncode
+                == 0
+            )
             if path.is_file() and not tracked:
                 digest.update(relative.encode("utf-8"))
                 digest.update(path.read_bytes())
@@ -267,9 +291,7 @@ class NoryxDeliveryAdapter:
         if os.environ.get("AMAURA_NORYX_INDEPENDENT_VERIFY", "1") != "1":
             raise GovernanceError("Independent Noryx verification may not be disabled")
         timeout = max(5, min(int(os.environ.get("AMAURA_NORYX_VERIFY_TIMEOUT_SECONDS", "300")), 1800))
-        return SecureVerifierRunner().run_all(
-            repository, [test.command for test in tests], timeout_seconds=timeout
-        )
+        return SecureVerifierRunner().run_all(repository, [test.command for test in tests], timeout_seconds=timeout)
 
     @staticmethod
     def _verify_contract(
@@ -334,9 +356,7 @@ class NoryxDeliveryAdapter:
         request_payload = {
             "schema": "amaura.noryx-task.v1",
             "objective": objective.strip(),
-            "acceptance_criteria": [
-                str(value).strip() for value in (acceptance_criteria or []) if str(value).strip()
-            ],
+            "acceptance_criteria": [str(value).strip() for value in (acceptance_criteria or []) if str(value).strip()],
             "repository_path": str(repository),
             "base_commit": base_commit,
             "idempotency_key": idempotency_key,
@@ -381,9 +401,7 @@ class NoryxDeliveryAdapter:
             stdout = completed.stdout[-100_000:]
             stderr = completed.stderr[-100_000:]
             if completed.returncode != 0:
-                raise GovernanceError(
-                    f"Noryx delivery failed with exit code {completed.returncode}: {stderr[-1600:]}"
-                )
+                raise GovernanceError(f"Noryx delivery failed with exit code {completed.returncode}: {stderr[-1600:]}")
             if not result_file.is_file():
                 raise GovernanceError("Noryx exited successfully but returned no structured result")
             try:

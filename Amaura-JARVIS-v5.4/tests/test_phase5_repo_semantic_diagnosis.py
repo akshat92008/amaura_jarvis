@@ -1,9 +1,7 @@
 """Phase 5 Tests: Repository AST Semantic Diagnosis and Read-Only Cache Isolation (Phases 9, 10, 11)."""
 
-import os
 import tempfile
 from pathlib import Path
-import pytest
 
 from jarvis.amaura.direct_action import DirectActionRouter, RepositoryDiagnosticEngine
 

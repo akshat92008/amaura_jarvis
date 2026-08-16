@@ -57,7 +57,11 @@ def validate_public_url(
     if parsed.username or parsed.password:
         raise GovernanceError("URLs containing credentials are not allowed")
     hostname = parsed.hostname.rstrip(".").lower()
-    if hostname == "localhost" or hostname.endswith((".localhost", ".local", ".internal")) or hostname in _BLOCKED_HOSTS:
+    if (
+        hostname == "localhost"
+        or hostname.endswith((".localhost", ".local", ".internal"))
+        or hostname in _BLOCKED_HOSTS
+    ):
         raise GovernanceError("Local and metadata-service hosts are blocked")
 
     addresses: set[str] = set()
@@ -80,7 +84,9 @@ def validate_public_url(
             raise GovernanceError(f"Outbound hostname resolved to no usable address: {hostname}")
     if any(not _address_is_public(address) for address in addresses):
         raise GovernanceError("Private, loopback, link-local, reserved, and metadata network destinations are blocked")
-    return ValidatedDestination(url=url, scheme=parsed.scheme, hostname=hostname, port=port, addresses=tuple(sorted(addresses)))
+    return ValidatedDestination(
+        url=url, scheme=parsed.scheme, hostname=hostname, port=port, addresses=tuple(sorted(addresses))
+    )
 
 
 class _PinnedHTTPConnection(http.client.HTTPConnection):
@@ -130,7 +136,10 @@ def _pinned_request(
     address = destination.addresses[0]
     connection_cls = _PinnedHTTPSConnection if destination.scheme == "https" else _PinnedHTTPConnection
     connection = connection_cls(destination.hostname, address, destination.port, timeout=timeout)
-    request_headers = {"Host": destination.hostname if destination.port in {80, 443} else f"{destination.hostname}:{destination.port}", **headers}
+    request_headers = {
+        "Host": destination.hostname if destination.port in {80, 443} else f"{destination.hostname}:{destination.port}",
+        **headers,
+    }
     try:
         connection.request(method.upper(), _path_and_query(destination.url), body=body, headers=request_headers)
         response = connection.getresponse()
@@ -184,7 +193,9 @@ def request_json(
         except (OSError, urllib.error.HTTPError, urllib.error.URLError) as exc:
             raise GovernanceError("Provider request failed") from exc
     else:
-        status, raw, response_headers = _pinned_request(destination, method=method, body=body, headers=request_headers, timeout=timeout, max_bytes=2_000_000)
+        status, raw, response_headers = _pinned_request(
+            destination, method=method, body=body, headers=request_headers, timeout=timeout, max_bytes=2_000_000
+        )
     try:
         decoded = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -213,8 +224,12 @@ def request_form_json(
         **(headers or {}),
     }
     status, raw, response_headers = _pinned_request(
-        destination, method="POST", body=body, headers=request_headers,
-        timeout=max(1.0, min(timeout, 60.0)), max_bytes=2_000_000,
+        destination,
+        method="POST",
+        body=body,
+        headers=request_headers,
+        timeout=max(1.0, min(timeout, 60.0)),
+        max_bytes=2_000_000,
     )
     try:
         decoded = json.loads(raw.decode("utf-8"))
@@ -223,7 +238,6 @@ def request_form_json(
     if not isinstance(decoded, dict):
         raise GovernanceError("Provider response must be a JSON object")
     return status, decoded, response_headers
-
 
 
 def request_bytes(
@@ -271,17 +285,26 @@ def decode_json_object(raw: bytes, *, allow_empty: bool = False) -> dict[str, An
         raise GovernanceError("Provider response must be a JSON object")
     return decoded
 
+
 def fetch_public_bytes(url: str, *, max_length: int = 100_000) -> tuple[bytes, dict[str, Any]]:
     destination = validate_public_url(url, resolve=True)
     limit = max(1, min(int(max_length), 2_000_000))
     status, raw, headers = _pinned_request(
-        destination, method="GET", body=None,
+        destination,
+        method="GET",
+        body=None,
         headers={"Accept": "text/*,application/json,application/xml", "User-Agent": "Amaura-Evidence-Fetcher/1.2"},
-        timeout=15.0, max_bytes=limit,
+        timeout=15.0,
+        max_bytes=limit,
     )
     if not 200 <= status < 300:
         raise GovernanceError(f"Public evidence fetch returned HTTP {status}")
-    return raw, {"validated_hostname": destination.hostname, "validated_ip": destination.addresses[0], "status": status, "headers": headers}
+    return raw, {
+        "validated_hostname": destination.hostname,
+        "validated_ip": destination.addresses[0],
+        "status": status,
+        "headers": headers,
+    }
 
 
 def fetch_public_text(url: str, *, max_length: int = 10_000) -> str:
@@ -289,4 +312,13 @@ def fetch_public_text(url: str, *, max_length: int = 10_000) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
-__all__ = ["ValidatedDestination", "decode_json_object", "fetch_public_bytes", "fetch_public_text", "request_bytes", "request_form_json", "request_json", "validate_public_url"]
+__all__ = [
+    "ValidatedDestination",
+    "decode_json_object",
+    "fetch_public_bytes",
+    "fetch_public_text",
+    "request_bytes",
+    "request_form_json",
+    "request_json",
+    "validate_public_url",
+]

@@ -19,7 +19,9 @@ _LOCK = threading.Lock()
 
 def get_amaura_bus():
     from jarvis.amaura.bus import CommandBus
+
     return CommandBus(get_control_plane())
+
 
 def get_control_plane() -> AmauraControlPlane:
     global _CONTROL
@@ -89,7 +91,10 @@ AMAURA_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "objective": {"type": "string", "description": "Concrete company outcome to achieve."},
-                    "success_metric": {"type": "string", "description": "Measurable threshold proving the programme succeeded."},
+                    "success_metric": {
+                        "type": "string",
+                        "description": "Measurable threshold proving the programme succeeded.",
+                    },
                     "workflow_key": {"type": "string", "enum": sorted(WORKFLOWS)},
                     "title": {"type": "string"},
                     "priority": {"type": "integer", "minimum": 1, "maximum": 5, "default": 3},
@@ -116,8 +121,10 @@ AMAURA_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "campaign_id": {"type": "string"}, "name": {"type": "string"},
-                    "target_segment": {"type": "string"}, "offer": {"type": "string"},
+                    "campaign_id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "target_segment": {"type": "string"},
+                    "offer": {"type": "string"},
                     "minimum_score": {"type": "integer", "minimum": 70, "maximum": 100, "default": 70},
                     "daily_lead_limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 10},
                     "daily_outreach_limit": {"type": "integer", "minimum": 0, "maximum": 50, "default": 3},
@@ -134,9 +141,12 @@ AMAURA_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "campaign_id": {"type": "string"}, "company_name": {"type": "string"},
-                    "domain": {"type": "string"}, "source_url": {"type": "string"},
-                    "country": {"type": "string"}, "industry": {"type": "string"},
+                    "campaign_id": {"type": "string"},
+                    "company_name": {"type": "string"},
+                    "domain": {"type": "string"},
+                    "source_url": {"type": "string"},
+                    "country": {"type": "string"},
+                    "industry": {"type": "string"},
                 },
                 "required": ["campaign_id", "company_name", "domain", "source_url"],
             },
@@ -157,7 +167,14 @@ AMAURA_TOOL_DEFINITIONS = [
                     "contactability": {"type": "integer", "minimum": 0, "maximum": 15},
                     "portfolio_match": {"type": "integer", "minimum": 0, "maximum": 15},
                 },
-                "required": ["lead_id", "campaign_fit", "visible_need", "ability_to_pay", "contactability", "portfolio_match"],
+                "required": [
+                    "lead_id",
+                    "campaign_fit",
+                    "visible_need",
+                    "ability_to_pay",
+                    "contactability",
+                    "portfolio_match",
+                ],
             },
         },
     },
@@ -256,9 +273,11 @@ AMAURA_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "decision": {"type": "string"}, "context": {"type": "string"},
+                    "decision": {"type": "string"},
+                    "context": {"type": "string"},
                     "options": {"type": "array", "items": {"type": "string"}},
-                    "chosen_option": {"type": "string"}, "reason": {"type": "string"},
+                    "chosen_option": {"type": "string"},
+                    "reason": {"type": "string"},
                     "review_date": {"type": "string"},
                 },
                 "required": ["decision", "context", "options", "chosen_option", "reason"],
@@ -310,7 +329,7 @@ AMAURA_TOOL_DEFINITIONS = [
                     "claim": {"type": "string"},
                     "source_url": {"type": "string"},
                     "source_excerpt": {"type": "string"},
-                    "confidence": {"type": "number"}
+                    "confidence": {"type": "number"},
                 },
                 "required": ["lead_id", "claim_type", "claim", "source_url", "source_excerpt", "confidence"],
             },
@@ -326,7 +345,7 @@ AMAURA_TOOL_DEFINITIONS = [
                 "properties": {
                     "lead_id": {"type": "string"},
                     "to_stage": {"type": "string"},
-                    "reason": {"type": "string"}
+                    "reason": {"type": "string"},
                 },
                 "required": ["lead_id", "to_stage", "reason"],
             },
@@ -345,7 +364,7 @@ AMAURA_TOOL_DEFINITIONS = [
                     "channel": {"type": "string"},
                     "message_type": {"type": "string"},
                     "subject": {"type": "string"},
-                    "body": {"type": "string"}
+                    "body": {"type": "string"},
                 },
                 "required": ["lead_id", "recipient", "channel", "message_type", "subject", "body"],
             },
@@ -366,7 +385,7 @@ AMAURA_TOOL_DEFINITIONS = [
                     "source_url": {"type": "string"},
                     "creator": {"type": "string"},
                     "licence": {"type": "string"},
-                    "status": {"type": "string"}
+                    "status": {"type": "string"},
                 },
                 "required": ["campaign_id", "asset_type", "uri"],
             },
@@ -384,7 +403,7 @@ AMAURA_TOOL_DEFINITIONS = [
                     "platform": {"type": "string"},
                     "window": {"type": "string", "enum": ["24h", "72h", "7d", "30d"]},
                     "metrics": {"type": "object"},
-                    "captured_at": {"type": "string"}
+                    "captured_at": {"type": "string"},
                 },
                 "required": ["campaign_id", "platform", "window", "metrics"],
             },
@@ -397,10 +416,7 @@ AMAURA_TOOL_DEFINITIONS = [
             "description": "Send a founder-approved email using the configured external integration (n8n or Gmail).",
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "message_id": {"type": "string"},
-                    "recipient": {"type": "string"}
-                },
+                "properties": {"message_id": {"type": "string"}, "recipient": {"type": "string"}},
                 "required": ["message_id", "recipient"],
             },
         },
@@ -416,8 +432,8 @@ AMAURA_TOOL_DEFINITIONS = [
                     "lead_id": {"type": "string"},
                     "fields": {
                         "type": "object",
-                        "description": "CRM fields to update (e.g. status, expected_value, probability, follow_up_date)"
-                    }
+                        "description": "CRM fields to update (e.g. status, expected_value, probability, follow_up_date)",
+                    },
                 },
                 "required": ["lead_id", "fields"],
             },
@@ -442,16 +458,45 @@ AMAURA_TOOL_DEFINITIONS = [
                     "title": {"type": "string"},
                     "problem": {"type": "string"},
                     "target_user": {"type": "string"},
-                    "product_type": {"type": "string", "enum": ["mobile_app", "micro_saas", "web_app", "browser_extension", "developer_tool", "template", "game", "ai_utility", "kdp_book", "digital_download", "template_pack", "content_asset", "affiliate_content", "newsletter"]},
+                    "product_type": {
+                        "type": "string",
+                        "enum": [
+                            "mobile_app",
+                            "micro_saas",
+                            "web_app",
+                            "browser_extension",
+                            "developer_tool",
+                            "template",
+                            "game",
+                            "ai_utility",
+                            "kdp_book",
+                            "digital_download",
+                            "template_pack",
+                            "content_asset",
+                            "affiliate_content",
+                            "newsletter",
+                        ],
+                    },
                     "source": {"type": "string"},
                     "evidence": {"type": "array", "items": {"type": "object"}},
                     "score_components": {"type": "object"},
                     "estimated_build_days": {"type": "integer", "minimum": 1, "maximum": 14},
                     "monetization": {"type": "string"},
                     "distribution_channel": {"type": "string"},
-                    "strategic_fit": {"type": "string"}
+                    "strategic_fit": {"type": "string"},
                 },
-                "required": ["title", "problem", "target_user", "product_type", "source", "evidence", "score_components", "estimated_build_days", "monetization", "distribution_channel"]
+                "required": [
+                    "title",
+                    "problem",
+                    "target_user",
+                    "product_type",
+                    "source",
+                    "evidence",
+                    "score_components",
+                    "estimated_build_days",
+                    "monetization",
+                    "distribution_channel",
+                ],
             },
         },
     },
@@ -468,9 +513,9 @@ AMAURA_TOOL_DEFINITIONS = [
                     "value": {"type": "number"},
                     "source": {"type": "string"},
                     "evidence": {"type": "array", "items": {"type": "object"}},
-                    "captured_at": {"type": "string"}
+                    "captured_at": {"type": "string"},
                 },
-                "required": ["experiment_id", "metric_name", "value", "source", "evidence"]
+                "required": ["experiment_id", "metric_name", "value", "source", "evidence"],
             },
         },
     },
@@ -493,10 +538,7 @@ AMAURA_TOOL_DEFINITIONS = [
             "description": "Inspect OSS capability installed/configured/healthy/execution-ready state and live RAM pressure. Set deep=true for explicit non-destructive smoke probes.",
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "capability": {"type": "string"},
-                    "deep": {"type": "boolean"}
-                },
+                "properties": {"capability": {"type": "string"}, "deep": {"type": "boolean"}},
             },
         },
     },
@@ -511,14 +553,29 @@ AMAURA_TOOL_DEFINITIONS = [
                     "capability": {
                         "type": "string",
                         "enum": [
-                            "playwright", "crawl4ai", "browser_use", "searxng", "docling",
-                            "pymupdf", "paddleocr", "llamaindex", "qdrant_fastembed",
-                            "faster_whisper", "kokoro", "ffmpeg", "remotion", "image_tools", "yt_dlp",
-                            "comfyui", "mcp", "langfuse", "antigravity"
-                        ]
+                            "playwright",
+                            "crawl4ai",
+                            "browser_use",
+                            "searxng",
+                            "docling",
+                            "pymupdf",
+                            "paddleocr",
+                            "llamaindex",
+                            "qdrant_fastembed",
+                            "faster_whisper",
+                            "kokoro",
+                            "ffmpeg",
+                            "remotion",
+                            "image_tools",
+                            "yt_dlp",
+                            "comfyui",
+                            "mcp",
+                            "langfuse",
+                            "antigravity",
+                        ],
                     },
                     "operation": {"type": "string"},
-                    "params": {"type": "object"}
+                    "params": {"type": "object"},
                 },
                 "required": ["capability", "operation", "params"],
             },
@@ -537,7 +594,10 @@ AMAURA_TOOL_DEFINITIONS = [
         "function": {
             "name": "amaura_cashflow_tick",
             "description": "Generate bounded internal next-action proposals for active Amaura Ventures cash-flow streams. It cannot publish, spend, change pricing or approve external actions.",
-            "parameters": {"type": "object", "properties": {"proposal_limit": {"type": "integer", "minimum": 1, "maximum": 20}}},
+            "parameters": {
+                "type": "object",
+                "properties": {"proposal_limit": {"type": "integer", "minimum": 1, "maximum": 20}},
+            },
         },
     },
     {
@@ -554,9 +614,9 @@ AMAURA_TOOL_DEFINITIONS = [
                     "source": {"type": "string"},
                     "evidence": {"type": "array", "items": {"type": "object"}},
                     "currency": {"type": "string"},
-                    "occurred_at": {"type": "string"}
+                    "occurred_at": {"type": "string"},
                 },
-                "required": ["stream_id", "event_type", "amount_cents", "source", "evidence"]
+                "required": ["stream_id", "event_type", "amount_cents", "source", "evidence"],
             },
         },
     },
@@ -565,10 +625,13 @@ AMAURA_TOOL_DEFINITIONS = [
         "function": {
             "name": "amaura_venture_recommendation",
             "description": "Calculate the evidence and threshold based continue, kill, iterate, or double-down recommendation for a venture experiment. This does not make the founder decision.",
-            "parameters": {"type": "object", "properties": {"experiment_id": {"type": "string"}}, "required": ["experiment_id"]},
+            "parameters": {
+                "type": "object",
+                "properties": {"experiment_id": {"type": "string"}},
+                "required": ["experiment_id"],
+            },
         },
     },
-
 ]
 
 
@@ -582,11 +645,13 @@ def resource_inventory() -> str:
     from jarvis.amaura.capability_runtime import get_capability_runtime
     from jarvis.amaura.resources import CapabilityRouter
 
-    return _json({
-        "resources": CapabilityRouter().inventory(),
-        "executors": get_capability_runtime().inventory(),
-        "mac_8gb_profile": CapabilityRouter().mac_8gb_profile(),
-    })
+    return _json(
+        {
+            "resources": CapabilityRouter().inventory(),
+            "executors": get_capability_runtime().inventory(),
+            "mac_8gb_profile": CapabilityRouter().mac_8gb_profile(),
+        }
+    )
 
 
 def capability_plan(intent: str) -> str:
@@ -615,42 +680,94 @@ def revenue_dashboard() -> str:
     return _json(get_control_plane().acquisition.dashboard())
 
 
-def create_campaign(campaign_id: str, name: str, target_segment: str, offer: str,
-                    minimum_score: int = 70, daily_lead_limit: int = 10,
-                    daily_outreach_limit: int = 3) -> str:
-    return _json(get_amaura_bus().execute(cmd.CreateCampaignCommand(
-        campaign_id=campaign_id, name=name, target_segment=target_segment, offer=offer,
-        minimum_score=minimum_score, daily_lead_limit=daily_lead_limit,
-        daily_outreach_limit=daily_outreach_limit, daily_followup_limit=0, maximum_followups=0, config={}
-    )))
+def create_campaign(
+    campaign_id: str,
+    name: str,
+    target_segment: str,
+    offer: str,
+    minimum_score: int = 70,
+    daily_lead_limit: int = 10,
+    daily_outreach_limit: int = 3,
+) -> str:
+    return _json(
+        get_amaura_bus().execute(
+            cmd.CreateCampaignCommand(
+                campaign_id=campaign_id,
+                name=name,
+                target_segment=target_segment,
+                offer=offer,
+                minimum_score=minimum_score,
+                daily_lead_limit=daily_lead_limit,
+                daily_outreach_limit=daily_outreach_limit,
+                daily_followup_limit=0,
+                maximum_followups=0,
+                config={},
+            )
+        )
+    )
 
 
-def discover_lead(campaign_id: str, company_name: str, domain: str, source_url: str,
-                  country: str = "", industry: str = "") -> str:
-    return _json(get_amaura_bus().execute(cmd.DiscoverLeadCommand(
-        campaign_id=campaign_id, company_name=company_name, domain=domain, source_url=source_url,
-        country=country, industry=industry,
-    )))
+def discover_lead(
+    campaign_id: str, company_name: str, domain: str, source_url: str, country: str = "", industry: str = ""
+) -> str:
+    return _json(
+        get_amaura_bus().execute(
+            cmd.DiscoverLeadCommand(
+                campaign_id=campaign_id,
+                company_name=company_name,
+                domain=domain,
+                source_url=source_url,
+                country=country,
+                industry=industry,
+            )
+        )
+    )
 
 
-def score_lead(lead_id: str, campaign_fit: int, visible_need: int, ability_to_pay: int,
-               contactability: int, portfolio_match: int) -> str:
-    return _json(get_amaura_bus().execute(cmd.ScoreLeadCommand(lead_id=lead_id, components={
-        "campaign_fit": campaign_fit, "visible_need": visible_need,
-        "ability_to_pay": ability_to_pay, "contactability": contactability,
-        "portfolio_match": portfolio_match,
-    })))
+def score_lead(
+    lead_id: str, campaign_fit: int, visible_need: int, ability_to_pay: int, contactability: int, portfolio_match: int
+) -> str:
+    return _json(
+        get_amaura_bus().execute(
+            cmd.ScoreLeadCommand(
+                lead_id=lead_id,
+                components={
+                    "campaign_fit": campaign_fit,
+                    "visible_need": visible_need,
+                    "ability_to_pay": ability_to_pay,
+                    "contactability": contactability,
+                    "portfolio_match": portfolio_match,
+                },
+            )
+        )
+    )
 
 
 def list_agents() -> str:
     return _json(get_control_plane().store.list_agents())
 
 
-def create_program(objective: str, success_metric: str, workflow_key: str, title: str = "", priority: int = 3, deadline: str = "", inputs: dict | None = None) -> str:
-    result = get_amaura_bus().execute(cmd.CreateProgramCommand(
-        objective=objective, success_metric=success_metric, workflow_key=workflow_key,
-        title=title or None, priority=priority, deadline=deadline or None, inputs=inputs or {}, actor="jarvis",
-    ))
+def create_program(
+    objective: str,
+    success_metric: str,
+    workflow_key: str,
+    title: str = "",
+    priority: int = 3,
+    deadline: str = "",
+    inputs: dict | None = None,
+) -> str:
+    result = get_amaura_bus().execute(
+        cmd.CreateProgramCommand(
+            objective=objective,
+            success_metric=success_metric,
+            workflow_key=workflow_key,
+            title=title or None,
+            priority=priority,
+            deadline=deadline or None,
+            inputs=inputs or {},
+            actor="jarvis",
+        )
+    )
     return _json(result)
 
 
@@ -665,20 +782,24 @@ def task_packet(task_id: str) -> str:
 def run_task(task_id: str, max_iterations: int = 12) -> str:
     return _json(GovernedTaskRunner(get_control_plane()).run(task_id, max_iterations))
 
+
 def supervisor_status() -> str:
     return _json(AmauraSupervisor(get_control_plane(), worker_id="jarvis-tool").status())
 
 
 def supervisor_tick(workflow_id: str = "", automatic_reviews: bool = True) -> str:
-    return _json(AmauraSupervisor(
-        get_control_plane(),
-        worker_id="jarvis-tool",
-        automatic_reviews=automatic_reviews,
-    ).tick(workflow_id=workflow_id or None))
+    return _json(
+        AmauraSupervisor(
+            get_control_plane(),
+            worker_id="jarvis-tool",
+            automatic_reviews=automatic_reviews,
+        ).tick(workflow_id=workflow_id or None)
+    )
 
 
 def review_task(task_id: str) -> str:
     from jarvis.amaura.executor import GovernedReviewRunner
+
     control = get_control_plane()
     result = GovernedReviewRunner(control).run(task_id)
     return _json(result)
@@ -692,8 +813,20 @@ def pause_agent(agent_id: str, reason: str) -> str:
     return _json(get_amaura_bus().execute(cmd.PauseAgentCommand(agent_id=agent_id, reason=reason, actor="jarvis")))
 
 
-def record_decision(decision: str, context: str, options: list[str], chosen_option: str, reason: str, review_date: str = "") -> str:
-    decision_id = get_amaura_bus().execute(cmd.RecordDecisionCommand(decision=decision, context=context, options=options, chosen_option=chosen_option, reason=reason, actor="jarvis", review_date=review_date or None))
+def record_decision(
+    decision: str, context: str, options: list[str], chosen_option: str, reason: str, review_date: str = ""
+) -> str:
+    decision_id = get_amaura_bus().execute(
+        cmd.RecordDecisionCommand(
+            decision=decision,
+            context=context,
+            options=options,
+            chosen_option=chosen_option,
+            reason=reason,
+            actor="jarvis",
+            review_date=review_date or None,
+        )
+    )
     return _json({"decision_id": decision_id})
 
 
@@ -712,39 +845,90 @@ def get_campaign_context(campaign_id: str) -> str:
     return _json(get_control_plane().store.get_campaign(campaign_id))
 
 
-def record_lead_evidence(lead_id: str, claim_type: str, claim: str, source_url: str, source_excerpt: str, confidence: float) -> str:
-    return _json(get_amaura_bus().execute(cmd.AddEvidenceCommand(
-        lead_id=lead_id, claim_type=claim_type, claim=claim, source_url=source_url, 
-        source_excerpt=source_excerpt, confidence=confidence, actor="jarvis"
-    )))
+def record_lead_evidence(
+    lead_id: str, claim_type: str, claim: str, source_url: str, source_excerpt: str, confidence: float
+) -> str:
+    return _json(
+        get_amaura_bus().execute(
+            cmd.AddEvidenceCommand(
+                lead_id=lead_id,
+                claim_type=claim_type,
+                claim=claim,
+                source_url=source_url,
+                source_excerpt=source_excerpt,
+                confidence=confidence,
+                actor="jarvis",
+            )
+        )
+    )
 
 
 def transition_lead(lead_id: str, to_stage: str, reason: str) -> str:
-    return _json(get_amaura_bus().execute(cmd.TransitionLeadCommand(lead_id=lead_id, to_stage=to_stage, actor="jarvis", reason=reason)))
+    return _json(
+        get_amaura_bus().execute(
+            cmd.TransitionLeadCommand(lead_id=lead_id, to_stage=to_stage, actor="jarvis", reason=reason)
+        )
+    )
 
 
 def stage_outreach(lead_id: str, recipient: str, channel: str, message_type: str, subject: str, body: str) -> str:
-    return _json(get_amaura_bus().execute(cmd.StageMessageCommand(
-        lead_id=lead_id, recipient=recipient, channel=channel, message_type=message_type, subject=subject, body=body
-    )))
+    return _json(
+        get_amaura_bus().execute(
+            cmd.StageMessageCommand(
+                lead_id=lead_id,
+                recipient=recipient,
+                channel=channel,
+                message_type=message_type,
+                subject=subject,
+                body=body,
+            )
+        )
+    )
 
 
-def register_content_asset(campaign_id: str, asset_type: str, uri: str, sha256: str = "", source_url: str = "", creator: str = "", licence: str = "", status: str = "draft") -> str:
-    return _json(get_amaura_bus().execute(cmd.RegisterAssetCommand(
-        campaign_id=campaign_id, asset_type=asset_type, uri=uri, sha256=sha256,
-        source_url=source_url, creator=creator, licence=licence, status=status,
-    )))
+def register_content_asset(
+    campaign_id: str,
+    asset_type: str,
+    uri: str,
+    sha256: str = "",
+    source_url: str = "",
+    creator: str = "",
+    licence: str = "",
+    status: str = "draft",
+) -> str:
+    return _json(
+        get_amaura_bus().execute(
+            cmd.RegisterAssetCommand(
+                campaign_id=campaign_id,
+                asset_type=asset_type,
+                uri=uri,
+                sha256=sha256,
+                source_url=source_url,
+                creator=creator,
+                licence=licence,
+                status=status,
+            )
+        )
+    )
 
 
 def record_content_metrics(campaign_id: str, platform: str, window: str, metrics: dict, captured_at: str = "") -> str:
-    return _json(get_amaura_bus().execute(cmd.RecordMetricsCommand(
-        campaign_id=campaign_id, platform=platform, window=window,
-        metrics=metrics, captured_at=captured_at or None,
-    )))
+    return _json(
+        get_amaura_bus().execute(
+            cmd.RecordMetricsCommand(
+                campaign_id=campaign_id,
+                platform=platform,
+                window=window,
+                metrics=metrics,
+                captured_at=captured_at or None,
+            )
+        )
+    )
 
 
 def venture_dashboard() -> str:
     from jarvis.amaura.ventures import VentureStudio
+
     return _json(VentureStudio(get_control_plane()).dashboard())
 
 
@@ -762,20 +946,23 @@ def register_venture_opportunity(
     strategic_fit: str = "",
 ) -> str:
     from jarvis.amaura.ventures import VentureStudio
-    return _json(VentureStudio(get_control_plane()).create_opportunity(
-        title=title,
-        problem=problem,
-        target_user=target_user,
-        product_type=product_type,
-        source=source,
-        evidence=evidence,
-        score_components=score_components,
-        estimated_build_days=estimated_build_days,
-        monetization=monetization,
-        distribution_channel=distribution_channel,
-        strategic_fit=strategic_fit,
-        actor="jarvis",
-    ))
+
+    return _json(
+        VentureStudio(get_control_plane()).create_opportunity(
+            title=title,
+            problem=problem,
+            target_user=target_user,
+            product_type=product_type,
+            source=source,
+            evidence=evidence,
+            score_components=score_components,
+            estimated_build_days=estimated_build_days,
+            monetization=monetization,
+            distribution_channel=distribution_channel,
+            strategic_fit=strategic_fit,
+            actor="jarvis",
+        )
+    )
 
 
 def record_venture_metric(
@@ -787,53 +974,73 @@ def record_venture_metric(
     captured_at: str = "",
 ) -> str:
     from jarvis.amaura.ventures import VentureStudio
-    return _json(VentureStudio(get_control_plane()).record_metric(
-        experiment_id,
-        metric_name=metric_name,
-        value=value,
-        source=source,
-        evidence=evidence,
-        captured_at=captured_at or None,
-        actor="jarvis",
-    ))
+
+    return _json(
+        VentureStudio(get_control_plane()).record_metric(
+            experiment_id,
+            metric_name=metric_name,
+            value=value,
+            source=source,
+            evidence=evidence,
+            captured_at=captured_at or None,
+            actor="jarvis",
+        )
+    )
 
 
 def cashflow_dashboard() -> str:
     from jarvis.amaura.ventures_cashflow import CashflowEngine
+
     return _json(CashflowEngine(get_control_plane()).dashboard())
 
 
 def cashflow_tick(proposal_limit: int = 8) -> str:
     from jarvis.amaura.ventures_cashflow import CashflowEngine
+
     return _json(CashflowEngine(get_control_plane()).tick(actor="jarvis", proposal_limit=proposal_limit))
 
 
 def record_cashflow_financial(
-    stream_id: str, event_type: str, amount_cents: int, source: str, evidence: list[dict],
-    currency: str = "", occurred_at: str = "",
+    stream_id: str,
+    event_type: str,
+    amount_cents: int,
+    source: str,
+    evidence: list[dict],
+    currency: str = "",
+    occurred_at: str = "",
 ) -> str:
     from jarvis.amaura.ventures_cashflow import CashflowEngine
-    return _json(CashflowEngine(get_control_plane()).record_financial_event(
-        stream_id, event_type=event_type, amount_cents=amount_cents, source=source, evidence=evidence,
-        currency=currency, occurred_at=occurred_at or None, actor="jarvis",
-    ))
+
+    return _json(
+        CashflowEngine(get_control_plane()).record_financial_event(
+            stream_id,
+            event_type=event_type,
+            amount_cents=amount_cents,
+            source=source,
+            evidence=evidence,
+            currency=currency,
+            occurred_at=occurred_at or None,
+            actor="jarvis",
+        )
+    )
 
 
 def venture_recommendation(experiment_id: str) -> str:
     from jarvis.amaura.ventures import VentureStudio
+
     return _json(VentureStudio(get_control_plane()).recommend(experiment_id))
 
 
 def send_email(message_id: str, recipient: str) -> str:
-    return _json(get_amaura_bus().execute(cmd.DeliverApprovedMessageCommand(
-        message_id=message_id, recipient=recipient, actor="jarvis"
-    )))
+    return _json(
+        get_amaura_bus().execute(
+            cmd.DeliverApprovedMessageCommand(message_id=message_id, recipient=recipient, actor="jarvis")
+        )
+    )
 
 
 def update_crm(lead_id: str, fields: dict) -> str:
-    return _json(get_amaura_bus().execute(cmd.UpdateCRMCommand(
-        lead_id=lead_id, fields=fields, actor="jarvis"
-    )))
+    return _json(get_amaura_bus().execute(cmd.UpdateCRMCommand(lead_id=lead_id, fields=fields, actor="jarvis")))
 
 
 AMAURA_DISPATCH = {

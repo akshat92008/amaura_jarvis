@@ -4,9 +4,8 @@ Gives Jarvis the ability to create presentations and documents.
 """
 
 import re
-from pathlib import Path
 from datetime import datetime
-
+from pathlib import Path
 
 # ── Tool Definitions ─────────────────────────────────────────────────────────
 
@@ -26,7 +25,11 @@ DOCUMENT_TOOL_DEFINITIONS = [
                             "type": "object",
                             "properties": {
                                 "title": {"type": "string", "description": "Slide title."},
-                                "bullets": {"type": "array", "items": {"type": "string"}, "description": "Bullet points."},
+                                "bullets": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "description": "Bullet points.",
+                                },
                             },
                         },
                         "description": "List of slides, each with a title and bullet points.",
@@ -63,7 +66,11 @@ DOCUMENT_TOOL_DEFINITIONS = [
                 "properties": {
                     "title": {"type": "string", "description": "Spreadsheet title (used for filename)."},
                     "headers": {"type": "array", "items": {"type": "string"}, "description": "Column headers."},
-                    "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}, "description": "Data rows."},
+                    "rows": {
+                        "type": "array",
+                        "items": {"type": "array", "items": {"type": "string"}},
+                        "description": "Data rows.",
+                    },
                     "output_path": {"type": "string", "description": "Output file path (default: ~/Desktop/)."},
                 },
                 "required": ["title", "headers", "rows"],
@@ -75,18 +82,17 @@ DOCUMENT_TOOL_DEFINITIONS = [
 
 # ── Tool Implementations ─────────────────────────────────────────────────────
 
+
 def tool_create_presentation(title: str, slides: list[dict], output_path: str = "") -> str:
     """Create a PowerPoint presentation using python-pptx."""
     try:
         from pptx import Presentation
-        from pptx.util import Inches, Pt
-        from pptx.dml.color import RGBColor
-        from pptx.enum.text import PP_ALIGN
+        from pptx.util import Inches
     except ImportError:
         return "❌ python-pptx not installed. Run: pip install python-pptx"
 
     if not output_path:
-        safe_title = re.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')[:50]
+        safe_title = re.sub(r"[^\w\s-]", "", title).strip().replace(" ", "_")[:50]
         output_path = str(Path.home() / "Desktop" / f"{safe_title}.pptx")
 
     p = Path(output_path).expanduser().resolve()
@@ -126,13 +132,13 @@ def tool_create_presentation(title: str, slides: list[dict], output_path: str = 
 
     prs.save(str(p))
     num_slides = len(slides) + 1  # +1 for title slide
-    return f"✅ Presentation created: {p}\n   {num_slides} slides, titled \"{title}\""
+    return f'✅ Presentation created: {p}\n   {num_slides} slides, titled "{title}"'
 
 
 def tool_create_document(title: str, content: str, output_path: str = "") -> str:
     """Create a markdown document."""
     if not output_path:
-        safe_title = re.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')[:50]
+        safe_title = re.sub(r"[^\w\s-]", "", title).strip().replace(" ", "_")[:50]
         output_path = str(Path.home() / "Desktop" / f"{safe_title}.md")
 
     p = Path(output_path).expanduser().resolve()
@@ -147,7 +153,7 @@ def tool_create_document(title: str, content: str, output_path: str = "") -> str
         f.write(doc_content)
 
     word_count = len(content.split())
-    return f"✅ Document created: {p}\n   {word_count} words, titled \"{title}\""
+    return f'✅ Document created: {p}\n   {word_count} words, titled "{title}"'
 
 
 def tool_create_spreadsheet(title: str, headers: list[str], rows: list[list], output_path: str = "") -> str:
@@ -155,7 +161,7 @@ def tool_create_spreadsheet(title: str, headers: list[str], rows: list[list], ou
     import csv
 
     if not output_path:
-        safe_title = re.sub(r'[^\w\s-]', '', title).strip().replace(' ', '_')[:50]
+        safe_title = re.sub(r"[^\w\s-]", "", title).strip().replace(" ", "_")[:50]
         output_path = str(Path.home() / "Desktop" / f"{safe_title}.csv")
 
     p = Path(output_path).expanduser().resolve()
@@ -173,9 +179,12 @@ def tool_create_spreadsheet(title: str, headers: list[str], rows: list[list], ou
 
 DOCUMENT_DISPATCH = {
     "create_presentation": lambda **kw: tool_create_presentation(
-        kw.get("title", "Untitled"), kw.get("slides", []), kw.get("output_path", "")),
+        kw.get("title", "Untitled"), kw.get("slides", []), kw.get("output_path", "")
+    ),
     "create_document": lambda **kw: tool_create_document(
-        kw.get("title", "Untitled"), kw.get("content", ""), kw.get("output_path", "")),
+        kw.get("title", "Untitled"), kw.get("content", ""), kw.get("output_path", "")
+    ),
     "create_spreadsheet": lambda **kw: tool_create_spreadsheet(
-        kw.get("title", "Untitled"), kw.get("headers", []), kw.get("rows", []), kw.get("output_path", "")),
+        kw.get("title", "Untitled"), kw.get("headers", []), kw.get("rows", []), kw.get("output_path", "")
+    ),
 }

@@ -1,21 +1,14 @@
 """Phase 7 Test Suite 10: Invariants, Wrong-Action Execution Checks & System Regressions."""
 
-import hashlib
 import json
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
-import pytest
 
-from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.cognition import ExecutiveKernel, ExecutiveRequest
+from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.direct_action import (
     DirectActionRouter,
-    RequestPreprocessor,
-    ActionType,
-    ResponseMode,
-    RepositoryDiagnosticEngine,
 )
 
 
@@ -27,6 +20,7 @@ def test_critical_wrong_action_invariant():
         kernel = ExecutiveKernel(control)
 
         executed_tools = []
+
         def mock_track_tools(tool_name, args):
             executed_tools.append(tool_name)
             return json.dumps({"ok": True, "data": {}})
@@ -45,7 +39,9 @@ def test_critical_wrong_action_invariant():
                 kernel.handle(req)
 
                 if expected_tool is None:
-                    assert len(executed_tools) == 0, f"Consequential tool executed for non-action prompt: {prompt} -> {executed_tools}"
+                    assert len(executed_tools) == 0, (
+                        f"Consequential tool executed for non-action prompt: {prompt} -> {executed_tools}"
+                    )
                 else:
                     assert "take_screenshot" not in executed_tools if expected_tool != "take_screenshot" else True
 
@@ -127,6 +123,7 @@ def test_regression_memory_retrieval():
         ws = Path(td)
         control = AmauraControlPlane(ws / "control")
         from jarvis.amaura.cognition import UnifiedMemoryService
+
         mem = UnifiedMemoryService(control)
         mem.remember(key="office_wifi_password", value="SecretWiFiPass2026", scope="project")
 

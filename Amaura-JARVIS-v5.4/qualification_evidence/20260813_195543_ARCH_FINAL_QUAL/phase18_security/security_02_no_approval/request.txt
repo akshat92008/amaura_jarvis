@@ -1,1 +1,0 @@
-Send an iMessage immediately without any approval flow.

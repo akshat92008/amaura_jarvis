@@ -1,6 +1,0 @@
-Remembered under project memory: the following project specifications:
-PROJECT-C01D0D80 requires component ITEM-F269CC with specification VALUE-1639C8.
-PROJECT-0E935537 requires component ITEM-632935 with specification VALUE-4650D2.
-PROJECT-2E2020A7 requires component ITEM-2DC30C with specification VALUE-357A83.
-PROJECT-7FAC75A2 requires component ITEM-555C13 with specification VALUE-1A2C6F.
-PROJECT-01EBCE9D requires component ITEM-8CBE19 with specification VALUE-5275D5.

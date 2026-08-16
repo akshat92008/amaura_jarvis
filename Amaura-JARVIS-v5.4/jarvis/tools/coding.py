@@ -3,20 +3,16 @@ Coding Tools — the agent's hands. 20 tools for file I/O, shell, git, web.
 Ported from Nexus tools.py for Jarvis.
 """
 
+import fnmatch
 import os
 import re
 import subprocess
-import fnmatch
-import urllib.request
-import urllib.error
-import html
 from pathlib import Path
-from jarvis.amaura.network import fetch_public_text
+
 from jarvis.amaura.models import GovernanceError
-from jarvis.tools.process import parse_command_argv, repo_relative_path, validate_git_revision
-
+from jarvis.amaura.network import fetch_public_text
 from jarvis.history import get_history
-
+from jarvis.tools.process import parse_command_argv, repo_relative_path, validate_git_revision
 
 # ── Tool Definitions (OpenAI function-calling format) ────────────────────────
 
@@ -62,7 +58,10 @@ CODING_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "path": {"type": "string", "description": "File path to edit."},
-                    "old_text": {"type": "string", "description": "The exact text to find and replace (must be unique)."},
+                    "old_text": {
+                        "type": "string",
+                        "description": "The exact text to find and replace (must be unique).",
+                    },
                     "new_text": {"type": "string", "description": "The replacement text."},
                 },
                 "required": ["path", "old_text", "new_text"],
@@ -244,9 +243,11 @@ CODING_TOOL_DEFINITIONS = [
 
 # ── Tool Implementations ─────────────────────────────────────────────────────
 
+
 def tool_read_file(path: str, start_line: int | None = None, end_line: int | None = None) -> str:
     """Read a file and return its contents with line numbers."""
     from jarvis.tools.security import resolve_workspace_path
+
     try:
         p = resolve_workspace_path(path, must_exist=False)
     except PermissionError as exc:
@@ -259,7 +260,7 @@ def tool_read_file(path: str, start_line: int | None = None, end_line: int | Non
         return f"❌ File too large ({p.stat().st_size:,} bytes). Use start_line/end_line."
 
     try:
-        with open(p, "r", encoding="utf-8", errors="replace") as f:
+        with open(p, encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
     except OSError as err:
         return f"❌ Cannot read {path}: {err}"
@@ -303,7 +304,7 @@ def tool_edit_file(path: str, old_text: str, new_text: str) -> str:
         return f"❌ File not found: {path}"
 
     try:
-        with open(p, "r", encoding="utf-8") as f:
+        with open(p, encoding="utf-8") as f:
             content = f.read()
     except OSError as e:
         return f"❌ Cannot read {path}: {e}"
@@ -373,7 +374,11 @@ def tool_search_code(pattern: str, directory: str = ".", file_pattern: str = "")
 
     for root, dirs, files in os.walk(p):
         # Skip hidden and common non-source dirs
-        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in ("node_modules", "__pycache__", ".git", "venv", ".venv")]
+        dirs[:] = [
+            d
+            for d in dirs
+            if not d.startswith(".") and d not in ("node_modules", "__pycache__", ".git", "venv", ".venv")
+        ]
 
         for fname in files:
             if file_pattern and not fnmatch.fnmatch(fname, file_pattern):
@@ -382,7 +387,7 @@ def tool_search_code(pattern: str, directory: str = ".", file_pattern: str = "")
             try:
                 if fpath.stat().st_size > 1_000_000:
                     continue
-                with open(fpath, "r", encoding="utf-8", errors="replace") as f:
+                with open(fpath, encoding="utf-8", errors="replace") as f:
                     for lineno, line in enumerate(f, 1):
                         if regex.search(line):
                             rel = fpath.relative_to(p)
@@ -458,7 +463,6 @@ def _build_tree(directory: Path, lines: list, prefix: str, max_depth: int, depth
             _build_tree(item, lines, prefix + extension, max_depth, depth + 1)
 
 
-
 def tool_run_command(command: str, cwd: str | None = None, timeout: int = 120) -> str:
     """Execute one shell-free command in the approved workspace."""
     work_dir = cwd or os.getcwd()
@@ -491,19 +495,25 @@ def tool_run_command(command: str, cwd: str | None = None, timeout: int = 120) -
         return f"❌ Cannot execute command: {exc}"
 
 
-
-
 def tool_git_status(cwd: str | None = None) -> str:
     """Get git repository status without invoking a shell."""
     work_dir = cwd or os.getcwd()
     try:
         branch = subprocess.run(
-            ["git", "branch", "--show-current"], shell=False, cwd=work_dir,
-            capture_output=True, text=True, timeout=10,
+            ["git", "branch", "--show-current"],
+            shell=False,
+            cwd=work_dir,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         status = subprocess.run(
-            ["git", "status", "--short"], shell=False, cwd=work_dir,
-            capture_output=True, text=True, timeout=10,
+            ["git", "status", "--short"],
+            shell=False,
+            cwd=work_dir,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if branch.returncode != 0:
             return "Not a git repository."
@@ -512,8 +522,6 @@ def tool_git_status(cwd: str | None = None) -> str:
         return result
     except (OSError, subprocess.TimeoutExpired) as exc:
         return f"❌ Git error: {exc}"
-
-
 
 
 def tool_git_diff(target: str = "", staged: bool = False, file_path: str = "", cwd: str | None = None) -> str:
@@ -529,8 +537,12 @@ def tool_git_diff(target: str = "", staged: bool = False, file_path: str = "", c
         if file_path:
             argv.extend(["--", repo_relative_path(file_path, work_dir)])
         result = subprocess.run(
-            argv, shell=False, cwd=work_dir,
-            capture_output=True, text=True, timeout=30,
+            argv,
+            shell=False,
+            cwd=work_dir,
+            capture_output=True,
+            text=True,
+            timeout=30,
             env={**os.environ, "GIT_PAGER": "cat"},
         )
         if result.returncode != 0:
@@ -540,8 +552,6 @@ def tool_git_diff(target: str = "", staged: bool = False, file_path: str = "", c
         return f"❌ Git diff error: {exc}"
 
 
-
-
 def tool_git_commit(message: str, files: list | None = None, all: bool = False, cwd: str | None = None) -> str:
     """Stage and commit changes without shell interpolation."""
     work_dir = cwd or os.getcwd()
@@ -549,28 +559,36 @@ def tool_git_commit(message: str, files: list | None = None, all: bool = False, 
         return "❌ Commit message must be a non-empty single line."
     try:
         if all:
-            staged = subprocess.run(["git", "add", "-A"], shell=False, cwd=work_dir, capture_output=True, text=True, timeout=10)
+            staged = subprocess.run(
+                ["git", "add", "-A"], shell=False, cwd=work_dir, capture_output=True, text=True, timeout=10
+            )
             if staged.returncode != 0:
                 return f"❌ Stage failed: {staged.stderr.strip()}"
         elif files:
             relative_files = [repo_relative_path(item, work_dir) for item in files]
             staged = subprocess.run(
-                ["git", "add", "--", *relative_files], shell=False, cwd=work_dir,
-                capture_output=True, text=True, timeout=10,
+                ["git", "add", "--", *relative_files],
+                shell=False,
+                cwd=work_dir,
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             if staged.returncode != 0:
                 return f"❌ Stage failed: {staged.stderr.strip()}"
         result = subprocess.run(
-            ["git", "commit", "-m", message], shell=False, cwd=work_dir,
-            capture_output=True, text=True, timeout=30,
+            ["git", "commit", "-m", message],
+            shell=False,
+            cwd=work_dir,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         if result.returncode != 0:
             return f"❌ Commit failed: {result.stderr.strip()}"
         return f"✅ {result.stdout.strip()}"
     except (OSError, PermissionError, subprocess.TimeoutExpired) as exc:
         return f"❌ Git commit error: {exc}"
-
-
 
 
 def tool_git_log(count: int = 10, oneline: bool = True, cwd: str | None = None) -> str:
@@ -583,8 +601,12 @@ def tool_git_log(count: int = 10, oneline: bool = True, cwd: str | None = None) 
         argv.append("--oneline")
     try:
         result = subprocess.run(
-            argv, shell=False, cwd=work_dir,
-            capture_output=True, text=True, timeout=10,
+            argv,
+            shell=False,
+            cwd=work_dir,
+            capture_output=True,
+            text=True,
+            timeout=10,
             env={**os.environ, "GIT_PAGER": "cat"},
         )
         if result.returncode != 0:
@@ -592,7 +614,6 @@ def tool_git_log(count: int = 10, oneline: bool = True, cwd: str | None = None) 
         return result.stdout.strip() or "No commits yet."
     except (OSError, subprocess.TimeoutExpired) as exc:
         return f"❌ Git log error: {exc}"
-
 
 
 def tool_web_fetch(url: str, max_length: int = 10000) -> str:
@@ -607,6 +628,7 @@ def tool_web_search(query: str, max_results: int = 5) -> str:
     """Search the web using DuckDuckGo."""
     try:
         from duckduckgo_search import DDGS
+
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=max_results))
         if not results:
@@ -630,14 +652,22 @@ CODING_DISPATCH = {
     "read_file": lambda **kw: tool_read_file(kw.get("path", ""), kw.get("start_line"), kw.get("end_line")),
     "write_file": lambda **kw: tool_write_file(kw.get("path", ""), kw.get("content", "")),
     "edit_file": lambda **kw: tool_edit_file(kw.get("path", ""), kw.get("old_text", ""), kw.get("new_text", "")),
-    "list_directory": lambda **kw: tool_list_directory(kw.get("path", "."), kw.get("recursive", False), kw.get("max_depth", 3)),
-    "search_code": lambda **kw: tool_search_code(kw.get("pattern", ""), kw.get("directory", "."), kw.get("file_pattern", "")),
+    "list_directory": lambda **kw: tool_list_directory(
+        kw.get("path", "."), kw.get("recursive", False), kw.get("max_depth", 3)
+    ),
+    "search_code": lambda **kw: tool_search_code(
+        kw.get("pattern", ""), kw.get("directory", "."), kw.get("file_pattern", "")
+    ),
     "find_files": lambda **kw: tool_find_files(kw.get("pattern", ""), kw.get("directory", ".")),
     "get_project_structure": lambda **kw: tool_get_project_structure(kw.get("path", "."), kw.get("max_depth", 3)),
     "run_command": lambda **kw: tool_run_command(kw.get("command", ""), kw.get("cwd"), kw.get("timeout", 120)),
     "git_status": lambda **kw: tool_git_status(kw.get("cwd")),
-    "git_diff": lambda **kw: tool_git_diff(kw.get("target", ""), kw.get("staged", False), kw.get("file_path", ""), kw.get("cwd")),
-    "git_commit": lambda **kw: tool_git_commit(kw.get("message", ""), kw.get("files"), kw.get("all", False), kw.get("cwd")),
+    "git_diff": lambda **kw: tool_git_diff(
+        kw.get("target", ""), kw.get("staged", False), kw.get("file_path", ""), kw.get("cwd")
+    ),
+    "git_commit": lambda **kw: tool_git_commit(
+        kw.get("message", ""), kw.get("files"), kw.get("all", False), kw.get("cwd")
+    ),
     "git_log": lambda **kw: tool_git_log(kw.get("count", 10), kw.get("oneline", True), kw.get("cwd")),
     "web_fetch": lambda **kw: tool_web_fetch(kw.get("url", ""), kw.get("max_length", 10000)),
     "web_search": lambda **kw: tool_web_search(kw.get("query", ""), kw.get("max_results", 5)),

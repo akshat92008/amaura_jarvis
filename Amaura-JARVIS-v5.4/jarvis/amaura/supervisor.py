@@ -14,8 +14,8 @@ from typing import Any
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.executor import GovernedReviewRunner, GovernedTaskRunner
 from jarvis.amaura.integrations import dispatch_outbox_event
-from jarvis.amaura.operation_policy import operation_policy
 from jarvis.amaura.models import GovernanceError, TaskState
+from jarvis.amaura.operation_policy import operation_policy
 
 RunnerFactory = Callable[[AmauraControlPlane], GovernedTaskRunner]
 ReviewerFactory = Callable[[AmauraControlPlane], GovernedReviewRunner]
@@ -38,9 +38,7 @@ class AmauraSupervisor:
         automatic_reviews: bool = True,
     ):
         self.control = control_plane
-        self.worker_id = worker_id or (
-            f"{socket.gethostname()}-{os.getpid()}-{uuid.uuid4().hex[:6]}"
-        )
+        self.worker_id = worker_id or (f"{socket.gethostname()}-{os.getpid()}-{uuid.uuid4().hex[:6]}")
         self.lease_seconds = max(30, min(int(lease_seconds), 86_400))
         self.max_attempts = max(1, min(int(max_attempts), 20))
         self.outbox_max_attempts = max(
@@ -65,12 +63,8 @@ class AmauraSupervisor:
             "automatic_reviews": self.automatic_reviews,
             "executions": self.control.store.execution_status(),
             "ready_tasks": len(self.control.list_tasks(TaskState.ASSIGNED.value)),
-            "awaiting_review": len(
-                self.control.list_tasks(TaskState.AWAITING_REVIEW.value)
-            ),
-            "awaiting_approval": len(
-                self.control.list_tasks(TaskState.AWAITING_APPROVAL.value)
-            ),
+            "awaiting_review": len(self.control.list_tasks(TaskState.AWAITING_REVIEW.value)),
+            "awaiting_approval": len(self.control.list_tasks(TaskState.AWAITING_APPROVAL.value)),
             "open_alerts": len(self.control.store.list_alerts(status="open")),
         }
 
@@ -88,13 +82,17 @@ class AmauraSupervisor:
         # ambiguous email attempts are never blindly replayed.
         recovered_outbox = self.control.store.recover_expired_outbox_events() if dispatch_outbox else []
         for event in recovered_outbox:
-            if event["status"] == "reconciliation_required" and operation_policy(str(event["operation"])).external_side_effect:
+            if (
+                event["status"] == "reconciliation_required"
+                and operation_policy(str(event["operation"])).external_side_effect
+            ):
                 message_id = str(event.get("payload", {}).get("message_id", ""))
                 publication_id = str(event.get("payload", {}).get("publication_id", ""))
                 action_id = str(event.get("payload", {}).get("action_id", ""))
                 if action_id:
                     self.control.store.complete_integration_action(
-                        action_id, error="Outbox worker lease expired during provider delivery",
+                        action_id,
+                        error="Outbox worker lease expired during provider delivery",
                         status="reconciliation_required",
                     )
                 if message_id:
@@ -119,11 +117,15 @@ class AmauraSupervisor:
             not dispatch_outbox
             or self.control.store.get_control("external_actions_kill_switch", "off").strip().lower() == "on"
         )
-        outbox_events = [] if external_actions_disabled else self.control.store.fetch_pending_outbox_events(
-            limit=10,
-            worker_id=self.worker_id,
-            lease_seconds=self.outbox_lease_seconds,
-            max_attempts=self.outbox_max_attempts,
+        outbox_events = (
+            []
+            if external_actions_disabled
+            else self.control.store.fetch_pending_outbox_events(
+                limit=10,
+                worker_id=self.worker_id,
+                lease_seconds=self.outbox_lease_seconds,
+                max_attempts=self.outbox_max_attempts,
+            )
         )
         dispatched_events = []
         for event in outbox_events:
@@ -139,7 +141,8 @@ class AmauraSupervisor:
                 if event["operation"] in {"send_email", "send_imessage"}:
                     payload = event["payload"]
                     self.control.acquisition.confirm_external_send(
-                        message_id=payload["message_id"], actor=payload.get("actor", "jarvis"),
+                        message_id=payload["message_id"],
+                        actor=payload.get("actor", "jarvis"),
                         provider_receipt=receipt,
                     )
                 elif event["operation"] == "prepare_assisted_message" and event.get("payload", {}).get("message_id"):
@@ -148,7 +151,8 @@ class AmauraSupervisor:
                     )
                 elif event["operation"] == "sync_crm":
                     self.control.store.publish_event(
-                        "crm.synced", str(event["payload"].get("lead_id", "")),
+                        "crm.synced",
+                        str(event["payload"].get("lead_id", "")),
                         {"outbox_event_id": event["id"], "external_id": receipt.external_id},
                     )
                 elif event["operation"] in {"publish_content", "create_private_draft"}:
@@ -179,9 +183,7 @@ class AmauraSupervisor:
                     event["id"],
                     {"provider": event["provider"], "operation": event["operation"]},
                 )
-                dispatched_events.append(
-                    {"id": event["id"], "status": completed["status"], "receipt": receipt_dict}
-                )
+                dispatched_events.append({"id": event["id"], "status": completed["status"], "receipt": receipt_dict})
             except Exception as exc:
                 self.control.store.record_provider_failure(str(event["provider"]), str(exc))
                 retryable = self._outbox_retryable(event, exc)
@@ -219,14 +221,10 @@ class AmauraSupervisor:
                     self.control.store.complete_integration_action(
                         action_id, error=str(exc), status=completed["status"]
                     )
-                dispatched_events.append(
-                    {"id": event["id"], "status": completed["status"], "error": str(exc)}
-                )
+                dispatched_events.append({"id": event["id"], "status": completed["status"], "error": str(exc)})
                 self.control.telemetry.alert(
                     severity=(
-                        "critical"
-                        if completed["status"] in {"failed", "reconciliation_required"}
-                        else "warning"
+                        "critical" if completed["status"] in {"failed", "reconciliation_required"} else "warning"
                     ),
                     code="outbox_dispatch_failed",
                     message="Failed to dispatch outbox event.",
@@ -241,9 +239,7 @@ class AmauraSupervisor:
                     },
                 )
 
-        recovered = self.control.store.recover_expired_executions(
-            max_attempts=self.max_attempts
-        )
+        recovered = self.control.store.recover_expired_executions(max_attempts=self.max_attempts)
         for item in recovered:
             self.control.store.publish_event(
                 "execution.recovered",
@@ -269,9 +265,7 @@ class AmauraSupervisor:
         if self.automatic_reviews:
             reviewable = self.control.list_tasks(TaskState.AWAITING_REVIEW.value)
             if workflow_id:
-                reviewable = [
-                    task for task in reviewable if task["workflow_id"] == workflow_id
-                ]
+                reviewable = [task for task in reviewable if task["workflow_id"] == workflow_id]
             # A paused/held dynamic mission is frozen at review as well as at
             # execution/claim time.
             reviewable = [task for task in reviewable if self.control.store.dynamic_mission_task_runnable(task)]
@@ -399,8 +393,7 @@ class AmauraSupervisor:
             )
             outcome = (
                 "retry_scheduled"
-                if self.control.store.get_work_item(task["id"])["state"]
-                == TaskState.ASSIGNED.value
+                if self.control.store.get_work_item(task["id"])["state"] == TaskState.ASSIGNED.value
                 else "failed"
             )
             self.control.telemetry.increment(
@@ -529,19 +522,11 @@ class AmauraSupervisor:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Run the Amaura durable workforce supervisor"
-    )
+    parser = argparse.ArgumentParser(description="Run the Amaura durable workforce supervisor")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument(
-        "--once", action="store_true", help="Advance one execution or review"
-    )
-    mode.add_argument(
-        "--drain", action="store_true", help="Run until no safe work is ready"
-    )
-    parser.add_argument(
-        "--workflow", default="", help="Restrict work to one workflow key"
-    )
+    mode.add_argument("--once", action="store_true", help="Advance one execution or review")
+    mode.add_argument("--drain", action="store_true", help="Run until no safe work is ready")
+    parser.add_argument("--workflow", default="", help="Restrict work to one workflow key")
     parser.add_argument("--poll-seconds", type=float, default=5.0)
     parser.add_argument("--max-ticks", type=int, default=100)
     parser.add_argument("--no-auto-review", action="store_true")

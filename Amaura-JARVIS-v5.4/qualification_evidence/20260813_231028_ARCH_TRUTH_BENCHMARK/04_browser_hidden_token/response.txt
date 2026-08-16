@@ -1,3 +1,0 @@
-Navigated to http://127.0.0.1:50598/fixture. Found token: ARCH-WEB-797a4ad0-d896-47c1-b542-d9e775f0166e
-
-Mission goal_c40abe4359e2 completed. The work passed through Amaura's evidence/review pipeline.

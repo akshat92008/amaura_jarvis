@@ -110,12 +110,12 @@ def _probe_ollama(
 def _probe_omniroute() -> dict[str, Any]:
     """Safe OmniRoute health probe — never exposes API keys in returned data."""
     import time as _time
-    key = (os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip()
-           or os.environ.get("OMNIROUTE_API_KEY", "").strip())
-    base_url = (os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
-                or os.environ.get("OMNIROUTE_BASE_URL", "").strip()).rstrip("/")
-    model = (os.environ.get("AMAURA_OMNIROUTE_MODEL", "").strip()
-             or os.environ.get("OMNIROUTE_MODEL", "").strip())
+
+    key = os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
+    base_url = (
+        os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+    ).rstrip("/")
+    model = os.environ.get("AMAURA_OMNIROUTE_MODEL", "").strip() or os.environ.get("OMNIROUTE_MODEL", "").strip()
     fallback = os.environ.get("AMAURA_OMNIROUTE_FALLBACK_MODEL", "").strip()
 
     if not key or not base_url:
@@ -148,8 +148,7 @@ def _probe_omniroute() -> dict[str, Any]:
         try:
             data = json.loads(raw)
             available_models = [
-                str(m.get("id") or m.get("name") or "") for m in (data.get("data") or [])
-                if isinstance(m, dict)
+                str(m.get("id") or m.get("name") or "") for m in (data.get("data") or []) if isinstance(m, dict)
             ]
         except (json.JSONDecodeError, AttributeError):
             available_models = []
@@ -308,12 +307,14 @@ def production_readiness(
     model_mode = os.environ.get("AMAURA_MODEL_MODE", "local").strip().lower()
     worker_model = os.environ.get("AMAURA_LOCAL_MODEL", "").strip()
     cloud_worker_model = os.environ.get("AMAURA_CLOUD_WORKER_MODEL", "").strip()
+    cloud_worker_key = (
+        os.environ.get("NVIDIA_WORKER_API_KEY", "").strip() or os.environ.get("NVIDIA_API_KEY", "").strip()
+    )
     reviewer_model = os.environ.get("AMAURA_LOCAL_REVIEW_MODEL", "").strip()
     review_mode = os.environ.get("AMAURA_REVIEW_MODE", "local").strip().lower()
     cloud_review_model = os.environ.get("AMAURA_CLOUD_REVIEW_MODEL", "").strip()
     cloud_review_key = (
-        os.environ.get("NVIDIA_REVIEW_API_KEY", "").strip()
-        or os.environ.get("NVIDIA_API_KEY", "").strip()
+        os.environ.get("NVIDIA_REVIEW_API_KEY", "").strip() or os.environ.get("NVIDIA_API_KEY", "").strip()
     )
     sandbox_mode = os.environ.get("AMAURA_SANDBOX_MODE", "docker").strip().lower()
     sandbox_digest = os.environ.get("AMAURA_SANDBOX_IMAGE_DIGEST", "").strip().lower()
@@ -324,6 +325,7 @@ def production_readiness(
     telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     from jarvis.amaura.auth import reviewer_credentials
     from jarvis.amaura.models import GovernanceError
+
     try:
         reviewer_key_items = reviewer_credentials()
         reviewer_key_config_valid = bool(reviewer_key_items)
@@ -334,13 +336,16 @@ def production_readiness(
     database = control.store.integrity_check()
     static_dir = Path(__file__).resolve().parents[1] / "static"
     app_js = (static_dir / "app.js").read_text(encoding="utf-8") if (static_dir / "app.js").is_file() else ""
-    index_html = (static_dir / "index.html").read_text(encoding="utf-8") if (static_dir / "index.html").is_file() else ""
+    index_html = (
+        (static_dir / "index.html").read_text(encoding="utf-8") if (static_dir / "index.html").is_file() else ""
+    )
     dockerfile = Path(__file__).resolve().parents[2] / "docker" / "amaura-sandbox.Dockerfile"
     dockerfile_text = dockerfile.read_text(encoding="utf-8") if dockerfile.is_file() else ""
 
     declared_tools = {tool for agent in ALL_AGENTS for tool in agent.tools}
-    from jarvis.tools.registry import ALL_TOOL_DEFINITIONS
     from jarvis.amaura.tool_governance import legacy_tool_mode, unsafe_legacy_tools_exposed
+    from jarvis.tools.registry import ALL_TOOL_DEFINITIONS
+
     tool_schema_names = [definition["function"]["name"] for definition in ALL_TOOL_DEFINITIONS]
     resource_inventory = CapabilityRouter().inventory()
     missing_tools = sorted(declared_tools - EXECUTABLE_EMPLOYEE_TOOLS)
@@ -348,13 +353,12 @@ def production_readiness(
     invalid_reviewers = sorted(
         agent.agent_id
         for agent in ALL_AGENTS
-        if agent.agent_id != "jarvis"
-        and agent.reviewer_id not in {"founder", *{item.agent_id for item in ALL_AGENTS}}
+        if agent.agent_id != "jarvis" and agent.reviewer_id not in {"founder", *{item.agent_id for item in ALL_AGENTS}}
     )
     from jarvis.amaura.policy import PolicyEngine
+
     invalid_permission_agents = [
-        agent.agent_id for agent in ALL_AGENTS
-        if not PolicyEngine.validate_employee_permissions(agent.agent_id).allowed
+        agent.agent_id for agent in ALL_AGENTS if not PolicyEngine.validate_employee_permissions(agent.agent_id).allowed
     ]
     source_checks = {
         "database_integrity": bool(database["ok"]),
@@ -370,18 +374,18 @@ def production_readiness(
             "company_operating_review",
             "product_discovery",
             "incident_response",
-        }.issubset(WORKFLOWS) and len(WORKFLOWS) >= 21,
-        "founder_prompt_catalogue": len(prompts) >= 57
-        and all(len(prompt) > 500 for prompt in prompts.values()),
+        }.issubset(WORKFLOWS)
+        and len(WORKFLOWS) >= 21,
+        "founder_prompt_catalogue": len(prompts) >= 57 and all(len(prompt) > 500 for prompt in prompts.values()),
         "durable_supervisor_store": isinstance(
             control.store.execution_status(),
             dict,
         ),
         "unique_tool_schemas": len(tool_schema_names) == len(set(tool_schema_names)),
         "free_first_resource_catalogue": any(
-            item["key"] == "nvidia_api" and item["tier"] == "free_api"
-            for item in resource_inventory
-        ) and any(item["key"] == "antigravity" and item["mode"] == "manual_handoff" for item in resource_inventory),
+            item["key"] == "nvidia_api" and item["tier"] == "free_api" for item in resource_inventory
+        )
+        and any(item["key"] == "antigravity" and item["mode"] == "manual_handoff" for item in resource_inventory),
         "legacy_direct_execution_disabled": (
             os.environ.get("JARVIS_ENABLE_LEGACY_DIRECT_TOOLS", "0") != "1"
             and legacy_tool_mode() != "full"
@@ -405,14 +409,14 @@ def production_readiness(
         ),
         "provenance_bound_evidence": control.evidence.root.is_dir() and hasattr(control.evidence, "_manifest_path"),
         "hud_assets_packaged": all((static_dir / name).is_file() for name in ("index.html", "app.js", "styles.css")),
-        "hud_xss_hardened": "marked.parse(content)" not in app_js and "renderSafeMarkdown(content)" in app_js and "https://cdn.jsdelivr.net" not in index_html,
-        "dns_pinned_transport": "_PinnedHTTPSConnection" in Path(__file__).with_name("network.py").read_text(encoding="utf-8"),
+        "hud_xss_hardened": "marked.parse(content)" not in app_js
+        and "renderSafeMarkdown(content)" in app_js
+        and "https://cdn.jsdelivr.net" not in index_html,
+        "dns_pinned_transport": "_PinnedHTTPSConnection"
+        in Path(__file__).with_name("network.py").read_text(encoding="utf-8"),
         "durable_telemetry": isinstance(control.telemetry.snapshot(), dict),
         "sandbox_fail_closed": sandbox_mode in {"docker", "native", "macos", "auto"}
-        or (
-            sandbox_mode == "host"
-            and os.environ.get("AMAURA_ALLOW_HOST_EXECUTION") == "1"
-        ),
+        or (sandbox_mode == "host" and os.environ.get("AMAURA_ALLOW_HOST_EXECUTION") == "1"),
         "sandbox_toolchain_contract": all(
             token in dockerfile_text
             for token in (
@@ -428,42 +432,49 @@ def production_readiness(
         ),
     }
     nvidia_worker_key = bool(os.environ.get("NVIDIA_API_KEY", "").strip())
-    balanced_worker_key = bool(
-        nvidia_worker_key or os.environ.get("GROQ_API_KEY", "").strip()
-    )
+    balanced_worker_key = bool(nvidia_worker_key or os.environ.get("GROQ_API_KEY", "").strip())
     omniroute_key_present = bool(
-        os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip()
-        or os.environ.get("OMNIROUTE_API_KEY", "").strip()
+        os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
     )
     model_routing_valid = (
         (model_mode == "local" and bool(worker_model))
         or (model_mode == "balanced" and bool(worker_model) and bool(cloud_worker_model) and balanced_worker_key)
         or (model_mode == "cloud" and bool(cloud_worker_model) and nvidia_worker_key)
-        or (omniroute_key_present and bool(
-            os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
-            or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
-        ))
+        or (
+            omniroute_key_present
+            and bool(
+                os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
+                or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+            )
+        )
     )
     from jarvis.amaura.evaluation import evaluation_pack_status
+
     require_private_eval = os.environ.get("AMAURA_REQUIRE_PRIVATE_EVAL_PACK", "1") == "1"
-    private_eval_status = evaluation_pack_status() if require_private_eval else {
-        "authenticated": True, "configured": False, "cases": len(())
-    }
+    private_eval_status = (
+        evaluation_pack_status()
+        if require_private_eval
+        else {"authenticated": True, "configured": False, "cases": len(())}
+    )
     gmail_static = bool(os.environ.get("AMAURA_GMAIL_ACCESS_TOKEN", "").strip())
-    gmail_refresh = all(bool(os.environ.get(name, "").strip()) for name in (
-        "AMAURA_GMAIL_CLIENT_ID", "AMAURA_GMAIL_CLIENT_SECRET", "AMAURA_GMAIL_REFRESH_TOKEN"
-    ))
+    gmail_refresh = all(
+        bool(os.environ.get(name, "").strip())
+        for name in ("AMAURA_GMAIL_CLIENT_ID", "AMAURA_GMAIL_CLIENT_SECRET", "AMAURA_GMAIL_REFRESH_TOKEN")
+    )
     n8n_enabled = os.environ.get("AMAURA_ENABLE_N8N", os.environ.get("USE_N8N", "0")) == "1"
 
     configuration_checks = {
         "model_routing_valid": model_routing_valid,
         "review_mode_valid": review_mode in {"local", "cloud", "omniroute"},
         "distinct_reviewer_model": (
-            True if omniroute_key_present else (
+            True
+            if omniroute_key_present
+            else (
                 bool(reviewer_model) and reviewer_model != worker_model
                 if review_mode == "local"
                 else bool(
-                    cloud_review_model and cloud_review_key
+                    cloud_review_model
+                    and cloud_review_key
                     and cloud_review_model not in {cloud_worker_model, worker_model}
                 )
             )
@@ -471,23 +482,15 @@ def production_readiness(
         "operator_key": _configured_secret("AMAURA_OPERATOR_KEY", minimum=24),
         "approval_key": _configured_secret("AMAURA_APPROVAL_KEY", minimum=24),
         "reviewer_identity_keys": reviewer_key_config_valid,
-        "review_attestation_key": _configured_secret(
-            "AMAURA_REVIEW_ATTESTATION_KEY"
-        ),
+        "review_attestation_key": _configured_secret("AMAURA_REVIEW_ATTESTATION_KEY"),
         "provider_receipt_key": _configured_secret("AMAURA_PROVIDER_RECEIPT_KEY"),
         "audit_hmac_key": _configured_secret("AMAURA_AUDIT_HMAC_KEY"),
         "evidence_hmac_key": _configured_secret("AMAURA_EVIDENCE_HMAC_KEY"),
-        "evaluation_pack_hmac_key": (
-            not require_private_eval or _configured_secret("AMAURA_EVALUATION_PACK_HMAC_KEY")
-        ),
-        "private_model_evaluation_pack": (
-            not require_private_eval or bool(private_eval_status.get("authenticated"))
-        ),
+        "evaluation_pack_hmac_key": (not require_private_eval or _configured_secret("AMAURA_EVALUATION_PACK_HMAC_KEY")),
+        "private_model_evaluation_pack": (not require_private_eval or bool(private_eval_status.get("authenticated"))),
         "audit_checkpoint_path": checkpoint_path is not None,
         "audit_checkpoint_separated": (
-            checkpoint_path is not None
-            and checkpoint_path != data_dir
-            and data_dir not in checkpoint_path.parents
+            checkpoint_path is not None and checkpoint_path != data_dir and data_dir not in checkpoint_path.parents
         ),
         "keys_are_separate": len(
             {
@@ -504,34 +507,30 @@ def production_readiness(
         )
         == (7 if require_private_eval else 6) + len(reviewer_key_items),
         "loopback_binding": is_loopback_host(host),
-        "remote_api_auth": is_loopback_host(host)
-        or len(jarvis_key) >= MIN_API_KEY_LENGTH,
+        "remote_api_auth": is_loopback_host(host) or len(jarvis_key) >= MIN_API_KEY_LENGTH,
         "telegram_founder_bound": not telegram_token or bool(telegram_user),
-        "experimental_langgraph_disabled": os.environ.get(
-            "AMAURA_ENABLE_EXPERIMENTAL_LANGGRAPH", "0"
-        ) != "1",
+        "experimental_langgraph_disabled": os.environ.get("AMAURA_ENABLE_EXPERIMENTAL_LANGGRAPH", "0") != "1",
         "strict_evidence_mode": os.environ.get("AMAURA_STRICT_EVIDENCE", "0") == "1",
         "strict_evidence_signatures": os.environ.get("AMAURA_STRICT_EVIDENCE_SIGNATURES", "0") == "1",
         "strict_audit_signatures": os.environ.get("AMAURA_STRICT_AUDIT_SIGNATURES", "0") == "1",
         "strict_audit_checkpoint": os.environ.get("AMAURA_STRICT_AUDIT_CHECKPOINT", "0") == "1",
         "local_tool_api_auth": (
-            os.environ.get("JARVIS_REQUIRE_LOCAL_AUTH", "1") == "1"
-            and len(jarvis_key) >= MIN_API_KEY_LENGTH
+            os.environ.get("JARVIS_REQUIRE_LOCAL_AUTH", "1") == "1" and len(jarvis_key) >= MIN_API_KEY_LENGTH
         ),
         "strict_review_mode": os.environ.get("AMAURA_STRICT_REVIEW", "0") == "1",
         "strict_git_mode": os.environ.get("AMAURA_STRICT_GIT", "0") == "1",
         "post_merge_validation": bool(os.environ.get("AMAURA_POST_MERGE_COMMAND", "").strip()),
         "sandbox_image_pinned": (
-            True if sandbox_mode in {"native", "macos"} or (sandbox_mode == "auto" and sys.platform == "darwin") else (
+            True
+            if sandbox_mode in {"native", "macos"} or (sandbox_mode == "auto" and sys.platform == "darwin")
+            else (
                 sandbox_digest.startswith("sha256:")
                 and len(sandbox_digest) == 71
                 and all(character in "0123456789abcdef" for character in sandbox_digest[7:])
             )
         ),
         "outbox_attempt_policy": int(os.environ.get("AMAURA_OUTBOX_MAX_ATTEMPTS", "3")) >= 1,
-        "gmail_adapter": (
-            os.environ.get("AMAURA_ENABLE_GMAIL") != "1" or gmail_static or gmail_refresh
-        ),
+        "gmail_adapter": (os.environ.get("AMAURA_ENABLE_GMAIL") != "1" or gmail_static or gmail_refresh),
         "imessage_adapter": (
             os.environ.get("AMAURA_ENABLE_IMESSAGE") != "1"
             or (
@@ -574,20 +573,21 @@ def production_readiness(
         )
     ).expanduser()
     backup_parent = backup_dir if backup_dir.exists() else backup_dir.parent
-    configuration_checks["backup_destination_writable"] = (
-        backup_parent.exists() and os.access(backup_parent, os.W_OK)
-    )
+    configuration_checks["backup_destination_writable"] = backup_parent.exists() and os.access(backup_parent, os.W_OK)
     resolved_backup_dir = backup_dir.resolve()
     configuration_checks["backup_destination_separated"] = (
         resolved_backup_dir != data_dir and data_dir not in resolved_backup_dir.parents
     )
 
-    omniroute_key = (os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip()
-                     or os.environ.get("OMNIROUTE_API_KEY", "").strip())
-    omniroute_url = (os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
-                     or os.environ.get("OMNIROUTE_BASE_URL", "").strip())
-    omniroute_model = (os.environ.get("AMAURA_OMNIROUTE_MODEL", "").strip()
-                       or os.environ.get("OMNIROUTE_MODEL", "").strip())
+    omniroute_key = (
+        os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
+    )
+    omniroute_url = (
+        os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+    )
+    omniroute_model = (
+        os.environ.get("AMAURA_OMNIROUTE_MODEL", "").strip() or os.environ.get("OMNIROUTE_MODEL", "").strip()
+    )
     omniroute_configured = bool(omniroute_key and omniroute_url and omniroute_model)
 
     live_details: dict[str, Any]
@@ -597,46 +597,78 @@ def production_readiness(
             worker_model=worker_model,
             reviewer_model=reviewer_model,
         )
-        docker = _probe_docker(
-            sandbox_digest or os.environ.get("AMAURA_SANDBOX_IMAGE", "amaura-sandbox:3.6.0")
-        )
+        docker = _probe_docker(sandbox_digest or os.environ.get("AMAURA_SANDBOX_IMAGE", "amaura-sandbox:3.6.0"))
         verifier_mode = os.environ.get("AMAURA_VERIFIER_MODE", "auto").strip().lower()
         if verifier_mode == "auto":
-            effective_verifier = "macos_native" if (sys.platform == "darwin" and shutil.which("sandbox-exec")) else ("docker" if shutil.which("docker") else "host")
+            effective_verifier = (
+                "macos_native"
+                if (sys.platform == "darwin" and shutil.which("sandbox-exec"))
+                else ("docker" if shutil.which("docker") else "host")
+            )
         else:
             effective_verifier = verifier_mode
 
         docker["effective_verifier"] = effective_verifier
-        docker["required"] = (sandbox_mode == "docker" or verifier_mode == "docker")
+        docker["required"] = sandbox_mode == "docker" or verifier_mode == "docker"
 
         native_verifier_healthy = bool(sys.platform == "darwin" and shutil.which("sandbox-exec"))
         effective_verifier_healthy = (
-            docker["healthy"] if effective_verifier == "docker"
-            else (native_verifier_healthy if effective_verifier in {"native", "macos_native", "macos"} else (os.environ.get("AMAURA_ALLOW_HOST_EXECUTION") == "1"))
+            docker["healthy"]
+            if effective_verifier == "docker"
+            else (
+                native_verifier_healthy
+                if effective_verifier in {"native", "macos_native", "macos"}
+                else (os.environ.get("AMAURA_ALLOW_HOST_EXECUTION") == "1")
+            )
         )
 
-        omniroute = _probe_omniroute() if omniroute_configured else {
-            "configured": False, "reachable": False, "status": "BLOCKED",
-            "reason": "not_configured", "model": omniroute_model or "(unset)",
-            "fallback_model": "none", "latency_ms": 0, "error": "missing_configuration",
-        }
+        omniroute = (
+            _probe_omniroute()
+            if omniroute_configured
+            else {
+                "configured": False,
+                "reachable": False,
+                "status": "BLOCKED",
+                "reason": "not_configured",
+                "model": omniroute_model or "(unset)",
+                "fallback_model": "none",
+                "latency_ms": 0,
+                "error": "missing_configuration",
+            }
+        )
         live_checks = {
-            "ollama_reachable": ollama["reachable"] if model_mode in {"local", "balanced"} and not omniroute_configured else True,
+            "ollama_reachable": ollama["reachable"]
+            if model_mode in {"local", "balanced"} and not omniroute_configured
+            else True,
             "worker_model_installed": (
-                True if omniroute_configured else (ollama["worker_model_installed"] if model_mode in {"local", "balanced"} else True)
+                True
+                if omniroute_configured
+                else (ollama["worker_model_installed"] if model_mode in {"local", "balanced"} else True)
             ),
             "reviewer_model_installed": (
-                True if omniroute_configured else (ollama["reviewer_model_installed"] if review_mode == "local" else True)
+                True
+                if omniroute_configured
+                else (ollama["reviewer_model_installed"] if review_mode == "local" else True)
             ),
             "cloud_worker_configured": (
-                True if (model_mode == "local" or omniroute_configured) else bool(cloud_worker_model and cloud_worker_key)
+                True
+                if (model_mode == "local" or omniroute_configured)
+                else bool(cloud_worker_model and cloud_worker_key)
             ),
             "cloud_reviewer_configured": (
-                True if (review_mode == "local" or omniroute_configured) else bool(cloud_review_model and cloud_review_key)
+                True
+                if (review_mode == "local" or omniroute_configured)
+                else bool(cloud_review_model and cloud_review_key)
             ),
-            "docker_healthy": docker["healthy"] if (sandbox_mode == "docker" or verifier_mode == "docker") else effective_verifier_healthy,
-            "sandbox_image_available": docker["image_available"] if (sandbox_mode == "docker" or verifier_mode == "docker") else True,
-            "sandbox_image_smoke": docker["image_smoke"] if (sandbox_mode == "docker" or verifier_mode == "docker") else True,
+            "docker_healthy": docker["healthy"]
+            if (sandbox_mode == "docker" or verifier_mode == "docker")
+            else effective_verifier_healthy,
+            "sandbox_image_available": docker["image_available"]
+            if (sandbox_mode == "docker" or verifier_mode == "docker")
+            else True,
+            "sandbox_image_smoke": docker["image_smoke"]
+            if (sandbox_mode == "docker" or verifier_mode == "docker")
+            else True,
         }
         live_details = {"ollama": ollama, "docker": docker, "omniroute": omniroute}
     else:
@@ -649,10 +681,9 @@ def production_readiness(
         **live_checks,
     }
     blockers = [name for name, passed in all_checks.items() if not passed]
-    source_blockers = [
-        name for name, passed in source_checks.items() if not passed
-    ]
+    source_blockers = [name for name, passed in source_checks.items() if not passed]
     from jarvis.amaura.antigravity_bridge import AntigravityDeliveryAdapter
+
     antigravity_status = AntigravityDeliveryAdapter().readiness()
     return {
         "ready": not blockers,
@@ -688,9 +719,7 @@ def production_readiness(
             "invalid_permission_agents": invalid_permission_agents,
             "private_evaluation_pack": private_eval_status,
         },
-        "optional_integrations": [
-            _integration_status(item) for item in OPTIONAL_INTEGRATIONS
-        ],
+        "optional_integrations": [_integration_status(item) for item in OPTIONAL_INTEGRATIONS],
         "note": (
             "Optional adapters are reported separately. Production readiness "
             "passes only when source, configuration, models, and isolation are real."

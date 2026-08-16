@@ -53,7 +53,13 @@ class LeadStage(StrEnum):
     DUPLICATE = "duplicate"
 
 
-TERMINAL_STAGES = {LeadStage.REJECTED, LeadStage.LOST, LeadStage.OPTED_OUT, LeadStage.INVALID_CONTACT, LeadStage.DUPLICATE}
+TERMINAL_STAGES = {
+    LeadStage.REJECTED,
+    LeadStage.LOST,
+    LeadStage.OPTED_OUT,
+    LeadStage.INVALID_CONTACT,
+    LeadStage.DUPLICATE,
+}
 ALLOWED_TRANSITIONS: dict[LeadStage, set[LeadStage]] = {
     LeadStage.DISCOVERED: {LeadStage.RESEARCHING, LeadStage.REJECTED, LeadStage.DUPLICATE},
     LeadStage.RESEARCHING: {LeadStage.RESEARCHED, LeadStage.REJECTED, LeadStage.INVALID_CONTACT},
@@ -108,6 +114,7 @@ def _public_http_url(url: str) -> tuple[bool, str]:
         return False, "URL must start with http:// or https://"
     try:
         from jarvis.amaura.network import validate_public_url
+
         validate_public_url(url, resolve=False)
     except GovernanceError as exc:
         return False, str(exc)
@@ -122,10 +129,20 @@ class AcquisitionPipeline:
         self.store = store
         self.founder_id = founder_id
 
-    def create_campaign(self, *, campaign_id: str, name: str, target_segment: str, offer: str,
-                        minimum_score: int = 70, daily_lead_limit: int = 10,
-                        daily_outreach_limit: int = 3, daily_followup_limit: int = 5,
-                        maximum_followups: int = 2, config: dict | None = None) -> dict:
+    def create_campaign(
+        self,
+        *,
+        campaign_id: str,
+        name: str,
+        target_segment: str,
+        offer: str,
+        minimum_score: int = 70,
+        daily_lead_limit: int = 10,
+        daily_outreach_limit: int = 3,
+        daily_followup_limit: int = 5,
+        maximum_followups: int = 2,
+        config: dict | None = None,
+    ) -> dict:
         if not all(value.strip() for value in (campaign_id, name, target_segment, offer)):
             raise GovernanceError("Campaign id, name, target segment, and offer are required")
         if not 70 <= minimum_score <= 100:
@@ -134,18 +151,34 @@ class AcquisitionPipeline:
             raise GovernanceError("Campaign daily limits are outside the governed envelope")
         if not 0 <= daily_followup_limit <= 100 or not 0 <= maximum_followups <= 2:
             raise GovernanceError("A campaign may use at most two follow-ups")
-        campaign = self.store.upsert_campaign({
-            "id": campaign_id, "name": name.strip(), "target_segment": target_segment.strip(),
-            "offer": offer.strip(), "minimum_score": minimum_score,
-            "daily_lead_limit": daily_lead_limit, "daily_outreach_limit": daily_outreach_limit,
-            "daily_followup_limit": daily_followup_limit, "maximum_followups": maximum_followups,
-            "config": config or {},
-        })
+        campaign = self.store.upsert_campaign(
+            {
+                "id": campaign_id,
+                "name": name.strip(),
+                "target_segment": target_segment.strip(),
+                "offer": offer.strip(),
+                "minimum_score": minimum_score,
+                "daily_lead_limit": daily_lead_limit,
+                "daily_outreach_limit": daily_outreach_limit,
+                "daily_followup_limit": daily_followup_limit,
+                "maximum_followups": maximum_followups,
+                "config": config or {},
+            }
+        )
         self._event(None, campaign_id, "campaign.configured", "campaign_manager", campaign, campaign)
         return campaign
 
-    def discover_lead(self, *, campaign_id: str, company_name: str, domain: str, source_url: str,
-                      country: str = "", industry: str = "", metadata: dict | None = None) -> dict:
+    def discover_lead(
+        self,
+        *,
+        campaign_id: str,
+        company_name: str,
+        domain: str,
+        source_url: str,
+        country: str = "",
+        industry: str = "",
+        metadata: dict | None = None,
+    ) -> dict:
         self._require_running("discovery")
         campaign = self.store.get_campaign(campaign_id)
         if not campaign["active"]:
@@ -159,11 +192,19 @@ class AcquisitionPipeline:
         if not safe_url:
             raise GovernanceError(f"Lead discovery requires a valid public source URL: {url_reason}")
         try:
-            lead = self.store.insert_lead({
-                "id": _id("lead"), "campaign_id": campaign_id, "company_name": company_name.strip(),
-                "domain": clean_domain, "country": country.strip(), "industry": industry.strip(),
-                "metadata": {"discovery_source": source_url, **(metadata or {})},
-            }, daily_limit=campaign["daily_lead_limit"], day_prefix=today)
+            lead = self.store.insert_lead(
+                {
+                    "id": _id("lead"),
+                    "campaign_id": campaign_id,
+                    "company_name": company_name.strip(),
+                    "domain": clean_domain,
+                    "country": country.strip(),
+                    "industry": industry.strip(),
+                    "metadata": {"discovery_source": source_url, **(metadata or {})},
+                },
+                daily_limit=campaign["daily_lead_limit"],
+                day_prefix=today,
+            )
         except ValueError as exc:
             raise GovernanceError(str(exc)) from exc
         except sqlite3.IntegrityError:
@@ -174,8 +215,17 @@ class AcquisitionPipeline:
         self._event(lead["id"], campaign_id, "lead.discovered", "lead_scout", {"domain": clean_domain}, lead)
         return lead
 
-    def add_evidence(self, lead_id: str, *, claim_type: str, claim: str, source_url: str,
-                     source_excerpt: str, confidence: float, actor: str = "prospect_research") -> dict:
+    def add_evidence(
+        self,
+        lead_id: str,
+        *,
+        claim_type: str,
+        claim: str,
+        source_url: str,
+        source_excerpt: str,
+        confidence: float,
+        actor: str = "prospect_research",
+    ) -> dict:
         lead = self.store.get_lead(lead_id)
         safe_url, url_reason = _public_http_url(source_url)
         if not safe_url or not source_excerpt.strip():
@@ -193,15 +243,28 @@ class AcquisitionPipeline:
         safe_excerpt = redact_sensitive_text(source_excerpt.strip())
         digest = hashlib.sha256(f"{claim_type}\0{claim}\0{source_url}\0{safe_excerpt}".encode()).hexdigest()
         try:
-            evidence = self.store.add_lead_evidence({
-                "id": _id("evidence"), "lead_id": lead_id, "claim_type": claim_type.strip(),
-                "claim": claim.strip(), "source_url": source_url, "source_excerpt": safe_excerpt,
-                "confidence": confidence, "content_hash": digest,
-            })
+            evidence = self.store.add_lead_evidence(
+                {
+                    "id": _id("evidence"),
+                    "lead_id": lead_id,
+                    "claim_type": claim_type.strip(),
+                    "claim": claim.strip(),
+                    "source_url": source_url,
+                    "source_excerpt": safe_excerpt,
+                    "confidence": confidence,
+                    "content_hash": digest,
+                }
+            )
         except sqlite3.IntegrityError as exc:
             raise GovernanceError("This evidence record already exists") from exc
-        self._event(lead_id, lead["campaign_id"], "evidence.recorded", actor,
-                    {"content_hash": digest}, {"evidence_id": evidence["id"], "security_scan": scan.to_dict()})
+        self._event(
+            lead_id,
+            lead["campaign_id"],
+            "evidence.recorded",
+            actor,
+            {"content_hash": digest},
+            {"evidence_id": evidence["id"], "security_scan": scan.to_dict()},
+        )
         return {**evidence, "security_scan": scan.to_dict()}
 
     def score_lead(self, lead_id: str, components: dict[str, int], *, actor: str = "") -> dict:
@@ -221,11 +284,21 @@ class AcquisitionPipeline:
         current = LeadStage(lead["stage"])
         if current not in {LeadStage.RESEARCHED, LeadStage.RESEARCHING, LeadStage.DISCOVERED}:
             raise GovernanceError(f"Lead cannot be scored from stage '{current.value}'")
-        updated = self.store.update_lead(lead_id, total_score=total, score_components=components,
-                                         stage=next_stage.value,
-                                         next_action="prepare evidence-backed outreach" if next_stage is LeadStage.QUALIFIED else "")
-        self._event(lead_id, lead["campaign_id"], "lead.scored", "lead_qualification", components,
-                    {"total": total, "stage": next_stage.value})
+        updated = self.store.update_lead(
+            lead_id,
+            total_score=total,
+            score_components=components,
+            stage=next_stage.value,
+            next_action="prepare evidence-backed outreach" if next_stage is LeadStage.QUALIFIED else "",
+        )
+        self._event(
+            lead_id,
+            lead["campaign_id"],
+            "lead.scored",
+            "lead_qualification",
+            components,
+            {"total": total, "stage": next_stage.value},
+        )
         return updated
 
     def transition(self, lead_id: str, to_stage: str, *, actor: str, reason: str) -> dict:
@@ -241,15 +314,32 @@ class AcquisitionPipeline:
         if target is LeadStage.OPTED_OUT:
             fields.update(do_not_contact=True, opt_out_reason=reason.strip(), next_action="", next_action_at=None)
         updated = self.store.update_lead(lead_id, **fields)
-        self._event(lead_id, lead["campaign_id"], f"lead.{target.value}", actor,
-                    {"from": current.value, "reason": reason}, {"to": target.value})
+        self._event(
+            lead_id,
+            lead["campaign_id"],
+            f"lead.{target.value}",
+            actor,
+            {"from": current.value, "reason": reason},
+            {"to": target.value},
+        )
         return updated
 
-    def stage_message(self, lead_id: str, *, recipient: str, channel: str, message_type: str, subject: str,
-                      body: str, actor: str = "outreach_writer") -> dict:
+    def stage_message(
+        self,
+        lead_id: str,
+        *,
+        recipient: str,
+        channel: str,
+        message_type: str,
+        subject: str,
+        body: str,
+        actor: str = "outreach_writer",
+    ) -> dict:
         if not recipient.strip():
             raise GovernanceError("A recipient address is required to stage a message (P0-6)")
-        if channel == "email" and not re.fullmatch(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", recipient.strip()):
+        if channel == "email" and not re.fullmatch(
+            r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", recipient.strip()
+        ):
             raise GovernanceError(f"Invalid email recipient address: {recipient}")
         lead = self.store.get_lead(lead_id)
         campaign = self.store.get_campaign(lead["campaign_id"])
@@ -266,22 +356,39 @@ class AcquisitionPipeline:
         followups = [m for m in self.store.list_messages(lead_id=lead_id) if m["message_type"] == "followup"]
         if message_type == "followup" and len(followups) >= campaign["maximum_followups"]:
             raise GovernanceError("Maximum follow-up count reached")
-        payload = {"lead_id": lead_id, "recipient": recipient.strip(), "channel": channel,
-                   "message_type": message_type, "subject": subject.strip(), "body": body.strip()}
+        payload = {
+            "lead_id": lead_id,
+            "recipient": recipient.strip(),
+            "channel": channel,
+            "message_type": message_type,
+            "subject": subject.strip(),
+            "body": body.strip(),
+        }
         key = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
         existing = self.store.get_idempotency(key)
         if existing:
             return self.store.get_message(existing["resource_id"])
-        message = self.store.insert_message({
-            "id": _id("message"), **payload, "status": "awaiting_approval", "idempotency_key": key,
-            "evidence_snapshot": [{"id": e["id"], "content_hash": e["content_hash"]} for e in evidence],
-        })
+        message = self.store.insert_message(
+            {
+                "id": _id("message"),
+                **payload,
+                "status": "awaiting_approval",
+                "idempotency_key": key,
+                "evidence_snapshot": [{"id": e["id"], "content_hash": e["content_hash"]} for e in evidence],
+            }
+        )
         self.store.record_idempotency(key, "stage_message", message["id"], hashlib.sha256(body.encode()).hexdigest())
         current = LeadStage(lead["stage"])
         if current is LeadStage.QUALIFIED:
             self.store.update_lead(lead_id, stage=LeadStage.AWAITING_APPROVAL.value)
-        self._event(lead_id, lead["campaign_id"], "message.awaiting_approval", actor, payload,
-                    {"message_id": message["id"], "idempotency_key": key})
+        self._event(
+            lead_id,
+            lead["campaign_id"],
+            "message.awaiting_approval",
+            actor,
+            payload,
+            {"message_id": message["id"], "idempotency_key": key},
+        )
         return message
 
     def decide_message(self, message_id: str, *, actor: str, approve: bool, reason: str) -> dict:
@@ -305,20 +412,27 @@ class AcquisitionPipeline:
                 "lead_id": message["lead_id"],
                 "idempotency_key": message["idempotency_key"],
             }
-            payload_hash = hashlib.sha256(
-                json.dumps(approval_payload, sort_keys=True).encode()
-            ).hexdigest()
+            payload_hash = hashlib.sha256(json.dumps(approval_payload, sort_keys=True).encode()).hexdigest()
             updated = self.store.update_message(
-                message_id, status="approved", approved_by=actor,
+                message_id,
+                status="approved",
+                approved_by=actor,
                 approved_at=datetime.now(UTC).isoformat(),
                 approved_payload_hash=payload_hash,
             )
         else:
-            updated = self.store.update_message(message_id, status="rejected", approved_by=actor,
-                                                approved_at=datetime.now(UTC).isoformat())
+            updated = self.store.update_message(
+                message_id, status="rejected", approved_by=actor, approved_at=datetime.now(UTC).isoformat()
+            )
         lead = self.store.get_lead(message["lead_id"])
-        self._event(lead["id"], lead["campaign_id"], f"message.{updated['status']}", actor,
-                    {"message_id": message_id, "reason": reason}, {"status": updated["status"]})
+        self._event(
+            lead["id"],
+            lead["campaign_id"],
+            f"message.{updated['status']}",
+            actor,
+            {"message_id": message_id, "reason": reason},
+            {"status": updated["status"]},
+        )
         return updated
 
     def confirm_external_send(
@@ -357,19 +471,21 @@ class AcquisitionPipeline:
             )
             allowed_operations = ALLOWED_RECEIPTS.get(raw_receipt.provider, set())
             if raw_receipt.operation not in allowed_operations:
-                raise GovernanceError(
-                    "Provider receipt operation is not allowed for this provider"
-                )
+                raise GovernanceError("Provider receipt operation is not allowed for this provider")
             if raw_receipt.operation == "send_imessage":
                 expected_payload = {"recipient": message["recipient"], "body": message["body"]}
             elif raw_receipt.operation == "confirm_assisted_send":
                 expected_payload = {
-                    "recipient": message["recipient"], "subject": message["subject"],
-                    "body": message["body"], "channel": message["channel"],
+                    "recipient": message["recipient"],
+                    "subject": message["subject"],
+                    "body": message["body"],
+                    "channel": message["channel"],
                 }
             else:
                 expected_payload = {
-                    "recipient": message["recipient"], "subject": message["subject"], "body": message["body"],
+                    "recipient": message["recipient"],
+                    "subject": message["subject"],
+                    "body": message["body"],
                 }
             receipt = verify_provider_receipt(
                 raw_receipt,
@@ -378,22 +494,15 @@ class AcquisitionPipeline:
                 expected_payload=expected_payload,
             )
             if receipt.status != "sent":
-                raise GovernanceError(
-                    "Only a signed sent receipt can confirm outreach"
-                )
+                raise GovernanceError("Only a signed sent receipt can confirm outreach")
             external_message_id = receipt.external_id
             thread_id = receipt.thread_id
             provider_name = receipt.provider
         elif os.environ.get("AMAURA_ALLOW_MANUAL_PROVIDER_CONFIRMATION") == "1":
             if not external_message_id.strip():
-                raise GovernanceError(
-                    "No silent success: a provider message identifier is required"
-                )
+                raise GovernanceError("No silent success: a provider message identifier is required")
         else:
-            raise GovernanceError(
-                "A signed provider receipt is required; manual success claims "
-                "are disabled"
-            )
+            raise GovernanceError("A signed provider receipt is required; manual success claims are disabled")
         lead = self.store.get_lead(message["lead_id"])
         if lead["do_not_contact"]:
             raise GovernanceError("Lead opted out after approval; sending is blocked")
@@ -403,20 +512,34 @@ class AcquisitionPipeline:
         limit = campaign["daily_followup_limit"] if is_followup else campaign["daily_outreach_limit"]
         try:
             updated = self.store.confirm_message_sent_atomic(
-                message_id, campaign_id=campaign["id"], is_followup=is_followup,
-                daily_limit=limit, since=today, external_message_id=external_message_id.strip(),
+                message_id,
+                campaign_id=campaign["id"],
+                is_followup=is_followup,
+                daily_limit=limit,
+                since=today,
+                external_message_id=external_message_id.strip(),
                 thread_id=thread_id.strip() or None,
             )
         except (ValueError, sqlite3.IntegrityError) as exc:
             raise GovernanceError(str(exc)) from exc
         next_at = datetime.now(UTC) + timedelta(days=4 if message["message_type"] == "first_contact" else 5)
-        self.store.update_lead(lead["id"], stage=LeadStage.SENT.value, next_action="review reply or prepare follow-up",
-                               next_action_at=next_at.isoformat())
-        self._event(lead["id"], lead["campaign_id"], "message.sent", actor,
-                    {"message_id": message_id}, {
-                        "external_message_id": external_message_id,
-                        "provider": provider_name,
-                    })
+        self.store.update_lead(
+            lead["id"],
+            stage=LeadStage.SENT.value,
+            next_action="review reply or prepare follow-up",
+            next_action_at=next_at.isoformat(),
+        )
+        self._event(
+            lead["id"],
+            lead["campaign_id"],
+            "message.sent",
+            actor,
+            {"message_id": message_id},
+            {
+                "external_message_id": external_message_id,
+                "provider": provider_name,
+            },
+        )
         return updated
 
     def confirm_assisted_handoff(
@@ -428,21 +551,34 @@ class AcquisitionPipeline:
         if message["status"] not in {"sending", "queued", "dispatching"}:
             raise GovernanceError("Assisted handoff is not awaiting preparation")
         expected_payload = {
-            "recipient": message["recipient"], "subject": message["subject"],
-            "body": message["body"], "channel": message["channel"],
+            "recipient": message["recipient"],
+            "subject": message["subject"],
+            "body": message["body"],
+            "channel": message["channel"],
         }
         receipt = verify_provider_receipt(
-            provider_receipt, expected_operation="prepare_assisted_message",
-            expected_idempotency_key=message["idempotency_key"], expected_payload=expected_payload,
+            provider_receipt,
+            expected_operation="prepare_assisted_message",
+            expected_idempotency_key=message["idempotency_key"],
+            expected_payload=expected_payload,
         )
         if receipt.provider != "assisted-browser" or receipt.status != "prepared":
             raise GovernanceError("Assisted handoff receipt is invalid")
         updated = self.store.update_message(
-            message_id, status="prepared", external_message_id=receipt.external_id, thread_id=receipt.thread_id,
+            message_id,
+            status="prepared",
+            external_message_id=receipt.external_id,
+            thread_id=receipt.thread_id,
         )
         lead = self.store.get_lead(message["lead_id"])
-        self._event(lead["id"], lead["campaign_id"], "message.prepared", actor,
-                    {"message_id": message_id}, {"handoff_id": receipt.external_id, "packet": receipt.thread_id})
+        self._event(
+            lead["id"],
+            lead["campaign_id"],
+            "message.prepared",
+            actor,
+            {"message_id": message_id},
+            {"handoff_id": receipt.external_id, "packet": receipt.thread_id},
+        )
         return updated
 
     def record_assisted_send(
@@ -456,11 +592,17 @@ class AcquisitionPipeline:
         if not external_message_id.strip():
             raise GovernanceError("The platform message identifier or founder reference is required")
         receipt = ProviderReceipt.issue(
-            provider="founder-confirmed", operation="confirm_assisted_send",
-            external_id=external_message_id.strip(), thread_id=thread_id.strip(),
+            provider="founder-confirmed",
+            operation="confirm_assisted_send",
+            external_id=external_message_id.strip(),
+            thread_id=thread_id.strip(),
             idempotency_key=message["idempotency_key"],
-            payload={"recipient": message["recipient"], "subject": message["subject"],
-                     "body": message["body"], "channel": message["channel"]},
+            payload={
+                "recipient": message["recipient"],
+                "subject": message["subject"],
+                "body": message["body"],
+                "channel": message["channel"],
+            },
             status="sent",
         )
         return self.confirm_external_send(message_id, actor=actor, provider_receipt=receipt)
@@ -479,9 +621,7 @@ class AcquisitionPipeline:
         if message["status"] == "sent":
             return message
         if message["status"] in {"sending", "reconciliation_required"}:
-            raise GovernanceError(
-                "Message has an unresolved provider attempt and requires reconciliation before retry"
-            )
+            raise GovernanceError("Message has an unresolved provider attempt and requires reconciliation before retry")
         if message["status"] != "approved":
             raise GovernanceError("Only an approved message can be delivered")
 
@@ -503,13 +643,9 @@ class AcquisitionPipeline:
                 "lead_id": message["lead_id"],
                 "idempotency_key": message["idempotency_key"],
             }
-            current_hash = hashlib.sha256(
-                json.dumps(current_payload, sort_keys=True).encode()
-            ).hexdigest()
+            current_hash = hashlib.sha256(json.dumps(current_payload, sort_keys=True).encode()).hexdigest()
             if not hmac.compare_digest(current_hash, message["approved_payload_hash"]):
-                raise GovernanceError(
-                    "Approved payload hash mismatch — message content was altered after approval"
-                )
+                raise GovernanceError("Approved payload hash mismatch — message content was altered after approval")
 
         self.store.mark_message_sending(message_id)
         try:
@@ -536,18 +672,25 @@ class AcquisitionPipeline:
                     "actor": actor,
                 }
                 self.store.enqueue_outbox_event(
-                    provider="imessage", operation="send_imessage", payload=payload,
+                    provider="imessage",
+                    operation="send_imessage",
+                    payload=payload,
                     idempotency_key=message["idempotency_key"],
                 )
                 return {"status": "enqueued", "message_id": message_id}
             if message["channel"] in {"whatsapp", "linkedin", "instagram", "facebook"}:
                 payload = {
-                    "message_id": message_id, "recipient": message["recipient"],
-                    "subject": message["subject"], "body": message["body"],
-                    "channel": message["channel"], "actor": actor,
+                    "message_id": message_id,
+                    "recipient": message["recipient"],
+                    "subject": message["subject"],
+                    "body": message["body"],
+                    "channel": message["channel"],
+                    "actor": actor,
                 }
                 self.store.enqueue_outbox_event(
-                    provider="assisted-browser", operation="prepare_assisted_message", payload=payload,
+                    provider="assisted-browser",
+                    operation="prepare_assisted_message",
+                    payload=payload,
                     idempotency_key=message["idempotency_key"],
                 )
                 return {"status": "enqueued", "message_id": message_id, "requires_founder_send": True}
@@ -573,10 +716,14 @@ class AcquisitionPipeline:
             raise GovernanceError("CRM field names beginning with underscore are reserved")
         payload = {"lead_id": lead_id, "data": fields, "actor": actor}
         idempotency_key = hashlib.sha256(
-            json.dumps({"lead_id": lead_id, "data": fields}, sort_keys=True, separators=(",", ":"), default=str).encode()
+            json.dumps(
+                {"lead_id": lead_id, "data": fields}, sort_keys=True, separators=(",", ":"), default=str
+            ).encode()
         ).hexdigest()
         event = self.store.enqueue_outbox_event(
-            provider="n8n", operation="sync_crm", payload=payload,
+            provider="n8n",
+            operation="sync_crm",
+            payload=payload,
             idempotency_key=f"crm-{idempotency_key}",
         )
         self._event(lead_id, lead["campaign_id"], "crm.sync_queued", actor, fields, {"outbox_event_id": event["id"]})
@@ -586,8 +733,14 @@ class AcquisitionPipeline:
         if actor not in {"jarvis", self.founder_id} or not reason.strip():
             raise GovernanceError("JARVIS or the founder must provide a kill-switch reason")
         self.store.set_control("acquisition_kill_switch", "on" if enabled else "off", actor)
-        self.store.audit(actor, "set_kill_switch", "pipeline", "client_acquisition", "allowed",
-                         {"enabled": enabled, "reason": reason})
+        self.store.audit(
+            actor,
+            "set_kill_switch",
+            "pipeline",
+            "client_acquisition",
+            "allowed",
+            {"enabled": enabled, "reason": reason},
+        )
         return {"enabled": enabled, "actor": actor, "reason": reason.strip()}
 
     def dashboard(self) -> dict:
@@ -596,7 +749,8 @@ class AcquisitionPipeline:
         active = [lead for lead in leads if LeadStage(lead["stage"]) not in TERMINAL_STAGES]
         return {
             "kill_switch": self.store.get_control("acquisition_kill_switch", "off") == "on",
-            "campaigns": len(self.store.list_campaigns()), "leads": len(leads),
+            "campaigns": len(self.store.list_campaigns()),
+            "leads": len(leads),
             "qualified": sum(lead["total_score"] >= 70 for lead in leads),
             "active_pipeline_value_cents": sum(lead["estimated_value_cents"] for lead in active),
             "awaiting_approval": sum(message["status"] == "awaiting_approval" for message in messages),
@@ -609,11 +763,24 @@ class AcquisitionPipeline:
         if self.store.get_control("acquisition_kill_switch", "off") == "on":
             raise GovernanceError(f"Client-acquisition kill switch blocks {operation}")
 
-    def _event(self, lead_id: str | None, campaign_id: str | None, event_type: str, agent: str,
-               input_data: object, output: dict) -> None:
+    def _event(
+        self,
+        lead_id: str | None,
+        campaign_id: str | None,
+        event_type: str,
+        agent: str,
+        input_data: object,
+        output: dict,
+    ) -> None:
         encoded = json.dumps(input_data, sort_keys=True, default=str).encode()
-        self.store.publish_pipeline_event(lead_id=lead_id, campaign_id=campaign_id, event_type=event_type,
-                                          agent=agent, input_hash=hashlib.sha256(encoded).hexdigest(), output=output)
+        self.store.publish_pipeline_event(
+            lead_id=lead_id,
+            campaign_id=campaign_id,
+            event_type=event_type,
+            agent=agent,
+            input_hash=hashlib.sha256(encoded).hexdigest(),
+            output=output,
+        )
 
 
 __all__ = ["AcquisitionPipeline", "LeadStage", "SCORE_LIMITS", "normalize_domain"]

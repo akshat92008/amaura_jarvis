@@ -11,7 +11,6 @@ from jarvis.tools.result import ToolResult, parse_tool_result
 from jarvis.tools.schema_validation import ToolArgumentValidationError, validate_tool_arguments
 from jarvis.tools.security import secure_tool_arguments
 
-
 # These objects must never be rebound: modules imported during registry bootstrap
 # may retain references to them. Category imports populate them in-place below.
 ALL_DISPATCH: dict[str, object] = {}
@@ -44,23 +43,23 @@ def execute_tool(name: str, args: dict) -> str:
 
 
 # Category imports intentionally happen only after the stable public API above.
-from jarvis.tools.coding import CODING_TOOL_DEFINITIONS, CODING_DISPATCH
-from jarvis.tools.advanced_coding import ADVANCED_CODING_TOOL_DEFINITIONS, ADVANCED_CODING_DISPATCH
-from jarvis.tools.agent_factory import AGENT_FACTORY_TOOL_DEFINITIONS, AGENT_FACTORY_DISPATCH
-from jarvis.tools.desktop import DESKTOP_TOOL_DEFINITIONS, DESKTOP_DISPATCH
-from jarvis.tools.research import RESEARCH_TOOL_DEFINITIONS, RESEARCH_DISPATCH
-from jarvis.tools.documents import DOCUMENT_TOOL_DEFINITIONS, DOCUMENT_DISPATCH
-from jarvis.tools.communication import COMMUNICATION_TOOL_DEFINITIONS, COMMUNICATION_DISPATCH
-from jarvis.tools.app_builder import APP_BUILDER_TOOL_DEFINITIONS, APP_BUILDER_DISPATCH
-from jarvis.tools.tdd_loop import TDD_TOOL_DEFINITIONS, TDD_DISPATCH
-from jarvis.tools.ast_indexer import AST_TOOL_DEFINITIONS, AST_DISPATCH
-from jarvis.tools.vision import VISION_TOOL_DEFINITIONS, VISION_DISPATCH
-from jarvis.tools.vector_memory import VECTOR_MEMORY_TOOL_DEFINITIONS, VECTOR_MEMORY_DISPATCH
-from jarvis.fleet import FLEET_TOOL_DEFINITIONS, FLEET_DISPATCH
-from jarvis.tools.browser import BROWSER_TOOL_DEFINITIONS, BROWSER_DISPATCH
-from jarvis.hud import HUD_TOOL_DEFINITIONS, HUD_DISPATCH
-from jarvis.voice.duplex_voice import VOICE_TOOL_DEFINITIONS, VOICE_DISPATCH
-from jarvis.tools.amaura import AMAURA_TOOL_DEFINITIONS, AMAURA_DISPATCH
+from jarvis.fleet import FLEET_DISPATCH, FLEET_TOOL_DEFINITIONS
+from jarvis.hud import HUD_DISPATCH, HUD_TOOL_DEFINITIONS
+from jarvis.tools.advanced_coding import ADVANCED_CODING_DISPATCH, ADVANCED_CODING_TOOL_DEFINITIONS
+from jarvis.tools.agent_factory import AGENT_FACTORY_DISPATCH, AGENT_FACTORY_TOOL_DEFINITIONS
+from jarvis.tools.amaura import AMAURA_DISPATCH, AMAURA_TOOL_DEFINITIONS
+from jarvis.tools.app_builder import APP_BUILDER_DISPATCH, APP_BUILDER_TOOL_DEFINITIONS
+from jarvis.tools.ast_indexer import AST_DISPATCH, AST_TOOL_DEFINITIONS
+from jarvis.tools.browser import BROWSER_DISPATCH, BROWSER_TOOL_DEFINITIONS
+from jarvis.tools.coding import CODING_DISPATCH, CODING_TOOL_DEFINITIONS
+from jarvis.tools.communication import COMMUNICATION_DISPATCH, COMMUNICATION_TOOL_DEFINITIONS
+from jarvis.tools.desktop import DESKTOP_DISPATCH, DESKTOP_TOOL_DEFINITIONS
+from jarvis.tools.documents import DOCUMENT_DISPATCH, DOCUMENT_TOOL_DEFINITIONS
+from jarvis.tools.research import RESEARCH_DISPATCH, RESEARCH_TOOL_DEFINITIONS
+from jarvis.tools.tdd_loop import TDD_DISPATCH, TDD_TOOL_DEFINITIONS
+from jarvis.tools.vector_memory import VECTOR_MEMORY_DISPATCH, VECTOR_MEMORY_TOOL_DEFINITIONS
+from jarvis.tools.vision import VISION_DISPATCH, VISION_TOOL_DEFINITIONS
+from jarvis.voice.duplex_voice import VOICE_DISPATCH, VOICE_TOOL_DEFINITIONS
 
 
 def _merge_unique_definitions(*groups: list[dict]) -> list[dict]:
@@ -125,9 +124,7 @@ ALL_DISPATCH.update(
 
 _TOOL_ARGUMENT_SCHEMAS.update(
     {
-        definition["function"]["name"]: definition["function"].get(
-            "parameters", {"type": "object", "properties": {}}
-        )
+        definition["function"]["name"]: definition["function"].get("parameters", {"type": "object", "properties": {}})
         for definition in ALL_TOOL_DEFINITIONS
     }
 )

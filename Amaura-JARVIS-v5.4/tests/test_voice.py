@@ -2,14 +2,16 @@ import os
 import shutil
 import tempfile
 import unittest
-from jarvis.voice.speaker import get_speaker
+
 from jarvis.voice.duplex_voice import (
     DuplexVoiceEngine,
     VoiceState,
-    trigger_barge_in,
+    get_voice_session_status,
     push_to_talk_command,
-    get_voice_session_status
+    trigger_barge_in,
 )
+from jarvis.voice.speaker import get_speaker
+
 
 class TestStreamingVoice(unittest.TestCase):
     def setUp(self):
@@ -65,6 +67,7 @@ class TestStreamingVoice(unittest.TestCase):
 
         barge = trigger_barge_in()
         self.assertIn("Barge-In", barge)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -9,12 +9,18 @@ Submits natural-language requests to JARVIS REST API and records:
 
 The harness NEVER decides which tool to call — it only submits text and observes.
 """
-import json, os, sys, time, subprocess, signal, datetime, hashlib, traceback
+
+import json
+import os
+import subprocess
+import sys
+import time
+import traceback
 from pathlib import Path
-from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from jarvis.amaura.runtime import load_amaura_env
+
 load_amaura_env()
 
 try:
@@ -29,18 +35,23 @@ BASE_URL = f"http://{JARVIS_HOST}:{JARVIS_PORT}"
 
 _server_proc = None
 
+
 def get_api_key() -> str:
     """Read JARVIS API key from env (loaded from .env.amaura)."""
     from jarvis.amaura.runtime import load_amaura_env
+
     load_amaura_env()
     key = os.environ.get("JARVIS_API_KEY", "").strip()
     return key
 
+
 def get_operator_key() -> str:
     """Read Amaura operator key for mission execution."""
     from jarvis.amaura.runtime import load_amaura_env
+
     load_amaura_env()
     return os.environ.get("AMAURA_OPERATOR_KEY", "").strip()
+
 
 def is_server_up() -> bool:
     try:
@@ -48,6 +59,7 @@ def is_server_up() -> bool:
         return r.status_code == 200
     except Exception:
         return False
+
 
 def ensure_server() -> tuple[bool, dict]:
     """Start JARVIS server if not running. Returns (is_up, health_info)."""
@@ -64,8 +76,7 @@ def ensure_server() -> tuple[bool, dict]:
     cmd = [str(venv_python), "-m", "jarvis.server"]
     env = os.environ.copy()
     _server_proc = subprocess.Popen(
-        cmd, cwd=str(project_dir), env=env,
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        cmd, cwd=str(project_dir), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
     deadline = time.time() + 45
     while time.time() < deadline:
@@ -80,12 +91,15 @@ def ensure_server() -> tuple[bool, dict]:
         time.sleep(0.5)
     return False, {"error": "server startup timeout"}
 
+
 def stop_server():
     global _server_proc
     if _server_proc and _server_proc.poll() is None:
         _server_proc.terminate()
-        try: _server_proc.wait(timeout=5)
-        except: _server_proc.kill()
+        try:
+            _server_proc.wait(timeout=5)
+        except Exception:
+            _server_proc.kill()
 
 
 class BlackBoxResult:
@@ -109,12 +123,12 @@ class BlackBoxResult:
         self.verification = {}
         self.evidence_dir = None
 
-    def ttft_ms(self) -> Optional[float]:
+    def ttft_ms(self) -> float | None:
         if self.request_ts and self.first_token_ts:
             return (self.first_token_ts - self.request_ts) * 1000
         return None
 
-    def total_ms(self) -> Optional[float]:
+    def total_ms(self) -> float | None:
         if self.request_ts and self.final_ts:
             return (self.final_ts - self.request_ts) * 1000
         return None
@@ -193,18 +207,20 @@ def enrich_result_with_mission_evidence(result: BlackBoxResult, timeout: int = 3
                         t_owner = task.get("owner_id", "")
                         t_state = task.get("state", "")
                         t_summary = task.get("summary", "")
-                        
+
                         tool_name = f"task:{t_action or 'action'}:{t_owner or 'agent'}"
                         if not any(tc.get("task_id") == t_id for tc in result.tool_calls):
-                            result.tool_calls.append({
-                                "name": tool_name,
-                                "args": {"task_title": t_title, "description": t_desc, "action_type": t_action},
-                                "result": t_summary or t_desc,
-                                "error": t_summary if t_state == "failed" else None,
-                                "status": t_state,
-                                "task_id": t_id,
-                                "ts": time.time(),
-                            })
+                            result.tool_calls.append(
+                                {
+                                    "name": tool_name,
+                                    "args": {"task_title": t_title, "description": t_desc, "action_type": t_action},
+                                    "result": t_summary or t_desc,
+                                    "error": t_summary if t_state == "failed" else None,
+                                    "status": t_state,
+                                    "task_id": t_id,
+                                    "ts": time.time(),
+                                }
+                            )
 
                         # Also append detailed task evidence records
                         for ev in task.get("evidence", []):
@@ -212,15 +228,17 @@ def enrich_result_with_mission_evidence(result: BlackBoxResult, timeout: int = 3
                             rec_excerpt = ev.get("excerpt", "")
                             rec_success = ev.get("success", True)
                             if rec_ref and not any(tc.get("reference") == rec_ref for tc in result.tool_calls):
-                                result.tool_calls.append({
-                                    "name": f"evidence:{ev.get('type', 'record')}",
-                                    "args": {"task_id": t_id, "reference": rec_ref},
-                                    "result": rec_excerpt,
-                                    "error": None if rec_success else rec_excerpt,
-                                    "status": "completed" if rec_success else "failed",
-                                    "reference": rec_ref,
-                                    "ts": time.time(),
-                                })
+                                result.tool_calls.append(
+                                    {
+                                        "name": f"evidence:{ev.get('type', 'record')}",
+                                        "args": {"task_id": t_id, "reference": rec_ref},
+                                        "result": rec_excerpt,
+                                        "error": None if rec_success else rec_excerpt,
+                                        "status": "completed" if rec_success else "failed",
+                                        "reference": rec_ref,
+                                        "ts": time.time(),
+                                    }
+                                )
 
                     if curr_state in ("completed", "failed", "cancelled"):
                         break
@@ -241,16 +259,13 @@ def submit_chat_stream(prompt: str, test_id: str, timeout: int = 90) -> BlackBox
     op_key = get_operator_key()
     if op_key:
         headers["X-Amaura-Operator-Key"] = op_key
-    
+
     payload = {"message": prompt, "stream": True}
     result.request_ts = time.time()
-    
+
     try:
         with httpx.Client(timeout=timeout) as client:
-            with client.stream(
-                "POST", f"{BASE_URL}/api/chat/stream",
-                json=payload, headers=headers
-            ) as resp:
+            with client.stream("POST", f"{BASE_URL}/api/chat/stream", json=payload, headers=headers) as resp:
                 result.http_status = resp.status_code
                 if resp.status_code != 200:
                     body = resp.read().decode()
@@ -261,7 +276,7 @@ def submit_chat_stream(prompt: str, test_id: str, timeout: int = 90) -> BlackBox
                         result.classification = "FAIL"
                     result.final_ts = time.time()
                     return result
-                
+
                 for line in resp.iter_lines():
                     now = time.time()
                     raw = line.strip()
@@ -274,10 +289,10 @@ def submit_chat_stream(prompt: str, test_id: str, timeout: int = 90) -> BlackBox
                     except json.JSONDecodeError:
                         result.events.append({"raw": raw})
                         continue
-                    
+
                     result.events.append(event)
                     etype = event.get("type", "")
-                    
+
                     if etype in ("token", "content"):
                         token_text = event.get("content", "")
                         result.response_text += token_text
@@ -295,14 +310,16 @@ def submit_chat_stream(prompt: str, test_id: str, timeout: int = 90) -> BlackBox
                         if result.first_tool_ts is None:
                             result.first_tool_ts = now
                         tc = event.get("tool_call", event)
-                        result.tool_calls.append({
-                            "name": tc.get("function", {}).get("name", tc.get("name", "?")),
-                            "args": tc.get("function", {}).get("arguments", tc.get("args", {})),
-                            "result": None,
-                            "error": None,
-                            "status": "invoked",
-                            "ts": now,
-                        })
+                        result.tool_calls.append(
+                            {
+                                "name": tc.get("function", {}).get("name", tc.get("name", "?")),
+                                "args": tc.get("function", {}).get("arguments", tc.get("args", {})),
+                                "result": None,
+                                "error": None,
+                                "status": "invoked",
+                                "ts": now,
+                            }
+                        )
                     elif etype == "tool_result":
                         result.tool_complete_ts = now
                         if result.tool_calls:
@@ -323,15 +340,17 @@ def submit_chat_stream(prompt: str, test_id: str, timeout: int = 90) -> BlackBox
                         if fn.get("name"):
                             if result.first_tool_ts is None:
                                 result.first_tool_ts = now
-                            result.tool_calls.append({
-                                "name": fn["name"],
-                                "args": fn.get("arguments", {}),
-                                "result": None,
-                                "error": None,
-                                "status": "invoked",
-                                "ts": now,
-                            })
-    
+                            result.tool_calls.append(
+                                {
+                                    "name": fn["name"],
+                                    "args": fn.get("arguments", {}),
+                                    "result": None,
+                                    "error": None,
+                                    "status": "invoked",
+                                    "ts": now,
+                                }
+                            )
+
     except httpx.TimeoutException as e:
         result.error = f"Timeout after {timeout}s: {e}"
         result.classification = "FAIL"
@@ -339,7 +358,7 @@ def submit_chat_stream(prompt: str, test_id: str, timeout: int = 90) -> BlackBox
         result.error = f"Request error: {e}"
         result.classification = "FAIL"
         traceback.print_exc()
-    
+
     result.final_ts = time.time()
     if result.goal_id:
         enrich_result_with_mission_evidence(result)
@@ -368,14 +387,16 @@ def submit_chat(prompt: str, test_id: str, timeout: int = 90) -> BlackBoxResult:
             raw_tc = data.get("tool_calls", [])
             for tc in raw_tc:
                 if isinstance(tc, dict):
-                    result.tool_calls.append({
-                        "name": tc.get("name", "?"),
-                        "args": tc.get("args", {}),
-                        "result": tc.get("result"),
-                        "error": tc.get("error"),
-                        "status": tc.get("status", "completed"),
-                        "ts": result.final_ts,
-                    })
+                    result.tool_calls.append(
+                        {
+                            "name": tc.get("name", "?"),
+                            "args": tc.get("args", {}),
+                            "result": tc.get("result"),
+                            "error": tc.get("error"),
+                            "status": tc.get("status", "completed"),
+                            "ts": result.final_ts,
+                        }
+                    )
                 elif isinstance(tc, str):
                     result.tool_calls.append({"name": tc, "ts": result.final_ts})
             exec_data = data.get("executive", {})
@@ -407,19 +428,14 @@ def save_result(result: BlackBoxResult, phase_dir: Path):
     test_dir = phase_dir / result.test_id
     test_dir.mkdir(parents=True, exist_ok=True)
     result.evidence_dir = str(test_dir)
-    
+
     (test_dir / "request.txt").write_text(result.prompt)
     (test_dir / "response.txt").write_text(result.response_text)
     (test_dir / "result.json").write_text(json.dumps(result.to_dict(), indent=2))
-    (test_dir / "events.jsonl").write_text(
-        "\n".join(json.dumps(e) for e in result.events)
-    )
-    (test_dir / "tool_calls.json").write_text(
-        json.dumps(result.tool_calls, indent=2)
-    )
-    (test_dir / "tool_events.jsonl").write_text(
-        "\n".join(json.dumps(tc) for tc in result.tool_calls)
-    )
+    (test_dir / "events.jsonl").write_text("\n".join(json.dumps(e) for e in result.events))
+    (test_dir / "tool_calls.json").write_text(json.dumps(result.tool_calls, indent=2))
+    (test_dir / "tool_events.jsonl").write_text("\n".join(json.dumps(tc) for tc in result.tool_calls))
+
 
 if __name__ == "__main__":
     up, health = ensure_server()
@@ -429,4 +445,3 @@ if __name__ == "__main__":
         print(f"Response: {r.response_text[:200]}")
         print(f"Tool calls: {r.tool_calls}")
         print(f"Latency: {r.total_ms():.0f}ms")
-

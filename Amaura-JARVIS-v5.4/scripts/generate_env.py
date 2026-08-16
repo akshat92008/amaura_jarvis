@@ -5,6 +5,7 @@ Paths are explicit or repository-relative; no developer-machine paths are
 embedded. Existing values may be imported from a legacy env file, while
 placeholder secrets are generated with cryptographically secure randomness.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -74,7 +75,9 @@ def atomic_private_write(path: Path, lines: list[str], *, force: bool) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--template", type=Path, default=ROOT / ".env.amaura.example")
-    parser.add_argument("--import-env", type=Path, default=None, help="Optional legacy env file whose values take precedence")
+    parser.add_argument(
+        "--import-env", type=Path, default=None, help="Optional legacy env file whose values take precedence"
+    )
     parser.add_argument("--output", type=Path, default=ROOT / ".env.amaura")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()

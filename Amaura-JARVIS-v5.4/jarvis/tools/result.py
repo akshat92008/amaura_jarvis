@@ -26,7 +26,7 @@ class ToolResult:
         return json.dumps(self.to_dict(), sort_keys=True, default=str)
 
     @classmethod
-    def success(cls, output: Any = None, **data: Any) -> "ToolResult":
+    def success(cls, output: Any = None, **data: Any) -> ToolResult:
         if output is not None:
             data = {"output": output, **data}
         return cls(ok=True, data=data)
@@ -39,7 +39,7 @@ class ToolResult:
         code: str = "TOOL_ERROR",
         retryable: bool = False,
         data: dict[str, Any] | None = None,
-    ) -> "ToolResult":
+    ) -> ToolResult:
         return cls(ok=False, data=data or {}, error=str(error), code=code, retryable=retryable)
 
 
@@ -62,7 +62,15 @@ def parse_tool_result(value: Any) -> ToolResult:
     if isinstance(payload, dict):
         if "ok" in payload:
             evidence = payload.get("evidence_ids") or ()
-            data_dict = payload.get("data") if isinstance(payload.get("data"), dict) else {k: v for k, v in payload.items() if k not in {"ok", "error", "code", "external_id", "retryable", "evidence_ids"}}
+            data_dict = (
+                payload.get("data")
+                if isinstance(payload.get("data"), dict)
+                else {
+                    k: v
+                    for k, v in payload.items()
+                    if k not in {"ok", "error", "code", "external_id", "retryable", "evidence_ids"}
+                }
+            )
             return ToolResult(
                 ok=bool(payload.get("ok")),
                 data=data_dict,

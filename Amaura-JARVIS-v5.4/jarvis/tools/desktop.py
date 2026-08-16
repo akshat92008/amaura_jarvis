@@ -3,10 +3,9 @@ Desktop Tools — macOS system control via AppleScript and shell commands.
 Gives Jarvis the ability to control the Mac like Iron Man controls his lab.
 """
 
-import subprocess
 import platform
+import subprocess
 from pathlib import Path
-
 
 # ── Tool Definitions ─────────────────────────────────────────────────────────
 
@@ -69,7 +68,10 @@ DESKTOP_TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "output_path": {"type": "string", "description": "Path to save the screenshot (default: ~/Desktop/screenshot.png)."},
+                    "output_path": {
+                        "type": "string",
+                        "description": "Path to save the screenshot (default: ~/Desktop/screenshot.png).",
+                    },
                 },
             },
         },
@@ -160,12 +162,15 @@ DESKTOP_TOOL_DEFINITIONS = [
 
 # ── Tool Implementations ─────────────────────────────────────────────────────
 
+
 def _run_applescript(script: str) -> str:
     """Execute an AppleScript and return the result."""
     try:
         result = subprocess.run(
             ["osascript", "-e", script],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True,
+            text=True,
+            timeout=15,
         )
         if result.returncode != 0:
             return f"❌ AppleScript error: {result.stderr.strip()}"
@@ -252,7 +257,10 @@ def tool_get_system_info() -> str:
     try:
         cpu = subprocess.run(
             ["top", "-l", "1", "-n", "0"],
-            shell=False, capture_output=True, text=True, timeout=10,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         cpu_line = next((line.strip() for line in cpu.stdout.splitlines() if "CPU usage" in line), "")
         if cpu_line:
@@ -264,7 +272,10 @@ def tool_get_system_info() -> str:
     try:
         mem = subprocess.run(
             ["vm_stat"],
-            shell=False, capture_output=True, text=True, timeout=10,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         # Parse page size and free pages
         lines = mem.stdout.strip().split("\n")
@@ -279,7 +290,10 @@ def tool_get_system_info() -> str:
     try:
         disk = subprocess.run(
             ["df", "-h", "/"],
-            shell=False, capture_output=True, text=True, timeout=10,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         disk_lines = [line for line in disk.stdout.splitlines() if line.strip()]
         if len(disk_lines) >= 2:
@@ -293,7 +307,10 @@ def tool_get_system_info() -> str:
     try:
         battery = subprocess.run(
             ["pmset", "-g", "batt"],
-            shell=False, capture_output=True, text=True, timeout=10,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if battery.stdout.strip():
             for line in battery.stdout.strip().split("\n"):
@@ -307,7 +324,10 @@ def tool_get_system_info() -> str:
     try:
         uptime = subprocess.run(
             ["uptime"],
-            shell=False, capture_output=True, text=True, timeout=10,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if uptime.stdout.strip():
             info.append(f"⏱  {uptime.stdout.strip()}")
@@ -328,7 +348,9 @@ def tool_take_screenshot(output_path: str = "") -> str:
     try:
         result = subprocess.run(
             ["screencapture", "-x", str(p)],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.returncode != 0:
             return f"❌ Screenshot failed: {result.stderr}"
@@ -344,7 +366,10 @@ def tool_set_brightness(level: float) -> str:
         # Try using brightness command if available
         result = subprocess.run(
             ["brightness", str(level)],
-            shell=False, capture_output=True, text=True, timeout=10,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.returncode == 0:
             return f"✅ Brightness set to {int(level * 100)}%"
@@ -359,7 +384,8 @@ def tool_lock_screen() -> str:
     try:
         subprocess.run(
             ["pmset", "displaysleepnow"],
-            capture_output=True, timeout=5,
+            capture_output=True,
+            timeout=5,
         )
         return "✅ Screen locked."
     except Exception as e:

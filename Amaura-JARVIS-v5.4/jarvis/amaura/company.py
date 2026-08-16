@@ -9,7 +9,6 @@ from jarvis.amaura.registry import ALL_AGENTS
 from jarvis.amaura.resources import CapabilityRouter
 from jarvis.amaura.workflows import WORKFLOWS
 
-
 DEPARTMENT_MISSIONS = {
     "control_plane": "Translate founder direction into governed programmes, approvals and operating reviews.",
     "strategy": "Choose high-leverage company priorities and measure progress against the mission.",
@@ -70,15 +69,31 @@ def company_blueprint() -> dict[str, Any]:
         "workflow_count": len(WORKFLOWS),
         "departments": departments,
         "workflows": [
-            {"key": workflow.key, "name": workflow.name, "department": workflow.department, "steps": len(workflow.steps)}
+            {
+                "key": workflow.key,
+                "name": workflow.name,
+                "department": workflow.department,
+                "steps": len(workflow.steps),
+            }
             for workflow in WORKFLOWS.values()
         ],
         "cadence": OPERATING_CADENCE,
         "resource_profile": router.mac_8gb_profile(),
         "autonomy_boundary": {
             "autonomous": ["research", "planning", "drafting", "sandbox testing", "internal reporting"],
-            "approval_required": ["publishing", "external messaging", "production deployment", "paid usage above policy"],
-            "founder_only": ["payments", "legal commitments", "production deletion", "credential grants", "strategy changes"],
+            "approval_required": [
+                "publishing",
+                "external messaging",
+                "production deployment",
+                "paid usage above policy",
+            ],
+            "founder_only": [
+                "payments",
+                "legal commitments",
+                "production deletion",
+                "credential grants",
+                "strategy changes",
+            ],
         },
     }
 

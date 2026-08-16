@@ -1,35 +1,37 @@
+import json
 import os
+import subprocess
 import sys
 import time
-import json
-import subprocess
-import requests
 from pathlib import Path
+
+import requests
 
 # Paths
 ROOT_DIR = Path(__file__).resolve().parent.parent
 EVIDENCE_DIR = ROOT_DIR / "qualification_evidence" / "20260812_193925"
 
+
 def main():
     print("=== Phase 15-17: Company OS, Ventures & Financial Trust ===")
-    
+
     ev_15 = EVIDENCE_DIR / "E-CMP-001_company_os.json"
     ev_16 = EVIDENCE_DIR / "E-VNT-001_ventures.json"
     ev_17 = EVIDENCE_DIR / "E-FIN-001_financial_trust.json"
-    
+
     print("Starting backend...")
     env = os.environ.copy()
     env["AMAURA_OPERATOR_KEY"] = "test_qual_key"
     env["JARVIS_API_KEY"] = "test_jarvis_key"
-    
+
     server = subprocess.Popen(
         [sys.executable, "-m", "jarvis.server"],
         cwd=ROOT_DIR,
         env=env,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
+        stderr=subprocess.DEVNULL,
     )
-    
+
     try:
         for _ in range(30):
             try:
@@ -43,12 +45,9 @@ def main():
             sys.exit(1)
 
         print("Server is up.")
-        
-        headers = {
-            "X-Amaura-Operator-Key": "test_qual_key",
-            "X-Jarvis-Key": "test_jarvis_key"
-        }
-        
+
+        headers = {"X-Amaura-Operator-Key": "test_qual_key", "X-Jarvis-Key": "test_jarvis_key"}
+
         # ── Phase 15: Company OS Lifecycle ────────────────────────────────────
         resp15 = requests.get("http://127.0.0.1:8000/api/amaura/company/status", headers=headers, timeout=10)
         data15 = resp15.json()
@@ -72,11 +71,12 @@ def main():
         print(f"Phase 17 (Financial Trust Cashflow): {p17_passed}")
         with open(ev_17, "w") as f:
             json.dump({"test": "Financial Trust", "response": data17, "success": p17_passed}, f, indent=2)
-            
+
     finally:
         print("Shutting down backend...")
         server.terminate()
         server.wait()
+
 
 if __name__ == "__main__":
     main()

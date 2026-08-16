@@ -16,7 +16,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 RUN_ID = os.environ.get("AMAURA_QUAL_RUN_ID") or datetime.now().strftime("%Y%m%d_%H%M%S")
 EVIDENCE_DIR = ROOT / "qualification_evidence" / RUN_ID / "full_capability_audit"
@@ -91,10 +90,10 @@ def main() -> int:
     }
     write_json("source_identity.json", source)
 
-    from jarvis.tools.registry import ALL_DISPATCH, ALL_TOOL_DEFINITIONS, execute_tool, get_tool_count
     from jarvis.amaura.capabilities import EXECUTABLE_EMPLOYEE_TOOLS
     from jarvis.amaura.registry import V1_AGENTS
     from jarvis.amaura.workflows import WORKFLOWS
+    from jarvis.tools.registry import ALL_DISPATCH, ALL_TOOL_DEFINITIONS, execute_tool, get_tool_count
 
     counts = {
         "REGISTERED_TOOLS": len(ALL_TOOL_DEFINITIONS),
@@ -106,7 +105,7 @@ def main() -> int:
     write_json("counts.json", counts)
 
     def add(capability: str, status: str, evidence_id: str, **fields: Any) -> None:
-        record = evidence_record(evidence_id, capability, status, **fields)
+        evidence_record(evidence_id, capability, status, **fields)
         matrix.append(
             {
                 "capability": capability,
@@ -118,15 +117,38 @@ def main() -> int:
 
     # Core CLI and local commands.
     cli_help = run_command([sys.executable, "-m", "jarvis.cli", "--help"])
-    add("JARVIS CLI help entrypoint", "PASS_REAL_E2E" if cli_help["exit_code"] == 0 else "FAIL", "E-CLI-001", request="python -m jarvis.cli --help", entrypoint="jarvis.cli", execution=cli_help, summary="CLI entrypoint responds locally.")
+    add(
+        "JARVIS CLI help entrypoint",
+        "PASS_REAL_E2E" if cli_help["exit_code"] == 0 else "FAIL",
+        "E-CLI-001",
+        request="python -m jarvis.cli --help",
+        entrypoint="jarvis.cli",
+        execution=cli_help,
+        summary="CLI entrypoint responds locally.",
+    )
 
     amaura_status = run_command([sys.executable, "-m", "jarvis.amaura.cli", "status"], timeout=90)
-    add("Amaura status command", "PASS_REAL_E2E" if amaura_status["exit_code"] == 0 else "FAIL", "E-AMA-STATUS-001", request="amaura status", entrypoint="jarvis.amaura.cli", execution=amaura_status, summary="Control-plane status executed through CLI.")
+    add(
+        "Amaura status command",
+        "PASS_REAL_E2E" if amaura_status["exit_code"] == 0 else "FAIL",
+        "E-AMA-STATUS-001",
+        request="amaura status",
+        entrypoint="jarvis.amaura.cli",
+        execution=amaura_status,
+        summary="Control-plane status executed through CLI.",
+    )
 
     pytest_result = run_command([sys.executable, "-m", "pytest", "-q"], timeout=600)
     write_text("raw/pytest_stdout.txt", pytest_result["stdout"])
     write_text("raw/pytest_stderr.txt", pytest_result["stderr"])
-    add("Repository pytest suite", "PASS_UNIT_ONLY" if pytest_result["exit_code"] == 0 else "FAIL", "E-PYTEST-001", request="python -m pytest -q", execution={**pytest_result, "stdout_path": "raw/pytest_stdout.txt", "stderr_path": "raw/pytest_stderr.txt"}, summary="Full checked-in pytest suite.")
+    add(
+        "Repository pytest suite",
+        "PASS_UNIT_ONLY" if pytest_result["exit_code"] == 0 else "FAIL",
+        "E-PYTEST-001",
+        request="python -m pytest -q",
+        execution={**pytest_result, "stdout_path": "raw/pytest_stdout.txt", "stderr_path": "raw/pytest_stderr.txt"},
+        summary="Full checked-in pytest suite.",
+    )
 
     # Safe tool execution samples through the actual registry dispatch.
     safe_tool_args: dict[str, dict[str, Any]] = {
@@ -234,7 +256,14 @@ def main() -> int:
         )
 
     write_json("CAPABILITY_MATRIX.json", matrix)
-    lines = ["# Capability Matrix", "", f"Run ID: `{RUN_ID}`", "", "| Capability | Status | Evidence | Summary |", "|---|---|---|---|"]
+    lines = [
+        "# Capability Matrix",
+        "",
+        f"Run ID: `{RUN_ID}`",
+        "",
+        "| Capability | Status | Evidence | Summary |",
+        "|---|---|---|---|",
+    ]
     for row in matrix:
         lines.append(f"| {row['capability']} | {row['status']} | {row['evidence_id']} | {row['summary']} |")
     write_text("CAPABILITY_MATRIX.md", "\n".join(lines) + "\n")

@@ -1,1 +1,0 @@
-Navigate to 'https://httpbin.org/status/404' in the browser and tell me what HTTP status or error message you encountered.

@@ -1,5 +1,6 @@
-from typing import TypedDict, Annotated, Any
 import operator
+from typing import Annotated, Any, TypedDict
+
 
 class LeadWorkflowState(TypedDict):
     campaign_id: str
@@ -10,6 +11,7 @@ class LeadWorkflowState(TypedDict):
     status: str
     errors: Annotated[list[str], operator.add]
     review_status: str | None
+
 
 class CampaignState(TypedDict):
     campaign_id: str

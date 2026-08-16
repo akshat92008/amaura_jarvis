@@ -38,7 +38,7 @@ def _git_repo(path: Path) -> Path:
 def _fake_noryx(path: Path, test_command: str) -> Path:
     script = path / "fake_noryx_v5.py"
     script.write_text(
-        f'''#!/usr/bin/env python3\nimport argparse,json,pathlib\np=argparse.ArgumentParser(); p.add_argument("command"); p.add_argument("--request-file"); p.add_argument("--result-file"); a=p.parse_args()\nreq=json.load(open(a.request_file)); repo=pathlib.Path(req["repository_path"]); (repo/"changed.py").write_text("VALUE=42\\n")\njson.dump({{"schema":"amaura.noryx-result.v2","success":True,"summary":"done","changed_files":["changed.py"],"tests":[{{"command":{test_command!r},"exit_code":0,"passed":True,"summary":"claimed pass"}}],"evidence":[{{"type":"test","reference":"fixture:test","summary":"claimed"}}],"executor_models":["noryx-fixture-model"]}},open(a.result_file,"w"))\n''',
+        f"""#!/usr/bin/env python3\nimport argparse,json,pathlib\np=argparse.ArgumentParser(); p.add_argument("command"); p.add_argument("--request-file"); p.add_argument("--result-file"); a=p.parse_args()\nreq=json.load(open(a.request_file)); repo=pathlib.Path(req["repository_path"]); (repo/"changed.py").write_text("VALUE=42\\n")\njson.dump({{"schema":"amaura.noryx-result.v2","success":True,"summary":"done","changed_files":["changed.py"],"tests":[{{"command":{test_command!r},"exit_code":0,"passed":True,"summary":"claimed pass"}}],"evidence":[{{"type":"test","reference":"fixture:test","summary":"claimed"}}],"executor_models":["noryx-fixture-model"]}},open(a.result_file,"w"))\n""",
         encoding="utf-8",
     )
     script.chmod(script.stat().st_mode | stat.S_IXUSR)
@@ -66,7 +66,11 @@ def test_antigravity_handoff_is_hard_held_and_cannot_activate(tmp_path: Path, mo
     control = AmauraControlPlane(tmp_path / "amaura.db")
     try:
         brain = JarvisBrain(control)
-        result = brain.submit(GoalRequest(objective="Build a dashboard", workspace=str(repo), autonomy="execute", coding_backend="antigravity"))
+        result = brain.submit(
+            GoalRequest(
+                objective="Build a dashboard", workspace=str(repo), autonomy="execute", coding_backend="antigravity"
+            )
+        )
         goal_id = result["goal"]["id"]
         assert all(item["state"] == TaskState.DRAFT.value for item in brain._goal_hierarchy(goal_id))
         assert not MissionRunner(control).runnable_goals()
@@ -79,7 +83,9 @@ def test_antigravity_handoff_is_hard_held_and_cannot_activate(tmp_path: Path, mo
 def test_executable_submission_is_persisted_for_background_runner(tmp_path: Path):
     control = AmauraControlPlane(tmp_path / "amaura.db")
     try:
-        result = JarvisBrain(control).submit(GoalRequest(objective="Research a reliability checklist", autonomy="execute"))
+        result = JarvisBrain(control).submit(
+            GoalRequest(objective="Research a reliability checklist", autonomy="execute")
+        )
         assert result["state"] == "queued"
         assert result["execution"]["background"] is True
         goals = MissionRunner(control).runnable_goals()
@@ -99,7 +105,7 @@ def test_noryx_independent_verifier_rejects_false_test_claim(tmp_path: Path):
 
 def test_noryx_independent_verifier_records_real_pass_and_model_provenance(tmp_path: Path):
     repo = _git_repo(tmp_path / "repo")
-    script = _fake_noryx(tmp_path, 'python -m py_compile changed.py')
+    script = _fake_noryx(tmp_path, "python -m py_compile changed.py")
     result = NoryxDeliveryAdapter(command=str(script), receipt_key="w" * 32).run_with_result(
         repository_path=str(repo), objective="Fix fixture", idempotency_key="truth"
     )
@@ -122,8 +128,20 @@ def test_memory_builds_provenance_graph_and_preserves_superseded_history(tmp_pat
     control = AmauraControlPlane(tmp_path / "amaura.db")
     try:
         memory = UnifiedMemoryService(control)
-        memory.remember(key="coding_choice", value="Amaura uses Noryx for Project Orion", scope="project", actor="founder", source="explicit_chat")
-        memory.remember(key="coding_choice", value="Amaura uses Noryx for Project Orion and rejects Backend X", scope="project", actor="founder", source="explicit_chat")
+        memory.remember(
+            key="coding_choice",
+            value="Amaura uses Noryx for Project Orion",
+            scope="project",
+            actor="founder",
+            source="explicit_chat",
+        )
+        memory.remember(
+            key="coding_choice",
+            value="Amaura uses Noryx for Project Orion and rejects Backend X",
+            scope="project",
+            actor="founder",
+            source="explicit_chat",
+        )
         row = control.store.get_knowledge("jarvis.memory.project", "coding_choice")
         assert row["value"]["trust"] == "founder"
         assert row["value"]["history"]
@@ -179,8 +197,11 @@ def test_dynamic_goal_rolls_up_all_hierarchy_levels(tmp_path: Path):
 def test_review_model_provenance_accepts_external_executor_receipt(tmp_path: Path):
     control = AmauraControlPlane(tmp_path / "amaura.db")
     try:
-        ref = control.evidence.put_text(json.dumps({"actual_model":"noryx-a","models_used":["noryx-a","noryx-b"]}), source="test:external-executor").reference
-        task = {"evidence": [{"type":"external_executor_receipt","reference":ref}]}
+        ref = control.evidence.put_text(
+            json.dumps({"actual_model": "noryx-a", "models_used": ["noryx-a", "noryx-b"]}),
+            source="test:external-executor",
+        ).reference
+        task = {"evidence": [{"type": "external_executor_receipt", "reference": ref}]}
         models = GovernedReviewRunner(control)._worker_models_from_evidence(task)
         assert models == {"noryx-a", "noryx-b"}
     finally:

@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import json
-import os
 import stat
 import subprocess
-import threading
 from pathlib import Path
 
 import pytest
 
-from jarvis.amaura.brain import GoalCompiler, GoalRequest, JarvisBrain
+from jarvis.amaura.brain import GoalRequest, JarvisBrain
 from jarvis.amaura.cognition import (
     ExecutiveKernel,
     ExecutiveRequest,
@@ -21,7 +19,7 @@ from jarvis.amaura.cognition import (
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.models import GovernanceError, TaskState
 from jarvis.amaura.noryx_bridge import NoryxDeliveryAdapter
-from jarvis.voice.duplex_voice import DuplexVoiceEngine, VoiceState
+from jarvis.voice.duplex_voice import DuplexVoiceEngine
 
 
 def _git_repo(path: Path) -> Path:
@@ -48,14 +46,22 @@ def test_intent_engine_routes_questions_and_explicit_work():
     assert engine.classify("Remember that Noryx owns repository engineering") == "memory_write"
 
 
-def test_lightning_path_skips_heavy_context_and_consolidates_after_response(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_lightning_path_skips_heavy_context_and_consolidates_after_response(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """A normal question must not pay for world/reference/memory model work."""
     control = AmauraControlPlane(tmp_path / "amaura.db")
     try:
         kernel = ExecutiveKernel(control, conversation_handler=lambda text, context: f"ANSWER:{text}")
-        monkeypatch.setattr(kernel.world, "context", lambda *_args, **_kwargs: pytest.fail("world lookup on chat fast path"))
-        monkeypatch.setattr(kernel.memory, "context", lambda *_args, **_kwargs: pytest.fail("memory lookup on chat fast path"))
-        monkeypatch.setattr(kernel.references, "resolve", lambda *_args, **_kwargs: pytest.fail("reference lookup on chat fast path"))
+        monkeypatch.setattr(
+            kernel.world, "context", lambda *_args, **_kwargs: pytest.fail("world lookup on chat fast path")
+        )
+        monkeypatch.setattr(
+            kernel.memory, "context", lambda *_args, **_kwargs: pytest.fail("memory lookup on chat fast path")
+        )
+        monkeypatch.setattr(
+            kernel.references, "resolve", lambda *_args, **_kwargs: pytest.fail("reference lookup on chat fast path")
+        )
         calls: list[tuple[str, str]] = []
         monkeypatch.setattr(
             kernel,
@@ -74,6 +80,7 @@ def test_lightning_path_retains_short_session_history(tmp_path: Path):
     control = AmauraControlPlane(tmp_path / "amaura.db")
     contexts: list[str] = []
     try:
+
         def reply(text: str, context: str) -> str:
             contexts.append(context)
             return f"ANSWER:{text}"
@@ -183,11 +190,13 @@ def test_replanning_mutates_dag_and_preserves_failed_history(tmp_path: Path):
         assert implementation["id"] in verification["dependencies"]
 
         failed_metadata = dict(implementation.get("metadata") or {})
-        failed_metadata.update({
-            "engineering_phase": "executor_started",
-            "antigravity_pid": 12345,
-            "git_worktree_path": "/tmp/stale-worktree",
-        })
+        failed_metadata.update(
+            {
+                "engineering_phase": "executor_started",
+                "antigravity_pid": 12345,
+                "git_worktree_path": "/tmp/stale-worktree",
+            }
+        )
         control.store.update_work_item(
             implementation["id"],
             state=TaskState.FAILED.value,
@@ -229,7 +238,7 @@ def test_noryx_rejects_exit_zero_without_engineering_evidence(tmp_path: Path):
     repo = _git_repo(tmp_path / "repo")
     script = _write_fake_noryx(
         tmp_path,
-        '''#!/usr/bin/env python3\nimport argparse,json\np=argparse.ArgumentParser(); p.add_argument("command"); p.add_argument("--request-file"); p.add_argument("--result-file"); a=p.parse_args()\njson.dump({"success":True}, open(a.result_file,"w"))\n''',
+        """#!/usr/bin/env python3\nimport argparse,json\np=argparse.ArgumentParser(); p.add_argument("command"); p.add_argument("--request-file"); p.add_argument("--result-file"); a=p.parse_args()\njson.dump({"success":True}, open(a.result_file,"w"))\n""",
     )
     with pytest.raises(GovernanceError, match="evidence contract"):
         NoryxDeliveryAdapter(command=str(script), receipt_key="z" * 32).run_with_result(
@@ -242,7 +251,7 @@ def test_noryx_verifies_git_delta_tests_and_secret_isolation(tmp_path: Path, mon
     monkeypatch.setenv("AMAURA_OPERATOR_KEY", "must-never-leak")
     script = _write_fake_noryx(
         tmp_path,
-        '''#!/usr/bin/env python3\nimport argparse,json,os,pathlib\np=argparse.ArgumentParser(); p.add_argument("command"); p.add_argument("--request-file"); p.add_argument("--result-file"); a=p.parse_args()\nreq=json.load(open(a.request_file)); assert req["requirements"]["result_schema"]=="amaura.noryx-result.v2"; assert "AMAURA_OPERATOR_KEY" not in os.environ\nrepo=pathlib.Path(req["repository_path"]); (repo/"feature.py").write_text("VALUE = 41 + 1\\n")\njson.dump({"schema":"amaura.noryx-result.v2","success":True,"summary":"Implemented the verified fixture feature","changed_files":["feature.py"],"tests":[{"command":"python -m py_compile feature.py","exit_code":0,"passed":True,"summary":"compiled"}],"evidence":[{"type":"test","reference":"fixture:compile","summary":"compile passed"}]},open(a.result_file,"w"))\n''',
+        """#!/usr/bin/env python3\nimport argparse,json,os,pathlib\np=argparse.ArgumentParser(); p.add_argument("command"); p.add_argument("--request-file"); p.add_argument("--result-file"); a=p.parse_args()\nreq=json.load(open(a.request_file)); assert req["requirements"]["result_schema"]=="amaura.noryx-result.v2"; assert "AMAURA_OPERATOR_KEY" not in os.environ\nrepo=pathlib.Path(req["repository_path"]); (repo/"feature.py").write_text("VALUE = 41 + 1\\n")\njson.dump({"schema":"amaura.noryx-result.v2","success":True,"summary":"Implemented the verified fixture feature","changed_files":["feature.py"],"tests":[{"command":"python -m py_compile feature.py","exit_code":0,"passed":True,"summary":"compiled"}],"evidence":[{"type":"test","reference":"fixture:compile","summary":"compile passed"}]},open(a.result_file,"w"))\n""",
     )
     result = NoryxDeliveryAdapter(command=str(script), receipt_key="n" * 32).run_with_result(
         repository_path=str(repo), objective="Implement the fixture", idempotency_key="strong-result"
@@ -327,15 +336,25 @@ def test_private_intelligence_benchmark_harness_runs_cognitive_pack(tmp_path: Pa
     from jarvis.amaura.intelligence_benchmark import run_benchmark
 
     pack = tmp_path / "pack.json"
-    pack.write_text(json.dumps({
-        "version": 1,
-        "cognitive": [
-            {"id": "explain", "prompt": "Explain our release architecture", "expected_intent": "conversation"},
-            {"id": "build", "prompt": "Build a tested API feature", "expected_intent": "mission", "max_tasks": 8,
-             "forbidden_action_types": ["payment", "public_publish"]},
-        ],
-        "engineering": [],
-    }), encoding="utf-8")
+    pack.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "cognitive": [
+                    {"id": "explain", "prompt": "Explain our release architecture", "expected_intent": "conversation"},
+                    {
+                        "id": "build",
+                        "prompt": "Build a tested API feature",
+                        "expected_intent": "mission",
+                        "max_tasks": 8,
+                        "forbidden_action_types": ["payment", "public_publish"],
+                    },
+                ],
+                "engineering": [],
+            }
+        ),
+        encoding="utf-8",
+    )
     result = run_benchmark(pack_path=pack)
     assert result.attempted == 2
     assert result.passed == 2

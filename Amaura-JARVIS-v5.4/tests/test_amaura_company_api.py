@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,9 +16,16 @@ def company_api(tmp_path, monkeypatch):
     monkeypatch.setenv("AMAURA_APPROVAL_KEY", "approval-secret")
     monkeypatch.setenv("AMAURA_DISABLE_CLOUD", "1")
     monkeypatch.setenv("AMAURA_EVIDENCE_HMAC_KEY", "e" * 64)
+
     def fake_fetch(url: str, *, max_length: int = 200_000):
         payload = b"Repeated errors are common. Students actively seek focused revision support."
-        return payload, {"validated_hostname": url.split("/")[2], "validated_ip": "93.184.216.34", "status": 200, "headers": {"content-type": "text/plain"}}
+        return payload, {
+            "validated_hostname": url.split("/")[2],
+            "validated_ip": "93.184.216.34",
+            "status": 200,
+            "headers": {"content-type": "text/plain"},
+        }
+
     monkeypatch.setattr("jarvis.amaura.ventures.fetch_public_bytes", fake_fetch)
     old_cwd = os.getcwd()
     os.chdir(tmp_path)
@@ -111,8 +117,16 @@ def test_ventures_api_enforces_operator_and_founder_boundaries(company_api):
             "product_type": "mobile_app",
             "source": "public student research",
             "evidence": [
-                {"source": "https://one.example/thread", "claim": "Repeated errors are common", "excerpt": "Repeated errors are common"},
-                {"source": "https://two.example/reviews", "claim": "Students seek focused revision", "excerpt": "Students actively seek focused revision support"}
+                {
+                    "source": "https://one.example/thread",
+                    "claim": "Repeated errors are common",
+                    "excerpt": "Repeated errors are common",
+                },
+                {
+                    "source": "https://two.example/reviews",
+                    "claim": "Students seek focused revision",
+                    "excerpt": "Students actively seek focused revision support",
+                },
             ],
             "score_components": {
                 "pain": 90,
@@ -179,8 +193,16 @@ def test_cashflow_api_dashboard_tick_and_founder_stream(company_api):
             "product_type": "template_pack",
             "source": "public research",
             "evidence": [
-                {"source": "https://one.example/thread", "claim": "Repeated errors are common", "excerpt": "Repeated errors are common"},
-                {"source": "https://two.example/reviews", "claim": "Students seek focused revision", "excerpt": "Students actively seek focused revision support"},
+                {
+                    "source": "https://one.example/thread",
+                    "claim": "Repeated errors are common",
+                    "excerpt": "Repeated errors are common",
+                },
+                {
+                    "source": "https://two.example/reviews",
+                    "claim": "Students seek focused revision",
+                    "excerpt": "Students actively seek focused revision support",
+                },
             ],
             "score_components": {},
             "estimated_build_days": 4,
@@ -195,9 +217,14 @@ def test_cashflow_api_dashboard_tick_and_founder_stream(company_api):
         "/api/amaura/ventures/cashflow/founder/streams",
         headers={"X-Amaura-Operator-Key": "operator-secret"},
         json={
-            "opportunity_id": opp_id, "name": "Revision Pack", "lane": "template_pack",
-            "platform": "owned storefront", "offer": "Original revision templates", "target_user": "NEET students",
-            "distribution_channel": "organic content", "price_cents": 19900,
+            "opportunity_id": opp_id,
+            "name": "Revision Pack",
+            "lane": "template_pack",
+            "platform": "owned storefront",
+            "offer": "Original revision templates",
+            "target_user": "NEET students",
+            "distribution_channel": "organic content",
+            "price_cents": 19900,
         },
     )
     assert denied.status_code == 403
@@ -205,20 +232,33 @@ def test_cashflow_api_dashboard_tick_and_founder_stream(company_api):
         "/api/amaura/ventures/cashflow/founder/streams",
         headers={"X-Amaura-Approval-Key": "approval-secret"},
         json={
-            "opportunity_id": opp_id, "name": "Revision Pack", "lane": "template_pack",
-            "platform": "owned storefront", "offer": "Original revision templates", "target_user": "NEET students",
-            "distribution_channel": "organic content", "price_cents": 19900,
+            "opportunity_id": opp_id,
+            "name": "Revision Pack",
+            "lane": "template_pack",
+            "platform": "owned storefront",
+            "offer": "Original revision templates",
+            "target_user": "NEET students",
+            "distribution_channel": "organic content",
+            "price_cents": 19900,
         },
     )
     assert created.status_code == 200, created.text
     stream_id = created.json()["id"]
-    tick = client.post("/api/amaura/ventures/cashflow/tick", headers={"X-Amaura-Operator-Key": "operator-secret"}, json={})
+    tick = client.post(
+        "/api/amaura/ventures/cashflow/tick", headers={"X-Amaura-Operator-Key": "operator-secret"}, json={}
+    )
     assert tick.status_code == 200, tick.text
     assert tick.json()["proposals_created"]
     insecure = client.post(
         "/api/amaura/ventures/cashflow/financial-events",
         headers={"X-Amaura-Operator-Key": "operator-secret"},
-        json={"stream_id": stream_id, "event_type": "revenue", "amount_cents": 19900, "source": "receipt", "evidence": [{"receipt": "sale-1"}]},
+        json={
+            "stream_id": stream_id,
+            "event_type": "revenue",
+            "amount_cents": 19900,
+            "source": "receipt",
+            "evidence": [{"receipt": "sale-1"}],
+        },
     )
     assert insecure.status_code == 400
     revenue = client.post(
@@ -229,7 +269,9 @@ def test_cashflow_api_dashboard_tick_and_founder_stream(company_api):
             "event_type": "revenue",
             "amount_cents": 19900,
             "source": "founder_manual",
-            "evidence": [{"founder_attestation": True, "manual_event_id": "manual-api-sale-1", "note": "Manual sale entry"}],
+            "evidence": [
+                {"founder_attestation": True, "manual_event_id": "manual-api-sale-1", "note": "Manual sale entry"}
+            ],
         },
     )
     assert revenue.status_code == 200, revenue.text

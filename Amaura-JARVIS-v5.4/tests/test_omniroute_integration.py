@@ -81,11 +81,14 @@ def _run_server(handler_class, port: int):
 
 # ── Provider Registration ────────────────────────────────────────────────
 
+
 def test_omniroute_is_in_providers_list():
     assert "omniroute" in CognitiveModelGateway.PROVIDERS
 
+
 def test_omniroute_is_first_in_providers_list():
     assert CognitiveModelGateway.PROVIDERS[0] == "omniroute"
+
 
 def test_omniroute_first_in_default_order(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("AMAURA_JARVIS_PROVIDER_ORDER", raising=False)
@@ -97,17 +100,20 @@ def test_omniroute_first_in_default_order(monkeypatch: pytest.MonkeyPatch):
 
 # ── Selection ──────────────────────────────────────────────────────────
 
+
 def test_omniroute_selected_when_configured(omniroute_env):
     sel = CognitiveModelGateway.select(purpose="general")
     assert sel is not None
     assert sel.provider == "omniroute"
     assert sel.model == "gpt-4o-mini"
 
+
 def test_general_chat_uses_fast_model_override(omniroute_env, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AMAURA_OMNIROUTE_CHAT_MODEL", "fast-chat-model")
     sel = CognitiveModelGateway.select(purpose="general")
     assert sel is not None
     assert sel.model == "fast-chat-model"
+
 
 def test_omniroute_available_when_configured(omniroute_env):
     assert CognitiveModelGateway.available(purpose="general") is True
@@ -135,7 +141,11 @@ def test_empty_completion_uses_configured_fallback(omniroute_env, monkeypatch: p
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            body = {"choices": [{"message": {"content": "fallback answer" if request.get("model") == "fallback-model" else ""}}]}
+            body = {
+                "choices": [
+                    {"message": {"content": "fallback answer" if request.get("model") == "fallback-model" else ""}}
+                ]
+            }
             self.wfile.write(json.dumps(body).encode())
 
     # Keep the fixture concise by simulating the two provider results instead
@@ -143,14 +153,18 @@ def test_empty_completion_uses_configured_fallback(omniroute_env, monkeypatch: p
     server, thread = _run_server(EmptyThenHealthyHandler, 19999)
     try:
         result = CognitiveModelGateway._omniroute(
-            model="primary-model", messages=[{"role": "user", "content": "hello"}],
-            temperature=0.1, max_tokens=20,
+            model="primary-model",
+            messages=[{"role": "user", "content": "hello"}],
+            temperature=0.1,
+            max_tokens=20,
         )
         assert result.text == "fallback answer"
         assert result.fallback_used is True
         assert result.fallback_reason == "empty_response"
     finally:
-        server.shutdown(); server.server_close(); thread.join(timeout=2)
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
 
 
 def test_circuit_opens_and_skips_unhealthy_gateway(omniroute_env, monkeypatch: pytest.MonkeyPatch):
@@ -165,14 +179,17 @@ def test_circuit_opens_and_skips_unhealthy_gateway(omniroute_env, monkeypatch: p
     try:
         with pytest.raises(GovernanceError):
             CognitiveModelGateway._omniroute(
-                model="gpt-4o-mini", messages=[{"role": "user", "content": "hello"}],
-                temperature=0.1, max_tokens=20,
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": "hello"}],
+                temperature=0.1,
+                max_tokens=20,
             )
         assert CognitiveModelGateway.select(purpose="general") is None
     finally:
         server.shutdown()
         server.server_close()
         thread.join(timeout=2.0)
+
 
 def test_omniroute_not_available_without_key(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AMAURA_MODEL_PROVIDER", "omniroute")
@@ -182,6 +199,7 @@ def test_omniroute_not_available_without_key(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("OMNIROUTE_API_KEY", raising=False)
     assert CognitiveModelGateway.select(purpose="general") is None
 
+
 def test_omniroute_not_available_without_url(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AMAURA_MODEL_PROVIDER", "omniroute")
     monkeypatch.setenv("AMAURA_OMNIROUTE_API_KEY", "sk-test-" + "x" * 32)
@@ -189,6 +207,7 @@ def test_omniroute_not_available_without_url(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("AMAURA_OMNIROUTE_BASE_URL", raising=False)
     monkeypatch.delenv("OMNIROUTE_BASE_URL", raising=False)
     assert CognitiveModelGateway.select(purpose="general") is None
+
 
 def test_omniroute_not_available_without_model(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AMAURA_MODEL_PROVIDER", "omniroute")
@@ -202,12 +221,14 @@ def test_omniroute_not_available_without_model(monkeypatch: pytest.MonkeyPatch):
 
 # ── Status / Health ────────────────────────────────────────────────────
 
+
 def test_omniroute_status_ready(omniroute_env):
     status = CognitiveModelGateway.status(purpose="general")
     assert status["available"] is True
     assert status["gateway"] == "OmniRoute"
     assert status["status"] == "READY"
     assert status["provider"] == "omniroute"
+
 
 def test_status_does_not_expose_api_key(omniroute_env):
     fake_key = "sk-test-" + "x" * 32
@@ -217,6 +238,7 @@ def test_status_does_not_expose_api_key(omniroute_env):
 
 # ── Secret Redaction ───────────────────────────────────────────────────
 
+
 def test_redact_secrets_removes_key():
     fake_key = "sk-testkey-abc123"
     with patch.dict(os.environ, {"AMAURA_OMNIROUTE_API_KEY": fake_key}):
@@ -224,12 +246,14 @@ def test_redact_secrets_removes_key():
     assert fake_key not in result
     assert "[REDACTED]" in result
 
+
 def test_redact_secrets_safe_with_empty_keys():
     result = CognitiveModelGateway._redact_secrets("neutral error text")
     assert "neutral error text" in result
 
 
 # ── Error Classification ───────────────────────────────────────────────
+
 
 def test_omniroute_raises_on_missing_config(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("AMAURA_OMNIROUTE_API_KEY", raising=False)
@@ -239,8 +263,10 @@ def test_omniroute_raises_on_missing_config(monkeypatch: pytest.MonkeyPatch):
         CognitiveModelGateway._omniroute(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": "test"}],
-            temperature=0.1, max_tokens=100,
+            temperature=0.1,
+            max_tokens=100,
         )
+
 
 def test_omniroute_rejects_non_http_base_url(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AMAURA_OMNIROUTE_API_KEY", "sk-test-" + "x" * 32)
@@ -249,11 +275,13 @@ def test_omniroute_rejects_non_http_base_url(monkeypatch: pytest.MonkeyPatch):
         CognitiveModelGateway._omniroute(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": "test"}],
-            temperature=0.1, max_tokens=100,
+            temperature=0.1,
+            max_tokens=100,
         )
 
 
 # ── Successful Round-Trip ──────────────────────────────────────────────
+
 
 def test_omniroute_successful_response(omniroute_env):
     class SuccessHandler(_MockHTTPHandler):
@@ -270,7 +298,8 @@ def test_omniroute_successful_response(omniroute_env):
         result = CognitiveModelGateway._omniroute(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": "Hello?"}],
-            temperature=0.2, max_tokens=100,
+            temperature=0.2,
+            max_tokens=100,
         )
         assert "JARVIS" in result.text
         assert result.provider == "omniroute"
@@ -292,13 +321,17 @@ def test_omniroute_reuses_process_http_pool(omniroute_env):
     server, thread = _run_server(SuccessHandler, 19999)
     try:
         CognitiveModelGateway._omniroute(
-            model="gpt-4o-mini", messages=[{"role": "user", "content": "one"}],
-            temperature=0.1, max_tokens=20,
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": "one"}],
+            temperature=0.1,
+            max_tokens=20,
         )
         client = CognitiveModelGateway._pooled_client
         CognitiveModelGateway._omniroute(
-            model="gpt-4o-mini", messages=[{"role": "user", "content": "two"}],
-            temperature=0.1, max_tokens=20,
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": "two"}],
+            temperature=0.1,
+            max_tokens=20,
         )
         assert CognitiveModelGateway._pooled_client is client
     finally:
@@ -317,10 +350,18 @@ def test_omniroute_stream_emits_incremental_tokens(omniroute_env):
             self.send_header("Content-Type", "text/event-stream")
             self.end_headers()
             for token in ("Hello", " world"):
-                self.wfile.write(("data: " + json.dumps({
-                    "model": "gpt-4o-mini",
-                    "choices": [{"delta": {"content": token}}],
-                }) + "\n\n").encode())
+                self.wfile.write(
+                    (
+                        "data: "
+                        + json.dumps(
+                            {
+                                "model": "gpt-4o-mini",
+                                "choices": [{"delta": {"content": token}}],
+                            }
+                        )
+                        + "\n\n"
+                    ).encode()
+                )
                 self.wfile.flush()
             self.wfile.write(b"data: [DONE]\n\n")
 
@@ -343,6 +384,7 @@ def test_omniroute_stream_emits_incremental_tokens(omniroute_env):
 
 # ── API Key Never Appears in Error ─────────────────────────────────────
 
+
 def test_omniroute_api_key_never_in_error_messages(omniroute_env):
     fake_key = "sk-test-" + "x" * 32
 
@@ -356,7 +398,8 @@ def test_omniroute_api_key_never_in_error_messages(omniroute_env):
             CognitiveModelGateway._omniroute(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": "hello"}],
-                temperature=0.1, max_tokens=100,
+                temperature=0.1,
+                max_tokens=100,
             )
         assert fake_key not in str(exc_info.value), "API key leaked in error message"
     finally:
@@ -366,6 +409,7 @@ def test_omniroute_api_key_never_in_error_messages(omniroute_env):
 
 
 # ── Provenance Fields ──────────────────────────────────────────────────
+
 
 def test_cognitive_model_result_all_provenance_fields():
     r = CognitiveModelResult(
@@ -403,10 +447,14 @@ def test_real_fallback_preserves_requested_and_resolved_model(omniroute_env, mon
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({
-                "model": "fallback-fast",
-                "choices": [{"message": {"content": "fallback answer"}}],
-            }).encode())
+            self.wfile.write(
+                json.dumps(
+                    {
+                        "model": "fallback-fast",
+                        "choices": [{"message": {"content": "fallback answer"}}],
+                    }
+                ).encode()
+            )
 
     server, thread = _run_server(FallbackHandler, 19999)
     try:
@@ -429,11 +477,19 @@ def test_real_fallback_preserves_requested_and_resolved_model(omniroute_env, mon
 
 # ── generate() raises without provider ────────────────────────────────
 
+
 def test_generate_raises_without_any_provider(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("AMAURA_MODEL_PROVIDER", raising=False)
     monkeypatch.delenv("AMAURA_JARVIS_PROVIDER", raising=False)
-    for k in ("AMAURA_OMNIROUTE_API_KEY", "OMNIROUTE_API_KEY", "OPENAI_API_KEY",
-              "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "NVIDIA_API_KEY", "GROQ_API_KEY"):
+    for k in (
+        "AMAURA_OMNIROUTE_API_KEY",
+        "OMNIROUTE_API_KEY",
+        "OPENAI_API_KEY",
+        "OPENROUTER_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "NVIDIA_API_KEY",
+        "GROQ_API_KEY",
+    ):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("AMAURA_JARVIS_ALLOW_OLLAMA", "0")
     with pytest.raises(GovernanceError, match="No configured cognition model"):
@@ -445,24 +501,30 @@ def test_generate_raises_without_any_provider(monkeypatch: pytest.MonkeyPatch):
 
 # ── Readiness Probe ────────────────────────────────────────────────────
 
+
 def test_omniroute_readiness_probe_not_configured():
     from jarvis.amaura.readiness import _probe_omniroute
+
     with patch.dict(os.environ, {}, clear=False):
-        for k in ("AMAURA_OMNIROUTE_API_KEY", "OMNIROUTE_API_KEY",
-                  "AMAURA_OMNIROUTE_BASE_URL", "OMNIROUTE_BASE_URL"):
+        for k in ("AMAURA_OMNIROUTE_API_KEY", "OMNIROUTE_API_KEY", "AMAURA_OMNIROUTE_BASE_URL", "OMNIROUTE_BASE_URL"):
             os.environ.pop(k, None)
         result = _probe_omniroute()
     assert result["configured"] is False
     assert result["status"] == "BLOCKED"
     assert result["error"] == "missing_configuration"
 
+
 def test_omniroute_readiness_probe_does_not_expose_key():
     from jarvis.amaura.readiness import _probe_omniroute
+
     fake_key = "sk-secret-should-not-appear-" + "z" * 20
-    with patch.dict(os.environ, {
-        "AMAURA_OMNIROUTE_API_KEY": fake_key,
-        "AMAURA_OMNIROUTE_BASE_URL": "http://127.0.0.1:29999",
-        "AMAURA_OMNIROUTE_MODEL": "gpt-4o-mini",
-    }):
+    with patch.dict(
+        os.environ,
+        {
+            "AMAURA_OMNIROUTE_API_KEY": fake_key,
+            "AMAURA_OMNIROUTE_BASE_URL": "http://127.0.0.1:29999",
+            "AMAURA_OMNIROUTE_MODEL": "gpt-4o-mini",
+        },
+    ):
         result = _probe_omniroute()
     assert fake_key not in json.dumps(result), "API key must never appear in readiness probe output"

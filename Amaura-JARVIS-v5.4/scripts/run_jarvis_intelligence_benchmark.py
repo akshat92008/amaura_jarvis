@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Run a private JARVIS cognition/Noryx benchmark pack and emit JSON evidence."""
+
 from __future__ import annotations
 
 import argparse

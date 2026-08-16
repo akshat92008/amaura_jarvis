@@ -10,31 +10,26 @@ from __future__ import annotations
 import ast
 import csv
 import hashlib
-import io
 import json
-import os
 import re
-import subprocess
-import tempfile
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
-from typing import Any, Optional
-from urllib.parse import urlsplit
+from typing import Any
 
-from jarvis.tools.registry import execute_tool, ALL_DISPATCH
-from jarvis.tools.result import parse_tool_result, ToolResult
-from jarvis.tools.security import resolve_workspace_path, _is_sensitive, tool_workspace, workspace_root
-from jarvis.amaura.models import GovernanceError
-
+from jarvis.tools.registry import execute_tool
+from jarvis.tools.result import parse_tool_result
+from jarvis.tools.security import resolve_workspace_path, tool_workspace, workspace_root
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1. Structural Preprocessing & Semantic Span Data Models
 # ═════════════════════════════════════════════════════════════════════════════
 
-class SpanType(str, Enum):
+
+class SpanType(StrEnum):
     """Types of semantic spans identified during preprocessing."""
+
     PATH = "PATH"
     URL = "URL"
     QUOTED_LITERAL = "QUOTED_LITERAL"
@@ -54,6 +49,7 @@ class SpanType(str, Enum):
 @dataclass
 class SemanticSpan:
     """A semantic span preserving start/end character offsets, raw text, and role."""
+
     span_type: SpanType
     start: int
     end: int
@@ -65,6 +61,7 @@ class SemanticSpan:
 @dataclass
 class Clause:
     """A single semantic clause/sentence with scoped spans and negation."""
+
     clause_id: int
     start: int
     end: int
@@ -77,8 +74,9 @@ class Clause:
     objects: list[str] = field(default_factory=list)
 
 
-class PathRole(str, Enum):
+class PathRole(StrEnum):
     """Semantic role of a filesystem path in a natural-language request."""
+
     INPUT = "input"
     SECONDARY_INPUT = "secondary_input"
     OUTPUT = "output"
@@ -86,7 +84,7 @@ class PathRole(str, Enum):
     REPOSITORY = "repository"
 
 
-class ResponseMode(str, Enum):
+class ResponseMode(StrEnum):
     """Response formatting constraints separated from action intent.
 
     NORMAL    — default formatted response
@@ -99,6 +97,7 @@ class ResponseMode(str, Enum):
     PATH_ONLY  — return only the path string
     SILENT     — suppress output
     """
+
     NORMAL = "NORMAL"
     DISPLAY = "DISPLAY"
     RAW = "RAW"
@@ -110,8 +109,9 @@ class ResponseMode(str, Enum):
     SILENT = "SILENT"
 
 
-class ActionType(str, Enum):
+class ActionType(StrEnum):
     """Semantic action types supported by direct deterministic routing."""
+
     EXACT_LITERAL_RESPONSE = "EXACT_LITERAL_RESPONSE"
     SCREENSHOT_CAPTURE = "SCREENSHOT_CAPTURE"
     FILE_WRITE = "FILE_WRITE"
@@ -129,6 +129,7 @@ class ActionType(str, Enum):
 @dataclass
 class ActionCandidate:
     """Scored candidate action derived from positive and negative semantic evidence."""
+
     action_type: ActionType
     verb_span: SemanticSpan | None = None
     object_span: SemanticSpan | None = None
@@ -142,6 +143,7 @@ class ActionCandidate:
 @dataclass
 class ParsedRequest:
     """Structured representation of a request operating on semantic spans."""
+
     original_text: str
     clauses: list[Clause] = field(default_factory=list)
     tokens: set[str] = field(default_factory=set)
@@ -164,6 +166,7 @@ class ParsedRequest:
 @dataclass
 class IntentDecision:
     """Structured decision representing classified intent and extracted arguments."""
+
     domain: str
     action: str
     confidence: float = 1.0
@@ -175,6 +178,7 @@ class IntentDecision:
 @dataclass
 class DirectActionResult:
     """Result of a direct action execution with verifiable evidence and provenance."""
+
     success: bool
     output: str
     execution_type: str = "tool"
@@ -186,8 +190,9 @@ class DirectActionResult:
     telemetry: dict[str, Any] = field(default_factory=dict)
 
 
-class FilesystemActionType(str, Enum):
+class FilesystemActionType(StrEnum):
     """Semantic action types for filesystem operations."""
+
     FS_READ_FILE = "FS_READ_FILE"
     FS_LIST_DIRECTORY = "FS_LIST_DIRECTORY"
     FS_WRITE_FILE = "FS_WRITE_FILE"
@@ -198,6 +203,7 @@ class FilesystemActionType(str, Enum):
 @dataclass
 class FilesystemSemanticAction:
     """Structured semantic decision for a filesystem request."""
+
     action_type: FilesystemActionType
     target_path: str
     is_directory: bool = False
@@ -210,6 +216,7 @@ class FilesystemSemanticAction:
 @dataclass
 class FilesystemAction:
     """Structured filesystem action representing parsed write, read, or list request."""
+
     action: str
     path: str
     content: str = ""
@@ -220,6 +227,7 @@ class FilesystemAction:
 @dataclass
 class WriteIntent:
     """Structured write intent representing parsed write request with extraction provenance."""
+
     target_path: str
     payload_span: tuple[int, int] = (-1, -1)
     payload: str = ""
@@ -235,6 +243,7 @@ class WriteIntent:
 @dataclass
 class WriteAction:
     """Structured write action representing parsed write request with clause-level provenance."""
+
     target_path: str
     content: str = ""
     payload: str = ""
@@ -266,6 +275,7 @@ class WriteAction:
 @dataclass
 class BrowserField:
     """Single requested field in a browser action."""
+
     type: str
     selector: str = ""
     name: str = ""
@@ -278,6 +288,7 @@ class BrowserFieldRequest:
     Phase 8: CSS selectors containing action-like words (capture, write, screen,
     read, open) must be preserved verbatim as data, not interpreted as intents.
     """
+
     selector: str
     requested_output_role: str = "value"
     source_span: tuple[int, int] = (-1, -1)
@@ -286,6 +297,7 @@ class BrowserFieldRequest:
 @dataclass
 class BrowserActionPlan:
     """Structured multi-field browser extraction plan."""
+
     url: str
     requests: list[BrowserField] = field(default_factory=list)
 
@@ -299,10 +311,11 @@ class SubtractIntent:
       'take B away from A' => A - B  (minuend=A, subtrahend=B)
       'A minus B'          => A - B  (minuend=A, subtrahend=B)
     """
-    minuend: str           # the value being subtracted FROM
-    subtrahend: str        # the value being subtracted
+
+    minuend: str  # the value being subtracted FROM
+    subtrahend: str  # the value being subtracted
     output_path: str = ""
-    provenance: str = ""   # source phrase that established roles
+    provenance: str = ""  # source phrase that established roles
     minuend_role_span: tuple[int, int] = (-1, -1)
     subtrahend_role_span: tuple[int, int] = (-1, -1)
     confidence: float = 1.0
@@ -317,6 +330,7 @@ class DivisionIntent:
       'A divided by B'  => A / B  (numerator=A, denominator=B)
       'divide B into A' => A / B  (numerator=A, denominator=B)
     """
+
     numerator: str
     denominator: str
     output_path: str = ""
@@ -334,10 +348,11 @@ class ExactLiteralIntent:
     If the payload depends on another action (file read, memory, browser), this
     is NOT an ExactLiteralIntent — it is a composite action with VALUE_ONLY mode.
     """
+
     payload: str
     payload_span_start: int = -1
     payload_span_end: int = -1
-    quote_style: str = ""        # 'single', 'double', 'backtick', 'none'
+    quote_style: str = ""  # 'single', 'double', 'backtick', 'none'
     prefix_constraint: str = ""  # the command prefix (e.g., 'Return only')
     suffix_constraint: str = ""  # trailing instruction stripped from payload
     confidence: float = 1.0
@@ -346,6 +361,7 @@ class ExactLiteralIntent:
 @dataclass
 class TransformationPlan:
     """Structured workflow transformation plan derived from user semantics."""
+
     inputs: list[str]
     operation: str
     output_path: str
@@ -358,6 +374,7 @@ class TransformationPlan:
 @dataclass
 class DelimitedTablePlan:
     """Structured plan for delimited table to JSON transformation."""
+
     source_path: str
     delimiter: str
     has_header: bool = True
@@ -370,39 +387,212 @@ class DelimitedTablePlan:
 # 2. Reusable Request Preprocessing Layer
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class RequestPreprocessor:
     """Reusable structural preprocessing layer extracting typed semantic spans."""
 
     KNOWN_EXTENSIONS = (
-        ".txt", ".json", ".py", ".md", ".csv", ".tsv", ".log", ".yaml", ".yml",
-        ".html", ".htm", ".js", ".ts", ".sh", ".toml", ".cfg", ".ini",
-        ".conf", ".xml", ".sql", ".dat", ".bin", ".out", ".png", ".jpg",
-        ".jpeg", ".pdf", ".env", ".lock", ".rst", ".xyz", ".custom", ".abc", ".num",
+        ".txt",
+        ".json",
+        ".py",
+        ".md",
+        ".csv",
+        ".tsv",
+        ".log",
+        ".yaml",
+        ".yml",
+        ".html",
+        ".htm",
+        ".js",
+        ".ts",
+        ".sh",
+        ".toml",
+        ".cfg",
+        ".ini",
+        ".conf",
+        ".xml",
+        ".sql",
+        ".dat",
+        ".bin",
+        ".out",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".pdf",
+        ".env",
+        ".lock",
+        ".rst",
+        ".xyz",
+        ".custom",
+        ".abc",
+        ".num",
     )
 
     STOP_WORDS = {
-        "the", "a", "an", "this", "that", "it", "its", "to", "in", "into", "at", "from", "for", "with", "by", "of", "as", "is", "be", "are", "was", "were",
-        "and", "or", "but", "so", "if", "your", "my", "our", "their", "his", "her", "should", "must", "will", "can", "could", "would",
-        "content", "contents", "text", "payload", "data", "body", "sum", "total", "result", "file", "files",
-        "directory", "directories", "folder", "folders", "repo", "repository", "codebase", "true", "false",
-        "null", "none", "only", "verbatim", "exact", "raw", "table", "tables", "json", "csv", "tsv",
-        "destination", "target", "location", "located", "following", "out", "transformed", "transformed json",
-        "converted", "output", "input", "source", "sources", "entry", "entries", "item", "items",
-        "solely", "strictly", "precisely", "nothing", "without", "explanation", "commentary", "all", "each", "every", "some", "any", "not",
+        "the",
+        "a",
+        "an",
+        "this",
+        "that",
+        "it",
+        "its",
+        "to",
+        "in",
+        "into",
+        "at",
+        "from",
+        "for",
+        "with",
+        "by",
+        "of",
+        "as",
+        "is",
+        "be",
+        "are",
+        "was",
+        "were",
+        "and",
+        "or",
+        "but",
+        "so",
+        "if",
+        "your",
+        "my",
+        "our",
+        "their",
+        "his",
+        "her",
+        "should",
+        "must",
+        "will",
+        "can",
+        "could",
+        "would",
+        "content",
+        "contents",
+        "text",
+        "payload",
+        "data",
+        "body",
+        "sum",
+        "total",
+        "result",
+        "file",
+        "files",
+        "directory",
+        "directories",
+        "folder",
+        "folders",
+        "repo",
+        "repository",
+        "codebase",
+        "true",
+        "false",
+        "null",
+        "none",
+        "only",
+        "verbatim",
+        "exact",
+        "raw",
+        "table",
+        "tables",
+        "json",
+        "csv",
+        "tsv",
+        "destination",
+        "target",
+        "location",
+        "located",
+        "following",
+        "out",
+        "transformed",
+        "transformed json",
+        "converted",
+        "output",
+        "input",
+        "source",
+        "sources",
+        "entry",
+        "entries",
+        "item",
+        "items",
+        "solely",
+        "strictly",
+        "precisely",
+        "nothing",
+        "without",
+        "explanation",
+        "commentary",
+        "all",
+        "each",
+        "every",
+        "some",
+        "any",
+        "not",
     }
 
     NEGATION_WORDS = {
-        "not", "don't", "dont", "do not", "does not", "doesn't", "never", "without",
-        "instead of", "rather than", "no", "cannot", "can't", "should not", "shouldn't",
+        "not",
+        "don't",
+        "dont",
+        "do not",
+        "does not",
+        "doesn't",
+        "never",
+        "without",
+        "instead of",
+        "rather than",
+        "no",
+        "cannot",
+        "can't",
+        "should not",
+        "shouldn't",
     }
 
     CAPTURE_VERBS = {"capture", "grab", "snap", "take", "save", "record"}
-    SCREEN_OBJECTS = {"screen", "display", "desktop", "monitor", "screenshot", "screen shot", "screen capture", "screen image"}
+    SCREEN_OBJECTS = {
+        "screen",
+        "display",
+        "desktop",
+        "monitor",
+        "screenshot",
+        "screen shot",
+        "screen capture",
+        "screen image",
+    }
 
-    WRITE_VERBS = {"write", "save", "create", "make", "put", "store", "dump", "record", "generate", "set", "contain", "contains", "hold", "holds"}
+    WRITE_VERBS = {
+        "write",
+        "save",
+        "create",
+        "make",
+        "put",
+        "store",
+        "dump",
+        "record",
+        "generate",
+        "set",
+        "contain",
+        "contains",
+        "hold",
+        "holds",
+    }
     READ_VERBS = {"read", "cat", "open", "show", "display", "view", "inspect", "fetch", "load", "get", "print"}
     LIST_VERBS = {"list", "enumerate", "inventory", "show", "display"}
-    WORKFLOW_VERBS = {"add", "subtract", "difference", "multiply", "divide", "sum", "total", "calculate", "compute", "combine", "transform", "convert"}
+    WORKFLOW_VERBS = {
+        "add",
+        "subtract",
+        "difference",
+        "multiply",
+        "divide",
+        "sum",
+        "total",
+        "calculate",
+        "compute",
+        "combine",
+        "transform",
+        "convert",
+    }
 
     @classmethod
     def scan_balanced_json(cls, text: str) -> list[SemanticSpan]:
@@ -413,13 +603,13 @@ class RequestPreprocessor:
 
         while i < n:
             ch = text[i]
-            if ch in ('{', '['):
+            if ch in ("{", "["):
                 open_ch = ch
-                close_ch = '}' if ch == '{' else ']'
+                close_ch = "}" if ch == "{" else "]"
                 start = i
                 depth = 0
                 in_quote = False
-                quote_char = ''
+                quote_char = ""
                 escaped = False
                 valid_json = False
                 candidate_str = ""
@@ -430,7 +620,7 @@ class RequestPreprocessor:
                     if in_quote:
                         if escaped:
                             escaped = False
-                        elif c == '\\':
+                        elif c == "\\":
                             escaped = True
                         elif c == quote_char:
                             in_quote = False
@@ -443,7 +633,7 @@ class RequestPreprocessor:
                         elif c == close_ch:
                             depth -= 1
                             if depth == 0:
-                                candidate_str = text[start:j + 1]
+                                candidate_str = text[start : j + 1]
                                 # Attempt JSON parse
                                 try:
                                     json.loads(candidate_str)
@@ -454,14 +644,16 @@ class RequestPreprocessor:
                     j += 1
 
                 if valid_json and candidate_str:
-                    stype = SpanType.JSON_OBJECT if open_ch == '{' else SpanType.JSON_ARRAY
-                    spans.append(SemanticSpan(
-                        span_type=stype,
-                        start=start,
-                        end=j + 1,
-                        raw_text=candidate_str,
-                        normalized_role="structured_literal",
-                    ))
+                    stype = SpanType.JSON_OBJECT if open_ch == "{" else SpanType.JSON_ARRAY
+                    spans.append(
+                        SemanticSpan(
+                            span_type=stype,
+                            start=start,
+                            end=j + 1,
+                            raw_text=candidate_str,
+                            normalized_role="structured_literal",
+                        )
+                    )
                     i = j + 1
                     continue
             i += 1
@@ -475,26 +667,30 @@ class RequestPreprocessor:
 
         # 1. Fenced blocks ```...```
         for m in re.finditer(r"```(?:[a-zA-Z0-9_-]+)?\n?(.*?)\n?```", text, re.DOTALL):
-            spans.append(SemanticSpan(
-                span_type=SpanType.CODE_BLOCK,
-                start=m.start(0),
-                end=m.end(0),
-                raw_text=m.group(0),
-                normalized_role="code_block",
-                metadata={"inner": m.group(1)},
-            ))
+            spans.append(
+                SemanticSpan(
+                    span_type=SpanType.CODE_BLOCK,
+                    start=m.start(0),
+                    end=m.end(0),
+                    raw_text=m.group(0),
+                    normalized_role="code_block",
+                    metadata={"inner": m.group(1)},
+                )
+            )
 
         # 2. Inline code `...`
         for m in re.finditer(r"`([^`\n]+)`", text):
             if not any(s.start <= m.start(0) and s.end >= m.end(0) for s in spans):
-                spans.append(SemanticSpan(
-                    span_type=SpanType.INLINE_CODE,
-                    start=m.start(0),
-                    end=m.end(0),
-                    raw_text=m.group(0),
-                    normalized_role="inline_code",
-                    metadata={"inner": m.group(1)},
-                ))
+                spans.append(
+                    SemanticSpan(
+                        span_type=SpanType.INLINE_CODE,
+                        start=m.start(0),
+                        end=m.end(0),
+                        raw_text=m.group(0),
+                        normalized_role="inline_code",
+                        metadata={"inner": m.group(1)},
+                    )
+                )
 
         return spans
 
@@ -504,42 +700,52 @@ class RequestPreprocessor:
         spans: list[SemanticSpan] = []
         for m in re.finditer(r"\b[a-zA-Z][a-zA-Z0-9+.-]*://[^\s'\"`<>]+", text):
             raw = m.group(0).rstrip(".,:;!?)]}")
-            spans.append(SemanticSpan(
-                span_type=SpanType.URL,
-                start=m.start(0),
-                end=m.start(0) + len(raw),
-                raw_text=raw,
-                normalized_role="url",
-            ))
+            spans.append(
+                SemanticSpan(
+                    span_type=SpanType.URL,
+                    start=m.start(0),
+                    end=m.start(0) + len(raw),
+                    raw_text=raw,
+                    normalized_role="url",
+                )
+            )
         return spans
 
     @classmethod
     def scan_quoted_literals(cls, text: str, existing_spans: list[SemanticSpan]) -> list[SemanticSpan]:
         """Scan text for quoted strings not already part of structured spans."""
         spans: list[SemanticSpan] = []
-        pattern = re.compile(r"('([^'\\]*(?:\\.[^'\\]*)*)'|\"([^\"\\]*(?:\\.[^\"\\]*)*)\"|`([^`\\]*(?:\\.[^`\\]*)*)`|«([^»]*)»|“([^”]*)”)")
+        pattern = re.compile(
+            r"('([^'\\]*(?:\\.[^'\\]*)*)'|\"([^\"\\]*(?:\\.[^\"\\]*)*)\"|`([^`\\]*(?:\\.[^`\\]*)*)`|«([^»]*)»|“([^”]*)”)"
+        )
         for m in pattern.finditer(text):
             start = m.start(0)
             end = m.end(0)
             if any(s.start <= start and s.end >= end for s in existing_spans):
                 continue
-            inner = m.group(2) if m.group(2) is not None else (
-                m.group(3) if m.group(3) is not None else (
-                    m.group(4) if m.group(4) is not None else (
-                        m.group(5) if m.group(5) is not None else (
-                            m.group(6) if m.group(6) is not None else ""
-                        )
+            inner = (
+                m.group(2)
+                if m.group(2) is not None
+                else (
+                    m.group(3)
+                    if m.group(3) is not None
+                    else (
+                        m.group(4)
+                        if m.group(4) is not None
+                        else (m.group(5) if m.group(5) is not None else (m.group(6) if m.group(6) is not None else ""))
                     )
                 )
             )
-            spans.append(SemanticSpan(
-                span_type=SpanType.QUOTED_LITERAL,
-                start=start,
-                end=end,
-                raw_text=m.group(0),
-                normalized_role="quoted_literal",
-                metadata={"inner": inner},
-            ))
+            spans.append(
+                SemanticSpan(
+                    span_type=SpanType.QUOTED_LITERAL,
+                    start=start,
+                    end=end,
+                    raw_text=m.group(0),
+                    normalized_role="quoted_literal",
+                    metadata={"inner": inner},
+                )
+            )
         return spans
 
     @classmethod
@@ -553,19 +759,31 @@ class RequestPreprocessor:
             for m in re.finditer(pattern, text):
                 start = m.start(0)
                 end = m.end(0)
-                if start > 0 and end < len(text) and text[start - 1] in ("'", '"', '`') and text[end] in ("'", '"', '`'):
+                if (
+                    start > 0
+                    and end < len(text)
+                    and text[start - 1] in ("'", '"', "`")
+                    and text[end] in ("'", '"', "`")
+                ):
                     start -= 1
                     end += 1
-                if any(s.span_type in (SpanType.JSON_OBJECT, SpanType.JSON_ARRAY, SpanType.CODE_BLOCK) and s.start <= start and s.end >= end for s in existing_spans):
+                if any(
+                    s.span_type in (SpanType.JSON_OBJECT, SpanType.JSON_ARRAY, SpanType.CODE_BLOCK)
+                    and s.start <= start
+                    and s.end >= end
+                    for s in existing_spans
+                ):
                     continue
-                spans.append(SemanticSpan(
-                    span_type=SpanType.PATH,
-                    start=start,
-                    end=end,
-                    raw_text=text[start:end],
-                    normalized_role="path",
-                    metadata={"clean_path": p_str},
-                ))
+                spans.append(
+                    SemanticSpan(
+                        span_type=SpanType.PATH,
+                        start=start,
+                        end=end,
+                        raw_text=text[start:end],
+                        normalized_role="path",
+                        metadata={"clean_path": p_str},
+                    )
+                )
         return spans
 
     @classmethod
@@ -586,7 +804,7 @@ class RequestPreprocessor:
         out: list[str] = []
         curr = 0
         for s in merged:
-            out.append(text[curr:s.start])
+            out.append(text[curr : s.start])
             if s.span_type == SpanType.PATH:
                 out.append("<PATH>")
             elif s.span_type == SpanType.URL:
@@ -633,31 +851,39 @@ class RequestPreprocessor:
                 continue
 
             c_spans = [s for s in non_intent_spans if s.start >= s_idx and s.end <= e_idx]
-            c_masked = cls.build_masked_view(text[s_idx:e_idx], [
-                SemanticSpan(s.span_type, s.start - s_idx, s.end - s_idx, s.raw_text, s.normalized_role, s.metadata)
-                for s in c_spans
-            ])
+            c_masked = cls.build_masked_view(
+                text[s_idx:e_idx],
+                [
+                    SemanticSpan(s.span_type, s.start - s_idx, s.end - s_idx, s.raw_text, s.normalized_role, s.metadata)
+                    for s in c_spans
+                ],
+            )
 
             c_lower = c_masked.lower()
             neg_words = [nw for nw in cls.NEGATION_WORDS if re.search(r"\b" + re.escape(nw) + r"\b", c_lower)]
             is_negated = bool(neg_words)
 
-            verbs = [v for v in (cls.CAPTURE_VERBS | cls.WRITE_VERBS | cls.READ_VERBS | cls.LIST_VERBS | cls.WORKFLOW_VERBS)
-                     if re.search(r"\b" + re.escape(v) + r"\b", c_lower)]
+            verbs = [
+                v
+                for v in (cls.CAPTURE_VERBS | cls.WRITE_VERBS | cls.READ_VERBS | cls.LIST_VERBS | cls.WORKFLOW_VERBS)
+                if re.search(r"\b" + re.escape(v) + r"\b", c_lower)
+            ]
             objects = [o for o in cls.SCREEN_OBJECTS if re.search(r"\b" + re.escape(o) + r"\b", c_lower)]
 
-            clauses.append(Clause(
-                clause_id=clause_id,
-                start=s_idx,
-                end=e_idx,
-                raw_text=c_raw,
-                masked_text=c_masked,
-                spans=c_spans,
-                is_negated=is_negated,
-                negation_words=neg_words,
-                verbs=verbs,
-                objects=objects,
-            ))
+            clauses.append(
+                Clause(
+                    clause_id=clause_id,
+                    start=s_idx,
+                    end=e_idx,
+                    raw_text=c_raw,
+                    masked_text=c_masked,
+                    spans=c_spans,
+                    is_negated=is_negated,
+                    negation_words=neg_words,
+                    verbs=verbs,
+                    objects=objects,
+                )
+            )
             clause_id += 1
 
         return clauses
@@ -678,37 +904,91 @@ class RequestPreprocessor:
         """
         clean = text.lower()
         # Phase 8: NUMBER_ONLY — arithmetic result only (HIGHEST PRIORITY)
-        if any(phrase in clean for phrase in (
-            "result only", "number only", "only the number", "only the result",
-            "just the number", "just the result", "reply with only the number",
-            "return only the number", "give only the number",
-        )):
+        if any(
+            phrase in clean
+            for phrase in (
+                "result only",
+                "number only",
+                "only the number",
+                "only the result",
+                "just the number",
+                "just the result",
+                "reply with only the number",
+                "return only the number",
+                "give only the number",
+            )
+        ):
             return ResponseMode.NUMBER_ONLY
         # Phase 8: VALUE_ONLY — memory/browser/file value only (BEFORE EXACT_RAW)
-        if any(phrase in clean for phrase in (
-            "value only", "only the value", "only value at", "reply with only value",
-            "return only value", "return only the value", "give only the value",
-            "only the remembered", "only the stored", "only the retrieved",
-            "reply only with the value", "just the value", "just return the value",
-            "only its value", "reply with the value only", "return only the marker",
-            "only the marker", "just the marker",
-        )):
+        if any(
+            phrase in clean
+            for phrase in (
+                "value only",
+                "only the value",
+                "only value at",
+                "reply with only value",
+                "return only value",
+                "return only the value",
+                "give only the value",
+                "only the remembered",
+                "only the stored",
+                "only the retrieved",
+                "reply only with the value",
+                "just the value",
+                "just return the value",
+                "only its value",
+                "reply with the value only",
+                "return only the marker",
+                "only the marker",
+                "just the marker",
+            )
+        ):
             return ResponseMode.VALUE_ONLY
         # Phase 8: FILE-AS-REPLY patterns
-        if any(w in clean for w in (
-            "use the text stored in", "use the contents of", "use file contents as",
-            "as your complete reply", "as your entire reply", "as your whole reply",
-            "as my complete response", "use it as your reply",
-        )):
+        if any(
+            w in clean
+            for w in (
+                "use the text stored in",
+                "use the contents of",
+                "use file contents as",
+                "as your complete reply",
+                "as your entire reply",
+                "as your whole reply",
+                "as my complete response",
+                "use it as your reply",
+            )
+        ):
             return ResponseMode.EXACT_RAW
-        if any(w in clean for w in (
-            "return exactly", "give exactly", "print exactly", "verbatim", "exact contents",
-            "only contents", "only the contents", "raw content", "raw contents", "unchanged",
-            "without explanation", "without line numbers", "just the contents", "just contents",
-            "no formatting", "no headers", "raw file", "exact file", "only file content",
-            "give only", "return only the content", "return only the contents", "exact output",
-            "whole reply must be file text", "whole response must be",
-        )):
+        if any(
+            w in clean
+            for w in (
+                "return exactly",
+                "give exactly",
+                "print exactly",
+                "verbatim",
+                "exact contents",
+                "only contents",
+                "only the contents",
+                "raw content",
+                "raw contents",
+                "unchanged",
+                "without explanation",
+                "without line numbers",
+                "just the contents",
+                "just contents",
+                "no formatting",
+                "no headers",
+                "raw file",
+                "exact file",
+                "only file content",
+                "give only",
+                "return only the content",
+                "return only the contents",
+                "exact output",
+                "whole reply must be file text",
+                "whole response must be",
+            )
+        ):
             return ResponseMode.EXACT_RAW
         if "json only" in clean or "only json" in clean or "as json" in clean:
             return ResponseMode.JSON_ONLY
@@ -796,99 +1076,182 @@ class RequestPreprocessor:
             c_mask = c.masked_text.lower()
             has_verb = any(re.search(r"\b" + re.escape(v) + r"\b", c_mask) for v in cls.CAPTURE_VERBS)
             has_obj = any(re.search(r"\b" + re.escape(o) + r"\b", c_mask) for o in cls.SCREEN_OBJECTS)
-            has_direct_noun = bool(re.search(r"\b(?:screenshot|screen\s+shot|screen\s+capture|screen\s+image)\b", c_mask))
+            has_direct_noun = bool(
+                re.search(r"\b(?:screenshot|screen\s+shot|screen\s+capture|screen\s+image)\b", c_mask)
+            )
 
             if (has_verb and has_obj) or has_direct_noun:
                 if c.is_negated:
-                    candidates.append(ActionCandidate(
-                        action_type=ActionType.SCREENSHOT_CAPTURE,
-                        positive_evidence=[f"capture_verb_and_object_in_clause_{c.clause_id}"],
-                        negative_evidence=["clause_negated"],
-                        confidence=0.0,
-                        clause_id=c.clause_id,
-                        is_blocked_as_negated=True,
-                    ))
+                    candidates.append(
+                        ActionCandidate(
+                            action_type=ActionType.SCREENSHOT_CAPTURE,
+                            positive_evidence=[f"capture_verb_and_object_in_clause_{c.clause_id}"],
+                            negative_evidence=["clause_negated"],
+                            confidence=0.0,
+                            clause_id=c.clause_id,
+                            is_blocked_as_negated=True,
+                        )
+                    )
                 else:
-                    candidates.append(ActionCandidate(
-                        action_type=ActionType.SCREENSHOT_CAPTURE,
-                        positive_evidence=[f"capture_verb_and_object_in_clause_{c.clause_id}"],
-                        confidence=0.95,
-                        clause_id=c.clause_id,
-                    ))
+                    candidates.append(
+                        ActionCandidate(
+                            action_type=ActionType.SCREENSHOT_CAPTURE,
+                            positive_evidence=[f"capture_verb_and_object_in_clause_{c.clause_id}"],
+                            confidence=0.95,
+                            clause_id=c.clause_id,
+                        )
+                    )
 
         # ── B. File Write Candidate ──────────────────────────────────────────
         has_write_verb = any(re.search(r"\b" + re.escape(v) + r"\b", clean_lower) for v in cls.WRITE_VERBS)
-        has_path_dest = ("<path>" in clean_lower and any(w in clean_lower for w in (" to ", " in ", " into ", " at ", " file ", "create "))) or bool(paths)
+        has_path_dest = (
+            "<path>" in clean_lower
+            and any(w in clean_lower for w in (" to ", " in ", " into ", " at ", " file ", "create "))
+        ) or bool(paths)
         if has_write_verb and (has_path_dest or "<path>" in clean_lower):
-            candidates.append(ActionCandidate(
-                action_type=ActionType.FILE_WRITE,
-                positive_evidence=["write_verb_with_target_path"],
-                confidence=0.90,
-            ))
+            candidates.append(
+                ActionCandidate(
+                    action_type=ActionType.FILE_WRITE,
+                    positive_evidence=["write_verb_with_target_path"],
+                    confidence=0.90,
+                )
+            )
 
         # ── C. Structured Workflow Candidate (Arithmetic / Data transforms) ──
-        has_workflow_verb = any(re.search(r"\b" + re.escape(v) + r"\b", clean_lower) for v in cls.WORKFLOW_VERBS) or "away from" in clean_lower
+        has_workflow_verb = (
+            any(re.search(r"\b" + re.escape(v) + r"\b", clean_lower) for v in cls.WORKFLOW_VERBS)
+            or "away from" in clean_lower
+        )
         if (has_workflow_verb and len(paths) >= 2) or ("take" in clean_lower and "away from" in clean_lower):
-            candidates.append(ActionCandidate(
-                action_type=ActionType.STRUCTURED_WORKFLOW,
-                positive_evidence=["arithmetic_or_transform_with_multiple_paths"],
-                confidence=0.98,
-            ))
+            candidates.append(
+                ActionCandidate(
+                    action_type=ActionType.STRUCTURED_WORKFLOW,
+                    positive_evidence=["arithmetic_or_transform_with_multiple_paths"],
+                    confidence=0.98,
+                )
+            )
 
         # ── D. File Read Candidate ───────────────────────────────────────────
         has_read_verb = any(re.search(r"\b" + re.escape(v) + r"\b", clean_lower) for v in cls.READ_VERBS) or any(
-            w in clean_lower for w in ("file text", "contents of", "content of", "raw contents", "verbatim", "give me raw", "whole reply must be")
+            w in clean_lower
+            for w in (
+                "file text",
+                "contents of",
+                "content of",
+                "raw contents",
+                "verbatim",
+                "give me raw",
+                "whole reply must be",
+            )
         )
-        if (has_read_verb or response_mode in (ResponseMode.EXACT_RAW, ResponseMode.RAW)) and paths and not has_write_verb and not (has_workflow_verb and len(paths) >= 2):
-            candidates.append(ActionCandidate(
-                action_type=ActionType.FILE_READ,
-                positive_evidence=["read_verb_or_raw_mode_with_path"],
-                confidence=0.88,
-            ))
+        if (
+            (has_read_verb or response_mode in (ResponseMode.EXACT_RAW, ResponseMode.RAW))
+            and paths
+            and not has_write_verb
+            and not (has_workflow_verb and len(paths) >= 2)
+        ):
+            candidates.append(
+                ActionCandidate(
+                    action_type=ActionType.FILE_READ,
+                    positive_evidence=["read_verb_or_raw_mode_with_path"],
+                    confidence=0.88,
+                )
+            )
 
         # ── E. Directory List Candidate ──────────────────────────────────────
         has_list_verb = any(re.search(r"\b" + re.escape(v) + r"\b", clean_lower) for v in cls.LIST_VERBS) or any(
-            w in clean_lower for w in ("directory", "folder", "filenames", "entries", "what files are in", "what is under")
+            w in clean_lower
+            for w in ("directory", "folder", "filenames", "entries", "what files are in", "what is under")
         )
         if has_list_verb and not has_write_verb and not has_read_verb and not (has_workflow_verb and len(paths) >= 2):
-            candidates.append(ActionCandidate(
-                action_type=ActionType.DIRECTORY_LIST,
-                positive_evidence=["directory_list_intent"],
-                confidence=0.85,
-            ))
+            candidates.append(
+                ActionCandidate(
+                    action_type=ActionType.DIRECTORY_LIST,
+                    positive_evidence=["directory_list_intent"],
+                    confidence=0.85,
+                )
+            )
 
         # ── F. Browser Action Candidate ──────────────────────────────────────
-        if "<url>" in clean_lower or any(w in clean_lower for w in ("navigate to", "extract content from", "extract title", "browse ", "open url", "web page")):
-            candidates.append(ActionCandidate(
-                action_type=ActionType.BROWSER_ACTION,
-                positive_evidence=["browser_navigation_or_extraction"],
-                confidence=0.91,
-            ))
+        if "<url>" in clean_lower or any(
+            w in clean_lower
+            for w in ("navigate to", "extract content from", "extract title", "browse ", "open url", "web page")
+        ):
+            candidates.append(
+                ActionCandidate(
+                    action_type=ActionType.BROWSER_ACTION,
+                    positive_evidence=["browser_navigation_or_extraction"],
+                    confidence=0.91,
+                )
+            )
 
         # ── G. Memory Action Candidate ───────────────────────────────────────
-        if any(w in clean_lower for w in ("what was the value of", "recall", "remember", "saved value of", "stored value of", "memory value")):
-            candidates.append(ActionCandidate(
-                action_type=ActionType.MEMORY_ACTION,
-                positive_evidence=["memory_query_intent"],
-                confidence=0.90,
-            ))
+        if any(
+            w in clean_lower
+            for w in (
+                "what was the value of",
+                "recall",
+                "remember",
+                "saved value of",
+                "stored value of",
+                "memory value",
+            )
+        ):
+            candidates.append(
+                ActionCandidate(
+                    action_type=ActionType.MEMORY_ACTION,
+                    positive_evidence=["memory_query_intent"],
+                    confidence=0.90,
+                )
+            )
 
         # ── H. Repository Inspection Candidate ───────────────────────────────
-        if any(w in clean_lower for w in ("inspect repo", "analyze repo", "diagnose", "find bug", "codebase", "review code", "check repo")):
-            candidates.append(ActionCandidate(
-                action_type=ActionType.REPOSITORY_INSPECT,
-                positive_evidence=["repository_inspection_intent"],
-                confidence=0.92,
-            ))
+        if any(
+            w in clean_lower
+            for w in ("inspect repo", "analyze repo", "diagnose", "find bug", "codebase", "review code", "check repo")
+        ):
+            candidates.append(
+                ActionCandidate(
+                    action_type=ActionType.REPOSITORY_INSPECT,
+                    positive_evidence=["repository_inspection_intent"],
+                    confidence=0.92,
+                )
+            )
 
         # ── I. Exact Literal Response Candidate ──────────────────────────────
-        if not paths and not any(w in clean_lower for w in ("<path>", "://", "repo", "repository", "inspect", "diagnose")):
-            if any(clean_lower.startswith(pfx) for pfx in ("echo:", "echo ", "reply ", "respond ", "return ", "say ", "print ", "type ", "the following string:", "and nothing more:", "just return", "just echo", "just say", "only reply")) or "reply must be" in clean_lower or "response must be" in clean_lower:
-                candidates.append(ActionCandidate(
-                    action_type=ActionType.EXACT_LITERAL_RESPONSE,
-                    positive_evidence=["explicit_literal_command"],
-                    confidence=0.96,
-                ))
+        if not paths and not any(
+            w in clean_lower for w in ("<path>", "://", "repo", "repository", "inspect", "diagnose")
+        ):
+            if (
+                any(
+                    clean_lower.startswith(pfx)
+                    for pfx in (
+                        "echo:",
+                        "echo ",
+                        "reply ",
+                        "respond ",
+                        "return ",
+                        "say ",
+                        "print ",
+                        "type ",
+                        "the following string:",
+                        "and nothing more:",
+                        "just return",
+                        "just echo",
+                        "just say",
+                        "only reply",
+                    )
+                )
+                or "reply must be" in clean_lower
+                or "response must be" in clean_lower
+            ):
+                candidates.append(
+                    ActionCandidate(
+                        action_type=ActionType.EXACT_LITERAL_RESPONSE,
+                        positive_evidence=["explicit_literal_command"],
+                        confidence=0.96,
+                    )
+                )
 
         return candidates
 
@@ -896,6 +1259,7 @@ class RequestPreprocessor:
 # ═════════════════════════════════════════════════════════════════════════════
 # 3. Path Extraction with Provenance
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class PathExtractor:
     """Robust, generic path extractor from natural language prompts preserving semantic roles."""
@@ -924,7 +1288,7 @@ class PathExtractor:
                 or any(val.endswith(ext) for ext in cls.KNOWN_EXTENSIONS)
                 or "/" in val
                 or "\\" in val
-                or ("." in val and not val.endswith(".") and not " " in val)
+                or ("." in val and not val.endswith(".") and " " not in val)
             ):
                 candidates.append((m.start(1), val))
 
@@ -987,7 +1351,7 @@ class PathExtractor:
         )
         for m in out_matches:
             cand = m.group(1).strip().strip("'\"`")
-            while cand and cand[-1] in ('.', ',', ':', ';', '!', '?', ')', ']', '}'):
+            while cand and cand[-1] in (".", ",", ":", ";", "!", "?", ")", "]", "}"):
                 cand = cand[:-1].strip()
             if cand in all_paths and cand.lower() not in cls.STOP_WORDS:
                 args["output_path"] = cand
@@ -1001,7 +1365,7 @@ class PathExtractor:
         )
         for m in in_matches:
             cand = m.group(1).strip().strip("'\"`")
-            while cand and cand[-1] in ('.', ',', ':', ';', '!', '?', ')', ']', '}'):
+            while cand and cand[-1] in (".", ",", ":", ";", "!", "?", ")", "]", "}"):
                 cand = cand[:-1].strip()
             if cand in all_paths and cand.lower() not in cls.STOP_WORDS and cand != args.get("output_path"):
                 args["input_path"] = cand
@@ -1047,7 +1411,12 @@ class PathExtractor:
 
         # Fallback assignments from all_paths
         if all_paths:
-            if not args.get("input_path") and not args.get("output_path") and not args.get("directory") and not args.get("repo_path"):
+            if (
+                not args.get("input_path")
+                and not args.get("output_path")
+                and not args.get("directory")
+                and not args.get("repo_path")
+            ):
                 args["path"] = all_paths[0]
             if len(all_paths) >= 2 and not args.get("output_path"):
                 args["output_path"] = all_paths[-1]
@@ -1062,6 +1431,7 @@ class PathExtractor:
 # ═════════════════════════════════════════════════════════════════════════════
 # 4. Rebuilt Write Parser with Balanced AST, Sanity Checks & Provenance
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class WriteActionParser:
     """Generic, role-based structured grammar parser for natural-language file write requests."""
@@ -1097,31 +1467,58 @@ class WriteActionParser:
         tokens = parsed.tokens
 
         # Check if write intent exists
-        write_candidates = [c for c in parsed.candidate_actions if c.action_type == ActionType.FILE_WRITE and not c.is_blocked_as_negated]
+        write_candidates = [
+            c
+            for c in parsed.candidate_actions
+            if c.action_type == ActionType.FILE_WRITE and not c.is_blocked_as_negated
+        ]
         has_write_verb = bool(tokens & RequestPreprocessor.WRITE_VERBS) or any(
-            ph in clean.lower() for ph in ("should contain", "must contain", "should have", "must have", "should hold", "must hold", "put ")
+            ph in clean.lower()
+            for ph in ("should contain", "must contain", "should have", "must have", "should hold", "must hold", "put ")
         )
         if not write_candidates and not has_write_verb:
             return None
 
         clean_lower = clean.lower()
-        if any(clean_lower.startswith(r) for r in ("read", "open", "show", "cat", "load", "fetch", "display", "view", "inspect", "examine", "list", "what", "print")):
-            if not any(w in clean_lower for w in (" and write", " and save", " and put", " and store", " then write", " then save")):
+        if any(
+            clean_lower.startswith(r)
+            for r in (
+                "read",
+                "open",
+                "show",
+                "cat",
+                "load",
+                "fetch",
+                "display",
+                "view",
+                "inspect",
+                "examine",
+                "list",
+                "what",
+                "print",
+            )
+        ):
+            if not any(
+                w in clean_lower
+                for w in (" and write", " and save", " and put", " and store", " then write", " then save")
+            ):
                 return None
 
         # Screenshot-looking words inside an explicit write payload are data.
         # Reject as a screenshot only when the request does not establish a strong
         # write target+payload relationship.
-        strong_write_payload_contract = bool(re.search(
-            r"\b(?:write|create|save|store|put|dump|record)\b[^\n]{0,180}"
-            r"(?:\b(?:to|into|at)\b[^\n]{0,120}\b(?:text|content|payload|body|data|string)\b\s*:|"
-            r"\b(?:contain|containing|contains|should\s+contain|must\s+contain)\b)",
-            clean,
-            re.IGNORECASE,
-        ))
-        if (
-            not strong_write_payload_contract
-            and any(c.action_type == ActionType.SCREENSHOT_CAPTURE and not c.is_blocked_as_negated and c.confidence > 0.8 for c in parsed.candidate_actions)
+        strong_write_payload_contract = bool(
+            re.search(
+                r"\b(?:write|create|save|store|put|dump|record)\b[^\n]{0,180}"
+                r"(?:\b(?:to|into|at)\b[^\n]{0,120}\b(?:text|content|payload|body|data|string)\b\s*:|"
+                r"\b(?:contain|containing|contains|should\s+contain|must\s+contain)\b)",
+                clean,
+                re.IGNORECASE,
+            )
+        )
+        if not strong_write_payload_contract and any(
+            c.action_type == ActionType.SCREENSHOT_CAPTURE and not c.is_blocked_as_negated and c.confidence > 0.8
+            for c in parsed.candidate_actions
         ):
             return None
 
@@ -1137,7 +1534,7 @@ class WriteActionParser:
         )
         if to_match:
             cand = to_match.group(1).strip().strip("'\"`")
-            while cand and cand[-1] in ('.', ',', ':', ';', '!', '?', ')', ']', '}'):
+            while cand and cand[-1] in (".", ",", ":", ";", "!", "?", ")", "]", "}"):
                 cand = cand[:-1].strip()
             # An explicit write destination introduced by to/into/at/in is a
             # path role even when it is extensionless.  Reject only obvious
@@ -1146,7 +1543,32 @@ class WriteActionParser:
                 cand in all_paths
                 or any(cand.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS)
                 or "/" in cand
-                or (cand.lower() not in {"the", "a", "an", "this", "that", "it", "content", "text", "payload", "to", "into", "at", "in", "file", "path", "location", "destination", "target", "out", "output"} and bool(re.fullmatch(r"[~/A-Za-z0-9_.-]+", cand)))
+                or (
+                    cand.lower()
+                    not in {
+                        "the",
+                        "a",
+                        "an",
+                        "this",
+                        "that",
+                        "it",
+                        "content",
+                        "text",
+                        "payload",
+                        "to",
+                        "into",
+                        "at",
+                        "in",
+                        "file",
+                        "path",
+                        "location",
+                        "destination",
+                        "target",
+                        "out",
+                        "output",
+                    }
+                    and bool(re.fullmatch(r"[~/A-Za-z0-9_.-]+", cand))
+                )
             ):
                 target_path = cand
 
@@ -1160,14 +1582,14 @@ class WriteActionParser:
             )
             if m_path_verb:
                 cand = m_path_verb.group(1).strip().strip("'\"`")
-                while cand and cand[-1] in ('.', ',', ':', ';', '!', '?', ')', ']', '}'):
+                while cand and cand[-1] in (".", ",", ":", ";", "!", "?", ")", "]", "}"):
                     cand = cand[:-1].strip()
                 if cand in all_paths:
                     target_path = cand
             if not target_path:
                 target_path = all_paths[-1] if len(all_paths) == 1 else (args.get("path") or all_paths[0])
 
-        while target_path and target_path[-1] in ('.', ',', ':', ';', '!', '?', ')', ']', '}'):
+        while target_path and target_path[-1] in (".", ",", ":", ";", "!", "?", ")", "]", "}"):
             target_path = target_path[:-1].strip()
 
         if not target_path:
@@ -1219,11 +1641,19 @@ class WriteActionParser:
 
         # 5. Check Quoted Literals
         if parsed_content is None and parsed.quoted_literals:
-            non_path_quotes = [q for q in parsed.quoted_literals if q.raw_text.strip("'\"`") != target_path and q.metadata.get("inner", "") != target_path]
+            non_path_quotes = [
+                q
+                for q in parsed.quoted_literals
+                if q.raw_text.strip("'\"`") != target_path and q.metadata.get("inner", "") != target_path
+            ]
             if len(non_path_quotes) == 1:
                 q = non_path_quotes[0]
                 cand = q.metadata.get("inner", q.raw_text[1:-1])
-                if (cand.startswith("'") and cand.endswith("'")) or (cand.startswith('"') and cand.endswith('"')) or (cand.startswith('`') and cand.endswith('`')):
+                if (
+                    (cand.startswith("'") and cand.endswith("'"))
+                    or (cand.startswith('"') and cand.endswith('"'))
+                    or (cand.startswith("`") and cand.endswith("`"))
+                ):
                     cand = cand[1:-1]
                 parsed_content = cand
                 payload_span_start = q.start
@@ -1232,7 +1662,9 @@ class WriteActionParser:
                 has_explicit_content = True
                 if not parsed_content and not is_empty_requested:
                     is_ambiguous = True
-                    invalid_reason = "Write precondition failed: empty quoted payload supplied without explicit empty request"
+                    invalid_reason = (
+                        "Write precondition failed: empty quoted payload supplied without explicit empty request"
+                    )
             elif len(non_path_quotes) > 1:
                 is_ambiguous = True
                 invalid_reason = "Multiple ambiguous quoted literals in write request"
@@ -1254,7 +1686,7 @@ class WriteActionParser:
             tgt_idx = clean.find(target_path)
             if tgt_idx != -1:
                 after_idx = tgt_idx + len(target_path)
-                if after_idx < len(clean) and clean[after_idx] in ("'", '"', '`'):
+                if after_idx < len(clean) and clean[after_idx] in ("'", '"', "`"):
                     after_idx += 1
                 after_tgt = clean[after_idx:].strip()
                 cand_after = re.sub(
@@ -1272,7 +1704,9 @@ class WriteActionParser:
                 ).strip()
                 if cand_after and cand_after != after_tgt:
                     cand_after = cls.TRAILING_DIRECTIVE_RE.sub("", cand_after).strip()
-                    if (cand_after.startswith("'") and cand_after.endswith("'")) or (cand_after.startswith('"') and cand_after.endswith('"')):
+                    if (cand_after.startswith("'") and cand_after.endswith("'")) or (
+                        cand_after.startswith('"') and cand_after.endswith('"')
+                    ):
                         cand_after = cand_after[1:-1]
                     parsed_content = cand_after
                     payload_span_start = clean.find(cand_after)
@@ -1289,7 +1723,9 @@ class WriteActionParser:
                     m_clause_payload = cls.INTRODUCER_STRIP_RE.sub("", c_text).strip()
                     if m_clause_payload and m_clause_payload != c_text and m_clause_payload != target_path:
                         m_clause_payload = cls.TRAILING_DIRECTIVE_RE.sub("", m_clause_payload).strip()
-                        if (m_clause_payload.startswith("'") and m_clause_payload.endswith("'")) or (m_clause_payload.startswith('"') and m_clause_payload.endswith('"')):
+                        if (m_clause_payload.startswith("'") and m_clause_payload.endswith("'")) or (
+                            m_clause_payload.startswith('"') and m_clause_payload.endswith('"')
+                        ):
                             m_clause_payload = m_clause_payload[1:-1]
                         parsed_content = m_clause_payload
                         payload_span_start = clean.find(m_clause_payload)
@@ -1311,7 +1747,11 @@ class WriteActionParser:
                     )
                     if m_before:
                         cand_before = m_before.group(1).strip()
-                        is_quoted_before = (cand_before.startswith("'") and cand_before.endswith("'")) or (cand_before.startswith('"') and cand_before.endswith('"')) or (cand_before.startswith('`') and cand_before.endswith('`'))
+                        is_quoted_before = (
+                            (cand_before.startswith("'") and cand_before.endswith("'"))
+                            or (cand_before.startswith('"') and cand_before.endswith('"'))
+                            or (cand_before.startswith("`") and cand_before.endswith("`"))
+                        )
                         if is_quoted_before:
                             cand_before = cand_before[1:-1]
                             parsed_content = cand_before
@@ -1320,7 +1760,22 @@ class WriteActionParser:
                             payload_type = "QUOTED_LITERAL"
                             has_explicit_content = True
                         elif cand_before and cand_before.lower() not in (
-                            "file", "a file", "the file", "some file", "content", "data", "text", "payload", "output", "it", "the text", "the content", "the data", "the payload", "the body", "the file content"
+                            "file",
+                            "a file",
+                            "the file",
+                            "some file",
+                            "content",
+                            "data",
+                            "text",
+                            "payload",
+                            "output",
+                            "it",
+                            "the text",
+                            "the content",
+                            "the data",
+                            "the payload",
+                            "the body",
+                            "the file content",
                         ):
                             parsed_content = cand_before
                             payload_span_start = clean.find(cand_before)
@@ -1339,7 +1794,11 @@ class WriteActionParser:
                 raw_cand = m_after_path.group(1).strip()
                 clean_cand = cls.INTRODUCER_STRIP_RE.sub("", raw_cand).strip()
                 clean_cand = cls.TRAILING_DIRECTIVE_RE.sub("", clean_cand).strip()
-                if (clean_cand.startswith("'") and clean_cand.endswith("'")) or (clean_cand.startswith('"') and clean_cand.endswith('"')) or (clean_cand.startswith('`') and clean_cand.endswith('`')):
+                if (
+                    (clean_cand.startswith("'") and clean_cand.endswith("'"))
+                    or (clean_cand.startswith('"') and clean_cand.endswith('"'))
+                    or (clean_cand.startswith("`") and clean_cand.endswith("`"))
+                ):
                     clean_cand = clean_cand[1:-1]
                 if clean_cand:
                     parsed_content = clean_cand
@@ -1353,14 +1812,47 @@ class WriteActionParser:
                 is_ambiguous = True
                 invalid_reason = "Parsed payload identical to target path"
 
-            if payload_type != "QUOTED_LITERAL" and parsed_content.lower() in ("content", "contents", "text", "payload", "body", "file", "verbatim", "strictly", "precisely", "data"):
+            if payload_type != "QUOTED_LITERAL" and parsed_content.lower() in (
+                "content",
+                "contents",
+                "text",
+                "payload",
+                "body",
+                "file",
+                "verbatim",
+                "strictly",
+                "precisely",
+                "data",
+            ):
                 is_ambiguous = True
                 invalid_reason = f"Parsed payload '{parsed_content}' is a bare grammar keyword"
 
-            if any(parsed_content.lower().startswith(pfx) for pfx in ("body is exactly ->", "the following in", "set its content to be")):
+            if any(
+                parsed_content.lower().startswith(pfx)
+                for pfx in ("body is exactly ->", "the following in", "set its content to be")
+            ):
                 parsed_content = cls.INTRODUCER_STRIP_RE.sub("", parsed_content).strip()
 
-        if payload_type != "QUOTED_LITERAL" and (not parsed_content or parsed_content.lower() in ("the text", "the content", "the payload", "the body", "the data", "text", "content", "payload", "body", "data")) and not is_empty_requested:
+        if (
+            payload_type != "QUOTED_LITERAL"
+            and (
+                not parsed_content
+                or parsed_content.lower()
+                in (
+                    "the text",
+                    "the content",
+                    "the payload",
+                    "the body",
+                    "the data",
+                    "text",
+                    "content",
+                    "payload",
+                    "body",
+                    "data",
+                )
+            )
+            and not is_empty_requested
+        ):
             has_content_intent = bool(
                 re.search(
                     r"(?:with\s+content|content\s*:|contents?\s+(?:is|of|to|must|should|:)|body\s+(?:is|of|to|must|should|:)|payload\s+(?:is|of|to|must|should|:)|with\s+payload|the\s+(?:text|content|payload|body|data)\s+(?:in|into|to))",
@@ -1403,6 +1895,7 @@ class WriteActionParser:
 # ═════════════════════════════════════════════════════════════════════════════
 # 5. Exact Literal Response Fast-Path Parser
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 @dataclass
 class ExactResponseInstruction:
@@ -1471,21 +1964,42 @@ class ExactResponseParser:
 
     # Phrases that indicate the value comes from a memory store
     _MEMORY_DEPENDENCY_PHRASES = (
-        "the remembered ", "the stored value", "the memory value",
-        "what was the value of", "recalled", "retrieve memory",
-        "deployment marker for", "the marker for", "the codename for",
-        "stored in memory", "in my memory", "from memory",
+        "the remembered ",
+        "the stored value",
+        "the memory value",
+        "what was the value of",
+        "recalled",
+        "retrieve memory",
+        "deployment marker for",
+        "the marker for",
+        "the codename for",
+        "stored in memory",
+        "in my memory",
+        "from memory",
     )
     # Phrases that indicate the value comes from a file
     _FILE_DEPENDENCY_PHRASES = (
-        "the text stored in", "the contents of", "use file", "from the file",
-        "in the file", "the file contents", "file text", "raw file",
+        "the text stored in",
+        "the contents of",
+        "use file",
+        "from the file",
+        "in the file",
+        "the file contents",
+        "file text",
+        "raw file",
     )
     # Phrases that indicate the value comes from a browser
     _BROWSER_DEPENDENCY_PHRASES = (
-        "at selector", "from url", "at the url", "from the page",
-        "from the browser", "the title of the page", "value at .",
-        "element value", "css selector", "from the website",
+        "at selector",
+        "from url",
+        "at the url",
+        "from the page",
+        "from the browser",
+        "the title of the page",
+        "value at .",
+        "element value",
+        "css selector",
+        "from the website",
     )
 
     @classmethod
@@ -1510,7 +2024,7 @@ class ExactResponseParser:
         return False
 
     @classmethod
-    def parse_intent(cls, text: str) -> "ExactLiteralIntent | None":
+    def parse_intent(cls, text: str) -> ExactLiteralIntent | None:
         """Phase 8 B2: Parse into structured ExactLiteralIntent with payload span tracking.
 
         Returns None if:
@@ -1534,14 +2048,16 @@ class ExactResponseParser:
         prefix_constraint = ""
         remaining = clean
         if cls.COMMAND_PREFIX_RE.search(clean):
-            prefix_constraint = cls.COMMAND_PREFIX_RE.match(clean).group(0) if cls.COMMAND_PREFIX_RE.match(clean) else ""
+            prefix_constraint = (
+                cls.COMMAND_PREFIX_RE.match(clean).group(0) if cls.COMMAND_PREFIX_RE.match(clean) else ""
+            )
             remaining = cls.COMMAND_PREFIX_RE.sub("", clean).strip()
         elif cls.REPLY_MUST_BE_RE.search(clean):
             remaining = cls.REPLY_MUST_BE_RE.sub("", clean).strip()
-            prefix_constraint = text[:len(text) - len(remaining)].strip()
+            prefix_constraint = text[: len(text) - len(remaining)].strip()
         elif cls.EXCLUSIVITY_PREFIX_RE.search(clean):
             remaining = cls.EXCLUSIVITY_PREFIX_RE.sub("", clean).strip()
-            prefix_constraint = text[:len(text) - len(remaining)].strip()
+            prefix_constraint = text[: len(text) - len(remaining)].strip()
         elif clean_lower.startswith(("echo:", "echo ", "repeat:", "repeat ")):
             remaining = re.sub(r"^(?:echo|repeat)\s*[:\-]?\s*", "", clean, flags=re.IGNORECASE).strip()
             prefix_constraint = "echo"
@@ -1553,8 +2069,8 @@ class ExactResponseParser:
         for suf_pat in cls.SUFFIX_STRIP_PATTERNS:
             m = re.search(suf_pat, remaining, flags=re.IGNORECASE)
             if m:
-                suffix_constraint = remaining[m.start():].strip()
-                remaining = remaining[:m.start()].strip()
+                suffix_constraint = remaining[m.start() :].strip()
+                remaining = remaining[: m.start()].strip()
 
         # Strip modifier prefixes
         prev = None
@@ -1631,13 +2147,18 @@ class ExactResponseParser:
         if all_paths:
             return None
         clean_lower = clean.lower()
-        if any(w in clean_lower for w in (" to ", " into ", " in ", " at ")) and any(w in clean_lower for w in ("write", "save", "put", "store", "create", "output", "dump")):
+        if any(w in clean_lower for w in (" to ", " into ", " in ", " at ")) and any(
+            w in clean_lower for w in ("write", "save", "put", "store", "create", "output", "dump")
+        ):
             return None
         if "://" in clean or any(w in clean_lower for w in ("browser", "navigate", "open url", "http")):
             return None
 
         # Reject if this is a directory listing or other filesystem operation
-        if FilesystemActionClassifier.classify(clean, workspace=workspace).action_type != FilesystemActionType.FS_UNKNOWN:
+        if (
+            FilesystemActionClassifier.classify(clean, workspace=workspace).action_type
+            != FilesystemActionType.FS_UNKNOWN
+        ):
             return None
 
         is_match = False
@@ -1689,7 +2210,12 @@ class ExactResponseParser:
                 remaining = re.sub(mod_pat, "", remaining, flags=re.IGNORECASE).strip()
 
         target = remaining.strip()
-        if (target.startswith("'") and target.endswith("'")) or (target.startswith('"') and target.endswith('"')) or (target.startswith("`") and target.endswith("`")) or (target.startswith("«") and target.endswith("»")):
+        if (
+            (target.startswith("'") and target.endswith("'"))
+            or (target.startswith('"') and target.endswith('"'))
+            or (target.startswith("`") and target.endswith("`"))
+            or (target.startswith("«") and target.endswith("»"))
+        ):
             if len(target) >= 2:
                 target = target[1:-1].strip()
 
@@ -1699,14 +2225,19 @@ class ExactResponseParser:
             for mod_pat in cls.MODIFIER_STRIP_PATTERNS:
                 target = re.sub(mod_pat, "", target, flags=re.IGNORECASE).strip()
 
-        if (target.startswith("'") and target.endswith("'")) or (target.startswith('"') and target.endswith('"')) or (target.startswith("`") and target.endswith("`")) or (target.startswith("«") and target.endswith("»")):
+        if (
+            (target.startswith("'") and target.endswith("'"))
+            or (target.startswith('"') and target.endswith('"'))
+            or (target.startswith("`") and target.endswith("`"))
+            or (target.startswith("«") and target.endswith("»"))
+        ):
             if len(target) >= 2:
                 target = target[1:-1].strip()
 
-        if target.endswith(".") and not clean.endswith("'.") and not clean.endswith('".') and not clean.endswith('`.'):
+        if target.endswith(".") and not clean.endswith("'.") and not clean.endswith('".') and not clean.endswith("`."):
             target = target[:-1].strip()
 
-        if target.endswith(",") and not (clean.endswith("',") or clean.endswith('",') or clean.endswith('`,')):
+        if target.endswith(",") and not (clean.endswith("',") or clean.endswith('",') or clean.endswith("`,")):
             target = target[:-1].strip()
 
         if target:
@@ -1724,10 +2255,10 @@ class ExactResponseParser:
         return None
 
 
-
 # ═════════════════════════════════════════════════════════════════════════════
 # 6. Filesystem Action Classifier (Stat-Dominant)
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class FilesystemActionClassifier:
     """Stat-dominant filesystem action classifier separating directories from files."""
@@ -1738,7 +2269,9 @@ class FilesystemActionClassifier:
         all_paths = PathExtractor.extract_all_paths(text)
         args = PathExtractor.extract_structured_arguments(text, default_workspace=workspace)
 
-        target_path_str = args.get("directory") or args.get("input_path") or args.get("path") or (all_paths[0] if all_paths else "")
+        target_path_str = (
+            args.get("directory") or args.get("input_path") or args.get("path") or (all_paths[0] if all_paths else "")
+        )
 
         if not target_path_str:
             return FilesystemSemanticAction(
@@ -1784,15 +2317,44 @@ class FilesystemActionClassifier:
                 evidence=["stat_is_file"],
             )
 
-        has_real_path = exists or any(target_path_str.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS) or target_path_str.startswith(("/", "./", "../", "~/")) or bool(re.search(r"/[a-zA-Z0-9_.\-]+", target_path_str))
+        has_real_path = (
+            exists
+            or any(target_path_str.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS)
+            or target_path_str.startswith(("/", "./", "../", "~/"))
+            or bool(re.search(r"/[a-zA-Z0-9_.\-]+", target_path_str))
+        )
 
         if not has_real_path and not exists:
-            has_dir_phrase = bool(re.search(r"\b(?:directory|folder|path|dir)\s+['\"`]?([a-zA-Z0-9_.\-/]+)", text, re.IGNORECASE)) or any(w in clean for w in ("files are in", "what files are in", "what is in", "what's in", "files of", "files in"))
+            has_dir_phrase = bool(
+                re.search(r"\b(?:directory|folder|path|dir)\s+['\"`]?([a-zA-Z0-9_.\-/]+)", text, re.IGNORECASE)
+            ) or any(
+                w in clean
+                for w in ("files are in", "what files are in", "what is in", "what's in", "files of", "files in")
+            )
             has_action_verb = any(
-                re.search(rf"\b{re.escape(v)}\b", clean) for v in (
-                    "list", "ls", "show", "display", "print", "enumerate", "inspect", "view",
-                    "files in", "files of", "files under", "entries in", "items in", "children of", "what is inside", "what is under",
-                    "what files are in", "what is in", "what's in", "what files in", "files are in"
+                re.search(rf"\b{re.escape(v)}\b", clean)
+                for v in (
+                    "list",
+                    "ls",
+                    "show",
+                    "display",
+                    "print",
+                    "enumerate",
+                    "inspect",
+                    "view",
+                    "files in",
+                    "files of",
+                    "files under",
+                    "entries in",
+                    "items in",
+                    "children of",
+                    "what is inside",
+                    "what is under",
+                    "what files are in",
+                    "what is in",
+                    "what's in",
+                    "what files in",
+                    "files are in",
                 )
             )
             if not (has_dir_phrase and has_action_verb):
@@ -1803,7 +2365,29 @@ class FilesystemActionClassifier:
                 )
 
         # Keyword heuristics when stat is indeterminate
-        if any(w in clean for w in ("directory", "folder", "entries", "filenames", "files under", "children", "items in", "what is under", "entries inside", "what is inside", "list ", "list_dir", "files are in", "what files are in", "what is in", "what's in", "files in", "files of")):
+        if any(
+            w in clean
+            for w in (
+                "directory",
+                "folder",
+                "entries",
+                "filenames",
+                "files under",
+                "children",
+                "items in",
+                "what is under",
+                "entries inside",
+                "what is inside",
+                "list ",
+                "list_dir",
+                "files are in",
+                "what files are in",
+                "what is in",
+                "what's in",
+                "files in",
+                "files of",
+            )
+        ):
             return FilesystemSemanticAction(
                 action_type=FilesystemActionType.FS_LIST_DIRECTORY,
                 target_path=target_path_str,
@@ -1814,7 +2398,9 @@ class FilesystemActionClassifier:
                 evidence=["grammar_directory_intent"],
             )
 
-        if any(w in clean for w in ("read", "cat", "open", "show", "display", "contents", "content", "raw")) or any(target_path_str.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS):
+        if any(w in clean for w in ("read", "cat", "open", "show", "display", "contents", "content", "raw")) or any(
+            target_path_str.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS
+        ):
             return FilesystemSemanticAction(
                 action_type=FilesystemActionType.FS_READ_FILE,
                 target_path=target_path_str,
@@ -1835,6 +2421,7 @@ class FilesystemActionClassifier:
 # ═════════════════════════════════════════════════════════════════════════════
 # 7. Repository Diagnostic Engine (Multi-Class AST Analysis & Truthful Unknown)
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class RepositoryDiagnosticEngine:
     """Safe, read-only repository inspection and deterministic AST semantic defect diagnosis."""
@@ -1945,7 +2532,11 @@ class RepositoryDiagnosticEngine:
                                 return_nodes.append(child)
 
                         # Semantic Bug Class 1: Wrong Helper Call
-                        module_fn_names = [mod_node.name for mod_node in ast.walk(tree) if isinstance(mod_node, ast.FunctionDef) and mod_node.name != fn_name]
+                        module_fn_names = [
+                            mod_node.name
+                            for mod_node in ast.walk(tree)
+                            if isinstance(mod_node, ast.FunctionDef) and mod_node.name != fn_name
+                        ]
                         local_calls: list[str] = []
                         for child in ast.walk(node):
                             if isinstance(child, ast.Call):
@@ -1955,8 +2546,9 @@ class RepositoryDiagnosticEngine:
                                     local_calls.append(child.func.attr)
 
                         if local_calls and module_fn_names:
-                            def _helper_return_operator(helper_name: str) -> str:
-                                for helper_node in ast.walk(tree):
+
+                            def _helper_return_operator(helper_name: str, current_tree: ast.AST = tree) -> str:
+                                for helper_node in ast.walk(current_tree):
                                     if not isinstance(helper_node, ast.FunctionDef) or helper_node.name != helper_name:
                                         continue
                                     for ret in ast.walk(helper_node):
@@ -1974,7 +2566,9 @@ class RepositoryDiagnosticEngine:
                             contract_op = ""
                             if re.search(r"\b(?:add|adds|adding|increase|plus|bonus|fee)\b", combined_doc):
                                 contract_op = "+"
-                            elif re.search(r"\b(?:subtract|subtracts|subtracting|decrease|minus|deduct|discount)\b", combined_doc):
+                            elif re.search(
+                                r"\b(?:subtract|subtracts|subtracting|decrease|minus|deduct|discount)\b", combined_doc
+                            ):
                                 contract_op = "-"
 
                             for called_helper in set(local_calls):
@@ -1983,17 +2577,24 @@ class RepositoryDiagnosticEngine:
                                     if sibling == called_helper:
                                         continue
                                     sibling_op = _helper_return_operator(sibling)
-                                    if contract_op and called_op and sibling_op == contract_op and called_op != contract_op:
-                                        findings.append({
-                                            "function": fn_name,
-                                            "category": "wrong_helper_call",
-                                            "called_helper": called_helper,
-                                            "expected_helper": sibling,
-                                            "description": f"Function '{fn_name}' calls helper '{called_helper}' ({called_op}) but contract semantics require '{sibling}' ({contract_op}).",
-                                            "reason": "helper return operator contradicts function contract while sibling satisfies it",
-                                            "confidence": 1.0,
-                                            "file": str(py_file),
-                                        })
+                                    if (
+                                        contract_op
+                                        and called_op
+                                        and sibling_op == contract_op
+                                        and called_op != contract_op
+                                    ):
+                                        findings.append(
+                                            {
+                                                "function": fn_name,
+                                                "category": "wrong_helper_call",
+                                                "called_helper": called_helper,
+                                                "expected_helper": sibling,
+                                                "description": f"Function '{fn_name}' calls helper '{called_helper}' ({called_op}) but contract semantics require '{sibling}' ({contract_op}).",
+                                                "reason": "helper return operator contradicts function contract while sibling satisfies it",
+                                                "confidence": 1.0,
+                                                "file": str(py_file),
+                                            }
+                                        )
                                         break
                                     sibling_doc = ""
                                     for mod_node in ast.walk(tree):
@@ -2005,20 +2606,24 @@ class RepositoryDiagnosticEngine:
                                     sibling_keywords = set(re.findall(r"[a-z]{3,}", (sibling_doc + sibling).lower()))
                                     called_keywords = set(re.findall(r"[a-z]{3,}", called_helper.lower()))
 
-                                    sibling_overlap = len(contract_keywords & sibling_keywords) - len({"def", "the", "and", "for", "with"} & sibling_keywords)
+                                    sibling_overlap = len(contract_keywords & sibling_keywords) - len(
+                                        {"def", "the", "and", "for", "with"} & sibling_keywords
+                                    )
                                     called_overlap = len(contract_keywords & called_keywords)
 
                                     if sibling_overlap > called_overlap and sibling_overlap > 0:
-                                        findings.append({
-                                            "function": fn_name,
-                                            "category": "wrong_helper_call",
-                                            "called_helper": called_helper,
-                                            "expected_helper": sibling,
-                                            "description": f"Function '{fn_name}' calls helper '{called_helper}' but should call '{sibling}' according to contract",
-                                            "reason": f"Sibling '{sibling}' matches function contract better ({sibling_overlap} vs {called_overlap})",
-                                            "confidence": 1.0,
-                                            "file": str(py_file),
-                                        })
+                                        findings.append(
+                                            {
+                                                "function": fn_name,
+                                                "category": "wrong_helper_call",
+                                                "called_helper": called_helper,
+                                                "expected_helper": sibling,
+                                                "description": f"Function '{fn_name}' calls helper '{called_helper}' but should call '{sibling}' according to contract",
+                                                "reason": f"Sibling '{sibling}' matches function contract better ({sibling_overlap} vs {called_overlap})",
+                                                "confidence": 1.0,
+                                                "file": str(py_file),
+                                            }
+                                        )
                                         break
 
                         # Semantic Bug Class 2: Comparison Boundary Defects
@@ -2029,125 +2634,176 @@ class RepositoryDiagnosticEngine:
                                 combined_doc = doc_lower + " " + fn_lower
 
                                 # At least / greater than or equal
-                                if ("at least" in combined_doc or "greater than or equal" in combined_doc or ">=" in doc or "inclusive" in combined_doc) and any(isinstance(op, ast.Gt) for op in child.ops):
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "comparison_boundary",
-                                        "observed_operator": ">",
-                                        "expected_operator": ">=",
-                                        "description": f"Function '{fn_name}' uses strict '>' comparison where '>=' (at least) was required by contract",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
+                                if (
+                                    "at least" in combined_doc
+                                    or "greater than or equal" in combined_doc
+                                    or ">=" in doc
+                                    or "inclusive" in combined_doc
+                                ) and any(isinstance(op, ast.Gt) for op in child.ops):
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "comparison_boundary",
+                                            "observed_operator": ">",
+                                            "expected_operator": ">=",
+                                            "description": f"Function '{fn_name}' uses strict '>' comparison where '>=' (at least) was required by contract",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
                                 # At most / less than or equal
-                                elif ("at most" in combined_doc or "less than or equal" in combined_doc or "<=" in doc) and any(isinstance(op, ast.Lt) for op in child.ops):
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "comparison_boundary",
-                                        "observed_operator": "<",
-                                        "expected_operator": "<=",
-                                        "description": f"Function '{fn_name}' uses strict '<' comparison where '<=' (at most) was required by contract",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
+                                elif (
+                                    "at most" in combined_doc or "less than or equal" in combined_doc or "<=" in doc
+                                ) and any(isinstance(op, ast.Lt) for op in child.ops):
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "comparison_boundary",
+                                            "observed_operator": "<",
+                                            "expected_operator": "<=",
+                                            "description": f"Function '{fn_name}' uses strict '<' comparison where '<=' (at most) was required by contract",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
                                 # Strictly greater
-                                elif ("strictly greater" in combined_doc or "exclusive" in combined_doc) and any(isinstance(op, ast.GtE) for op in child.ops):
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "comparison_boundary",
-                                        "observed_operator": ">=",
-                                        "expected_operator": ">",
-                                        "description": f"Function '{fn_name}' uses inclusive '>=' comparison where strict '>' was required by contract",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
+                                elif ("strictly greater" in combined_doc or "exclusive" in combined_doc) and any(
+                                    isinstance(op, ast.GtE) for op in child.ops
+                                ):
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "comparison_boundary",
+                                            "observed_operator": ">=",
+                                            "expected_operator": ">",
+                                            "description": f"Function '{fn_name}' uses inclusive '>=' comparison where strict '>' was required by contract",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
                                 # Strictly less
-                                elif ("strictly less" in combined_doc) and any(isinstance(op, ast.LtE) for op in child.ops):
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "comparison_boundary",
-                                        "observed_operator": "<=",
-                                        "expected_operator": "<",
-                                        "description": f"Function '{fn_name}' uses inclusive '<=' comparison where strict '<' was required by contract",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
+                                elif ("strictly less" in combined_doc) and any(
+                                    isinstance(op, ast.LtE) for op in child.ops
+                                ):
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "comparison_boundary",
+                                            "observed_operator": "<=",
+                                            "expected_operator": "<",
+                                            "description": f"Function '{fn_name}' uses inclusive '<=' comparison where strict '<' was required by contract",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
                                 # Equality inversion
-                                elif any(isinstance(op, ast.NotEq) for op in child.ops) and ("equal" in combined_doc and "not" not in combined_doc):
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "comparison_boundary",
-                                        "observed_operator": "!=",
-                                        "expected_operator": "==",
-                                        "description": f"Function '{fn_name}' uses '!=' where '==' was expected",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
+                                elif any(isinstance(op, ast.NotEq) for op in child.ops) and (
+                                    "equal" in combined_doc and "not" not in combined_doc
+                                ):
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "comparison_boundary",
+                                            "observed_operator": "!=",
+                                            "expected_operator": "==",
+                                            "description": f"Function '{fn_name}' uses '!=' where '==' was expected",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
                                 # Comparison Inversion (> instead of < or vice versa)
-                                elif ("less than" in combined_doc or "is_less" in fn_name) and any(isinstance(op, ast.Gt) for op in child.ops):
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "comparison_inversion",
-                                        "observed_operator": ">",
-                                        "expected_operator": "<",
-                                        "description": f"Function '{fn_name}' uses inverted '>' comparison where '<' was expected by contract/name",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
-                                elif ("greater than" in combined_doc or "is_greater" in fn_name) and any(isinstance(op, ast.Lt) for op in child.ops):
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "comparison_inversion",
-                                        "observed_operator": "<",
-                                        "expected_operator": ">",
-                                        "description": f"Function '{fn_name}' uses inverted '<' comparison where '>' was expected by contract/name",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
+                                elif ("less than" in combined_doc or "is_less" in fn_name) and any(
+                                    isinstance(op, ast.Gt) for op in child.ops
+                                ):
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "comparison_inversion",
+                                            "observed_operator": ">",
+                                            "expected_operator": "<",
+                                            "description": f"Function '{fn_name}' uses inverted '>' comparison where '<' was expected by contract/name",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
+                                elif ("greater than" in combined_doc or "is_greater" in fn_name) and any(
+                                    isinstance(op, ast.Lt) for op in child.ops
+                                ):
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "comparison_inversion",
+                                            "observed_operator": "<",
+                                            "expected_operator": ">",
+                                            "description": f"Function '{fn_name}' uses inverted '<' comparison where '>' was expected by contract/name",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
 
                         # Semantic Bug Class: Indexing Error
                         for child in ast.walk(node):
                             if isinstance(child, ast.Subscript):
                                 if isinstance(child.slice, ast.Constant) and isinstance(child.slice.value, int):
                                     idx_val = child.slice.value
-                                    if ("first" in combined_doc or "first" in fn_name or "head" in fn_name or "initial" in combined_doc) and idx_val != 0:
-                                        findings.append({
-                                            "function": fn_name,
-                                            "category": "indexing_error",
-                                            "observed_index": idx_val,
-                                            "expected_index": 0,
-                                            "description": f"Function '{fn_name}' accesses index [{idx_val}] where index [0] was expected for the first element",
-                                            "confidence": 1.0,
-                                            "file": str(py_file),
-                                        })
-                                    elif ("last" in combined_doc or "last" in fn_name or "tail" in fn_name or "final" in combined_doc) and idx_val not in (-1, None):
-                                        findings.append({
-                                            "function": fn_name,
-                                            "category": "indexing_error",
-                                            "observed_index": idx_val,
-                                            "expected_index": -1,
-                                            "description": f"Function '{fn_name}' accesses index [{idx_val}] where index [-1] was expected for the last element",
-                                            "confidence": 1.0,
-                                            "file": str(py_file),
-                                        })
+                                    if (
+                                        "first" in combined_doc
+                                        or "first" in fn_name
+                                        or "head" in fn_name
+                                        or "initial" in combined_doc
+                                    ) and idx_val != 0:
+                                        findings.append(
+                                            {
+                                                "function": fn_name,
+                                                "category": "indexing_error",
+                                                "observed_index": idx_val,
+                                                "expected_index": 0,
+                                                "description": f"Function '{fn_name}' accesses index [{idx_val}] where index [0] was expected for the first element",
+                                                "confidence": 1.0,
+                                                "file": str(py_file),
+                                            }
+                                        )
+                                    elif (
+                                        "last" in combined_doc
+                                        or "last" in fn_name
+                                        or "tail" in fn_name
+                                        or "final" in combined_doc
+                                    ) and idx_val not in (-1, None):
+                                        findings.append(
+                                            {
+                                                "function": fn_name,
+                                                "category": "indexing_error",
+                                                "observed_index": idx_val,
+                                                "expected_index": -1,
+                                                "description": f"Function '{fn_name}' accesses index [{idx_val}] where index [-1] was expected for the last element",
+                                                "confidence": 1.0,
+                                                "file": str(py_file),
+                                            }
+                                        )
 
                         # Semantic Bug Class 3: Wrong Constant
                         for child in ast.walk(node):
-                            if isinstance(child, ast.Constant) and isinstance(child.value, (int, float)) and not isinstance(child.value, bool):
+                            if (
+                                isinstance(child, ast.Constant)
+                                and isinstance(child.value, (int, float))
+                                and not isinstance(child.value, bool)
+                            ):
                                 val = child.value
                                 num_matches = re.findall(r"\b\d+(?:\.\d+)?\b", doc)
                                 doc_nums = [float(n) if "." in n else int(n) for n in num_matches]
                                 if doc_nums and val not in doc_nums and val not in (0, 1, -1):
                                     expected_const = doc_nums[0]
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "wrong_constant",
-                                        "observed_constant": val,
-                                        "expected_constant": expected_const,
-                                        "description": f"Function '{fn_name}' uses constant {val} but contract specifies {expected_const}",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "wrong_constant",
+                                            "observed_constant": val,
+                                            "expected_constant": expected_const,
+                                            "description": f"Function '{fn_name}' uses constant {val} but contract specifies {expected_const}",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
                                     break
 
                         # Semantic Bug Class 4: Wrong Returned Variable
@@ -2156,86 +2812,129 @@ class RepositoryDiagnosticEngine:
                             if isinstance(ret_val, ast.Name):
                                 returned_name = ret_val.id
                                 other_vars = [v for v in local_vars if v != returned_name]
-                                contract_tokens = set(re.findall(r"[a-z]{3,}", (fn_name + " " + doc).lower())) - {"def", "the", "and", "for", "with", "compute", "calculate", "process", "return", "function", "value"}
+                                contract_tokens = set(re.findall(r"[a-z]{3,}", (fn_name + " " + doc).lower())) - {
+                                    "def",
+                                    "the",
+                                    "and",
+                                    "for",
+                                    "with",
+                                    "compute",
+                                    "calculate",
+                                    "process",
+                                    "return",
+                                    "function",
+                                    "value",
+                                }
                                 for other in other_vars:
                                     other_tokens = set(re.findall(r"[a-z]{3,}", other.lower()))
                                     ret_tokens = set(re.findall(r"[a-z]{3,}", returned_name.lower()))
-                                    has_token_match = bool(other_tokens & contract_tokens) and not bool(ret_tokens & contract_tokens)
+                                    has_token_match = bool(other_tokens & contract_tokens) and not bool(
+                                        ret_tokens & contract_tokens
+                                    )
                                     is_temp = "temp" in returned_name.lower() or "intermediate" in returned_name.lower()
                                     if has_token_match or (is_temp and "total" in other.lower()):
-                                        findings.append({
-                                            "function": fn_name,
-                                            "category": "wrong_returned_variable",
-                                            "returned_variable": returned_name,
-                                            "expected_variable": other,
-                                            "description": f"Function '{fn_name}' computes '{other}' but returns '{returned_name}' instead",
-                                            "confidence": 1.0,
-                                            "file": str(py_file),
-                                        })
+                                        findings.append(
+                                            {
+                                                "function": fn_name,
+                                                "category": "wrong_returned_variable",
+                                                "returned_variable": returned_name,
+                                                "expected_variable": other,
+                                                "description": f"Function '{fn_name}' computes '{other}' but returns '{returned_name}' instead",
+                                                "confidence": 1.0,
+                                                "file": str(py_file),
+                                            }
+                                        )
                                         break
 
                         # Semantic Bug Class 5: Boolean Operator Mismatch
                         for child in ast.walk(node):
-                            bool_node = child if isinstance(child, ast.BoolOp) else (child.test if isinstance(child, ast.If) and isinstance(child.test, ast.BoolOp) else None)
+                            bool_node = (
+                                child
+                                if isinstance(child, ast.BoolOp)
+                                else (
+                                    child.test
+                                    if isinstance(child, ast.If) and isinstance(child.test, ast.BoolOp)
+                                    else None
+                                )
+                            )
                             if bool_node:
-                                if isinstance(bool_node.op, ast.Or) and ("both" in doc.lower() or "and" in doc.lower() or "all" in fn_name.lower()):
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "boolean_operator_mismatch",
-                                        "observed_operator": "or",
-                                        "expected_operator": "and",
-                                        "description": f"Function '{fn_name}' uses 'or' logic where 'and' is required according to contract",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
-                                elif isinstance(bool_node.op, ast.And) and ("either" in doc.lower() or "any" in doc.lower()):
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "boolean_operator_mismatch",
-                                        "observed_operator": "and",
-                                        "expected_operator": "or",
-                                        "description": f"Function '{fn_name}' uses 'and' logic where 'or' is required according to contract",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
+                                if isinstance(bool_node.op, ast.Or) and (
+                                    "both" in doc.lower() or "and" in doc.lower() or "all" in fn_name.lower()
+                                ):
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "boolean_operator_mismatch",
+                                            "observed_operator": "or",
+                                            "expected_operator": "and",
+                                            "description": f"Function '{fn_name}' uses 'or' logic where 'and' is required according to contract",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
+                                elif isinstance(bool_node.op, ast.And) and (
+                                    "either" in doc.lower() or "any" in doc.lower()
+                                ):
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "boolean_operator_mismatch",
+                                            "observed_operator": "and",
+                                            "expected_operator": "or",
+                                            "description": f"Function '{fn_name}' uses 'and' logic where 'or' is required according to contract",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
 
                         # Semantic Bug Class 6: Operator Mismatch (Arithmetic)
                         for child in ast.walk(node):
                             if isinstance(child, ast.Return) and isinstance(child.value, ast.BinOp):
                                 op = child.value.op
-                                if ("add" in fn_name.lower() or "sum" in fn_name.lower() or "plus" in doc.lower()) and isinstance(op, ast.Sub):
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "operator_mismatch",
-                                        "observed_operator": "-",
-                                        "expected_operator": "+",
-                                        "description": f"Function '{fn_name}' subtracts instead of adding",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
-                                elif ("sub" in fn_name.lower() or "diff" in fn_name.lower() or "minus" in doc.lower()) and isinstance(op, ast.Add):
-                                    findings.append({
-                                        "function": fn_name,
-                                        "category": "operator_mismatch",
-                                        "observed_operator": "+",
-                                        "expected_operator": "-",
-                                        "description": f"Function '{fn_name}' adds instead of subtracting",
-                                        "confidence": 1.0,
-                                        "file": str(py_file),
-                                    })
+                                if (
+                                    "add" in fn_name.lower() or "sum" in fn_name.lower() or "plus" in doc.lower()
+                                ) and isinstance(op, ast.Sub):
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "operator_mismatch",
+                                            "observed_operator": "-",
+                                            "expected_operator": "+",
+                                            "description": f"Function '{fn_name}' subtracts instead of adding",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
+                                elif (
+                                    "sub" in fn_name.lower() or "diff" in fn_name.lower() or "minus" in doc.lower()
+                                ) and isinstance(op, ast.Add):
+                                    findings.append(
+                                        {
+                                            "function": fn_name,
+                                            "category": "operator_mismatch",
+                                            "observed_operator": "+",
+                                            "expected_operator": "-",
+                                            "description": f"Function '{fn_name}' adds instead of subtracting",
+                                            "confidence": 1.0,
+                                            "file": str(py_file),
+                                        }
+                                    )
 
             except Exception:
                 pass
 
         # Truthful Unknown: If test failed but no deterministic semantic AST finding was established
         if test_failure_captured and not findings:
-            findings.insert(0, {
-                "function": test_failure_captured["function_under_test"],
-                "category": "unresolved_semantic_defect",
-                "description": "test failure located; semantic root cause unresolved",
-                "confidence": 0.5,
-                "file": test_files[0] if test_files else str(repo_path),
-            })
+            findings.insert(
+                0,
+                {
+                    "function": test_failure_captured["function_under_test"],
+                    "category": "unresolved_semantic_defect",
+                    "description": "test failure located; semantic root cause unresolved",
+                    "confidence": 0.5,
+                    "file": test_files[0] if test_files else str(repo_path),
+                },
+            )
 
         post_hashes: dict[str, str] = {}
         for file_path_str in pre_hashes:
@@ -2244,7 +2943,7 @@ class RepositoryDiagnosticEngine:
             except Exception:
                 pass
 
-        read_only_intact = (pre_hashes == post_hashes)
+        read_only_intact = pre_hashes == post_hashes
 
         return {
             "pre_hashes": pre_hashes,
@@ -2258,6 +2957,7 @@ class RepositoryDiagnosticEngine:
 # ═════════════════════════════════════════════════════════════════════════════
 # 8. Unified Direct Action Router
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class DirectActionRouter:
     """Generic router for single-step deterministic actions and policy-governed tools."""
@@ -2287,13 +2987,19 @@ class DirectActionRouter:
         if cls._is_filesystem_request(clean):
             return True
 
-        if "://" in clean or any(w in clean.lower() for w in ("browser", "navigate to", "open http", "browse ", "fetch url", "extract content from http")):
+        if "://" in clean or any(
+            w in clean.lower()
+            for w in ("browser", "navigate to", "open http", "browse ", "fetch url", "extract content from http")
+        ):
             return True
 
         if cls._is_memory_recall_request(clean):
             return True
 
-        if any(w in clean.lower() for w in ("schedule", "calendar", "book an appointment", "add to calendar", "book a meeting")):
+        if any(
+            w in clean.lower()
+            for w in ("schedule", "calendar", "book an appointment", "add to calendar", "book a meeting")
+        ):
             return True
 
         return False
@@ -2361,7 +3067,15 @@ class DirectActionRouter:
     def _try_policy_refusal(cls, text: str) -> DirectActionResult | None:
         clean = text.lower()
         destructive_verbs = ("delete", "remove", "wipe", "destroy", "drop", "purge")
-        bypass_terms = ("without asking", "bypass", "force", "protected", "silently", "override policy", "no confirmation")
+        bypass_terms = (
+            "without asking",
+            "bypass",
+            "force",
+            "protected",
+            "silently",
+            "override policy",
+            "no confirmation",
+        )
         if any(v in clean for v in destructive_verbs) and any(t in clean for t in bypass_terms):
             return DirectActionResult(
                 success=False,
@@ -2381,10 +3095,7 @@ class DirectActionRouter:
     def _is_screenshot_request(cls, text: str) -> bool:
         """Return True only if text has positive, unnegated semantic command for screenshot."""
         parsed = RequestPreprocessor.process(text)
-        screenshot_candidates = [
-            c for c in parsed.candidate_actions
-            if c.action_type == ActionType.SCREENSHOT_CAPTURE
-        ]
+        screenshot_candidates = [c for c in parsed.candidate_actions if c.action_type == ActionType.SCREENSHOT_CAPTURE]
         if not screenshot_candidates:
             return False
 
@@ -2427,7 +3138,9 @@ class DirectActionRouter:
             tool_res = parse_tool_result(res_raw)
 
             if not tool_res.ok:
-                is_perm = any(w in str(tool_res.error).lower() for w in ("permission", "denied", "not permitted", "authorization"))
+                is_perm = any(
+                    w in str(tool_res.error).lower() for w in ("permission", "denied", "not permitted", "authorization")
+                )
                 return DirectActionResult(
                     success=False,
                     output=f"Screenshot failed: {tool_res.error or 'tool_failed'}",
@@ -2524,7 +3237,13 @@ class DirectActionRouter:
                 provider="macos-native-tool",
                 model="",
                 policy_decision="allowed",
-                telemetry={"output_path": str(p), "size_bytes": size, "dimensions": f"{width}x{height}", "verification_passed": True, "verification": "passed"},
+                telemetry={
+                    "output_path": str(p),
+                    "size_bytes": size,
+                    "dimensions": f"{width}x{height}",
+                    "verification_passed": True,
+                    "verification": "passed",
+                },
             )
         except Exception as exc:
             return DirectActionResult(
@@ -2543,16 +3262,93 @@ class DirectActionRouter:
     @classmethod
     def _is_workflow_request(cls, text: str) -> bool:
         parsed = RequestPreprocessor.process(text)
-        workflow_candidates = [c for c in parsed.candidate_actions if c.action_type == ActionType.STRUCTURED_WORKFLOW and not c.is_blocked_as_negated]
+        workflow_candidates = [
+            c
+            for c in parsed.candidate_actions
+            if c.action_type == ActionType.STRUCTURED_WORKFLOW and not c.is_blocked_as_negated
+        ]
         if workflow_candidates:
             return True
 
         tokens = parsed.tokens
-        has_input = bool(tokens & {"read", "reading", "reads", "input", "inputs", "from", "extract", "extracting", "combine", "combining", "load", "loading", "cat", "files", "source", "sources", "table", "tables"})
-        has_output = bool(tokens & {"save", "saving", "saves", "output", "outputs", "write", "writing", "writes", "create", "creating", "creates", "into", "put", "puts", "store", "stores", "convert", "converting", "destination", "dest"})
-        has_transform = bool(tokens & {"json", "prefix", "suffix", "sum", "total", "compute", "add", "subtract", "difference", "multiply", "product", "divide", "merge", "convert", "transform", "fields", "table", "delimiter", "replace", "concatenate", "key", "value", "pairs"})
+        has_input = bool(
+            tokens
+            & {
+                "read",
+                "reading",
+                "reads",
+                "input",
+                "inputs",
+                "from",
+                "extract",
+                "extracting",
+                "combine",
+                "combining",
+                "load",
+                "loading",
+                "cat",
+                "files",
+                "source",
+                "sources",
+                "table",
+                "tables",
+            }
+        )
+        has_output = bool(
+            tokens
+            & {
+                "save",
+                "saving",
+                "saves",
+                "output",
+                "outputs",
+                "write",
+                "writing",
+                "writes",
+                "create",
+                "creating",
+                "creates",
+                "into",
+                "put",
+                "puts",
+                "store",
+                "stores",
+                "convert",
+                "converting",
+                "destination",
+                "dest",
+            }
+        )
+        has_transform = bool(
+            tokens
+            & {
+                "json",
+                "prefix",
+                "suffix",
+                "sum",
+                "total",
+                "compute",
+                "add",
+                "subtract",
+                "difference",
+                "multiply",
+                "product",
+                "divide",
+                "merge",
+                "convert",
+                "transform",
+                "fields",
+                "table",
+                "delimiter",
+                "replace",
+                "concatenate",
+                "key",
+                "value",
+                "pairs",
+            }
+        )
         all_paths = PathExtractor.extract_all_paths(text)
-        return (has_input and (has_output or "convert to" in text.lower()) and (has_transform or len(all_paths) >= 2))
+        return has_input and (has_output or "convert to" in text.lower()) and (has_transform or len(all_paths) >= 2)
 
     @classmethod
     def _parse_workflow_plan(cls, text: str, default_workspace: str = "") -> TransformationPlan | None:
@@ -2567,7 +3363,9 @@ class DirectActionRouter:
 
         if not in_path_str or not out_path_str or in_path_str == out_path_str:
             if len(all_paths) >= 2:
-                m_save_first = re.search(r"\b(?:save|write|put|output|store)\b.*?\b(?:from|after\s+reading|reading\s+table)\b", clean)
+                m_save_first = re.search(
+                    r"\b(?:save|write|put|output|store)\b.*?\b(?:from|after\s+reading|reading\s+table)\b", clean
+                )
                 if m_save_first:
                     out_path_str = all_paths[0]
                     in_path_str = all_paths[1]
@@ -2604,7 +3402,10 @@ class DirectActionRouter:
         is_prefix = "prefix" in clean
         is_suffix = "suffix" in clean
         is_replace = any(w in clean for w in ("replace", "substitute"))
-        is_table = any(w in clean for w in ("table", "delimited", "csv", "tsv", "pipe", "semicolon", "rows", "columns", "convert to"))
+        is_table = any(
+            w in clean
+            for w in ("table", "delimited", "csv", "tsv", "pipe", "semicolon", "rows", "columns", "convert to")
+        )
         is_kv = any(w in clean for w in ("key-value", "key value", "key/value", "pairs", "config", "env", "kv"))
 
         # Phase 8 Part C: Explicit semantic operand roles for subtraction
@@ -2719,17 +3520,23 @@ class DirectActionRouter:
             op = "add"
         elif is_prefix:
             op = "prefix"
-            m_pfx = re.search(r"prefix\s+(?:with\s+)?['\"]?([^'\"\n]+?)['\"]?(?:\s+and|\s+to|\s+save|$)", text, re.IGNORECASE)
+            m_pfx = re.search(
+                r"prefix\s+(?:with\s+)?['\"]?([^'\"\n]+?)['\"]?(?:\s+and|\s+to|\s+save|$)", text, re.IGNORECASE
+            )
             if m_pfx:
                 params["prefix"] = m_pfx.group(1).strip()
         elif is_suffix:
             op = "suffix"
-            m_sfx = re.search(r"suffix\s+(?:with\s+)?['\"]?([^'\"\n]+?)['\"]?(?:\s+and|\s+to|\s+save|$)", text, re.IGNORECASE)
+            m_sfx = re.search(
+                r"suffix\s+(?:with\s+)?['\"]?([^'\"\n]+?)['\"]?(?:\s+and|\s+to|\s+save|$)", text, re.IGNORECASE
+            )
             if m_sfx:
                 params["suffix"] = m_sfx.group(1).strip()
         elif is_replace:
             op = "replace"
-            m_rep = re.search(r"replace\s+['\"]?([^'\"\n]+?)['\"]?\s+with\s+['\"]?([^'\"\n]+?)['\"]?", text, re.IGNORECASE)
+            m_rep = re.search(
+                r"replace\s+['\"]?([^'\"\n]+?)['\"]?\s+with\s+['\"]?([^'\"\n]+?)['\"]?", text, re.IGNORECASE
+            )
             if m_rep:
                 params["target"] = m_rep.group(1)
                 params["replacement"] = m_rep.group(2)
@@ -2746,7 +3553,6 @@ class DirectActionRouter:
             parameters=params,
             input_roles=input_roles,
         )
-
 
     @classmethod
     def _try_multi_step_workflow(cls, text: str, workspace: str = "") -> DirectActionResult | None:
@@ -2793,7 +3599,7 @@ class DirectActionRouter:
                 raw_contents.append(content)
 
             input_1 = raw_contents[0]
-            input_2 = raw_contents[1] if len(raw_contents) > 1 else ""
+            raw_contents[1] if len(raw_contents) > 1 else ""
 
             transformed_content = ""
             computed_result: Any = None
@@ -2833,12 +3639,15 @@ class DirectActionRouter:
                         computed_result = computed_result / n
 
                 if plan.output_format == "json":
-                    transformed_content = json.dumps({
-                        "inputs": [str(p) for p in resolved_inputs],
-                        "operation": plan.operation,
-                        "operands": extracted_numbers,
-                        "result": computed_result,
-                    }, indent=2)
+                    transformed_content = json.dumps(
+                        {
+                            "inputs": [str(p) for p in resolved_inputs],
+                            "operation": plan.operation,
+                            "operands": extracted_numbers,
+                            "result": computed_result,
+                        },
+                        indent=2,
+                    )
                 else:
                     transformed_content = f"{computed_result}\n"
 
@@ -2862,10 +3671,16 @@ class DirectActionRouter:
 
             # 3. Delimited Table -> JSON Array
             elif plan.operation == "delimited_table_to_json":
-                lines = [l for l in input_1.splitlines() if l.strip()]
-                is_kv_format = lines and all(
-                    re.match(r"^[a-zA-Z0-9_.\-]+\s*[:=]\s*", l.strip()) for l in lines if not l.strip().startswith("#")
-                ) and not any("|" in l or "\t" in l or "," in l for l in lines)
+                lines = [line_item for line_item in input_1.splitlines() if line_item.strip()]
+                is_kv_format = (
+                    lines
+                    and all(
+                        re.match(r"^[a-zA-Z0-9_.\-]+\s*[:=]\s*", line_item.strip())
+                        for line_item in lines
+                        if not line_item.strip().startswith("#")
+                    )
+                    and not any("|" in line_item or "\t" in line_item or "," in line_item for line_item in lines)
+                )
 
                 if is_kv_format:
                     extracted_dict: dict[str, Any] = {}
@@ -2893,7 +3708,13 @@ class DirectActionRouter:
                     transformed_content = json.dumps(extracted_dict, indent=2)
                     computed_result = extracted_dict
                 else:
-                    clean_lines = [l for l in input_1.splitlines() if l.strip() and not l.strip().startswith("#") and not re.match(r"^[-|+= :]+$", l.strip())]
+                    clean_lines = [
+                        line_item
+                        for line_item in input_1.splitlines()
+                        if line_item.strip()
+                        and not line_item.strip().startswith("#")
+                        and not re.match(r"^[-|+= :]+$", line_item.strip())
+                    ]
                     first_line = clean_lines[0] if clean_lines else input_1
                     if "|" in first_line:
                         delim = "|"
@@ -2916,7 +3737,11 @@ class DirectActionRouter:
                             transformed_content = "[]"
                             computed_result = []
                         else:
-                            headers = [h.strip().strip("'\"").strip("`").strip().lower().replace(" ", "_") for h in rows[0] if h.strip()]
+                            headers = [
+                                h.strip().strip("'\"").strip("`").strip().lower().replace(" ", "_")
+                                for h in rows[0]
+                                if h.strip()
+                            ]
                             result_list = []
                             for row in rows[1:]:
                                 cells = [c.strip().strip("'\"").strip("`").strip() for c in row if c.strip() != ""]
@@ -2944,10 +3769,14 @@ class DirectActionRouter:
                             computed_result = result_list
 
             elif plan.operation == "kv_to_json":
-                lines = [l for l in input_1.splitlines() if l.strip() and not l.strip().startswith("#")]
+                lines = [
+                    line_item
+                    for line_item in input_1.splitlines()
+                    if line_item.strip() and not line_item.strip().startswith("#")
+                ]
                 res_dict = {}
-                for l in lines:
-                    m = re.match(r"^\s*([a-zA-Z0-9_.\-]+)\s*[:=]\s*(.*)$", l)
+                for line_item in lines:
+                    m = re.match(r"^\s*([a-zA-Z0-9_.\-]+)\s*[:=]\s*(.*)$", line_item)
                     if m:
                         k = m.group(1).strip().lower()
                         v = m.group(2).strip().strip("'\"")
@@ -3055,17 +3884,47 @@ class DirectActionRouter:
     def _is_repository_inspection_request(cls, text: str) -> bool:
         clean = text.lower()
         repo_indicators = (
-            "inspect repo", "inspect the repo", "analyze repo", "review code", "diagnose project",
-            "find bug", "find the bug", "check repo", "check the repo", "codebase", "check codebase",
-            "examine repo", "audit repo", "audit codebase", "scan repo", "examine codebase",
-            "review project", "diagnose repo", "review repo", "inspect python repository",
-            "diagnose bug", "identify defect", "locate bug", "diagnose defect",
+            "inspect repo",
+            "inspect the repo",
+            "analyze repo",
+            "review code",
+            "diagnose project",
+            "find bug",
+            "find the bug",
+            "check repo",
+            "check the repo",
+            "codebase",
+            "check codebase",
+            "examine repo",
+            "audit repo",
+            "audit codebase",
+            "scan repo",
+            "examine codebase",
+            "review project",
+            "diagnose repo",
+            "review repo",
+            "inspect python repository",
+            "diagnose bug",
+            "identify defect",
+            "locate bug",
+            "diagnose defect",
         )
-        return (
-            any(ind in clean for ind in repo_indicators)
-            or (
-                ("repo" in clean or "project" in clean or "codebase" in clean or "repository" in clean)
-                and any(v in clean for v in ("inspect", "analyze", "review", "check", "diagnose", "audit", "examine", "scan", "find", "locate"))
+        return any(ind in clean for ind in repo_indicators) or (
+            ("repo" in clean or "project" in clean or "codebase" in clean or "repository" in clean)
+            and any(
+                v in clean
+                for v in (
+                    "inspect",
+                    "analyze",
+                    "review",
+                    "check",
+                    "diagnose",
+                    "audit",
+                    "examine",
+                    "scan",
+                    "find",
+                    "locate",
+                )
             )
         )
 
@@ -3172,19 +4031,88 @@ class DirectActionRouter:
         if not all_paths:
             return False
 
-        write_tokens = {"save", "write", "create", "make", "put", "store", "dump", "record", "output", "contain", "contains", "hold", "holds", "set"}
-        if bool(tokens & write_tokens) and any(p in clean for p in (" to ", " in ", " into ", " at ", "with content", "containing", "should contain", "must contain", "should hold", "must hold")):
+        write_tokens = {
+            "save",
+            "write",
+            "create",
+            "make",
+            "put",
+            "store",
+            "dump",
+            "record",
+            "output",
+            "contain",
+            "contains",
+            "hold",
+            "holds",
+            "set",
+        }
+        if bool(tokens & write_tokens) and any(
+            p in clean
+            for p in (
+                " to ",
+                " in ",
+                " into ",
+                " at ",
+                "with content",
+                "containing",
+                "should contain",
+                "must contain",
+                "should hold",
+                "must hold",
+            )
+        ):
             return True
 
         read_tokens = {
-            "read", "open", "show", "display", "load", "cat", "view", "fetch", "get", "print",
-            "examine", "inspect", "retrieve", "contain", "contains", "contents", "content", "verbatim", "raw", "inside",
+            "read",
+            "open",
+            "show",
+            "display",
+            "load",
+            "cat",
+            "view",
+            "fetch",
+            "get",
+            "print",
+            "examine",
+            "inspect",
+            "retrieve",
+            "contain",
+            "contains",
+            "contents",
+            "content",
+            "verbatim",
+            "raw",
+            "inside",
         }
         if bool(tokens & read_tokens) and any(ext in clean for ext in PathExtractor.KNOWN_EXTENSIONS):
             return True
 
         list_tokens = {"list", "directory", "folder", "filenames", "entries"}
-        if bool(tokens & list_tokens) and any(w in clean for w in ("list", "what files", "show files", "show entries", "give filenames", "files under", "what is under", "entries inside", "contents of", "what is inside", "display entries", "list items", "what entries", "directory contents", "folder contents", "children of", "direct children of", "inventory of")):
+        if bool(tokens & list_tokens) and any(
+            w in clean
+            for w in (
+                "list",
+                "what files",
+                "show files",
+                "show entries",
+                "give filenames",
+                "files under",
+                "what is under",
+                "entries inside",
+                "contents of",
+                "what is inside",
+                "display entries",
+                "list items",
+                "what entries",
+                "directory contents",
+                "folder contents",
+                "children of",
+                "direct children of",
+                "inventory of",
+            )
+        ):
             return True
 
         return False
@@ -3200,13 +4128,33 @@ class DirectActionRouter:
         if not cls._is_filesystem_request(text, workspace=workspace):
             return None
 
-        is_raw_read = (parsed.response_mode in (ResponseMode.RAW, ResponseMode.EXACT_RAW)) or any(w in clean for w in (
-            "verbatim", "exact contents", "only contents", "only the contents", "raw content",
-            "raw contents", "unchanged", "without explanation", "without line numbers", "just the contents",
-            "just contents", "no formatting", "no headers", "raw file", "exact file", "print exactly",
-            "only file content", "give only", "return only the content", "return only the contents",
-            "whole reply must be file text", "whole response must be",
-        ))
+        is_raw_read = (parsed.response_mode in (ResponseMode.RAW, ResponseMode.EXACT_RAW)) or any(
+            w in clean
+            for w in (
+                "verbatim",
+                "exact contents",
+                "only contents",
+                "only the contents",
+                "raw content",
+                "raw contents",
+                "unchanged",
+                "without explanation",
+                "without line numbers",
+                "just the contents",
+                "just contents",
+                "no formatting",
+                "no headers",
+                "raw file",
+                "exact file",
+                "print exactly",
+                "only file content",
+                "give only",
+                "return only the content",
+                "return only the contents",
+                "whole reply must be file text",
+                "whole response must be",
+            )
+        )
 
         # A. Write / Create file
         write_action = WriteActionParser.parse(text, default_workspace=workspace)
@@ -3220,7 +4168,11 @@ class DirectActionRouter:
                     provider="local-filesystem",
                     model="",
                     policy_decision="allowed",
-                    telemetry={"reason": "write_precondition_failed", "detail": write_action.invalid_reason, "verification_passed": False},
+                    telemetry={
+                        "reason": "write_precondition_failed",
+                        "detail": write_action.invalid_reason,
+                        "verification_passed": False,
+                    },
                 )
 
             path_str = write_action.target_path
@@ -3352,7 +4304,13 @@ class DirectActionRouter:
 
         # B & C: Stat-Dominant File vs Directory Classification
         fs_decision = FilesystemActionClassifier.classify(text, workspace=workspace)
-        target_path_str = fs_decision.target_path or args.get("directory") or args.get("input_path") or args.get("path") or (all_paths[0] if all_paths else ".")
+        target_path_str = (
+            fs_decision.target_path
+            or args.get("directory")
+            or args.get("input_path")
+            or args.get("path")
+            or (all_paths[0] if all_paths else ".")
+        )
 
         target_is_dir: bool | None = None
         target_is_file: bool | None = None
@@ -3371,7 +4329,26 @@ class DirectActionRouter:
             should_list = False
         elif fs_decision.action_type == FilesystemActionType.FS_LIST_DIRECTORY:
             should_list = True
-        elif any(w in clean for w in ("directory", "folder", "entries", "filenames", "files under", "children", "items in", "items under", "what is under", "entries inside", "what is inside", "list ", "list_dir", "inventory of", "direct children")):
+        elif any(
+            w in clean
+            for w in (
+                "directory",
+                "folder",
+                "entries",
+                "filenames",
+                "files under",
+                "children",
+                "items in",
+                "items under",
+                "what is under",
+                "entries inside",
+                "what is inside",
+                "list ",
+                "list_dir",
+                "inventory of",
+                "direct children",
+            )
+        ):
             should_list = True
         else:
             should_list = False
@@ -3435,7 +4412,11 @@ class DirectActionRouter:
 
                 output_val = tool_res.data.get("output")
                 entries = output_val.get("entries") if isinstance(output_val, dict) else output_val
-                out_str = "\n".join(str(e) for e in entries) if isinstance(entries, list) else str(output_val if output_val is not None else "")
+                out_str = (
+                    "\n".join(str(e) for e in entries)
+                    if isinstance(entries, list)
+                    else str(output_val if output_val is not None else "")
+                )
 
                 return DirectActionResult(
                     success=True,
@@ -3445,7 +4426,11 @@ class DirectActionRouter:
                     provider="local-filesystem",
                     model="",
                     policy_decision="allowed",
-                    telemetry={"path": str(p), "count": len(entries) if isinstance(entries, list) else 0, "verification_passed": True},
+                    telemetry={
+                        "path": str(p),
+                        "count": len(entries) if isinstance(entries, list) else 0,
+                        "verification_passed": True,
+                    },
                 )
             except Exception as exc:
                 return DirectActionResult(
@@ -3520,7 +4505,11 @@ class DirectActionRouter:
                 final_output = raw_text
             else:
                 output_val = tool_res.data.get("output")
-                final_output = str(output_val.get("content") if isinstance(output_val, dict) and "content" in output_val else (output_val if output_val is not None else raw_text))
+                final_output = str(
+                    output_val.get("content")
+                    if isinstance(output_val, dict) and "content" in output_val
+                    else (output_val if output_val is not None else raw_text)
+                )
 
             return DirectActionResult(
                 success=True,
@@ -3530,7 +4519,12 @@ class DirectActionRouter:
                 provider="local-filesystem",
                 model="",
                 policy_decision="allowed",
-                telemetry={"path": str(p), "size_bytes": p.stat().st_size, "read_mode": "raw" if is_raw_read else "display", "verification_passed": True},
+                telemetry={
+                    "path": str(p),
+                    "size_bytes": p.stat().st_size,
+                    "read_mode": "raw" if is_raw_read else "display",
+                    "verification_passed": True,
+                },
             )
         except Exception as exc:
             return DirectActionResult(
@@ -3548,7 +4542,9 @@ class DirectActionRouter:
     @classmethod
     def _try_browser_action(cls, text: str) -> DirectActionResult | None:
         clean = text.lower()
-        if not ("://" in clean or "browser" in clean or "navigate" in clean or "browse" in clean or "fetch url" in clean):
+        if not (
+            "://" in clean or "browser" in clean or "navigate" in clean or "browse" in clean or "fetch url" in clean
+        ):
             return None
 
         m_url = re.search(r"['\"]?([a-zA-Z][a-zA-Z0-9+.-]*://[^\s'\"]+)['\"]?", text, re.IGNORECASE)
@@ -3569,7 +4565,23 @@ class DirectActionRouter:
                 telemetry={"reason": "metadata_endpoint_refusal", "url": url},
             )
 
-        is_multi_field = any(w in clean for w in ("extract", "scrape", "get", "title", "text", "body", "content", "link", "selector", "field", "fetch", "summary"))
+        is_multi_field = any(
+            w in clean
+            for w in (
+                "extract",
+                "scrape",
+                "get",
+                "title",
+                "text",
+                "body",
+                "content",
+                "link",
+                "selector",
+                "field",
+                "fetch",
+                "summary",
+            )
+        )
         req_fields: list[BrowserField] = []
 
         if is_multi_field:
@@ -3593,7 +4605,14 @@ class DirectActionRouter:
                     req_fields.append(BrowserField(type="selector", selector=sel, name=safe_name))
 
             if not any(f.type == "selector" for f in req_fields):
-                if "text" in clean or "body" in clean or "extract content" in clean or "get content" in clean or "content from" in clean or ("content" in clean and not any(f.name == "content" for f in req_fields)):
+                if (
+                    "text" in clean
+                    or "body" in clean
+                    or "extract content" in clean
+                    or "get content" in clean
+                    or "content from" in clean
+                    or ("content" in clean and not any(f.name == "content" for f in req_fields))
+                ):
                     req_fields.append(BrowserField(type="text", name="content"))
 
             if "link" in clean or "links" in clean or "href" in clean:
@@ -3629,7 +4648,9 @@ class DirectActionRouter:
             nav_title = nav_data.get("title")
             nav_content_str = str(nav_data.get("content", nav_res.data if isinstance(nav_res.data, str) else ""))
             if not nav_title and nav_content_str:
-                m_t = re.search(r"🏷️\s*\*\*Title:\*\*\s*([^\n]+)", nav_content_str) or re.search(r"<title>([^<]+)</title>", nav_content_str, re.IGNORECASE)
+                m_t = re.search(r"🏷️\s*\*\*Title:\*\*\s*([^\n]+)", nav_content_str) or re.search(
+                    r"<title>([^<]+)</title>", nav_content_str, re.IGNORECASE
+                )
                 if m_t:
                     nav_title = m_t.group(1).strip()
 
@@ -3713,16 +4734,22 @@ class DirectActionRouter:
 
                 if field_success:
                     extracted_data[f.name] = field_val
-                field_results.append({
-                    "field": f.name,
-                    "selector": f.selector or f.name,  # Phase 8 fix: preserve verbatim selector
-                    "type": f.type,
-                    "success": field_success,
-                    "error": field_error,
-                })
+                field_results.append(
+                    {
+                        "field": f.name,
+                        "selector": f.selector or f.name,  # Phase 8 fix: preserve verbatim selector
+                        "type": f.type,
+                        "success": field_success,
+                        "error": field_error,
+                    }
+                )
 
             all_failed = field_results and all(not r["success"] for r in field_results)
-            has_partial = field_results and any(not r["success"] for r in field_results) and any(r["success"] for r in field_results)
+            has_partial = (
+                field_results
+                and any(not r["success"] for r in field_results)
+                and any(r["success"] for r in field_results)
+            )
 
             if all_failed:
                 return DirectActionResult(
@@ -3733,16 +4760,18 @@ class DirectActionRouter:
                     provider="browser",
                     model="",
                     policy_decision="allowed",
-                    telemetry={"status": "total_failure", "reason": "all_fields_failed", "url": url, "field_results": field_results},
+                    telemetry={
+                        "status": "total_failure",
+                        "reason": "all_fields_failed",
+                        "url": url,
+                        "field_results": field_results,
+                    },
                 )
 
             out_str = json.dumps(extracted_data, indent=2) if extracted_data else f"Navigated to {url}"
             if has_partial:
                 # Phase 8 fix: use selector verbatim (preserving . # prefixes) in failure summary
-                failed_fields_display = [
-                    r.get("selector") or r["field"]
-                    for r in field_results if not r["success"]
-                ]
+                failed_fields_display = [r.get("selector") or r["field"] for r in field_results if not r["success"]]
                 out_str = f"Browser extraction partially completed for {url} ({len(extracted_data)}/{len(req_fields)} fields extracted, failed: {', '.join(failed_fields_display)}):\n{out_str}"
 
             return DirectActionResult(
@@ -3760,7 +4789,8 @@ class DirectActionRouter:
                     "successful_fields": extracted_data,
                     "failed_fields": [
                         {"selector": r.get("selector") or r["field"], "field": r["field"], "error": r["error"]}
-                        for r in field_results if not r["success"]
+                        for r in field_results
+                        if not r["success"]
                     ],
                     "field_results": field_results,
                     "partial_failure": has_partial,
@@ -3783,23 +4813,74 @@ class DirectActionRouter:
     @classmethod
     def _is_memory_recall_request(cls, text: str) -> bool:
         clean = text.lower().strip()
-        if any(w in clean for w in (
-            "remember that", "remember :", "please remember", "forget that", "forget about",
-            "what did i just say", "what did i say", "what was my last", "what did we just", "repeat what i said"
-        )):
+        if any(
+            w in clean
+            for w in (
+                "remember that",
+                "remember :",
+                "please remember",
+                "forget that",
+                "forget about",
+                "what did i just say",
+                "what did i say",
+                "what was my last",
+                "what did we just",
+                "repeat what i said",
+            )
+        ):
             return False
-        if any(clean.startswith(q) for q in (
-            "what is", "what was", "who is", "who was", "where is", "where was",
-            "which ", "how is", "what did", "what do", "recall", "retrieve memory",
-        )):
+        if any(
+            clean.startswith(q)
+            for q in (
+                "what is",
+                "what was",
+                "who is",
+                "who was",
+                "where is",
+                "where was",
+                "which ",
+                "how is",
+                "what did",
+                "what do",
+                "recall",
+                "retrieve memory",
+            )
+        ):
             return True
-        return any(w in clean for w in (
-            "recall", "retrieve memory", "codename", "secret", "venue", "supplier", "contact",
-            "password", "api key", "cluster", "deploy", "database host", "timeout", "staging port",
-            "backup interval", "release version", "gateway url", "default locale", "audit log",
-            "encryption cipher", "retry count", "engineer", "cache expiration", "notification channel",
-            "fallback server", "brand color", "stored value", "saved value", "memory value",
-        ))
+        return any(
+            w in clean
+            for w in (
+                "recall",
+                "retrieve memory",
+                "codename",
+                "secret",
+                "venue",
+                "supplier",
+                "contact",
+                "password",
+                "api key",
+                "cluster",
+                "deploy",
+                "database host",
+                "timeout",
+                "staging port",
+                "backup interval",
+                "release version",
+                "gateway url",
+                "default locale",
+                "audit log",
+                "encryption cipher",
+                "retry count",
+                "engineer",
+                "cache expiration",
+                "notification channel",
+                "fallback server",
+                "brand color",
+                "stored value",
+                "saved value",
+                "memory value",
+            )
+        )
 
     @classmethod
     def _try_memory_recall(cls, text: str, *, context: str = "", control: Any) -> DirectActionResult | None:
@@ -3808,6 +4889,7 @@ class DirectActionRouter:
 
         try:
             from jarvis.amaura.cognition import UnifiedMemoryService
+
             memory_service = UnifiedMemoryService(control)
             hits = memory_service.query(text, limit=16)
 
@@ -3815,12 +4897,17 @@ class DirectActionRouter:
                 return None
 
             entities = memory_service._extract_entities(text)
-            factual_hits = [h for h in hits if h.source not in ("conversation_memory", "legacy_user_memory")]
+            factual_hits = [
+                h for h in hits if h.source not in ("conversation_memory", "legacy_user_memory", "vector_memory")
+            ]
+            if not factual_hits:
+                factual_hits = [h for h in hits if h.source not in ("conversation_memory", "legacy_user_memory")]
             if not factual_hits:
                 return None
             generic_entities = {"give", "only", "reply", "return", "remember", "recall", "retrieve"}
             meaningful_entities = [
-                str(entity).strip() for entity in entities
+                str(entity).strip()
+                for entity in entities
                 if str(entity).strip() and str(entity).strip().lower() not in generic_entities
             ]
 
@@ -3884,7 +4971,10 @@ class DirectActionRouter:
     def _try_calendar_event(cls, text: str, context: str = "") -> DirectActionResult | None:
         clean = text.lower()
         combined = f"{context}\n{text}"
-        if not any(k in clean for k in ("schedule", "calendar", "book an appointment", "add to calendar", "book it", "book a meeting")):
+        if not any(
+            k in clean
+            for k in ("schedule", "calendar", "book an appointment", "add to calendar", "book it", "book a meeting")
+        ):
             return None
 
         date_str = ""
@@ -3903,21 +4993,38 @@ class DirectActionRouter:
                 raw_date = date_match.group(1).strip()
                 raw_time = (date_match.group(2) or "09:00 AM").strip()
                 clean_date = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", raw_date)
-                for fmt in ("%B %d, %Y %I:%M %p", "%B %d %Y %I:%M %p", "%B %d, %Y %I %p", "%B %d %Y %I %p", "%B %d, %Y", "%B %d %Y"):
+                for fmt in (
+                    "%B %d, %Y %I:%M %p",
+                    "%B %d %Y %I:%M %p",
+                    "%B %d, %Y %I %p",
+                    "%B %d %Y %I %p",
+                    "%B %d, %Y",
+                    "%B %d %Y",
+                ):
                     try:
                         from datetime import datetime
-                        dt = datetime.strptime(f"{clean_date} {raw_time}", fmt) if "AM" in raw_time or "PM" in raw_time or ":" in raw_time else datetime.strptime(clean_date, fmt)
+
+                        dt = (
+                            datetime.strptime(f"{clean_date} {raw_time}", fmt)
+                            if "AM" in raw_time or "PM" in raw_time or ":" in raw_time
+                            else datetime.strptime(clean_date, fmt)
+                        )
                         date_str = dt.strftime("%Y-%m-%d %H:%M")
                         break
                     except Exception:
                         pass
 
-        m_title = re.search(r"(?:schedule|book)\s+(?:an?\s+)?(?:appointment|meeting|event|call)?\s*(?:with\s+)?([^.\n]+)", text, re.IGNORECASE)
+        m_title = re.search(
+            r"(?:schedule|book)\s+(?:an?\s+)?(?:appointment|meeting|event|call)?\s*(?:with\s+)?([^.\n]+)",
+            text,
+            re.IGNORECASE,
+        )
         title = m_title.group(1).strip() if m_title else text.strip()
 
         if title and date_str:
             try:
                 from jarvis.tools.communication import tool_add_calendar_event
+
                 res = tool_add_calendar_event(title, date_str, duration_hours=1.0, notes=combined[:500])
                 if not res.startswith("❌"):
                     return DirectActionResult(

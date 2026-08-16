@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import stat
 import subprocess
 import time
@@ -49,7 +48,7 @@ def _git_repo(path: Path) -> Path:
 def _fake_stream_agy(path: Path, *, sleep_seconds: float = 0.0) -> Path:
     script = path / "agy-v52"
     script.write_text(
-        f'''#!/usr/bin/env python3
+        f"""#!/usr/bin/env python3
 import json, pathlib, sys, time
 if "--version" in sys.argv or (len(sys.argv) > 1 and sys.argv[1] == "version"):
     print("Antigravity CLI v1.1.11"); raise SystemExit(0)
@@ -69,7 +68,7 @@ time.sleep({sleep_seconds!r})
 repo=pathlib.Path.cwd(); (repo/"agy_fix.py").write_text("VALUE = 52\\n")
 result={{"schema":"amaura.antigravity-result.v1","success":True,"summary":"Implemented safely","changed_files":["agy_fix.py"],"verification_commands":["python -m py_compile agy_fix.py"],"remaining_failures":[],"models_used":["gemini-test"],"conversation_id":"agy-v52"}}
 print(json.dumps({{"type":"result","result":result}}), flush=True)
-''',
+""",
         encoding="utf-8",
     )
     script.chmod(script.stat().st_mode | stat.S_IXUSR)
@@ -117,7 +116,13 @@ def test_finalize_commit_disables_repository_git_hooks(tmp_path: Path):
     hook.write_text(f"#!/bin/sh\necho fired > {marker}\n", encoding="utf-8")
     hook.chmod(0o755)
     (work / "README.md").write_text("# changed\n", encoding="utf-8")
-    record = WorktreeRecord(str(repo), str(work), "amaura-test", "master", subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip())
+    record = WorktreeRecord(
+        str(repo),
+        str(work),
+        "amaura-test",
+        "master",
+        subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip(),
+    )
     commit = finalize_task_commit(record, task_id="task-v52", title="Safe commit")
     assert commit.commit
     assert not marker.exists(), "Amaura-managed git commit must not execute repository hooks"
@@ -172,9 +177,13 @@ def test_antigravity_exposes_only_linked_worktree_git_metadata(tmp_path: Path):
         objective="Implement fixture in linked worktree",
         idempotency_key="linked-worktree",
     )
-    common_dir = Path(subprocess.check_output(
-        ["git", "rev-parse", "--git-common-dir"], cwd=worktree, text=True,
-    ).strip()).resolve()
+    common_dir = Path(
+        subprocess.check_output(
+            ["git", "rev-parse", "--git-common-dir"],
+            cwd=worktree,
+            text=True,
+        ).strip()
+    ).resolve()
     assert result.verification["changed_files"] == ["agy_fix.py"]
     assert common_dir == (repo / ".git").resolve()
 
@@ -235,18 +244,23 @@ def test_space_path_repository_uses_isolated_clone_and_imports_verified_commit(
     (worktree / "feature.txt").write_text("verified\n", encoding="utf-8")
     commit = finalize_task_commit(record, task_id="task-space-path", title="Space-safe fixture")
     imported = subprocess.check_output(
-        ["git", "rev-parse", record.branch], cwd=repo, text=True,
+        ["git", "rev-parse", record.branch],
+        cwd=repo,
+        text=True,
     ).strip()
     assert imported == commit.commit
-    cleanup_task_worktree({
-        "id": "task-space-path",
-        "metadata": {
-            "git_repository_root": str(repo),
-            "git_worktree_path": str(worktree),
-            "git_branch": record.branch,
-            "git_isolation_mode": record.isolation_mode,
+    cleanup_task_worktree(
+        {
+            "id": "task-space-path",
+            "metadata": {
+                "git_repository_root": str(repo),
+                "git_worktree_path": str(worktree),
+                "git_branch": record.branch,
+                "git_isolation_mode": record.isolation_mode,
+            },
         },
-    }, require_clean=False)
+        require_clean=False,
+    )
     assert not worktree.exists()
 
 

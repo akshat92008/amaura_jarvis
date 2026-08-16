@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
+import json as _json
 import os
+import threading as _threading
+import time as _time
+import urllib.error as _urlerror
+import urllib.request as _urlrequest
+from collections.abc import Callable as _Callable
 from dataclasses import asdict, dataclass
+from dataclasses import dataclass as _dataclass
+from typing import Any as _Any
 
 from jarvis.amaura.models import GovernanceError, RiskLevel
 from jarvis.amaura.registry import get_agent
@@ -43,7 +51,11 @@ class ModelGateway:
             raise GovernanceError("AMAURA_MODEL_MODE must be local, balanced, cloud, or omniroute")
 
         if provider_env == "omniroute" or mode == "omniroute":
-            omni_model = os.environ.get("AMAURA_OMNIROUTE_MODEL", "").strip() or os.environ.get("OMNIROUTE_MODEL", "").strip() or os.environ.get("AMAURA_CLOUD_WORKER_MODEL", "").strip()
+            omni_model = (
+                os.environ.get("AMAURA_OMNIROUTE_MODEL", "").strip()
+                or os.environ.get("OMNIROUTE_MODEL", "").strip()
+                or os.environ.get("AMAURA_CLOUD_WORKER_MODEL", "").strip()
+            )
             if not omni_model:
                 raise GovernanceError("AMAURA_OMNIROUTE_MODEL is required when provider is omniroute")
             route = ModelRoute(
@@ -87,13 +99,21 @@ class ModelGateway:
         else:
             selected = vision_model if needs_vision else cloud_model
             if not selected:
-                variable = "AMAURA_CLOUD_VISION_MODEL or AMAURA_CLOUD_WORKER_MODEL" if needs_vision else "AMAURA_CLOUD_WORKER_MODEL"
+                variable = (
+                    "AMAURA_CLOUD_VISION_MODEL or AMAURA_CLOUD_WORKER_MODEL"
+                    if needs_vision
+                    else "AMAURA_CLOUD_WORKER_MODEL"
+                )
                 raise GovernanceError(f"{variable} is required for cloud-routed work")
-            complexity_multiplier = 2 if (
-                needs_vision
-                or agent.model_policy == "balanced"
-                or RiskLevel(risk) in {RiskLevel.HIGH, RiskLevel.CRITICAL}
-            ) else 1
+            complexity_multiplier = (
+                2
+                if (
+                    needs_vision
+                    or agent.model_policy == "balanced"
+                    or RiskLevel(risk) in {RiskLevel.HIGH, RiskLevel.CRITICAL}
+                )
+                else 1
+            )
             route = ModelRoute(
                 model_key=selected,
                 provider="nvidia",
@@ -113,19 +133,12 @@ class ModelGateway:
             )
         return route
 
+
 # ── Executive cognition gateway ──────────────────────────────────────────────
 # The employee ModelGateway above routes governed Company OS worker tasks.  The
 # executive gateway below is deliberately separate: it gives intent/planning/
 # reference-resolution one source of truth for both provider availability and
 # actual provider execution.
-
-from dataclasses import dataclass as _dataclass
-import json as _json
-import threading as _threading
-import time as _time
-import urllib.error as _urlerror
-import urllib.request as _urlrequest
-from typing import Any as _Any, Callable as _Callable
 
 
 @_dataclass(frozen=True, slots=True)
@@ -247,7 +260,9 @@ class CognitiveModelGateway:
             specific = os.environ.get(purpose_key, "").strip()
             if specific and specific.lower() not in {"auto", "on", "true", "1"}:
                 return specific
-            omni_model = os.environ.get("AMAURA_OMNIROUTE_MODEL", "").strip() or os.environ.get("OMNIROUTE_MODEL", "").strip()
+            omni_model = (
+                os.environ.get("AMAURA_OMNIROUTE_MODEL", "").strip() or os.environ.get("OMNIROUTE_MODEL", "").strip()
+            )
             if omni_model:
                 return omni_model
             general = os.environ.get("AMAURA_JARVIS_MODEL", "").strip()
@@ -286,8 +301,14 @@ class CognitiveModelGateway:
         if not cls._model_for(provider, purpose):
             return False
         if provider == "omniroute":
-            key = os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
-            url = os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+            key = (
+                os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip()
+                or os.environ.get("OMNIROUTE_API_KEY", "").strip()
+            )
+            url = (
+                os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
+                or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+            )
             return bool(key and url)
         if provider == "openrouter":
             return bool(os.environ.get("OPENROUTER_API_KEY", "").strip())
@@ -317,7 +338,8 @@ class CognitiveModelGateway:
                 wanted = cls._model_for("ollama", purpose)
                 names = {
                     str(item.get("name") or item.get("model") or "")
-                    for item in payload.get("models", []) if isinstance(item, dict)
+                    for item in payload.get("models", [])
+                    if isinstance(item, dict)
                 }
                 # Ollama may expose either `name` or `model`; exact tag match is
                 # required so the UI cannot claim cognition is active when the
@@ -366,16 +388,24 @@ class CognitiveModelGateway:
                 or os.environ.get("AMAURA_JARVIS_PROVIDER", "auto").strip().lower()
                 or "auto"
             )
-            order = [requested] if requested != "auto" else [
-                item.strip().lower()
-                for item in os.environ.get(
-                    "AMAURA_JARVIS_PROVIDER_ORDER",
-                    "omniroute,openrouter,openai,anthropic,nvidia,groq,ollama",
-                ).split(",")
-                if item.strip()
-            ]
+            order = (
+                [requested]
+                if requested != "auto"
+                else [
+                    item.strip().lower()
+                    for item in os.environ.get(
+                        "AMAURA_JARVIS_PROVIDER_ORDER",
+                        "omniroute,openrouter,openai,anthropic,nvidia,groq,ollama",
+                    ).split(",")
+                    if item.strip()
+                ]
+            )
             circuit_open = any(p in cls.PROVIDERS and cls._circuit_is_open(p) for p in order)
-            reason = "[CIRCUIT_OPEN] Provider circuit breaker is open" if circuit_open else "[ROUTER_NO_PROVIDER] No cognition provider configured or available"
+            reason = (
+                "[CIRCUIT_OPEN] Provider circuit breaker is open"
+                if circuit_open
+                else "[ROUTER_NO_PROVIDER] No cognition provider configured or available"
+            )
             return {
                 "available": False,
                 "provider": "deterministic-fallback",
@@ -386,8 +416,14 @@ class CognitiveModelGateway:
                 "reason": reason,
             }
         if selection.provider == "omniroute":
-            key = os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
-            url = os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+            key = (
+                os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip()
+                or os.environ.get("OMNIROUTE_API_KEY", "").strip()
+            )
+            url = (
+                os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
+                or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+            )
             configured = bool(key and url)
             fallback = os.environ.get("AMAURA_OMNIROUTE_FALLBACK_MODEL", "").strip() or "none"
             return {
@@ -447,7 +483,9 @@ class CognitiveModelGateway:
         max_retries_override: int | None = None,
     ) -> CognitiveModelResult:
         key = os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
-        base_url = (os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()).rstrip("/")
+        base_url = (
+            os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+        ).rstrip("/")
         if not key or not base_url:
             raise GovernanceError("OmniRoute is not properly configured: API key and Base URL are required")
 
@@ -456,7 +494,8 @@ class CognitiveModelGateway:
 
         timeout_sec = max(2.0, min(float(os.environ.get("AMAURA_OMNIROUTE_TIMEOUT_SECONDS", "8")), 300.0))
         max_retries = (
-            max_retries_override if max_retries_override is not None
+            max_retries_override
+            if max_retries_override is not None
             else max(0, min(int(os.environ.get("AMAURA_OMNIROUTE_MAX_RETRIES", "0")), 5))
         )
         fallback_model = os.environ.get("AMAURA_OMNIROUTE_FALLBACK_MODEL", "").strip()
@@ -487,24 +526,23 @@ class CognitiveModelGateway:
                 "max_tokens": max_tokens,
             }
             headers = {
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {key}",
-                    "Accept": "application/json",
-                }
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {key}",
+                "Accept": "application/json",
+            }
             try:
                 response = cls._http_client().post(
-                    endpoint, json=payload, headers=headers, timeout=attempt_timeout,
+                    endpoint,
+                    json=payload,
+                    headers=headers,
+                    timeout=attempt_timeout,
                 )
                 response.raise_for_status()
                 latency_ms = int((_time.monotonic() - t0) * 1000)
                 raw_text = response.text
                 headers = {k.lower(): v for k, v in response.headers.items()}
-                
-                request_id = str(
-                    headers.get("x-request-id")
-                    or headers.get("x-omniroute-request-id")
-                    or ""
-                )
+
+                request_id = str(headers.get("x-request-id") or headers.get("x-omniroute-request-id") or "")
                 resolved_provider = str(
                     headers.get("x-resolved-provider")
                     or headers.get("x-provider")
@@ -512,16 +550,16 @@ class CognitiveModelGateway:
                     or "omniroute"
                 )
                 resolved_model = str(
-                    headers.get("x-resolved-model")
-                    or headers.get("x-omniroute-model")
-                    or target_model
+                    headers.get("x-resolved-model") or headers.get("x-omniroute-model") or target_model
                 )
                 text = ""
                 try:
                     resp_data = _json.loads(raw_text)
                     if isinstance(resp_data, dict):
                         request_id = str(resp_data.get("id") or "") or request_id
-                        resolved_provider = str(resp_data.get("provider") or resp_data.get("resolved_provider") or resolved_provider)
+                        resolved_provider = str(
+                            resp_data.get("provider") or resp_data.get("resolved_provider") or resolved_provider
+                        )
                         resolved_model = str(resp_data.get("model") or resolved_model)
                         choices = resp_data.get("choices") or []
                         if choices and isinstance(choices, list) and isinstance(choices[0], dict):
@@ -591,7 +629,9 @@ class CognitiveModelGateway:
                     raise
                 code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else 0
                 if isinstance(exc, httpx.RequestError):
-                    last_error_class = "PROVIDER_TIMEOUT" if isinstance(exc, httpx.TimeoutException) else "PROVIDER_HTTP_ERROR"
+                    last_error_class = (
+                        "PROVIDER_TIMEOUT" if isinstance(exc, httpx.TimeoutException) else "PROVIDER_HTTP_ERROR"
+                    )
                     # A pooled connection can become stale after a server or
                     # route restart. Recreate the pool before the next attempt.
                     with cls._pooled_client_lock:
@@ -611,13 +651,21 @@ class CognitiveModelGateway:
                 elif code:
                     last_error_class = "PROVIDER_HTTP_ERROR"
 
-                if attempt < max_retries and last_error_class in {"PROVIDER_UNAVAILABLE", "PROVIDER_HTTP_ERROR", "PROVIDER_TIMEOUT"}:
-                    _time.sleep(0.5 * (2 ** attempt))
+                if attempt < max_retries and last_error_class in {
+                    "PROVIDER_UNAVAILABLE",
+                    "PROVIDER_HTTP_ERROR",
+                    "PROVIDER_TIMEOUT",
+                }:
+                    _time.sleep(0.5 * (2**attempt))
                     continue
 
         # If primary model failed and fallback model is configured
         if fallback_model and model != fallback_model:
-            reason_str = "provider_unavailable" if last_error_class == "PROVIDER_UNAVAILABLE" else ("empty_response" if last_error_class == "MODEL_RESPONSE_EMPTY" else last_error_class.lower())
+            reason_str = (
+                "provider_unavailable"
+                if last_error_class == "PROVIDER_UNAVAILABLE"
+                else ("empty_response" if last_error_class == "MODEL_RESPONSE_EMPTY" else last_error_class.lower())
+            )
             return cls._omniroute(
                 model=fallback_model,
                 messages=messages,
@@ -630,9 +678,7 @@ class CognitiveModelGateway:
             )
 
         cls._record_provider_failure("omniroute")
-        raise GovernanceError(
-            cls._redact_secrets(f"OmniRoute request failed [{last_error_class}] for model {model}")
-        )
+        raise GovernanceError(cls._redact_secrets(f"OmniRoute request failed [{last_error_class}] for model {model}"))
 
     @staticmethod
     def _openai_compatible(
@@ -715,9 +761,7 @@ class CognitiveModelGateway:
                 parsed = _json.loads(response.read().decode("utf-8"))
         except (_urlerror.URLError, _urlerror.HTTPError, ValueError) as exc:
             raise GovernanceError(f"Anthropic cognition request failed: {exc}") from exc
-        text = "".join(
-            str(item.get("text") or "") for item in parsed.get("content", []) if isinstance(item, dict)
-        )
+        text = "".join(str(item.get("text") or "") for item in parsed.get("content", []) if isinstance(item, dict))
         return CognitiveModelResult(
             text=text,
             provider="anthropic",
@@ -781,19 +825,26 @@ class CognitiveModelGateway:
             raise GovernanceError(f"No configured cognition model is available for {purpose}")
         if selection.provider != "omniroute":
             result = cls.generate(
-                messages=messages, purpose=purpose, temperature=temperature, max_tokens=max_tokens,
+                messages=messages,
+                purpose=purpose,
+                temperature=temperature,
+                max_tokens=max_tokens,
             )
             if result.text:
                 on_token(result.text)
             return result
 
         key = os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get("OMNIROUTE_API_KEY", "").strip()
-        base_url = (os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()).rstrip("/")
+        base_url = (
+            os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
+        ).rstrip("/")
         if not key or not base_url or not base_url.startswith(("http://", "https://")):
             raise GovernanceError("OmniRoute is not properly configured for streaming")
         endpoint = (
-            base_url if base_url.endswith("/chat/completions")
-            else f"{base_url}/chat/completions" if base_url.endswith("/v1") or "/v1/" in base_url
+            base_url
+            if base_url.endswith("/chat/completions")
+            else f"{base_url}/chat/completions"
+            if base_url.endswith("/v1") or "/v1/" in base_url
             else f"{base_url}/v1/chat/completions"
         )
         deadline, retry_override = cls._interactive_budget(purpose)
@@ -801,17 +852,17 @@ class CognitiveModelGateway:
         if deadline is not None:
             timeout_sec = max(0.5, min(timeout_sec, deadline - _time.monotonic()))
         payload = {
-                "model": selection.model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": True,
-            }
+            "model": selection.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
         headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {key}",
-                "Accept": "text/event-stream",
-            }
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {key}",
+            "Accept": "text/event-stream",
+        }
         started = _time.monotonic()
         chunks: list[str] = []
         request_id = ""
@@ -820,13 +871,19 @@ class CognitiveModelGateway:
         ttft_ms = 0
         try:
             with cls._http_client().stream(
-                "POST", endpoint, json=payload, headers=headers, timeout=timeout_sec,
+                "POST",
+                endpoint,
+                json=payload,
+                headers=headers,
+                timeout=timeout_sec,
             ) as response:
                 response.raise_for_status()
                 headers = {k.lower(): v for k, v in response.headers.items()}
                 request_id = str(headers.get("x-request-id") or headers.get("x-omniroute-request-id") or "")
                 resolved_provider = str(headers.get("x-resolved-provider") or headers.get("x-provider") or "omniroute")
-                resolved_model = str(headers.get("x-resolved-model") or headers.get("x-omniroute-model") or selection.model)
+                resolved_model = str(
+                    headers.get("x-resolved-model") or headers.get("x-omniroute-model") or selection.model
+                )
                 for raw_line in response.iter_lines():
                     line = raw_line.strip()
                     if not line.startswith("data:") or line == "data: [DONE]":
@@ -846,22 +903,32 @@ class CognitiveModelGateway:
                                 ttft_ms = int((_time.monotonic() - started) * 1000)
                             chunks.append(token)
                             on_token(token)
-        except Exception:
+        except Exception as exc:
             if chunks:
-                raise GovernanceError("OmniRoute stream interrupted after output began")
+                raise GovernanceError("OmniRoute stream interrupted after output began") from exc
             result = cls._omniroute(
-                model=selection.model, messages=messages, temperature=temperature, max_tokens=max_tokens,
-                deadline_monotonic=deadline, max_retries_override=retry_override,
+                model=selection.model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                deadline_monotonic=deadline,
+                max_retries_override=retry_override,
             )
             if result.text:
                 on_token(result.text)
             return result
         cls._record_provider_success("omniroute")
         return CognitiveModelResult(
-            text="".join(chunks), provider="omniroute", model=resolved_model,
-            requested_model=selection.model, resolved_provider=resolved_provider,
-            resolved_model=resolved_model, request_id=request_id,
-            latency_ms=int((_time.monotonic() - started) * 1000), ttft_ms=ttft_ms, gateway="omniroute",
+            text="".join(chunks),
+            provider="omniroute",
+            model=resolved_model,
+            requested_model=selection.model,
+            resolved_provider=resolved_provider,
+            resolved_model=resolved_model,
+            request_id=request_id,
+            latency_ms=int((_time.monotonic() - started) * 1000),
+            ttft_ms=ttft_ms,
+            gateway="omniroute",
         )
 
     @classmethod

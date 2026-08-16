@@ -1,14 +1,12 @@
 """Phase 7 Test Suite 1: Structural Request Preprocessing & Semantic Span Masking."""
 
 import json
-import pytest
+
 from jarvis.amaura.direct_action import (
-    RequestPreprocessor,
-    ParsedRequest,
-    SpanType,
-    SemanticSpan,
-    ResponseMode,
     ActionType,
+    RequestPreprocessor,
+    ResponseMode,
+    SpanType,
 )
 
 
@@ -72,7 +70,9 @@ def test_clause_segmentation_and_negation():
     assert len(parsed1.clauses) == 2
     assert not parsed1.clauses[0].is_negated
     assert parsed1.clauses[1].is_negated
-    assert "screenshot" in parsed1.clauses[1].masked_text.lower() or "<QUOTED_LITERAL>" in parsed1.clauses[1].masked_text
+    assert (
+        "screenshot" in parsed1.clauses[1].masked_text.lower() or "<QUOTED_LITERAL>" in parsed1.clauses[1].masked_text
+    )
 
     # Screenshot action must be blocked as negated
     screenshot_cands = [c for c in parsed1.candidate_actions if c.action_type == ActionType.SCREENSHOT_CAPTURE]

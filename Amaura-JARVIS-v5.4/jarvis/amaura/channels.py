@@ -154,9 +154,7 @@ class AssistedOutreachAdapter:
             if existing.get("payload_sha256") != payload_hash:
                 raise GovernanceError("Assisted handoff idempotency collision")
         else:
-            fd, temporary_name = tempfile.mkstemp(
-                prefix=".handoff-", suffix=".tmp", dir=self.handoff_dir
-            )
+            fd, temporary_name = tempfile.mkstemp(prefix=".handoff-", suffix=".tmp", dir=self.handoff_dir)
             os.close(fd)
             temporary = Path(temporary_name)
             try:
@@ -167,9 +165,7 @@ class AssistedOutreachAdapter:
             finally:
                 temporary.unlink(missing_ok=True)
         should_open = (
-            os.environ.get("AMAURA_BROWSER_HANDOFF_OPEN", "0") == "1"
-            if open_browser is None
-            else bool(open_browser)
+            os.environ.get("AMAURA_BROWSER_HANDOFF_OPEN", "0") == "1" if open_browser is None else bool(open_browser)
         )
         if should_open and not webbrowser.open(launch_url, new=2, autoraise=True):
             raise GovernanceError("Browser handoff could not be opened")
@@ -338,8 +334,10 @@ class MetaPublicationAdapter:
             access_token if access_token is not None else os.environ.get("AMAURA_META_ACCESS_TOKEN", "")
         ).strip()
         self.graph_version = (
-            graph_version if graph_version is not None else os.environ.get("AMAURA_META_GRAPH_VERSION", "")
-        ).strip().lstrip("v")
+            (graph_version if graph_version is not None else os.environ.get("AMAURA_META_GRAPH_VERSION", ""))
+            .strip()
+            .lstrip("v")
+        )
         self.page_id = (page_id if page_id is not None else os.environ.get("AMAURA_FACEBOOK_PAGE_ID", "")).strip()
         self.instagram_account_id = (
             instagram_account_id

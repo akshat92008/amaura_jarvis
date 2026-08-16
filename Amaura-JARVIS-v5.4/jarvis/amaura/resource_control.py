@@ -23,9 +23,10 @@ import sys
 import threading
 import time
 import uuid
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 try:  # psutil is a lightweight core dependency in v3.6.1, but fail safely if missing.
     import psutil  # type: ignore
@@ -60,7 +61,7 @@ class MemoryPolicy:
     stale_reservation_seconds: int = 7200
 
     @classmethod
-    def from_env(cls) -> "MemoryPolicy":
+    def from_env(cls) -> MemoryPolicy:
         def _int(name: str, default: int, minimum: int, maximum: int) -> int:
             raw = os.environ.get(name, "").strip()
             if not raw:
@@ -122,7 +123,11 @@ def _mac_free_percent() -> float | None:
             return None
         try:
             proc = subprocess.run(
-                [command, "-Q"], text=True, capture_output=True, check=False, timeout=2,
+                [command, "-Q"],
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=2,
             )
         except (OSError, subprocess.TimeoutExpired):
             _MAC_PRESSURE_CACHE = (now, None)
@@ -176,7 +181,9 @@ def _native_memory_values(policy: MemoryPolicy) -> tuple[int, int, float, int, i
                 except (OSError, ValueError, subprocess.TimeoutExpired):
                     total_mb = 0
             mac_free = _mac_free_percent()
-            available_mb = int(total_mb * mac_free / 100.0) if total_mb and mac_free is not None else policy.yellow_available_mb
+            available_mb = (
+                int(total_mb * mac_free / 100.0) if total_mb and mac_free is not None else policy.yellow_available_mb
+            )
             used_percent = 100.0 - (available_mb / total_mb * 100.0) if total_mb else policy.yellow_used_percent
             swap_total_mb = 0
             swap_used_mb = 0
@@ -523,59 +530,105 @@ class CrossProcessResourceLedger:
             summary = self._summarize(reservations)
 
             if host.pressure == "red" and heavy:
-                return None, "system memory pressure is red; heavy workers are blocked", {
-                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
-                }
+                return (
+                    None,
+                    "system memory pressure is red; heavy workers are blocked",
+                    {
+                        "host": host.to_dict(),
+                        **summary,
+                        "process_tree_rss_mb": current_tree_rss,
+                    },
+                )
             if host.pressure == "yellow" and heavy and int(ram_mb) > policy.pressure_limit_mb:
-                return None, "system memory pressure is yellow; requested heavy worker exceeds the pressure-safe allowance", {
-                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
-                    "pressure_safe_allowance_mb": policy.pressure_limit_mb,
-                }
+                return (
+                    None,
+                    "system memory pressure is yellow; requested heavy worker exceeds the pressure-safe allowance",
+                    {
+                        "host": host.to_dict(),
+                        **summary,
+                        "process_tree_rss_mb": current_tree_rss,
+                        "pressure_safe_allowance_mb": policy.pressure_limit_mb,
+                    },
+                )
 
             effective_limit = (
-                policy.pressure_limit_mb if host.pressure in {"red", "yellow"}
-                else policy.burst_limit_mb if heavy
+                policy.pressure_limit_mb
+                if host.pressure in {"red", "yellow"}
+                else policy.burst_limit_mb
+                if heavy
                 else policy.normal_target_mb
             )
             projected = int(summary["reserved_mb"]) + max(0, int(ram_mb))
             if bool(summary["active_heavy_jobs"]) and not heavy:
                 # During a burst, keep the host quiet rather than stacking ordinary work behind it.
-                return None, "a heavy capability is active; ordinary capability admission is paused", {
-                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
-                    "effective_limit_mb": effective_limit,
-                }
+                return (
+                    None,
+                    "a heavy capability is active; ordinary capability admission is paused",
+                    {
+                        "host": host.to_dict(),
+                        **summary,
+                        "process_tree_rss_mb": current_tree_rss,
+                        "effective_limit_mb": effective_limit,
+                    },
+                )
             if heavy and int(summary["active_heavy_jobs"]) > 0:
-                return None, "another heavy capability is already active", {
-                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
-                    "effective_limit_mb": effective_limit,
-                }
+                return (
+                    None,
+                    "another heavy capability is already active",
+                    {
+                        "host": host.to_dict(),
+                        **summary,
+                        "process_tree_rss_mb": current_tree_rss,
+                        "effective_limit_mb": effective_limit,
+                    },
+                )
             if projected > effective_limit:
-                return None, f"projected reservation {projected} MB exceeds {effective_limit} MB limit", {
-                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
-                    "effective_limit_mb": effective_limit,
-                }
+                return (
+                    None,
+                    f"projected reservation {projected} MB exceeds {effective_limit} MB limit",
+                    {
+                        "host": host.to_dict(),
+                        **summary,
+                        "process_tree_rss_mb": current_tree_rss,
+                        "effective_limit_mb": effective_limit,
+                    },
+                )
             if current_tree_rss >= policy.absolute_limit_mb:
-                return None, f"Amaura process tree already uses {current_tree_rss} MB, above the absolute ceiling", {
-                    "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
-                    "effective_limit_mb": effective_limit,
-                }
+                return (
+                    None,
+                    f"Amaura process tree already uses {current_tree_rss} MB, above the absolute ceiling",
+                    {
+                        "host": host.to_dict(),
+                        **summary,
+                        "process_tree_rss_mb": current_tree_rss,
+                        "effective_limit_mb": effective_limit,
+                    },
+                )
 
             reservation_id = uuid.uuid4().hex
-            reservations.append({
-                "id": reservation_id,
-                "pid": os.getpid(),
-                "capability": capability,
-                "ram_mb": max(0, int(ram_mb)),
-                "heavy": bool(heavy),
-                "created_at": now,
-            })
+            reservations.append(
+                {
+                    "id": reservation_id,
+                    "pid": os.getpid(),
+                    "capability": capability,
+                    "ram_mb": max(0, int(ram_mb)),
+                    "heavy": bool(heavy),
+                    "created_at": now,
+                }
+            )
             payload = {"version": 1, "updated_at": now, "reservations": reservations}
             _write_state(handle, payload)
             summary = self._summarize(reservations)
-            return reservation_id, "reserved", {
-                "host": host.to_dict(), **summary, "process_tree_rss_mb": current_tree_rss,
-                "effective_limit_mb": effective_limit,
-            }
+            return (
+                reservation_id,
+                "reserved",
+                {
+                    "host": host.to_dict(),
+                    **summary,
+                    "process_tree_rss_mb": current_tree_rss,
+                    "effective_limit_mb": effective_limit,
+                },
+            )
 
     def release(self, reservation_id: str) -> None:
         if not reservation_id:

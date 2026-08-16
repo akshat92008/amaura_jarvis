@@ -8,6 +8,7 @@ payload are explicitly present but the payload is unquoted, e.g.:
 It does not infer output roles from path order and does not authorize effects by
 itself; authorization remains owned by SemanticRequestGraph/EffectAuthorizer.
 """
+
 from __future__ import annotations
 
 import re

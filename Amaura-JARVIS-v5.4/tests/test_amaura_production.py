@@ -66,12 +66,7 @@ class TestAmauraProductionControls(unittest.TestCase):
             second = vault.put_text("complete test output", source="pytest")
             self.assertEqual(first.sha256, second.sha256)
             self.assertTrue(vault.verify(first.reference)["ok"])
-            target = (
-                Path(directory)
-                / "sha256"
-                / first.sha256[:2]
-                / first.sha256[2:]
-            )
+            target = Path(directory) / "sha256" / first.sha256[:2] / first.sha256[2:]
             target.write_text("tampered", encoding="utf-8")
             self.assertFalse(vault.verify(first.reference)["ok"])
 
@@ -107,13 +102,9 @@ class TestAmauraProductionControls(unittest.TestCase):
             },
             key=ATTESTATION_KEY,
         )
-        self.assertTrue(
-            verify_review_attestation(attestation, key=ATTESTATION_KEY)
-        )
+        self.assertTrue(verify_review_attestation(attestation, key=ATTESTATION_KEY))
         attestation["decision"]["approve"] = False
-        self.assertFalse(
-            verify_review_attestation(attestation, key=ATTESTATION_KEY)
-        )
+        self.assertFalse(verify_review_attestation(attestation, key=ATTESTATION_KEY))
 
     def test_review_task_accepts_real_object_decision_attestation(self):
         with patch.dict(os.environ, {"AMAURA_REVIEW_ATTESTATION_KEY": ATTESTATION_KEY}):
@@ -220,9 +211,7 @@ class TestAmauraProductionControls(unittest.TestCase):
             ),
             receipt_key=RECEIPT_KEY,
         )
-        with patch(
-            "jarvis.amaura.integrations.validate_public_url"
-        ):
+        with patch("jarvis.amaura.integrations.validate_public_url"):
             receipt = adapter.create_private_draft(
                 payload={"visibility": "private", "title": "Proof"},
                 idempotency_key="draft-key",

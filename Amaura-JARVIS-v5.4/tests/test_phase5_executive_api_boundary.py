@@ -4,9 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
-import pytest
 
-from jarvis.agent import JarvisAgent
 from jarvis.amaura.cognition import ExecutiveKernel, ExecutiveRequest
 from jarvis.amaura.control_plane import AmauraControlPlane
 
@@ -41,7 +39,9 @@ def test_api_boundary_security_refusal_during_model_outage():
         control = AmauraControlPlane(ws / "control")
         kernel = ExecutiveKernel(control)
 
-        with patch("jarvis.amaura.model_gateway.CognitiveModelGateway.generate", side_effect=RuntimeError("Gateway Offline")):
+        with patch(
+            "jarvis.amaura.model_gateway.CognitiveModelGateway.generate", side_effect=RuntimeError("Gateway Offline")
+        ):
             with patch("jarvis.amaura.model_gateway.CognitiveModelGateway.available", return_value=False):
                 req = ExecutiveRequest(text=prompt, session_id="api_sec_test", workspace=str(ws))
                 resp = kernel.handle(req)

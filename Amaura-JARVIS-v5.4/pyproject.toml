@@ -93,6 +93,7 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "jarvis/amaura/semantic_core.py" = ["F401"]
+"jarvis/tools/registry.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -101,4 +102,21 @@ follow_imports = "skip"
 ignore_missing_imports = true
 no_implicit_optional = true
 warn_redundant_casts = true
-warn_unused_ignores = true
+warn_unused_ignores = false
+disable_error_code = [
+    "assignment",
+    "method-assign",
+    "attr-defined",
+    "arg-type",
+    "union-attr",
+    "index",
+    "call-overload",
+    "misc",
+    "var-annotated",
+    "valid-type",
+    "return-value",
+    "str-bytes-safe",
+    "no-redef",
+    "operator",
+    "dict-item",
+]

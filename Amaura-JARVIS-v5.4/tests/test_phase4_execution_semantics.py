@@ -16,27 +16,21 @@ J. Regression tests for verified systems (memory recall, distractors, screenshot
 import asyncio
 import hashlib
 import json
-import os
 import re
 import secrets
 import tempfile
-import time
 from pathlib import Path
+
 import pytest
 
 from jarvis.amaura.direct_action import (
     DirectActionRouter,
-    PathExtractor,
-    DirectActionResult,
-    TransformationPlan,
-    BrowserActionPlan,
 )
-from jarvis.tools.security import tool_workspace, workspace_root
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # A. FILE WRITES (20+ Variations)
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 def test_file_write_variations():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -52,7 +46,7 @@ def test_file_write_variations():
             # 4. Another unusual extension
             ("put 'binary_blob' into data.custom", "data.custom", "binary_blob"),
             # 5. Content before path with quotes
-            ("write \"hello before path\" to out1.txt", "out1.txt", "hello before path"),
+            ('write "hello before path" to out1.txt', "out1.txt", "hello before path"),
             # 6. Content after path with colon
             ("write to out2.txt: colon content here", "out2.txt", "colon content here"),
             # 7. Content with keyword 'containing'
@@ -103,7 +97,9 @@ def test_file_write_variations():
             target_file = tmp_path / expected_rel_path
             assert target_file.exists(), f"File missing: {target_file}"
             actual = target_file.read_text(encoding="utf-8")
-            assert actual == expected_content, f"Content mismatch in {target_file}: expected '{expected_content}', got '{actual}'"
+            assert actual == expected_content, (
+                f"Content mismatch in {target_file}: expected '{expected_content}', got '{actual}'"
+            )
             assert res.telemetry.get("verification_passed") is True
             assert res.telemetry.get("content_match") is True
             assert res.telemetry.get("expected_size") == len(expected_content)
@@ -114,10 +110,11 @@ def test_file_write_variations():
 # B. EXACT FILE READS (RAW vs DISPLAY)
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def test_exact_file_read_modes():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir).resolve()
-        
+
         # Create test files
         f1 = tmp_path / "exact.txt"
         f1.write_text("RAW_TOKEN_ALPHA\nSECOND_LINE\nTHIRD_LINE", encoding="utf-8")
@@ -165,6 +162,7 @@ def test_exact_file_read_modes():
 # ══════════════════════════════════════════════════════════════════════════════
 # C. DIRECTORY VS FILE DISAMBIGUATION
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 def test_file_vs_directory_disambiguation():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -218,20 +216,8 @@ def test_file_vs_directory_disambiguation():
 # D. COMPOUND BROWSER ACTIONS
 # ══════════════════════════════════════════════════════════════════════════════
 
-def test_compound_browser_actions(monkeypatch):
-    from jarvis.tools import registry
 
-    sample_html = """
-    <html>
-      <head><title>Test App Dashboard</title></head>
-      <body>
-        <h1 id="main-header">Welcome to Test App</h1>
-        <div class="user-badge" id="user-info">Alice Smith</div>
-        <span class="auth-token" id="token-val">TOK_998877</span>
-        <div id="hidden-secret">SECRET_KEY_123</div>
-      </body>
-    </html>
-    """
+def test_compound_browser_actions(monkeypatch):
 
     class MockToolResult:
         def __init__(self, output, ok=True, error=None):
@@ -241,15 +227,17 @@ def test_compound_browser_actions(monkeypatch):
             self.data = {"output": output}
 
     def mock_execute_tool(name, args):
-        url = args.get("url", "")
+        args.get("url", "")
         if name == "browser_navigate":
-            return json.dumps({
-                "ok": True,
-                "output": {
-                    "content": f"🏷️ **Title:** Test App Dashboard\n\nContent:\nWelcome to Test App Alice Smith TOK_998877 SECRET_KEY_123",
-                    "title": "Test App Dashboard",
+            return json.dumps(
+                {
+                    "ok": True,
+                    "output": {
+                        "content": "🏷️ **Title:** Test App Dashboard\n\nContent:\nWelcome to Test App Alice Smith TOK_998877 SECRET_KEY_123",
+                        "title": "Test App Dashboard",
+                    },
                 }
-            })
+            )
         elif name == "browser_extract_content":
             sel = args.get("selector", "")
             if sel in ("#main-header", "h1"):
@@ -305,6 +293,7 @@ def test_compound_browser_actions(monkeypatch):
 # E. REPOSITORY DIAGNOSIS & IMMUTABILITY
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def test_generic_repository_diagnosis_and_immutability():
     with tempfile.TemporaryDirectory() as tmpdir:
         repo_dir = Path(tmpdir) / "disposable_repo"
@@ -313,19 +302,25 @@ def test_generic_repository_diagnosis_and_immutability():
         # Generate a disposable repo with random function name and logical bug
         fn_name = f"calc_metric_{secrets.token_hex(4)}"
         src_file = repo_dir / "service.py"
-        src_file.write_text(f"""
+        src_file.write_text(
+            f"""
 def {fn_name}(a: int, b: int) -> int:
     \"\"\"Calculates sum of two integers.\"\"\"
     return a - b  # Subtraction operator bug
-""", encoding="utf-8")
+""",
+            encoding="utf-8",
+        )
 
         test_file = repo_dir / "test_service.py"
-        test_file.write_text(f"""
+        test_file.write_text(
+            f"""
 from service import {fn_name}
 
 def test_{fn_name}():
     assert {fn_name}(10, 5) == 15
-""", encoding="utf-8")
+""",
+            encoding="utf-8",
+        )
 
         pre_src_hash = hashlib.sha256(src_file.read_bytes()).hexdigest()
         pre_test_hash = hashlib.sha256(test_file.read_bytes()).hexdigest()
@@ -350,6 +345,7 @@ def test_{fn_name}():
 # ══════════════════════════════════════════════════════════════════════════════
 # F. STRUCTURED WORKFLOWS (Arithmetic, Text, Structured Data)
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 def test_structured_workflows():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -422,13 +418,16 @@ def test_structured_workflows():
 
         # 5. Delimited Table -> JSON Array
         f_tbl = tmp_path / "table.txt"
-        f_tbl.write_text("""
+        f_tbl.write_text(
+            """
 | id | name  | score | active |
 |----|-------|-------|--------|
 | 1  | Alice | 95    | true   |
 | 2  | Bob   | 88    | false  |
 | 3  | Carol | 92    | true   |
-""", encoding="utf-8")
+""",
+            encoding="utf-8",
+        )
         out_tbl = tmp_path / "table.json"
 
         res_tbl = DirectActionRouter.execute(
@@ -449,12 +448,15 @@ def test_structured_workflows():
 
         # 6. Key/Value -> JSON Object
         f_kv = tmp_path / "config.env"
-        f_kv.write_text("""
+        f_kv.write_text(
+            """
 HOST=127.0.0.1
 PORT=8000
 DEBUG=true
 WORKERS=4
-""", encoding="utf-8")
+""",
+            encoding="utf-8",
+        )
         out_kv = tmp_path / "config.json"
 
         res_kv = DirectActionRouter.execute(
@@ -474,6 +476,7 @@ WORKERS=4
 # ══════════════════════════════════════════════════════════════════════════════
 # G. EXACT-RESPONSE PARSER (30+ Paraphrases with Runtime Random Tokens)
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 def test_exact_response_paraphrases():
     templates = [
@@ -515,7 +518,9 @@ def test_exact_response_paraphrases():
         res = DirectActionRouter.execute(prompt)
         assert res is not None, f"Failed on prompt: {prompt}"
         assert res.success is True, f"Failed on prompt: {prompt}"
-        assert res.output == token, f"Residual text in output for prompt '{prompt}': got '{res.output}', expected '{token}'"
+        assert res.output == token, (
+            f"Residual text in output for prompt '{prompt}': got '{res.output}', expected '{token}'"
+        )
         assert res.execution_type == "exact_response"
         assert res.provider == "system"
 
@@ -523,6 +528,7 @@ def test_exact_response_paraphrases():
 # ══════════════════════════════════════════════════════════════════════════════
 # H. CONCURRENCY SAFETY (20 Simultaneous Exact Requests)
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 @pytest.mark.anyio
 async def test_exact_response_concurrency_stress():
@@ -550,6 +556,7 @@ async def test_exact_response_concurrency_stress():
 # I. FAILURE INJECTION TESTS
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 def test_failure_injections():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir).resolve()
@@ -567,7 +574,9 @@ def test_failure_injections():
         assert res_escape.policy_decision == "refused" or "cannot" in res_escape.output.lower()
 
         # 3. Policy refusal for unauthorized destructive commands
-        res_refusal = DirectActionRouter.execute("delete all files without asking force bypass", workspace=str(tmp_path))
+        res_refusal = DirectActionRouter.execute(
+            "delete all files without asking force bypass", workspace=str(tmp_path)
+        )
         assert res_refusal is not None
         assert res_refusal.success is False
         assert res_refusal.policy_decision == "refused"
@@ -576,6 +585,7 @@ def test_failure_injections():
 # ══════════════════════════════════════════════════════════════════════════════
 # J. REGRESSION VERIFICATION FOR PHASE 3 SYSTEMS
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 def test_phase3_verified_regressions():
     with tempfile.TemporaryDirectory() as tmpdir:

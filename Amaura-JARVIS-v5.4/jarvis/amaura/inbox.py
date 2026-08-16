@@ -1,23 +1,22 @@
 """Durable inbound-message ingestion, classification and founder-reviewed replies."""
+
 from __future__ import annotations
 
 import base64
 import hashlib
 import hmac
 import html
-import json
 import os
 import re
-import uuid
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from email.utils import parseaddr
 from typing import Any
 from urllib.parse import quote, urlencode
 
 from jarvis.amaura.models import GovernanceError
-from jarvis.amaura.oauth import OAuthTokenProvider
 from jarvis.amaura.network import request_json
+from jarvis.amaura.oauth import OAuthTokenProvider
 from jarvis.amaura.pipeline import AcquisitionPipeline, LeadStage
 from jarvis.amaura.store import CompanyStore
 
@@ -85,6 +84,7 @@ class GmailInboxAdapter:
     def _call(self, url: str) -> tuple[int, dict[str, Any], dict[str, str]]:
         def attempt(token: str):
             return self.transport(url, method="GET", headers={"Authorization": f"Bearer {token}"}, timeout=30)
+
         return self.tokens.request_with_refresh(attempt)
 
     def list_messages(self, *, query: str = "is:unread", max_results: int = 25) -> list[InboundMessage]:
@@ -147,16 +147,23 @@ class GmailInboxAdapter:
                 received = datetime.fromtimestamp(int(internal_ms) / 1000, tz=UTC).isoformat()
             except (TypeError, ValueError, OSError):
                 received = datetime.now(UTC).isoformat()
-            messages.append(InboundMessage(
-                provider="gmail", external_id=external_id, thread_id=str(raw.get("threadId", "")),
-                sender=sender.strip().lower(), recipient=recipient.strip().lower(), subject=values.get("subject", "").strip(),
-                body=body[:100_000], received_at=received,
-                raw_metadata={
-                    "labelIds": raw.get("labelIds", []),
-                    "message_id_header": values.get("message-id", ""),
-                    "history_id": str(raw.get("historyId", "")),
-                },
-            ))
+            messages.append(
+                InboundMessage(
+                    provider="gmail",
+                    external_id=external_id,
+                    thread_id=str(raw.get("threadId", "")),
+                    sender=sender.strip().lower(),
+                    recipient=recipient.strip().lower(),
+                    subject=values.get("subject", "").strip(),
+                    body=body[:100_000],
+                    received_at=received,
+                    raw_metadata={
+                        "labelIds": raw.get("labelIds", []),
+                        "message_id_header": values.get("message-id", ""),
+                        "history_id": str(raw.get("historyId", "")),
+                    },
+                )
+            )
         return messages
 
     def mark_read(self, external_id: str) -> None:
@@ -183,34 +190,50 @@ class ReplyClassifier:
     _rules = [
         # Safety-critical negative intent must be evaluated before positive
         # keywords.  In particular, "not interested" contains "interested".
-        ("opt_out", (
-            r"^\s*stop[.!]?\s*$",
-            r"\b(?:please\s+)?stop(?:\s+(?:emailing|messaging|contacting|sending))?(?:\s+me)?\b",
-            r"\bunsubscribe\b",
-            r"\bopt[ -]?out\b",
-            r"\bremove me\b",
-            r"\btake me off\b",
-            r"\bdo not (?:contact|email|message|call) me\b",
-            r"\bdon'?t (?:contact|email|message|call) me\b",
-            r"\bno more (?:emails?|messages?|calls?|contact)\b",
-        ), 0.995),
-        ("not_interested", (
-            r"\bnot(?:\s+(?:currently|really|particularly|remotely|at all))?\s+interested\b",
-            r"\bno thanks\b",
-            r"\bno thank you\b",
-            r"\bnot a fit\b",
-            r"\bwe(?:'re| are) not looking\b",
-        ), 0.96),
+        (
+            "opt_out",
+            (
+                r"^\s*stop[.!]?\s*$",
+                r"\b(?:please\s+)?stop(?:\s+(?:emailing|messaging|contacting|sending))?(?:\s+me)?\b",
+                r"\bunsubscribe\b",
+                r"\bopt[ -]?out\b",
+                r"\bremove me\b",
+                r"\btake me off\b",
+                r"\bdo not (?:contact|email|message|call) me\b",
+                r"\bdon'?t (?:contact|email|message|call) me\b",
+                r"\bno more (?:emails?|messages?|calls?|contact)\b",
+            ),
+            0.995,
+        ),
+        (
+            "not_interested",
+            (
+                r"\bnot(?:\s+(?:currently|really|particularly|remotely|at all))?\s+interested\b",
+                r"\bno thanks\b",
+                r"\bno thank you\b",
+                r"\bnot a fit\b",
+                r"\bwe(?:'re| are) not looking\b",
+            ),
+            0.96,
+        ),
         ("wrong_contact", (r"\bwrong (person|contact)\b", r"\bno longer work\b"), 0.94),
         ("not_now", (r"\bnot now\b", r"\blater\b", r"\bnext (month|quarter|year)\b"), 0.86),
-        ("interested", (
-            r"\binterested\b",
-            r"\blet'?s talk\b",
-            r"\bschedule (a )?(call|meeting)\b",
-            r"\bsend (me )?(details|proposal)\b",
-        ), 0.90),
+        (
+            "interested",
+            (
+                r"\binterested\b",
+                r"\blet'?s talk\b",
+                r"\bschedule (a )?(call|meeting)\b",
+                r"\bsend (me )?(details|proposal)\b",
+            ),
+            0.90,
+        ),
         ("price_objection", (r"\btoo expensive\b", r"\bbudget\b", r"\bprice\b", r"\bcost\b"), 0.80),
-        ("needs_information", (r"\bhow does\b", r"\bcan you explain\b", r"\bmore (information|details)\b", r"\bwhat do you\b"), 0.78),
+        (
+            "needs_information",
+            (r"\bhow does\b", r"\bcan you explain\b", r"\bmore (information|details)\b", r"\bwhat do you\b"),
+            0.78,
+        ),
     ]
 
     def classify(self, text: str) -> dict[str, Any]:
@@ -218,12 +241,19 @@ class ReplyClassifier:
         for label, patterns, confidence in self._rules:
             matched = [pattern for pattern in patterns if re.search(pattern, clean)]
             if matched:
-                return {"label": label, "confidence": confidence, "matched_rules": matched, "requires_founder_review": True}
+                return {
+                    "label": label,
+                    "confidence": confidence,
+                    "matched_rules": matched,
+                    "requires_founder_review": True,
+                }
         return {"label": "unclear", "confidence": 0.35, "matched_rules": [], "requires_founder_review": True}
 
 
 class InboxService:
-    def __init__(self, store: CompanyStore, founder_id: str = "founder", classifier: ReplyClassifier | None = None) -> None:
+    def __init__(
+        self, store: CompanyStore, founder_id: str = "founder", classifier: ReplyClassifier | None = None
+    ) -> None:
         self.store = store
         self.founder_id = founder_id
         self.pipeline = AcquisitionPipeline(store, founder_id)
@@ -233,10 +263,19 @@ class InboxService:
         lead = self.store.get_lead_by_public_contact(message.sender)
         record, inserted = self.store.upsert_inbound_message(message.to_record(lead_id=lead["id"] if lead else ""))
         if inserted:
-            self.store.publish_event("inbox.message.received", record["id"],
-                                     {"provider": record["provider"], "lead_id": record.get("lead_id") or ""})
-            self.store.audit("jarvis", "ingest_inbound_message", "inbound_message", record["id"], "stored",
-                             {"provider": record["provider"], "external_id": record["external_id"]})
+            self.store.publish_event(
+                "inbox.message.received",
+                record["id"],
+                {"provider": record["provider"], "lead_id": record.get("lead_id") or ""},
+            )
+            self.store.audit(
+                "jarvis",
+                "ingest_inbound_message",
+                "inbound_message",
+                record["id"],
+                "stored",
+                {"provider": record["provider"], "external_id": record["external_id"]},
+            )
         return record, inserted
 
     def sync_gmail(
@@ -329,18 +368,32 @@ class InboxService:
         elif lead:
             try:
                 if LeadStage(lead["stage"]) in {LeadStage.SENT, LeadStage.FOLLOWUP_DUE}:
-                    self.pipeline.transition(lead["id"], LeadStage.REPLIED, actor="reply_classifier", reason="Inbound reply received")
+                    self.pipeline.transition(
+                        lead["id"], LeadStage.REPLIED, actor="reply_classifier", reason="Inbound reply received"
+                    )
             except (GovernanceError, ValueError):
                 pass
             if stage_reply and classification["label"] not in {"not_interested", "wrong_contact", "not_now"}:
                 subject, body = self._reply_draft(classification["label"], record["sender"], record["subject"])
                 channel = "email" if record["provider"] == "gmail" else record["provider"]
-                message = self.pipeline.stage_message(lead["id"], recipient=record["sender"], channel=channel,
-                                                      message_type="reply", subject=subject, body=body,
-                                                      actor="reply_writer")
+                message = self.pipeline.stage_message(
+                    lead["id"],
+                    recipient=record["sender"],
+                    channel=channel,
+                    message_type="reply",
+                    subject=subject,
+                    body=body,
+                    actor="reply_writer",
+                )
                 reply_message_id = message["id"]
-        updated = self.store.update_inbound_message(inbound_id, status=status, classification={**classification, "reply_message_id": reply_message_id})
-        self.store.publish_event("inbox.message.processed", inbound_id, {"classification": classification["label"], "reply_message_id": reply_message_id})
+        updated = self.store.update_inbound_message(
+            inbound_id, status=status, classification={**classification, "reply_message_id": reply_message_id}
+        )
+        self.store.publish_event(
+            "inbox.message.processed",
+            inbound_id,
+            {"classification": classification["label"], "reply_message_id": reply_message_id},
+        )
         return updated
 
 
@@ -365,7 +418,11 @@ def parse_meta_webhook(payload: dict[str, Any]) -> list[InboundMessage]:
             value = change.get("value") if isinstance(change.get("value"), dict) else {}
             metadata = value.get("metadata") if isinstance(value.get("metadata"), dict) else {}
             contacts = value.get("contacts") if isinstance(value.get("contacts"), list) else []
-            names = {str(c.get("wa_id", "")): str((c.get("profile") or {}).get("name", "")) for c in contacts if isinstance(c, dict)}
+            names = {
+                str(c.get("wa_id", "")): str((c.get("profile") or {}).get("name", ""))
+                for c in contacts
+                if isinstance(c, dict)
+            }
             for msg in value.get("messages", []) if isinstance(value.get("messages"), list) else []:
                 if not isinstance(msg, dict):
                     continue
@@ -374,11 +431,24 @@ def parse_meta_webhook(payload: dict[str, Any]) -> list[InboundMessage]:
                 if not body:
                     continue
                 sender = str(msg.get("from", "")).strip()
-                received = datetime.fromtimestamp(int(msg.get("timestamp", 0)), tz=UTC).isoformat() if str(msg.get("timestamp", "")).isdigit() else datetime.now(UTC).isoformat()
-                results.append(InboundMessage(provider="whatsapp", external_id=str(msg.get("id", "")),
-                                               thread_id=sender, sender=sender, recipient=str(metadata.get("display_phone_number", "")),
-                                               subject="", body=body, received_at=received,
-                                               raw_metadata={"contact_name": names.get(sender, ""), "type": msg.get("type", "")}))
+                received = (
+                    datetime.fromtimestamp(int(msg.get("timestamp", 0)), tz=UTC).isoformat()
+                    if str(msg.get("timestamp", "")).isdigit()
+                    else datetime.now(UTC).isoformat()
+                )
+                results.append(
+                    InboundMessage(
+                        provider="whatsapp",
+                        external_id=str(msg.get("id", "")),
+                        thread_id=sender,
+                        sender=sender,
+                        recipient=str(metadata.get("display_phone_number", "")),
+                        subject="",
+                        body=body,
+                        received_at=received,
+                        raw_metadata={"contact_name": names.get(sender, ""), "type": msg.get("type", "")},
+                    )
+                )
         for messaging in entry.get("messaging", []) if isinstance(entry.get("messaging"), list) else []:
             if not isinstance(messaging, dict):
                 continue
@@ -395,10 +465,27 @@ def parse_meta_webhook(payload: dict[str, Any]) -> list[InboundMessage]:
                 received = datetime.fromtimestamp(int(timestamp) / 1000, tz=UTC).isoformat()
             except (TypeError, ValueError, OSError):
                 received = datetime.now(UTC).isoformat()
-            results.append(InboundMessage(provider=provider, external_id=external_id, thread_id=sender,
-                                           sender=sender, recipient=recipient, subject="", body=text,
-                                           received_at=received, raw_metadata={"object": payload.get("object", "")}))
+            results.append(
+                InboundMessage(
+                    provider=provider,
+                    external_id=external_id,
+                    thread_id=sender,
+                    sender=sender,
+                    recipient=recipient,
+                    subject="",
+                    body=text,
+                    received_at=received,
+                    raw_metadata={"object": payload.get("object", "")},
+                )
+            )
     return results
 
 
-__all__ = ["GmailInboxAdapter", "InboundMessage", "InboxService", "ReplyClassifier", "parse_meta_webhook", "verify_meta_signature"]
+__all__ = [
+    "GmailInboxAdapter",
+    "InboundMessage",
+    "InboxService",
+    "ReplyClassifier",
+    "parse_meta_webhook",
+    "verify_meta_signature",
+]

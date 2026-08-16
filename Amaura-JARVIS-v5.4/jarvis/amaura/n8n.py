@@ -41,7 +41,9 @@ class N8nClient:
             raise GovernanceError("Local n8n requires AMAURA_ALLOW_LOCAL_N8N=1")
         body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         request = urllib.request.Request(
-            url, data=body, method="POST",
+            url,
+            data=body,
+            method="POST",
             headers={
                 "Accept": "application/json",
                 "Content-Type": "application/json",
@@ -93,20 +95,36 @@ class N8nClient:
         return response
 
     def stage_outreach(self, lead_id: str, channel: str, message_type: str, subject: str, body: str) -> dict[str, Any]:
-        return self.trigger_webhook(os.environ.get("N8N_WEBHOOK_OUTREACH", "amaura-outreach"), {
-            "lead_id": lead_id, "channel": channel, "message_type": message_type,
-            "subject": subject, "body": body,
-        })
+        return self.trigger_webhook(
+            os.environ.get("N8N_WEBHOOK_OUTREACH", "amaura-outreach"),
+            {
+                "lead_id": lead_id,
+                "channel": channel,
+                "message_type": message_type,
+                "subject": subject,
+                "body": body,
+            },
+        )
 
     def send_message(self, to: str, message: str, *, idempotency_key: str = "") -> dict[str, Any]:
-        return self.trigger_webhook(os.environ.get("N8N_WEBHOOK_MESSAGE", "amaura-message"), {
-            "to": to, "message": message, "idempotency_key": idempotency_key,
-        })
+        return self.trigger_webhook(
+            os.environ.get("N8N_WEBHOOK_MESSAGE", "amaura-message"),
+            {
+                "to": to,
+                "message": message,
+                "idempotency_key": idempotency_key,
+            },
+        )
 
     def sync_crm(self, lead_id: str, data: dict[str, Any], *, idempotency_key: str) -> dict[str, Any]:
-        return self.trigger_webhook(os.environ.get("N8N_WEBHOOK_CRM", "amaura-crm-sync"), {
-            "lead_id": lead_id, "data": data, "idempotency_key": idempotency_key,
-        })
+        return self.trigger_webhook(
+            os.environ.get("N8N_WEBHOOK_CRM", "amaura-crm-sync"),
+            {
+                "lead_id": lead_id,
+                "data": data,
+                "idempotency_key": idempotency_key,
+            },
+        )
 
 
 def get_n8n_client() -> N8nClient:

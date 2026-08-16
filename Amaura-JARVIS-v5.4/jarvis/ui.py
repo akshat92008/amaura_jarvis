@@ -3,14 +3,13 @@ Jarvis UI — Iron Man-styled terminal interface using Rich.
 Cyan/gold color scheme with animated boot sequence and HUD-style formatting.
 """
 
-import time
 import platform
 from datetime import datetime
 
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich import box
 
 # ── Color Palette (Iron Man HUD) ────────────────────────────────────────────
 CYAN = "#00d4ff"
@@ -55,6 +54,7 @@ JARVIS_BANNER = """[bold #ffd700]
 
 
 # ── Boot Sequence ────────────────────────────────────────────────────────────
+
 
 def print_boot_sequence(model_name: str = "", working_dir: str = ""):
     """Display the Iron Man-style boot sequence."""
@@ -124,6 +124,7 @@ def print_boot_sequence(model_name: str = "", working_dir: str = ""):
 
 # ── Prompt ───────────────────────────────────────────────────────────────────
 
+
 def get_prompt_text(voice_mode: bool = False) -> str:
     """Get the prompt prefix text."""
     if voice_mode:
@@ -132,6 +133,7 @@ def get_prompt_text(voice_mode: bool = False) -> str:
 
 
 # ── Output Formatting ────────────────────────────────────────────────────────
+
 
 def print_user_input(text: str):
     """Display formatted user input."""
@@ -229,7 +231,7 @@ def print_voice_listening():
 
 def print_voice_transcription(text: str):
     """Show the transcribed voice input."""
-    console.print(f"  [{GREEN}]📝[/] [{WHITE}]Heard: \"{text}\"[/]")
+    console.print(f'  [{GREEN}]📝[/] [{WHITE}]Heard: "{text}"[/]')
 
 
 def print_jarvis_speaking(text: str):
@@ -239,17 +241,18 @@ def print_jarvis_speaking(text: str):
 
 # ── Help & Status ────────────────────────────────────────────────────────────
 
+
 def print_help():
     """Display the help panel."""
     console.print(f"\n  [{GOLD}]⚡ J.A.R.V.I.S. Natural Language Commands[/]")
     console.print(f"    [{WHITE}]No slash commands needed! Just speak or type in plain English:[/'\n]")
-    console.print(f"    [{CYAN}]• \"Build a FastAPI app with JWT authentication\"[/]")
-    console.print(f"    [{CYAN}]• \"Open Safari and set volume to 50\"[/]")
-    console.print(f"    [{CYAN}]• \"Take a screenshot\"[/]")
-    console.print(f"    [{CYAN}]• \"Fix the bug in server.py and run tests\"[/]")
-    console.print(f"    [{CYAN}]• \"Show system status\"[/]")
-    console.print(f"    [{CYAN}]• \"Undo last edit\" or \"Clear conversation\"[/]")
-    console.print(f"    [{CYAN}]• \"What tools do you have?\"[/]")
+    console.print(f'    [{CYAN}]• "Build a FastAPI app with JWT authentication"[/]')
+    console.print(f'    [{CYAN}]• "Open Safari and set volume to 50"[/]')
+    console.print(f'    [{CYAN}]• "Take a screenshot"[/]')
+    console.print(f'    [{CYAN}]• "Fix the bug in server.py and run tests"[/]')
+    console.print(f'    [{CYAN}]• "Show system status"[/]')
+    console.print(f'    [{CYAN}]• "Undo last edit" or "Clear conversation"[/]')
+    console.print(f'    [{CYAN}]• "What tools do you have?"[/]')
     console.print()
 
     help_table = Table(

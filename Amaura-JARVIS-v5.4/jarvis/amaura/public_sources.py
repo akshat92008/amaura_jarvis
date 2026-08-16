@@ -10,8 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-import socket
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from html import unescape
@@ -55,8 +54,18 @@ _SOCIAL_HOSTS = {
 }
 _CONTACT_HINTS = ("contact", "about", "team", "services", "book", "enquiry", "inquiry")
 _GENERIC_EMAIL_PREFIXES = {
-    "info", "hello", "contact", "sales", "support", "office", "admin", "team",
-    "business", "enquiries", "enquiry", "help",
+    "info",
+    "hello",
+    "contact",
+    "sales",
+    "support",
+    "office",
+    "admin",
+    "team",
+    "business",
+    "enquiries",
+    "enquiry",
+    "help",
 }
 
 
@@ -373,7 +382,7 @@ class WebsiteEnricher:
                     "claim_type": "mobile_gap",
                     "claim": "The homepage does not declare a viewport meta tag.",
                     "source_url": canonical,
-                    "source_excerpt": "No <meta name=\"viewport\"> detected in the retrieved HTML.",
+                    "source_excerpt": 'No <meta name="viewport"> detected in the retrieved HTML.',
                     "confidence": 0.9,
                 }
             )
@@ -478,44 +487,67 @@ class AcquisitionDiscoveryRunner:
         self.pipeline = pipeline
         self.service = service or FreeLeadDiscoveryService()
 
-    def run(self, *, campaign_id: str, query: str, max_results: int = 10, country: str = "", industry: str = "") -> list[dict[str, Any]]:
+    def run(
+        self, *, campaign_id: str, query: str, max_results: int = 10, country: str = "", industry: str = ""
+    ) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = []
         for business in self.service.discover(query, max_results=max_results):
             primary_contact = business.emails[0] if business.emails else (business.phones[0] if business.phones else "")
             lead = self.pipeline.discover_lead(
-                campaign_id=campaign_id, company_name=business.company_name, domain=business.domain,
-                source_url=business.source_url, country=country, industry=industry,
-                metadata={"website": business.website, "social_urls": business.social_urls,
-                          "emails": list(business.emails), "phones": list(business.phones),
-                          "profile": business.profile},
+                campaign_id=campaign_id,
+                company_name=business.company_name,
+                domain=business.domain,
+                source_url=business.source_url,
+                country=country,
+                industry=industry,
+                metadata={
+                    "website": business.website,
+                    "social_urls": business.social_urls,
+                    "emails": list(business.emails),
+                    "phones": list(business.phones),
+                    "profile": business.profile,
+                },
             )
             if lead.get("duplicate"):
                 results.append({"lead": lead, "duplicate": True})
                 continue
             if primary_contact:
                 self.pipeline.store.update_lead(
-                    lead["id"], public_contact=primary_contact, contact_source_url=business.website,
+                    lead["id"],
+                    public_contact=primary_contact,
+                    contact_source_url=business.website,
                     linkedin_url=business.social_urls.get("linkedin", ""),
                 )
             try:
-                self.pipeline.transition(lead["id"], "researching", actor="lead_scout", reason="Public website enrichment started")
+                self.pipeline.transition(
+                    lead["id"], "researching", actor="lead_scout", reason="Public website enrichment started"
+                )
             except Exception:
                 pass
             accepted = 0
             for observation in business.observations[:12]:
                 try:
                     self.pipeline.add_evidence(
-                        lead["id"], claim_type=str(observation.get("claim_type", "public_fact")),
+                        lead["id"],
+                        claim_type=str(observation.get("claim_type", "public_fact")),
                         claim=str(observation.get("claim", "Public business fact")),
                         source_url=str(observation.get("source_url") or business.website),
-                        source_excerpt=str(observation.get("source_excerpt") or business.source_snippet or business.source_title),
-                        confidence=float(observation.get("confidence", 0.7)), actor="public_source_enricher",
+                        source_excerpt=str(
+                            observation.get("source_excerpt") or business.source_snippet or business.source_title
+                        ),
+                        confidence=float(observation.get("confidence", 0.7)),
+                        actor="public_source_enricher",
                     )
                     accepted += 1
                 except Exception:
                     continue
             try:
-                self.pipeline.transition(lead["id"], "researched", actor="public_source_enricher", reason="Bounded public-source enrichment completed")
+                self.pipeline.transition(
+                    lead["id"],
+                    "researched",
+                    actor="public_source_enricher",
+                    reason="Bounded public-source enrichment completed",
+                )
             except Exception:
                 pass
             components = {
@@ -525,7 +557,11 @@ class AcquisitionDiscoveryRunner:
                 "contactability": 15 if primary_contact else 4,
                 "portfolio_match": 12,
             }
-            scored = self.pipeline.score_lead(lead["id"], components, actor="free_first_qualification") if accepted else self.pipeline.store.get_lead(lead["id"])
+            scored = (
+                self.pipeline.score_lead(lead["id"], components, actor="free_first_qualification")
+                if accepted
+                else self.pipeline.store.get_lead(lead["id"])
+            )
             results.append({"lead": scored, "business": business.to_dict(), "evidence_accepted": accepted})
         return results
 

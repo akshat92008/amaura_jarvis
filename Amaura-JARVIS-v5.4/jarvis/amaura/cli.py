@@ -14,16 +14,13 @@ from typing import Any
 
 from jarvis.amaura.runtime import load_amaura_env
 
-
 PACKAGE_ROOT = Path(__file__).resolve().parent
 SOURCE_ROOT = PACKAGE_ROOT.parents[1]
 SOURCE_CHECKOUT = (SOURCE_ROOT / "pyproject.toml").is_file() and (SOURCE_ROOT / "jarvis").is_dir()
 REPOSITORY_ROOT = SOURCE_ROOT if SOURCE_CHECKOUT else Path.cwd().resolve()
 DEFAULT_ENV_FILE = REPOSITORY_ROOT / ".env.amaura"
 ENV_TEMPLATE = (
-    SOURCE_ROOT / ".env.amaura.example"
-    if SOURCE_CHECKOUT
-    else PACKAGE_ROOT / "resources" / "env.amaura.example"
+    SOURCE_ROOT / ".env.amaura.example" if SOURCE_CHECKOUT else PACKAGE_ROOT / "resources" / "env.amaura.example"
 )
 SANDBOX_DOCKERFILE = (
     SOURCE_ROOT / "docker" / "amaura-sandbox.Dockerfile"
@@ -66,7 +63,9 @@ def _render_env_template() -> str:
         "JARVIS_DATA_DIR": str(REPOSITORY_ROOT / ".jarvis-data"),
         "AMAURA_EVIDENCE_DIR": str(REPOSITORY_ROOT / ".amaura-data" / "evidence"),
         "AMAURA_BACKUP_DIR": str(REPOSITORY_ROOT.parent / f"{REPOSITORY_ROOT.name}-backups"),
-        "AMAURA_AUDIT_CHECKPOINT_PATH": str(REPOSITORY_ROOT.parent / f"{REPOSITORY_ROOT.name}-trust" / "audit-head.json"),
+        "AMAURA_AUDIT_CHECKPOINT_PATH": str(
+            REPOSITORY_ROOT.parent / f"{REPOSITORY_ROOT.name}-trust" / "audit-head.json"
+        ),
     }
     lines: list[str] = []
     generated_authorities: set[str] = set()
@@ -97,8 +96,7 @@ def _render_env_template() -> str:
     missing_authorities = sorted(required_authorities - generated_authorities)
     if missing_authorities:
         raise RuntimeError(
-            "Failed to generate every independent Amaura authority secret: "
-            + ", ".join(missing_authorities)
+            "Failed to generate every independent Amaura authority secret: " + ", ".join(missing_authorities)
         )
     return "\n".join(lines) + "\n"
 
@@ -159,7 +157,9 @@ def _build_sandbox() -> dict[str, Any]:
         )
         if inspected.returncode == 0:
             image_digest = inspected.stdout.strip().lower()
-    ok = completed.returncode == 0 and smoke is not None and smoke.returncode == 0 and image_digest.startswith("sha256:")
+    ok = (
+        completed.returncode == 0 and smoke is not None and smoke.returncode == 0 and image_digest.startswith("sha256:")
+    )
     return {
         "ok": ok,
         "image": image,
@@ -171,7 +171,6 @@ def _build_sandbox() -> dict[str, Any]:
         "smoke_stdout": "" if smoke is None else smoke.stdout[-4000:],
         "smoke_stderr": "" if smoke is None else smoke.stderr[-4000:],
     }
-
 
 
 def _upsert_env_value(path: Path, key: str, value: str) -> None:
@@ -195,6 +194,7 @@ def _upsert_env_value(path: Path, key: str, value: str) -> None:
     os.replace(temporary, path)
     if os.name == "posix":
         path.chmod(0o600)
+
 
 def command_init(args: argparse.Namespace) -> int:
     env_path = Path(args.env_file).expanduser().resolve()
@@ -424,34 +424,46 @@ def command_mission(args: argparse.Namespace) -> int:
         if args.mission_action == "list":
             portfolio = mission.portfolio()
             if args.status:
-                portfolio["objectives"] = [
-                    item for item in portfolio["objectives"] if item["status"] == args.status
-                ]
+                portfolio["objectives"] = [item for item in portfolio["objectives"] if item["status"] == args.status]
             _emit(portfolio)
         elif args.mission_action == "create":
             _emit(
                 mission.create_objective(
-                    title=args.title, objective=args.objective, success_metric=args.success_metric,
-                    workflow_key=args.workflow, cadence=args.cadence, inputs=json.loads(args.inputs_json),
-                    priority=args.priority, target_value=args.target_value, current_value=args.current_value,
-                    unit=args.unit, max_active_programmes=args.max_active_programmes,
-                    budget_cents=args.budget_cents, deadline=args.deadline or None,
+                    title=args.title,
+                    objective=args.objective,
+                    success_metric=args.success_metric,
+                    workflow_key=args.workflow,
+                    cadence=args.cadence,
+                    inputs=json.loads(args.inputs_json),
+                    priority=args.priority,
+                    target_value=args.target_value,
+                    current_value=args.current_value,
+                    unit=args.unit,
+                    max_active_programmes=args.max_active_programmes,
+                    budget_cents=args.budget_cents,
+                    deadline=args.deadline or None,
                 )
             )
         elif args.mission_action == "progress":
             _emit(
                 mission.record_progress(
-                    args.objective_id, value=args.value, delta=args.delta, note=args.note,
-                    evidence_refs=json.loads(args.evidence_json), actor=control.founder_id,
+                    args.objective_id,
+                    value=args.value,
+                    delta=args.delta,
+                    note=args.note,
+                    evidence_refs=json.loads(args.evidence_json),
+                    actor=control.founder_id,
                 )
             )
         elif args.mission_action == "set-status":
             _emit(mission.set_status(args.objective_id, args.status, reason=args.reason))
         elif args.mission_action == "bootstrap-distribution":
-            _emit({
-                "created": mission.bootstrap_distribution_first(repository_path=args.repository or None),
-                "portfolio": mission.portfolio(),
-            })
+            _emit(
+                {
+                    "created": mission.bootstrap_distribution_first(repository_path=args.repository or None),
+                    "portfolio": mission.portfolio(),
+                }
+            )
         elif args.mission_action == "autopilot":
             _emit(mission.set_autopilot(args.autopilot_action == "enable", reason=args.reason))
         else:
@@ -510,15 +522,9 @@ def command_company(args: argparse.Namespace) -> int:
                 )
             )
         elif args.company_action == "autopilot":
-            _emit(
-                MissionControl(control).set_autopilot(
-                    args.autopilot_state == "enable", reason=args.reason
-                )
-            )
+            _emit(MissionControl(control).set_autopilot(args.autopilot_state == "enable", reason=args.reason))
         elif args.company_action == "run-once":
-            runtime = AutonomousCompanyRuntime(
-                control, automatic_reviews=not args.no_auto_review
-            )
+            runtime = AutonomousCompanyRuntime(control, automatic_reviews=not args.no_auto_review)
             _emit(
                 runtime.tick(
                     max_work_units=args.max_work_units,
@@ -559,7 +565,13 @@ def command_ventures(args: argparse.Namespace) -> int:
                 )
             )
         elif args.ventures_action == "opportunities":
-            _emit({"opportunities": control.store.list_venture_opportunities(status=args.status or None, limit=args.limit)})
+            _emit(
+                {
+                    "opportunities": control.store.list_venture_opportunities(
+                        status=args.status or None, limit=args.limit
+                    )
+                }
+            )
         elif args.ventures_action == "start":
             _emit(
                 studio.start_validation(
@@ -593,34 +605,68 @@ def command_ventures(args: argparse.Namespace) -> int:
             _emit(studio.set_stage(args.experiment_id, stage=args.stage, reason=args.reason))
         elif args.ventures_action == "cashflow-status":
             from jarvis.amaura.ventures_cashflow import CashflowEngine
+
             _emit(CashflowEngine(control).dashboard())
         elif args.ventures_action == "cashflow-tick":
             from jarvis.amaura.ventures_cashflow import CashflowEngine
+
             _emit(CashflowEngine(control).tick(actor=control.founder_id))
         elif args.ventures_action == "cashflow-stream-add":
             from jarvis.amaura.ventures_cashflow import CashflowEngine
-            _emit(CashflowEngine(control).create_stream(
-                opportunity_id=args.opportunity_id, name=args.name, lane=args.lane, platform=args.platform,
-                offer=args.offer, target_user=args.target_user, distribution_channel=args.distribution_channel,
-                price_cents=args.price_cents, unit_cost_cents=args.unit_cost_cents, currency=args.currency,
-                founder_minutes_per_week=args.founder_minutes_per_week, automation_level=args.automation_level,
-                experiment_id=args.experiment_id, actor=control.founder_id,
-            ))
+
+            _emit(
+                CashflowEngine(control).create_stream(
+                    opportunity_id=args.opportunity_id,
+                    name=args.name,
+                    lane=args.lane,
+                    platform=args.platform,
+                    offer=args.offer,
+                    target_user=args.target_user,
+                    distribution_channel=args.distribution_channel,
+                    price_cents=args.price_cents,
+                    unit_cost_cents=args.unit_cost_cents,
+                    currency=args.currency,
+                    founder_minutes_per_week=args.founder_minutes_per_week,
+                    automation_level=args.automation_level,
+                    experiment_id=args.experiment_id,
+                    actor=control.founder_id,
+                )
+            )
         elif args.ventures_action == "cashflow-finance":
             from jarvis.amaura.ventures_cashflow import CashflowEngine
-            _emit(CashflowEngine(control).record_financial_event(
-                args.stream_id, event_type=args.event_type, amount_cents=args.amount_cents, source=args.source,
-                evidence=json.loads(args.evidence_json), currency=args.currency, occurred_at=args.occurred_at or None,
-                actor=control.founder_id,
-            ))
+
+            _emit(
+                CashflowEngine(control).record_financial_event(
+                    args.stream_id,
+                    event_type=args.event_type,
+                    amount_cents=args.amount_cents,
+                    source=args.source,
+                    evidence=json.loads(args.evidence_json),
+                    currency=args.currency,
+                    occurred_at=args.occurred_at or None,
+                    actor=control.founder_id,
+                )
+            )
         elif args.ventures_action == "cashflow-stream-status":
             from jarvis.amaura.ventures_cashflow import CashflowEngine
-            _emit(CashflowEngine(control).set_stream_status(args.stream_id, status=args.status, reason=args.reason, actor=control.founder_id))
+
+            _emit(
+                CashflowEngine(control).set_stream_status(
+                    args.stream_id, status=args.status, reason=args.reason, actor=control.founder_id
+                )
+            )
         elif args.ventures_action == "cashflow-action":
             from jarvis.amaura.ventures_cashflow import CashflowEngine
-            _emit(CashflowEngine(control).set_action_status(
-                args.action_id, status=args.status, reason=args.reason, result=json.loads(args.result_json), actor=control.founder_id
-            ))
+
+            _emit(
+                CashflowEngine(control).set_action_status(
+                    args.action_id,
+                    status=args.status,
+                    reason=args.reason,
+                    result=json.loads(args.result_json),
+                    actor=control.founder_id,
+                )
+            )
         else:
             raise RuntimeError(f"Unsupported ventures action: {args.ventures_action}")
     finally:
@@ -670,51 +716,59 @@ def command_distribution(args: argparse.Namespace) -> int:
     try:
         distribution = control.distribution
         if args.distribution_action == "list":
-            _emit({
-                "publications": control.store.list_distribution_publications(
-                    status=args.status or None,
-                    campaign_id=args.campaign_id or None,
-                    limit=args.limit,
-                ),
-                "dashboard": distribution.dashboard(),
-            })
+            _emit(
+                {
+                    "publications": control.store.list_distribution_publications(
+                        status=args.status or None,
+                        campaign_id=args.campaign_id or None,
+                        limit=args.limit,
+                    ),
+                    "dashboard": distribution.dashboard(),
+                }
+            )
         elif args.distribution_action == "stage":
-            _emit(distribution.stage_publication(
-                campaign_id=args.campaign_id,
-                platform=args.platform,
-                title=args.title,
-                body=args.body,
-                asset_ids=json.loads(args.asset_ids_json),
-                visibility=args.visibility,
-                scheduled_at=args.scheduled_at or None,
-                account_ref=args.account_ref,
-                metadata=json.loads(args.metadata_json),
-                actor="jarvis",
-            ))
+            _emit(
+                distribution.stage_publication(
+                    campaign_id=args.campaign_id,
+                    platform=args.platform,
+                    title=args.title,
+                    body=args.body,
+                    asset_ids=json.loads(args.asset_ids_json),
+                    visibility=args.visibility,
+                    scheduled_at=args.scheduled_at or None,
+                    account_ref=args.account_ref,
+                    metadata=json.loads(args.metadata_json),
+                    actor="jarvis",
+                )
+            )
         elif args.distribution_action == "decide":
-            _emit(control.decide_approval(
-                args.approval_id,
-                actor=control.founder_id,
-                decision=args.decision,
-                reason=args.reason,
-            ))
+            _emit(
+                control.decide_approval(
+                    args.approval_id,
+                    actor=control.founder_id,
+                    decision=args.decision,
+                    reason=args.reason,
+                )
+            )
         elif args.distribution_action == "dispatch":
             _emit({"publication": distribution.dispatch(args.publication_id)})
         elif args.distribution_action == "metrics":
-            _emit(distribution.record_metrics(
-                args.publication_id,
-                window=args.window,
-                metrics=json.loads(args.metrics_json),
-                captured_at=args.captured_at or None,
-            ))
+            _emit(
+                distribution.record_metrics(
+                    args.publication_id,
+                    window=args.window,
+                    metrics=json.loads(args.metrics_json),
+                    captured_at=args.captured_at or None,
+                )
+            )
         elif args.distribution_action == "lessons":
             publication = control.store.get_distribution_publication(args.publication_id)
-            _emit({
-                "publication": publication,
-                "lessons": control.store.list_content_lessons(
-                    publication["campaign_id"], limit=args.limit
-                ),
-            })
+            _emit(
+                {
+                    "publication": publication,
+                    "lessons": control.store.list_content_lessons(publication["campaign_id"], limit=args.limit),
+                }
+            )
         else:
             raise RuntimeError(f"Unknown distribution action: {args.distribution_action}")
     finally:
@@ -759,7 +813,9 @@ def build_parser() -> argparse.ArgumentParser:
     worker.add_argument("--no-auto-review", action="store_true")
     worker.set_defaults(handler=command_worker)
 
-    autopilot = subparsers.add_parser("autopilot", help="Run the safe autonomous company cadence and governed supervisor")
+    autopilot = subparsers.add_parser(
+        "autopilot", help="Run the safe autonomous company cadence and governed supervisor"
+    )
     autopilot.add_argument("--once", action="store_true")
     autopilot.add_argument("--poll-seconds", type=float, default=30.0)
     autopilot.add_argument("--no-auto-review", action="store_true")
@@ -768,9 +824,7 @@ def build_parser() -> argparse.ArgumentParser:
     autopilot.add_argument("--max-signals", type=int, default=3)
     autopilot.set_defaults(handler=command_autopilot)
 
-    company = subparsers.add_parser(
-        "company", help="Operate the full Amaura company autonomy layer"
-    )
+    company = subparsers.add_parser("company", help="Operate the full Amaura company autonomy layer")
     company_sub = company.add_subparsers(dest="company_action", required=True)
 
     company_status = company_sub.add_parser("status", help="Show company autonomy status")
@@ -796,9 +850,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     company_signal.add_argument("--type", dest="signal_type", required=True)
     company_signal.add_argument("--source", required=True)
-    company_signal.add_argument(
-        "--severity", choices=("low", "medium", "high", "critical"), default="medium"
-    )
+    company_signal.add_argument("--severity", choices=("low", "medium", "high", "critical"), default="medium")
     company_signal.add_argument("--payload-json", default="{}")
     company_signal.add_argument("--idempotency-key", default="")
     company_signal.set_defaults(handler=command_company)
@@ -809,31 +861,27 @@ def build_parser() -> argparse.ArgumentParser:
     company_signals.add_argument("--limit", type=int, default=100)
     company_signals.set_defaults(handler=command_company)
 
-    company_department = company_sub.add_parser(
-        "department", help="Pause or resume a department autonomy circuit"
-    )
+    company_department = company_sub.add_parser("department", help="Pause or resume a department autonomy circuit")
     company_department.add_argument("department")
     company_department.add_argument("department_state", choices=("enable", "pause"))
     company_department.add_argument("--reason", required=True)
     company_department.set_defaults(handler=command_company)
 
-    company_autopilot = company_sub.add_parser(
-        "autopilot", help="Founder kill switch for the complete company runtime"
-    )
+    company_autopilot = company_sub.add_parser("autopilot", help="Founder kill switch for the complete company runtime")
     company_autopilot.add_argument("autopilot_state", choices=("enable", "pause"))
     company_autopilot.add_argument("--reason", required=True)
     company_autopilot.set_defaults(handler=command_company)
 
-    company_run = company_sub.add_parser(
-        "run-once", help="Run one complete company autonomy cycle"
-    )
+    company_run = company_sub.add_parser("run-once", help="Run one complete company autonomy cycle")
     company_run.add_argument("--max-work-units", type=int, default=4)
     company_run.add_argument("--max-new-programmes", type=int, default=3)
     company_run.add_argument("--max-signals", type=int, default=3)
     company_run.add_argument("--no-auto-review", action="store_true")
     company_run.set_defaults(handler=command_company)
 
-    mission = subparsers.add_parser("mission", help="Manage persistent founder objectives and objective-driven autopilot")
+    mission = subparsers.add_parser(
+        "mission", help="Manage persistent founder objectives and objective-driven autopilot"
+    )
     mission_sub = mission.add_subparsers(dest="mission_action", required=True)
 
     mission_list = mission_sub.add_parser("list", help="Show objective portfolio")
@@ -871,7 +919,9 @@ def build_parser() -> argparse.ArgumentParser:
     mission_status.add_argument("--reason", required=True)
     mission_status.set_defaults(handler=command_mission)
 
-    mission_bootstrap = mission_sub.add_parser("bootstrap-distribution", help="Create the distribution-first Amaura objective portfolio")
+    mission_bootstrap = mission_sub.add_parser(
+        "bootstrap-distribution", help="Create the distribution-first Amaura objective portfolio"
+    )
     mission_bootstrap.add_argument("--repository", default="")
     mission_bootstrap.set_defaults(handler=command_mission)
 
@@ -883,10 +933,14 @@ def build_parser() -> argparse.ArgumentParser:
     ventures = subparsers.add_parser("ventures", help="Operate the separate Amaura Ventures startup studio")
     ventures_sub = ventures.add_subparsers(dest="ventures_action", required=True)
 
-    ventures_status = ventures_sub.add_parser("status", help="Show venture portfolio, constraints and active experiments")
+    ventures_status = ventures_sub.add_parser(
+        "status", help="Show venture portfolio, constraints and active experiments"
+    )
     ventures_status.set_defaults(handler=command_ventures)
 
-    ventures_add = ventures_sub.add_parser("opportunity-add", help="Register and deterministically score an evidenced product opportunity")
+    ventures_add = ventures_sub.add_parser(
+        "opportunity-add", help="Register and deterministically score an evidenced product opportunity"
+    )
     ventures_add.add_argument("--title", required=True)
     ventures_add.add_argument("--problem", required=True)
     ventures_add.add_argument("--target-user", required=True)
@@ -941,10 +995,15 @@ def build_parser() -> argparse.ArgumentParser:
     ventures_stage.add_argument("--reason", required=True)
     ventures_stage.set_defaults(handler=command_ventures)
 
-    cashflow_status = ventures_sub.add_parser("cashflow-status", help="Show the low-capital Amaura Ventures cash-flow portfolio")
+    cashflow_status = ventures_sub.add_parser(
+        "cashflow-status", help="Show the low-capital Amaura Ventures cash-flow portfolio"
+    )
     cashflow_status.set_defaults(handler=command_ventures)
 
-    cashflow_tick = ventures_sub.add_parser("cashflow-tick", help="Advance the closed-loop Ventures cycle: reconcile, propose, approvals and durable missions")
+    cashflow_tick = ventures_sub.add_parser(
+        "cashflow-tick",
+        help="Advance the closed-loop Ventures cycle: reconcile, propose, approvals and durable missions",
+    )
     cashflow_tick.set_defaults(handler=command_ventures)
 
     cashflow_add = ventures_sub.add_parser("cashflow-stream-add", help="Founder-create a qualified cash-flow stream")
@@ -963,7 +1022,10 @@ def build_parser() -> argparse.ArgumentParser:
     cashflow_add.add_argument("--experiment-id", default="")
     cashflow_add.set_defaults(handler=command_ventures)
 
-    cashflow_finance = ventures_sub.add_parser("cashflow-finance", help="Founder-record a financial event (manual evidence requires founder_attestation + manual_event_id; provider events require a signed ProviderReceipt)")
+    cashflow_finance = ventures_sub.add_parser(
+        "cashflow-finance",
+        help="Founder-record a financial event (manual evidence requires founder_attestation + manual_event_id; provider events require a signed ProviderReceipt)",
+    )
     cashflow_finance.add_argument("stream_id")
     cashflow_finance.add_argument("--event-type", required=True)
     cashflow_finance.add_argument("--amount-cents", type=int, required=True)
@@ -973,13 +1035,17 @@ def build_parser() -> argparse.ArgumentParser:
     cashflow_finance.add_argument("--occurred-at", default="")
     cashflow_finance.set_defaults(handler=command_ventures)
 
-    cashflow_stream_status = ventures_sub.add_parser("cashflow-stream-status", help="Founder change cash-flow stream lifecycle")
+    cashflow_stream_status = ventures_sub.add_parser(
+        "cashflow-stream-status", help="Founder change cash-flow stream lifecycle"
+    )
     cashflow_stream_status.add_argument("stream_id")
     cashflow_stream_status.add_argument("--status", required=True)
     cashflow_stream_status.add_argument("--reason", required=True)
     cashflow_stream_status.set_defaults(handler=command_ventures)
 
-    cashflow_action = ventures_sub.add_parser("cashflow-action", help="Founder approve/cancel/update a cash-flow action")
+    cashflow_action = ventures_sub.add_parser(
+        "cashflow-action", help="Founder approve/cancel/update a cash-flow action"
+    )
     cashflow_action.add_argument("action_id")
     cashflow_action.add_argument("--status", required=True)
     cashflow_action.add_argument("--reason", required=True)
@@ -1036,7 +1102,9 @@ def build_parser() -> argparse.ArgumentParser:
     distribution_stage.add_argument("--metadata-json", default="{}")
     distribution_stage.set_defaults(handler=command_distribution)
 
-    distribution_decide = distribution_sub.add_parser("decide", help="Founder decision for an exact publication package")
+    distribution_decide = distribution_sub.add_parser(
+        "decide", help="Founder decision for an exact publication package"
+    )
     distribution_decide.add_argument("approval_id")
     distribution_decide.add_argument(
         "--decision",

@@ -10,8 +10,8 @@ from __future__ import annotations
 import os
 import re
 import stat
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 _ENV_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _LOADED_FILES: set[Path] = set()
@@ -53,7 +53,7 @@ def _decode_value(raw: str) -> str:
                 value.replace(r"\n", "\n")
                 .replace(r"\r", "\r")
                 .replace(r"\t", "\t")
-                .replace(r'\"', '"')
+                .replace(r"\"", '"')
                 .replace(r"\\", "\\")
             )
     return value
@@ -82,9 +82,7 @@ def load_amaura_env(
         if require_private_permissions and os.name == "posix":
             permissions = stat.S_IMODE(candidate.stat().st_mode)
             if permissions & 0o077:
-                raise PermissionError(
-                    f"Amaura environment file must not be group/world accessible: {candidate}"
-                )
+                raise PermissionError(f"Amaura environment file must not be group/world accessible: {candidate}")
         for line_number, raw_line in enumerate(
             candidate.read_text(encoding="utf-8", errors="strict").splitlines(),
             start=1,
@@ -95,15 +93,11 @@ def load_amaura_env(
             if line.startswith("export "):
                 line = line[7:].lstrip()
             if "=" not in line:
-                raise ValueError(
-                    f"Invalid environment assignment at {candidate}:{line_number}"
-                )
+                raise ValueError(f"Invalid environment assignment at {candidate}:{line_number}")
             key, raw_value = line.split("=", 1)
             key = key.strip()
             if not _ENV_KEY.fullmatch(key):
-                raise ValueError(
-                    f"Invalid environment key at {candidate}:{line_number}: {key!r}"
-                )
+                raise ValueError(f"Invalid environment key at {candidate}:{line_number}: {key!r}")
             if override or not os.environ.get(key):
                 os.environ[key] = _decode_value(raw_value)
         _LOADED_FILES.add(candidate)

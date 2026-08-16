@@ -133,7 +133,7 @@ class BrowserEgressProxy:
     thread: threading.Thread
 
     @classmethod
-    def start(cls) -> "BrowserEgressProxy":
+    def start(cls) -> BrowserEgressProxy:
         server = _ThreadingProxy(("127.0.0.1", 0), _ProxyHandler)
         thread = threading.Thread(target=server.serve_forever, name="amaura-browser-egress", daemon=True)
         thread.start()
@@ -149,7 +149,7 @@ class BrowserEgressProxy:
         self.server.server_close()
         self.thread.join(timeout=2)
 
-    def __enter__(self) -> "BrowserEgressProxy":
+    def __enter__(self) -> BrowserEgressProxy:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:  # noqa: ANN001

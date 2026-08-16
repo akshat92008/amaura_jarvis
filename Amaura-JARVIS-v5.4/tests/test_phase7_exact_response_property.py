@@ -2,11 +2,11 @@
 
 import random
 import string
-import pytest
+
 from jarvis.amaura.direct_action import (
+    ActionType,
     ExactResponseParser,
     RequestPreprocessor,
-    ActionType,
     ResponseMode,
 )
 
@@ -76,12 +76,14 @@ def generate_non_literal_exact_controls(count: int = 550):
     # Category 1: Read file exactly
     for i in range(150):
         p = f"/tmp/data_{i}.txt"
-        prompt = random.choice([
-            f"read {p} and return exactly its contents",
-            f"give me raw contents of {p}",
-            f"cat {p} verbatim without line numbers",
-            f"whole reply must be file text of {p}",
-        ])
+        prompt = random.choice(
+            [
+                f"read {p} and return exactly its contents",
+                f"give me raw contents of {p}",
+                f"cat {p} verbatim without line numbers",
+                f"whole reply must be file text of {p}",
+            ]
+        )
         cases.append((prompt, ActionType.FILE_READ, ResponseMode.EXACT_RAW))
 
     # Category 2: Arithmetic workflow exact result
@@ -116,7 +118,9 @@ def test_exact_literal_generated_2000_cases():
         res = ExactResponseParser.parse(prompt)
         assert res is not None, f"Failed exact echo parse for: {prompt}"
         assert res.success is True
-        assert res.output == expected_payload, f"Payload mismatch: got {repr(res.output)} vs {repr(expected_payload)} in {prompt}"
+        assert res.output == expected_payload, (
+            f"Payload mismatch: got {repr(res.output)} vs {repr(expected_payload)} in {prompt}"
+        )
         success_count += 1
 
     assert success_count >= 2000
@@ -128,7 +132,7 @@ def test_non_literal_exact_controls_500_cases():
     assert len(controls) >= 500
 
     non_echo_count = 0
-    for prompt, expected_action, expected_mode in controls:
+    for prompt, expected_action, _expected_mode in controls:
         # 1. ExactResponseParser MUST return None
         echo_res = ExactResponseParser.parse(prompt)
         assert echo_res is None, f"Non-literal control incorrectly captured by exact echo fast path: {prompt}"
@@ -136,7 +140,9 @@ def test_non_literal_exact_controls_500_cases():
         # 2. RequestPreprocessor must identify correct underlying action
         parsed = RequestPreprocessor.process(prompt)
         assert parsed.primary_action is not None, f"No action parsed for: {prompt}"
-        assert parsed.primary_action.action_type == expected_action, f"Wrong action for {prompt}: got {parsed.primary_action.action_type} vs {expected_action}"
+        assert parsed.primary_action.action_type == expected_action, (
+            f"Wrong action for {prompt}: got {parsed.primary_action.action_type} vs {expected_action}"
+        )
 
         non_echo_count += 1
 

@@ -1,5 +1,7 @@
 import unittest
-from jarvis.tools.registry import get_tool_count, execute_tool
+
+from jarvis.tools.registry import execute_tool, get_tool_count
+
 
 class TestRegistry(unittest.TestCase):
     def test_registry_tool_counts(self):
@@ -13,6 +15,7 @@ class TestRegistry(unittest.TestCase):
     def test_execute_tool(self):
         res = execute_tool("generate_morning_briefing", {})
         self.assertIn("Good morning, sir", res)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -24,7 +24,7 @@ def test_exact_literal_declarative_equal_form_and_payload_span():
     assert graph.literal_payload == "TOKEN"
     intent = da.ExactResponseParser.parse_intent(text)
     assert intent is not None
-    assert text[intent.payload_span_start:intent.payload_span_end] == "TOKEN"
+    assert text[intent.payload_span_start : intent.payload_span_end] == "TOKEN"
     assert intent.quote_style == "none"
 
 
@@ -33,7 +33,7 @@ def test_exact_literal_quoted_span_is_exact():
     intent = da.ExactResponseParser.parse_intent(text)
     assert intent is not None
     assert intent.payload == "BLUE_CANARY"
-    assert text[intent.payload_span_start:intent.payload_span_end] == "BLUE_CANARY"
+    assert text[intent.payload_span_start : intent.payload_span_end] == "BLUE_CANARY"
     assert intent.quote_style == "double"
 
 

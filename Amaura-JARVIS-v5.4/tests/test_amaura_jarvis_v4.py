@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-import os
 import stat
 import subprocess
 from pathlib import Path
@@ -31,7 +29,11 @@ def test_goal_compiler_creates_dynamic_software_dag(tmp_path: Path):
     plan = GoalCompiler().compile(request)
     assert plan.domain == "software"
     assert [task.key for task in plan.tasks] == [
-        "requirements", "repo_inspection", "technical_plan", "implementation", "verification"
+        "requirements",
+        "repo_inspection",
+        "technical_plan",
+        "implementation",
+        "verification",
     ]
     assert plan.tasks[3].action_type == "repository_write"
     assert plan.tasks[3].depends_on == ["technical_plan"]
@@ -56,9 +58,7 @@ def test_new_software_project_gets_isolated_managed_workspace(tmp_path: Path, mo
     monkeypatch.setenv("AMAURA_JARVIS_LLM_PLANNER", "off")
     control = AmauraControlPlane(tmp_path / "amaura.db")
     try:
-        result = JarvisBrain(control).submit(
-            GoalRequest(objective="Create a platformer game", autonomy="plan_only")
-        )
+        result = JarvisBrain(control).submit(GoalRequest(objective="Create a platformer game", autonomy="plan_only"))
         workspace = Path(result["goal"]["metadata"]["workspace"])
         assert workspace.parent == projects
         assert (workspace / ".git").is_dir()
@@ -114,7 +114,7 @@ def test_antigravity_backend_is_handoff_not_fake_execution(tmp_path: Path, monke
 def _fake_noryx(path: Path) -> Path:
     script = path / "fake_noryx.py"
     script.write_text(
-        '''#!/usr/bin/env python3\nimport argparse, json, os, pathlib\np=argparse.ArgumentParser(); p.add_argument("command"); p.add_argument("--request-file"); p.add_argument("--result-file"); a=p.parse_args()\nreq=json.load(open(a.request_file))\nassert req["schema"] == "amaura.noryx-task.v1"\nassert req["requirements"]["result_schema"] == "amaura.noryx-result.v2"\nassert "AMAURA_OPERATOR_KEY" not in os.environ\nrepo=pathlib.Path(req["repository_path"]); target=repo/"noryx_fix.py"; target.write_text("VALUE=1\\n")\njson.dump({"schema":"amaura.noryx-result.v2","success":True,"summary":"Implemented and verified the requested change","run_id":"run-123","changed_files":["noryx_fix.py"],"tests":[{"command":"python -m py_compile noryx_fix.py","exit_code":0,"passed":True,"summary":"fixture verification"}],"evidence":[{"type":"test","reference":"fixture:test","summary":"fixture evidence"}]}, open(a.result_file,"w"))\n''',
+        """#!/usr/bin/env python3\nimport argparse, json, os, pathlib\np=argparse.ArgumentParser(); p.add_argument("command"); p.add_argument("--request-file"); p.add_argument("--result-file"); a=p.parse_args()\nreq=json.load(open(a.request_file))\nassert req["schema"] == "amaura.noryx-task.v1"\nassert req["requirements"]["result_schema"] == "amaura.noryx-result.v2"\nassert "AMAURA_OPERATOR_KEY" not in os.environ\nrepo=pathlib.Path(req["repository_path"]); target=repo/"noryx_fix.py"; target.write_text("VALUE=1\\n")\njson.dump({"schema":"amaura.noryx-result.v2","success":True,"summary":"Implemented and verified the requested change","run_id":"run-123","changed_files":["noryx_fix.py"],"tests":[{"command":"python -m py_compile noryx_fix.py","exit_code":0,"passed":True,"summary":"fixture verification"}],"evidence":[{"type":"test","reference":"fixture:test","summary":"fixture evidence"}]}, open(a.result_file,"w"))\n""",
         encoding="utf-8",
     )
     script.chmod(script.stat().st_mode | stat.S_IXUSR)

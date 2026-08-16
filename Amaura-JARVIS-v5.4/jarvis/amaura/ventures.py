@@ -14,15 +14,47 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 
+from jarvis.amaura.control_plane import AmauraControlPlane
+from jarvis.amaura.models import GovernanceError
 from jarvis.amaura.network import fetch_public_bytes
 from jarvis.amaura.security import scan_untrusted_text
 
-from jarvis.amaura.control_plane import AmauraControlPlane
-from jarvis.amaura.models import GovernanceError
-
-PRODUCT_TYPES = {"mobile_app", "micro_saas", "web_app", "browser_extension", "developer_tool", "template", "game", "ai_utility", "kdp_book", "digital_download", "template_pack", "content_asset", "affiliate_content", "newsletter"}
-OPPORTUNITY_STATUSES = {"discovered", "review_required", "qualified", "rejected", "selected", "experimenting", "archived"}
-EXPERIMENT_STAGES = {"planned", "validating", "building", "launching", "measuring", "paused", "killed", "scaling", "completed"}
+PRODUCT_TYPES = {
+    "mobile_app",
+    "micro_saas",
+    "web_app",
+    "browser_extension",
+    "developer_tool",
+    "template",
+    "game",
+    "ai_utility",
+    "kdp_book",
+    "digital_download",
+    "template_pack",
+    "content_asset",
+    "affiliate_content",
+    "newsletter",
+}
+OPPORTUNITY_STATUSES = {
+    "discovered",
+    "review_required",
+    "qualified",
+    "rejected",
+    "selected",
+    "experimenting",
+    "archived",
+}
+EXPERIMENT_STAGES = {
+    "planned",
+    "validating",
+    "building",
+    "launching",
+    "measuring",
+    "paused",
+    "killed",
+    "scaling",
+    "completed",
+}
 DECISIONS = {"kill", "iterate", "double_down", "pause"}
 SCORE_WEIGHTS = {
     "pain": 25,
@@ -49,9 +81,7 @@ class VentureStudio:
         missing = set(SCORE_WEIGHTS) - set(score_components)
         extra = set(score_components) - set(SCORE_WEIGHTS)
         if missing or extra:
-            raise GovernanceError(
-                "Venture score requires exactly: " + ", ".join(SCORE_WEIGHTS)
-            )
+            raise GovernanceError("Venture score requires exactly: " + ", ".join(SCORE_WEIGHTS))
         total = 0.0
         for key, weight in SCORE_WEIGHTS.items():
             value = float(score_components[key])
@@ -60,7 +90,9 @@ class VentureStudio:
             total += value * weight / 100.0
         return int(round(total))
 
-    def _verified_market_evidence(self, evidence: list[dict[str, Any]], *, actor: str) -> tuple[list[dict[str, Any]], set[str]]:
+    def _verified_market_evidence(
+        self, evidence: list[dict[str, Any]], *, actor: str
+    ) -> tuple[list[dict[str, Any]], set[str]]:
         if not evidence:
             raise GovernanceError("Venture opportunities require source-backed evidence before scoring")
         normalized: list[dict[str, Any]] = []
@@ -83,7 +115,9 @@ class VentureStudio:
             if reference:
                 verification = self.control.evidence.verify(reference)
                 if not verification.get("ok"):
-                    raise GovernanceError(f"Venture evidence reference failed verification: {verification.get('reason')}")
+                    raise GovernanceError(
+                        f"Venture evidence reference failed verification: {verification.get('reason')}"
+                    )
                 provenance = verification.get("provenance") or {}
                 if str(provenance.get("source", "")).rstrip("/") != source_url.rstrip("/"):
                     raise GovernanceError("Venture evidence source does not match its signed provenance manifest")
@@ -111,20 +145,30 @@ class VentureStudio:
                 payload_sha256 = record.sha256
                 captured_at = record.created_at
             domains.add(parsed.hostname.lower().removeprefix("www."))
-            normalized.append({
-                "source": source_url,
-                "claim": claim,
-                "excerpt": excerpt,
-                "reference": reference,
-                "sha256": payload_sha256,
-                "captured_at": captured_at,
-                "confidence": max(0.0, min(float(item.get("confidence", 0.75)), 1.0)),
-                "retrieval": retrieval,
-            })
+            normalized.append(
+                {
+                    "source": source_url,
+                    "claim": claim,
+                    "excerpt": excerpt,
+                    "reference": reference,
+                    "sha256": payload_sha256,
+                    "captured_at": captured_at,
+                    "confidence": max(0.0, min(float(item.get("confidence", 0.75)), 1.0)),
+                    "retrieval": retrieval,
+                }
+            )
         return normalized, domains
 
     @staticmethod
-    def _computed_score(*, evidence: list[dict[str, Any]], domains: set[str], estimated_build_days: int, monetization: str, distribution_channel: str, strategic_fit: str) -> dict[str, float]:
+    def _computed_score(
+        *,
+        evidence: list[dict[str, Any]],
+        domains: set[str],
+        estimated_build_days: int,
+        monetization: str,
+        distribution_channel: str,
+        strategic_fit: str,
+    ) -> dict[str, float]:
         confidence = sum(float(item.get("confidence", 0.0)) for item in evidence) / max(1, len(evidence))
         components = {
             "pain": min(100.0, 45.0 + 12.0 * len(evidence) + 15.0 * confidence),
@@ -156,18 +200,30 @@ class VentureStudio:
             raise GovernanceError("Only JARVIS or the founder may register venture opportunities")
         if product_type not in PRODUCT_TYPES:
             raise GovernanceError(f"Unsupported venture product type: {product_type}")
-        if not all(value.strip() for value in (title, problem, target_user, source, monetization, distribution_channel)):
-            raise GovernanceError("Venture opportunities require a title, problem, user, source, monetization and channel")
+        if not all(
+            value.strip() for value in (title, problem, target_user, source, monetization, distribution_channel)
+        ):
+            raise GovernanceError(
+                "Venture opportunities require a title, problem, user, source, monetization and channel"
+            )
         if not 1 <= int(estimated_build_days) <= 14:
             raise GovernanceError("Venture products must be testable within 14 days")
         verified_evidence, evidence_domains = self._verified_market_evidence(evidence, actor=actor)
         computed_components = self._computed_score(
-            evidence=verified_evidence, domains=evidence_domains, estimated_build_days=int(estimated_build_days),
-            monetization=monetization, distribution_channel=distribution_channel, strategic_fit=strategic_fit,
+            evidence=verified_evidence,
+            domains=evidence_domains,
+            estimated_build_days=int(estimated_build_days),
+            monetization=monetization,
+            distribution_channel=distribution_channel,
+            strategic_fit=strategic_fit,
         )
         total = self.score(computed_components)
         min_sources = max(2, int(os.environ.get("AMAURA_VENTURE_MIN_INDEPENDENT_SOURCES", "2")))
-        status = "review_required" if total >= int(os.environ.get("AMAURA_VENTURE_MIN_SCORE", "70")) and len(evidence_domains) >= min_sources else "rejected"
+        status = (
+            "review_required"
+            if total >= int(os.environ.get("AMAURA_VENTURE_MIN_SCORE", "70")) and len(evidence_domains) >= min_sources
+            else "rejected"
+        )
         opportunity = self.control.store.create_venture_opportunity(
             {
                 "id": _id("vopp"),
@@ -189,7 +245,12 @@ class VentureStudio:
         self.control.store.publish_event(
             "ventures.opportunity.scored",
             opportunity["id"],
-            {"score": total, "status": status, "product_type": product_type, "caller_score_ignored": bool(score_components)},
+            {
+                "score": total,
+                "status": status,
+                "product_type": product_type,
+                "caller_score_ignored": bool(score_components),
+            },
         )
         self.control.store.audit(
             actor,
@@ -235,28 +296,30 @@ class VentureStudio:
             opportunity = self.control.store.update_venture_opportunity(opportunity_id, status="selected")
         try:
             experiment = self.control.store.create_venture_experiment_with_slot(
-            {
-                "id": _id("vexp"),
-                "opportunity_id": opportunity_id,
-                "product_name": product_name.strip(),
-                "hypothesis": hypothesis.strip(),
-                "stage": "validating",
-                "timebox_days": int(timebox_days),
-                "budget_cents": int(budget_cents),
-                "primary_metric": primary_metric.strip(),
-                "target_value": float(target_value),
-                "kill_threshold": float(kill_threshold),
-                "started_at": started.isoformat(),
-                "deadline": (started + timedelta(days=int(timebox_days))).isoformat(),
-                "metadata": {
-                    "founder_attention_minutes": min(20, int(os.environ.get("AMAURA_VENTURE_FOUNDER_REVIEW_MINUTES", "20"))),
-                    "one_problem": opportunity["problem"],
-                    "one_user": opportunity["target_user"],
-                    "one_channel": opportunity["distribution_channel"],
+                {
+                    "id": _id("vexp"),
+                    "opportunity_id": opportunity_id,
+                    "product_name": product_name.strip(),
+                    "hypothesis": hypothesis.strip(),
+                    "stage": "validating",
+                    "timebox_days": int(timebox_days),
+                    "budget_cents": int(budget_cents),
+                    "primary_metric": primary_metric.strip(),
+                    "target_value": float(target_value),
+                    "kill_threshold": float(kill_threshold),
+                    "started_at": started.isoformat(),
+                    "deadline": (started + timedelta(days=int(timebox_days))).isoformat(),
+                    "metadata": {
+                        "founder_attention_minutes": min(
+                            20, int(os.environ.get("AMAURA_VENTURE_FOUNDER_REVIEW_MINUTES", "20"))
+                        ),
+                        "one_problem": opportunity["problem"],
+                        "one_user": opportunity["target_user"],
+                        "one_channel": opportunity["distribution_channel"],
+                    },
                 },
-            },
-            max_active=max_active,
-        )
+                max_active=max_active,
+            )
         except RuntimeError as exc:
             raise GovernanceError(str(exc) + "; finish, kill or pause the current sprint first") from exc
         programme = self.control.create_program(
@@ -310,7 +373,8 @@ class VentureStudio:
             raise GovernanceError("Founder approval is required to build, launch or scale a venture")
         if stage in {"building", "launching"}:
             conflicts = [
-                item for item in self.control.store.list_venture_experiments(limit=1000)
+                item
+                for item in self.control.store.list_venture_experiments(limit=1000)
                 if item["id"] != experiment_id and item["stage"] in {"building", "launching"}
             ]
             if conflicts:
@@ -319,7 +383,14 @@ class VentureStudio:
             raise GovernanceError("Venture stage changes require a reason")
         updated = self.control.store.update_venture_experiment(experiment_id, stage=stage)
         self.control.store.publish_event("ventures.experiment.stage", experiment_id, {"stage": stage, "reason": reason})
-        self.control.store.audit(actor, "set_venture_stage", "venture_experiment", experiment_id, "allowed", {"stage": stage, "reason": reason})
+        self.control.store.audit(
+            actor,
+            "set_venture_stage",
+            "venture_experiment",
+            experiment_id,
+            "allowed",
+            {"stage": stage, "reason": reason},
+        )
         return updated
 
     def record_metric(
@@ -381,7 +452,9 @@ class VentureStudio:
             recommendation = "continue"
             reason = f"Validation remains inside the timebox with {len(metrics)} evidenced metric event(s)"
         updated = self.control.store.update_venture_experiment(
-            experiment_id, recommendation=recommendation, metadata={**(experiment.get("metadata") or {}), "recommendation_reason": reason}
+            experiment_id,
+            recommendation=recommendation,
+            metadata={**(experiment.get("metadata") or {}), "recommendation_reason": reason},
         )
         return {"recommendation": recommendation, "reason": reason, "experiment": updated}
 
@@ -407,14 +480,24 @@ class VentureStudio:
         opportunity_id = updated["opportunity_id"]
         if decision == "kill":
             self.control.store.update_venture_opportunity(opportunity_id, status="archived")
-        self.control.store.publish_event("ventures.experiment.decided", experiment_id, {"decision": decision, "stage": stage})
-        self.control.store.audit(actor, "decide_venture_experiment", "venture_experiment", experiment_id, "allowed", {"decision": decision, "reason": reason})
+        self.control.store.publish_event(
+            "ventures.experiment.decided", experiment_id, {"decision": decision, "stage": stage}
+        )
+        self.control.store.audit(
+            actor,
+            "decide_venture_experiment",
+            "venture_experiment",
+            experiment_id,
+            "allowed",
+            {"decision": decision, "reason": reason},
+        )
         return updated
 
     def dashboard(self) -> dict[str, Any]:
         opportunities = self.control.store.list_venture_opportunities(limit=1000)
         experiments = self.control.store.list_venture_experiments(limit=1000)
         from jarvis.amaura.ventures_cashflow import CashflowEngine
+
         cashflow = CashflowEngine(self.control)
         return {
             "branch": "Amaura Ventures",
@@ -424,17 +507,27 @@ class VentureStudio:
                 "max_validation_days": 14,
                 "max_active_builds": 1,
                 "minimum_opportunity_score": int(os.environ.get("AMAURA_VENTURE_MIN_SCORE", "70")),
-                "founder_review_minutes_per_decision": int(os.environ.get("AMAURA_VENTURE_FOUNDER_REVIEW_MINUTES", "20")),
+                "founder_review_minutes_per_decision": int(
+                    os.environ.get("AMAURA_VENTURE_FOUNDER_REVIEW_MINUTES", "20")
+                ),
                 "external_actions_require_approval": True,
             },
-            "opportunity_counts": {status: sum(1 for item in opportunities if item["status"] == status) for status in OPPORTUNITY_STATUSES},
-            "experiment_counts": {stage: sum(1 for item in experiments if item["stage"] == stage) for stage in EXPERIMENT_STAGES},
+            "opportunity_counts": {
+                status: sum(1 for item in opportunities if item["status"] == status) for status in OPPORTUNITY_STATUSES
+            },
+            "experiment_counts": {
+                stage: sum(1 for item in experiments if item["stage"] == stage) for stage in EXPERIMENT_STAGES
+            },
             "top_opportunities": opportunities[:10],
             "active_experiments": [item for item in experiments if item["stage"] not in {"killed", "completed"}],
         }
 
 
 __all__ = [
-    "VentureStudio", "PRODUCT_TYPES", "OPPORTUNITY_STATUSES", "EXPERIMENT_STAGES",
-    "DECISIONS", "SCORE_WEIGHTS",
+    "VentureStudio",
+    "PRODUCT_TYPES",
+    "OPPORTUNITY_STATUSES",
+    "EXPERIMENT_STAGES",
+    "DECISIONS",
+    "SCORE_WEIGHTS",
 ]

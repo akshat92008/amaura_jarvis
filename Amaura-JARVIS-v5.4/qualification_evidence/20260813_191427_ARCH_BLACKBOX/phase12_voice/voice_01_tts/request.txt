@@ -1,1 +1,0 @@
-Use text-to-speech to say the phrase 'Qualification test complete' out loud.

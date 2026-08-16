@@ -9,18 +9,20 @@ Mission execution is not implicitly authorised by voice. The safe default
 handler can converse but sets ``allow_missions=False``. A trusted authenticated
 host may inject a handler after it has independently validated operator authority.
 """
+
 from __future__ import annotations
 
 import threading
 import time
-from enum import Enum
-from typing import Callable, Dict, List, Optional
+from collections.abc import Callable
+from enum import StrEnum
 
-from jarvis.voice.listener import is_available as stt_available, listen_continuous
+from jarvis.voice.listener import is_available as stt_available
+from jarvis.voice.listener import listen_continuous
 from jarvis.voice.speaker import Speaker, get_speaker
 
 
-class VoiceState(str, Enum):
+class VoiceState(StrEnum):
     IDLE = "IDLE"
     WAKE_WORD_WAIT = "WAKE_WORD_WAIT"
     LISTENING = "LISTENING"
@@ -128,12 +130,12 @@ class DuplexVoiceEngine:
         self.state = VoiceState.IDLE
         self.speaker = speaker or get_speaker()
         self.command_handler = command_handler or _default_command_handler
-        self._session_thread: Optional[threading.Thread] = None
+        self._session_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._lock = threading.RLock()
         self.last_latency_ms: float | None = None
         self.last_error = ""
-        self.history: List[Dict[str, str]] = []
+        self.history: list[dict[str, str]] = []
 
     def set_command_handler(self, handler: CommandHandler | None) -> None:
         """Install a host-authorised handler, or restore the safe default."""
@@ -158,7 +160,7 @@ class DuplexVoiceEngine:
         for candidate in sorted(candidates, key=len, reverse=True):
             index = lowered.find(candidate.lower())
             if index >= 0:
-                return (text[:index] + text[index + len(candidate):]).strip(" ,:;.!?-")
+                return (text[:index] + text[index + len(candidate) :]).strip(" ,:;.!?-")
         return text.strip()
 
     def _listen_loop(self) -> None:

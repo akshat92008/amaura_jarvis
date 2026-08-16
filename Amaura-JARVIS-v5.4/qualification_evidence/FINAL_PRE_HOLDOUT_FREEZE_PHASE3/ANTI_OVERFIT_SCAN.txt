@@ -1,4 +1,0 @@
-ANTI-OVERFITTING SCAN RESULT:
-Production source directory: jarvis/
-Total holdout/test fixture references found: 0
-Status: CLEAN

@@ -1,3 +1,0 @@
-I'm not capable of directly accessing or retrieving system information about your device. I'm a text-based AI assistant and do not have the ability to monitor or retrieve real-time data about your system's CPU usage, available memory, or disk space.
-
-However, you can easily find this information on your device by using the built-in system monitoring tools. On a Mac, you can use the Activity Monitor application to view CPU usage, memory usage, and disk usage. On a Windows device, you can use the Task Manager to view this information. On a Linux device, you can use the `top` or `htop` command in the terminal to view system resource usage.

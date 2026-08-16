@@ -128,6 +128,4 @@ class AmauraActions:
         )
 
     def update_crm(self, lead_id: str, fields: dict[str, Any]) -> dict[str, Any]:
-        return self.bus.execute(
-            UpdateCRMCommand(lead_id=lead_id, fields=fields, actor=self.worker_id)
-        )
+        return self.bus.execute(UpdateCRMCommand(lead_id=lead_id, fields=fields, actor=self.worker_id))

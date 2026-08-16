@@ -29,7 +29,16 @@ def test_complete_company_registry_and_workflow_catalogue():
     }.issubset(WORKFLOWS)
     departments = Counter(agent.department for agent in ALL_AGENTS)
     assert set(departments).issubset(DEPARTMENT_MISSIONS)
-    assert {"strategy", "product", "operations", "finance", "security_legal", "customer_success", "community", "ventures"}.issubset(departments)
+    assert {
+        "strategy",
+        "product",
+        "operations",
+        "finance",
+        "security_legal",
+        "customer_success",
+        "community",
+        "ventures",
+    }.issubset(departments)
 
 
 def test_tool_schemas_are_unique_and_match_employee_contracts():
@@ -178,9 +187,9 @@ def test_incident_response_workflow_policy_validation(tmp_path):
 
 
 def test_policy_engine_rejects_unauthorized_risk_assignment():
+    from jarvis.amaura.models import RiskLevel
     from jarvis.amaura.policy import PolicyEngine
     from jarvis.amaura.registry import get_agent
-    from jarvis.amaura.models import RiskLevel
 
     qa_agent = get_agent("qa")
     assert qa_agent.max_risk == RiskLevel.LOW
@@ -195,4 +204,3 @@ def test_policy_engine_rejects_unauthorized_risk_assignment():
     decision = PolicyEngine.validate_assignment(unauthorized_task)
     assert decision.allowed is False
     assert any("may not own medium-risk work" in r for r in decision.reasons)
-

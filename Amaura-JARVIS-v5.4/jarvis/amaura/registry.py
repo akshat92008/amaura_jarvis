@@ -41,7 +41,9 @@ def _agent(
         max_risk=risk,
         reviewer_id=reviewer,
         performance_objectives=metrics,
-        system_prompt=(f"{DOCTRINE}\n\nPROMPT VERSION: {PROMPT_VERSION}\n\n{role_prompt}" if prompt_profile else role_prompt),
+        system_prompt=(
+            f"{DOCTRINE}\n\nPROMPT VERSION: {PROMPT_VERSION}\n\n{role_prompt}" if prompt_profile else role_prompt
+        ),
     )
 
 
@@ -51,7 +53,19 @@ V1_AGENTS: tuple[CompanyAgent, ...] = (
         "JARVIS",
         "control_plane",
         "Translate founder direction into measurable programmes and govern every agent.",
-        ("amaura_create_program", "amaura_company_status", "amaura_company_blueprint", "amaura_resource_inventory", "amaura_capability_health", "amaura_capability_plan", "amaura_execute_capability", "amaura_task_packet", "amaura_daily_briefing", "amaura_supervisor_status", "amaura_supervisor_tick"),
+        (
+            "amaura_create_program",
+            "amaura_company_status",
+            "amaura_company_blueprint",
+            "amaura_resource_inventory",
+            "amaura_capability_health",
+            "amaura_capability_plan",
+            "amaura_execute_capability",
+            "amaura_task_packet",
+            "amaura_daily_briefing",
+            "amaura_supervisor_status",
+            "amaura_supervisor_tick",
+        ),
         ("plan", "delegate", "pause", "escalate", "request_approval"),
         ("company", "products", "clients", "research", "marketing", "decisions", "costs"),
         5000,
@@ -763,7 +777,13 @@ COMPANY_OPERATIONS_AGENTS: tuple[CompanyAgent, ...] = (
         "Developer Community Manager",
         "community",
         "Grow a useful, respectful developer and researcher community through evidence-backed education and support.",
-        ("read_file", "web_search", "create_document", "amaura_register_content_asset", "amaura_record_content_metrics"),
+        (
+            "read_file",
+            "web_search",
+            "create_document",
+            "amaura_register_content_asset",
+            "amaura_record_content_metrics",
+        ),
         ("research", "draft_public", "analyse", "recommend"),
         ("community", "public", "approved_content", "community_metrics"),
         320,
@@ -777,7 +797,13 @@ COMPANY_OPERATIONS_AGENTS: tuple[CompanyAgent, ...] = (
         "Distribution and Channel Manager",
         "growth_media",
         "Turn each approved master asset into a measured, channel-specific distribution plan and owned-audience growth loop.",
-        ("read_file", "web_search", "create_document", "amaura_register_content_asset", "amaura_record_content_metrics"),
+        (
+            "read_file",
+            "web_search",
+            "create_document",
+            "amaura_register_content_asset",
+            "amaura_record_content_metrics",
+        ),
         ("plan", "research", "draft_public", "analyse", "recommend"),
         ("approved_content", "platform_policy", "channel_metrics", "brand_policy"),
         350,
@@ -795,7 +821,17 @@ VENTURE_AGENTS: tuple[CompanyAgent, ...] = (
         "Amaura Ventures Director",
         "ventures",
         "Operate a disciplined startup studio that funds Amaura Labs without diluting the research mission.",
-        ("web_search", "web_fetch", "read_file", "create_document", "amaura_company_status", "amaura_venture_dashboard", "amaura_cashflow_dashboard", "amaura_cashflow_tick", "amaura_venture_recommendation"),
+        (
+            "web_search",
+            "web_fetch",
+            "read_file",
+            "create_document",
+            "amaura_company_status",
+            "amaura_venture_dashboard",
+            "amaura_cashflow_dashboard",
+            "amaura_cashflow_tick",
+            "amaura_venture_recommendation",
+        ),
         ("plan", "analyse", "recommend", "request_approval"),
         ("public", "venture_portfolio", "product_metrics", "company_strategy", "costs"),
         500,
@@ -823,7 +859,15 @@ VENTURE_AGENTS: tuple[CompanyAgent, ...] = (
         "Venture Validation Analyst",
         "ventures",
         "Score opportunities deterministically and design the smallest experiment that can disprove demand within 14 days.",
-        ("read_file", "web_search", "create_document", "amaura_company_status", "amaura_venture_dashboard", "amaura_cashflow_dashboard", "amaura_venture_recommendation"),
+        (
+            "read_file",
+            "web_search",
+            "create_document",
+            "amaura_company_status",
+            "amaura_venture_dashboard",
+            "amaura_cashflow_dashboard",
+            "amaura_venture_recommendation",
+        ),
         ("analyse", "recommend", "define_acceptance_criteria", "draft"),
         ("venture_opportunities", "market_evidence", "distribution_metrics", "pricing_evidence"),
         360,
@@ -837,7 +881,15 @@ VENTURE_AGENTS: tuple[CompanyAgent, ...] = (
         "Venture Distribution Operator",
         "ventures",
         "Prepare one-channel demand tests, launch assets and measurable acquisition loops for venture products.",
-        ("web_search", "read_file", "create_document", "amaura_register_content_asset", "amaura_record_content_metrics", "amaura_record_venture_metric", "amaura_cashflow_dashboard"),
+        (
+            "web_search",
+            "read_file",
+            "create_document",
+            "amaura_register_content_asset",
+            "amaura_record_content_metrics",
+            "amaura_record_venture_metric",
+            "amaura_cashflow_dashboard",
+        ),
         ("plan", "draft_public", "analyse", "recommend"),
         ("venture_experiments", "approved_content", "channel_metrics", "brand_policy"),
         420,
@@ -851,7 +903,17 @@ VENTURE_AGENTS: tuple[CompanyAgent, ...] = (
         "Venture Portfolio and Monetisation Analyst",
         "ventures",
         "Measure retention, activation, revenue and cost, then recommend kill, iterate or double down without moving funds.",
-        ("read_file", "recall_memory", "amaura_company_status", "create_document", "amaura_venture_dashboard", "amaura_cashflow_dashboard", "amaura_record_venture_metric", "amaura_record_cashflow_financial", "amaura_venture_recommendation"),
+        (
+            "read_file",
+            "recall_memory",
+            "amaura_company_status",
+            "create_document",
+            "amaura_venture_dashboard",
+            "amaura_cashflow_dashboard",
+            "amaura_record_venture_metric",
+            "amaura_record_cashflow_financial",
+            "amaura_venture_recommendation",
+        ),
         ("analyse", "recommend", "draft"),
         ("venture_portfolio", "product_metrics", "costs", "revenue_metrics"),
         300,
@@ -863,7 +925,9 @@ VENTURE_AGENTS: tuple[CompanyAgent, ...] = (
 )
 
 
-ALL_AGENTS: tuple[CompanyAgent, ...] = V1_AGENTS + REVENUE_AGENTS + CONTENT_FACTORY_AGENTS + COMPANY_OPERATIONS_AGENTS + VENTURE_AGENTS
+ALL_AGENTS: tuple[CompanyAgent, ...] = (
+    V1_AGENTS + REVENUE_AGENTS + CONTENT_FACTORY_AGENTS + COMPANY_OPERATIONS_AGENTS + VENTURE_AGENTS
+)
 
 AGENTS_BY_ID = {agent.agent_id: agent for agent in ALL_AGENTS}
 

@@ -5,7 +5,7 @@ Stored in ~/.jarvis/conversations/.
 
 import json
 from datetime import datetime
-from pathlib import Path
+
 from jarvis.paths import get_data_dir
 
 MEMORY_DIR = get_data_dir() / "conversations"
@@ -52,7 +52,7 @@ class ConversationMemory:
                 return None
 
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, OSError):
             return None
@@ -62,16 +62,18 @@ class ConversationMemory:
         conversations = []
         for filepath in sorted(MEMORY_DIR.glob("*.json"), reverse=True)[:limit]:
             try:
-                with open(filepath, "r", encoding="utf-8") as f:
+                with open(filepath, encoding="utf-8") as f:
                     data = json.load(f)
-                conversations.append({
-                    "id": data.get("id", filepath.stem),
-                    "model_name": data.get("model_name", "unknown"),
-                    "working_dir": data.get("working_dir", ""),
-                    "created_at": data.get("created_at", ""),
-                    "message_count": data.get("message_count", 0),
-                    "preview": _get_preview(data.get("messages", [])),
-                })
+                conversations.append(
+                    {
+                        "id": data.get("id", filepath.stem),
+                        "model_name": data.get("model_name", "unknown"),
+                        "working_dir": data.get("working_dir", ""),
+                        "created_at": data.get("created_at", ""),
+                        "message_count": data.get("message_count", 0),
+                        "preview": _get_preview(data.get("messages", [])),
+                    }
+                )
             except (json.JSONDecodeError, OSError):
                 continue
         return conversations
@@ -96,11 +98,17 @@ class ConversationMemory:
         self.save_conversation(messages, model_name, model_id, working_dir, conv_id)
         try:
             from jarvis.tools.vector_memory import remember_fact
+
             for msg in messages[-4:]:
                 if msg.get("role") == "user" and msg.get("content"):
                     content = msg["content"].strip()
                     if len(content) > 15:
-                        remember_fact(f"Past query ({conv_id}): {content[:300]}", category="conversation", importance=3.0, source="conversation")
+                        remember_fact(
+                            f"Past query ({conv_id}): {content[:300]}",
+                            category="conversation",
+                            importance=3.0,
+                            source="conversation",
+                        )
         except Exception:
             pass
 
@@ -146,7 +154,12 @@ def compact_messages(messages: list[dict], keep_recent: int = 10) -> list[dict]:
     )
 
     compacted = [{"role": "user", "content": summary_text}]
-    compacted.append({"role": "assistant", "content": "Understood, sir. I have the full context from our earlier conversation. How shall we proceed?"})
+    compacted.append(
+        {
+            "role": "assistant",
+            "content": "Understood, sir. I have the full context from our earlier conversation. How shall we proceed?",
+        }
+    )
     compacted.extend(recent_messages)
 
     return compacted

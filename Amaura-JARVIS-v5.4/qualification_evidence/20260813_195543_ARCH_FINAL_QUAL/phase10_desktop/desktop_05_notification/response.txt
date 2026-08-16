@@ -1,1 +1,0 @@
-❌ Error: Application 'a macOS desktop notification with the title 'JARVIS Qualification' and message 'Test notification -  ignore'.' is not in the strict allowlist.

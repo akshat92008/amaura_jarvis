@@ -75,7 +75,7 @@ class AmauraControlPlane:
     def close(self) -> None:
         self.store.close()
 
-    def __enter__(self) -> "AmauraControlPlane":
+    def __enter__(self) -> AmauraControlPlane:
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
@@ -86,7 +86,11 @@ class AmauraControlPlane:
             self.store.upsert_agent(agent.to_dict())
         for policy_name, policy in POLICIES.items():
             self.store.upsert_knowledge("company_policies", policy_name, policy, [], "internal", "jarvis")
-        self.store.publish_event("company.control_plane.ready", "jarvis", {"agents": len(ALL_AGENTS), "founder": self.founder_name, "workflows": list(WORKFLOWS)})
+        self.store.publish_event(
+            "company.control_plane.ready",
+            "jarvis",
+            {"agents": len(ALL_AGENTS), "founder": self.founder_name, "workflows": list(WORKFLOWS)},
+        )
         return {"master": "jarvis", "agents": len(ALL_AGENTS), "workflows": list(WORKFLOWS)}
 
     def create_program(
@@ -109,7 +113,9 @@ class AmauraControlPlane:
             raise GovernanceError("Priority must be between 1 (highest) and 5 (lowest)")
         workflow = get_workflow(workflow_key)
         supplied = inputs or {}
-        workspace = Path(supplied.get("repository_path") or supplied.get("workspace") or os.getcwd()).expanduser().resolve()
+        workspace = (
+            Path(supplied.get("repository_path") or supplied.get("workspace") or os.getcwd()).expanduser().resolve()
+        )
         if not workspace.exists() or not workspace.is_dir():
             raise GovernanceError(f"Assigned workspace does not exist or is not a directory: {workspace}")
         supplied = {**supplied, "workspace": str(workspace)}
@@ -161,11 +167,36 @@ class AmauraControlPlane:
         # Priority-1: all inserts are one atomic transaction — any policy failure rolls
         # back the whole programme rather than leaving orphaned partial rows.
         with self.store.atomic_block():
-            self.store.insert_work_item({**base, "id": programme_id, "parent_id": None, "item_type": "programme", "title": programme_title, "description": objective})
             self.store.insert_work_item(
-                {**base, "id": project_id, "parent_id": programme_id, "item_type": "project", "title": workflow.name, "description": f"Execute the {workflow.name} workflow for: {objective}"}
+                {
+                    **base,
+                    "id": programme_id,
+                    "parent_id": None,
+                    "item_type": "programme",
+                    "title": programme_title,
+                    "description": objective,
+                }
             )
-            self.store.insert_work_item({**base, "id": milestone_id, "parent_id": project_id, "item_type": "milestone", "title": f"Complete {workflow.name}", "description": success_metric})
+            self.store.insert_work_item(
+                {
+                    **base,
+                    "id": project_id,
+                    "parent_id": programme_id,
+                    "item_type": "project",
+                    "title": workflow.name,
+                    "description": f"Execute the {workflow.name} workflow for: {objective}",
+                }
+            )
+            self.store.insert_work_item(
+                {
+                    **base,
+                    "id": milestone_id,
+                    "parent_id": project_id,
+                    "item_type": "milestone",
+                    "title": f"Complete {workflow.name}",
+                    "description": success_metric,
+                }
+            )
 
             for step in workflow.steps:
                 task = self.store.insert_work_item(
@@ -204,9 +235,18 @@ class AmauraControlPlane:
                 self.store.audit(actor, "assign", "task", task["id"], "allowed", {"owner": step.owner_id})
                 tasks.append(task)
 
-        self.store.publish_event("project.created", programme_id, {"objective": objective, "workflow": workflow.key, "tasks": len(tasks), "success_metric": success_metric})
+        self.store.publish_event(
+            "project.created",
+            programme_id,
+            {"objective": objective, "workflow": workflow.key, "tasks": len(tasks), "success_metric": success_metric},
+        )
         self.store.audit(actor, "create_program", "programme", programme_id, "allowed", {"workflow": workflow.key})
-        return {"programme": self.store.get_work_item(programme_id), "project_id": project_id, "milestone_id": milestone_id, "tasks": tasks}
+        return {
+            "programme": self.store.get_work_item(programme_id),
+            "project_id": project_id,
+            "milestone_id": milestone_id,
+            "tasks": tasks,
+        }
 
     def task_packet(self, task_id: str, actor: str = "jarvis") -> dict[str, Any]:
         if actor != "jarvis":
@@ -246,9 +286,13 @@ class AmauraControlPlane:
             data_authorized=list(agent.data_access),
             dependencies=[
                 TaskDependency(
-                    id=dep["id"], title=dep["title"], state=dep["state"], 
-                    summary=dep.get("summary", ""), evidence=dep["evidence"]
-                ) for dep in dependency_cards
+                    id=dep["id"],
+                    title=dep["title"],
+                    state=dep["state"],
+                    summary=dep.get("summary", ""),
+                    evidence=dep["evidence"],
+                )
+                for dep in dependency_cards
             ],
             risk_class=task["risk"],
             action_type=task["action_type"],
@@ -258,7 +302,7 @@ class AmauraControlPlane:
                 "Attach evidence for every completion claim.",
                 "Do not certify your own work.",
                 "Stop and escalate any unapproved tool, data, cost, or external action.",
-            ]
+            ],
         )
         self.store.audit(actor, "issue_task_packet", "task", task_id, "allowed", {"owner": agent.agent_id})
         packet_dict = packet_model.model_dump(mode="json")
@@ -275,7 +319,9 @@ class AmauraControlPlane:
         self._ensure_agent_enabled(task["owner_id"])
         if task["state"] not in {TaskState.ASSIGNED.value, TaskState.BLOCKED.value}:
             raise GovernanceError(f"Task cannot start from state '{task['state']}'")
-        incomplete = [dep for dep in task["dependencies"] if self.store.get_work_item(dep)["state"] != TaskState.COMPLETED.value]
+        incomplete = [
+            dep for dep in task["dependencies"] if self.store.get_work_item(dep)["state"] != TaskState.COMPLETED.value
+        ]
         if incomplete:
             updated = self.store.update_work_item(task_id, state=TaskState.BLOCKED.value)
             self.store.publish_event("task.blocked", task_id, {"dependencies": incomplete})
@@ -307,14 +353,20 @@ class AmauraControlPlane:
             if not item.get("type") or not item.get("reference"):
                 raise GovernanceError("Each evidence item requires 'type' and 'reference'")
         next_state = TaskState.AWAITING_APPROVAL if task["reviewer_id"] == "founder" else TaskState.AWAITING_REVIEW
-        updated = self.store.update_work_item(task_id, state=next_state.value, summary=summary.strip(), evidence=evidence)
-        self.store.publish_event("qa.ready", task_id, {"reviewer": task["reviewer_id"], "evidence_count": len(evidence)})
+        updated = self.store.update_work_item(
+            task_id, state=next_state.value, summary=summary.strip(), evidence=evidence
+        )
+        self.store.publish_event(
+            "qa.ready", task_id, {"reviewer": task["reviewer_id"], "evidence_count": len(evidence)}
+        )
         self.store.audit(actor, "submit", "task", task_id, "allowed", {"evidence_count": len(evidence)})
         if task["reviewer_id"] == "founder":
             self._request_approval(updated, requested_by="jarvis")
         return self._task(task_id)
 
-    def review_task(self, task_id: str, actor: str, approve: bool, findings: str, attestation: dict[str, Any] | None = None) -> dict[str, Any]:
+    def review_task(
+        self, task_id: str, actor: str, approve: bool, findings: str, attestation: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         task = self._task(task_id)
         if actor != task["reviewer_id"]:
             self.store.audit(actor, "review", "task", task_id, "denied", {"expected": task["reviewer_id"]})
@@ -328,6 +380,7 @@ class AmauraControlPlane:
                 validate_criterion_review,
                 verify_review_attestation,
             )
+
             if not attestation:
                 raise GovernanceError("Review attestation is required for non-founder reviewers")
             if not verify_review_attestation(attestation):
@@ -361,7 +414,11 @@ class AmauraControlPlane:
         if not findings.strip():
             raise GovernanceError("Review findings are required")
         if not approve:
-            updated = self.store.update_work_item(task_id, state=TaskState.ASSIGNED.value, summary=f"REVIEW REJECTED: {findings.strip()}\n\nPrevious submission: {task['summary']}")
+            updated = self.store.update_work_item(
+                task_id,
+                state=TaskState.ASSIGNED.value,
+                summary=f"REVIEW REJECTED: {findings.strip()}\n\nPrevious submission: {task['summary']}",
+            )
             self.store.publish_event("qa.rejected", task_id, {"reviewer": actor, "findings": findings})
             self.store.audit(actor, "review", "task", task_id, "rejected", {"findings": findings})
             if is_software_task(task) and task.get("metadata", {}).get("git_worktree_path"):
@@ -392,7 +449,14 @@ class AmauraControlPlane:
             return existing[0]
         payload = self._approval_payload(task)
         approval = self.store.create_approval(
-            {"id": _id("approval"), "task_id": task["id"], "action_type": task["action_type"], "risk": task["risk"], "requested_by": requested_by, "payload": payload}
+            {
+                "id": _id("approval"),
+                "task_id": task["id"],
+                "action_type": task["action_type"],
+                "risk": task["risk"],
+                "requested_by": requested_by,
+                "payload": payload,
+            }
         )
         self.store.publish_event("approval.requested", approval["id"], {"task_id": task["id"], "risk": task["risk"]})
         return approval
@@ -449,9 +513,7 @@ class AmauraControlPlane:
                 "denied",
                 {"reason": "approval_payload_changed"},
             )
-            raise GovernanceError(
-                "Approval payload changed after it was requested; request a fresh founder approval"
-            )
+            raise GovernanceError("Approval payload changed after it was requested; request a fresh founder approval")
 
         task_id = approval_snapshot["task_id"]
         if status is ApprovalStatus.APPROVED:
@@ -483,8 +545,7 @@ class AmauraControlPlane:
                     task_id,
                     state=TaskState.BLOCKED.value,
                     summary=(
-                        f"FOUNDER REJECTED: {reason.strip()}\n\n"
-                        f"Previous submission: {task_before_decision['summary']}"
+                        f"FOUNDER REJECTED: {reason.strip()}\n\nPrevious submission: {task_before_decision['summary']}"
                     ),
                 )
             elif status is ApprovalStatus.CHANGES_REQUESTED:
@@ -492,8 +553,7 @@ class AmauraControlPlane:
                     task_id,
                     state=TaskState.ASSIGNED.value,
                     summary=(
-                        f"CHANGES REQUESTED: {reason.strip()}\n\n"
-                        f"Previous submission: {task_before_decision['summary']}"
+                        f"CHANGES REQUESTED: {reason.strip()}\n\nPrevious submission: {task_before_decision['summary']}"
                     ),
                 )
             else:
@@ -516,7 +576,16 @@ class AmauraControlPlane:
             )
         return {"approval": approval, "task": task}
 
-    def record_cost(self, task_id: str, agent_id: str, amount_cents: int, category: str, units: float = 0, unit_name: str = "", metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+    def record_cost(
+        self,
+        task_id: str,
+        agent_id: str,
+        amount_cents: int,
+        category: str,
+        units: float = 0,
+        unit_name: str = "",
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         task = self._task(task_id)
         if agent_id != task["owner_id"]:
             raise GovernanceError("Cost owner must match the assigned employee")
@@ -524,9 +593,20 @@ class AmauraControlPlane:
             self.store.audit(agent_id, "record_cost", "task", task_id, "denied", {"amount_cents": amount_cents})
             raise GovernanceError("Cost would exceed the task budget")
         self.store.record_cost(
-            {"id": _id("cost"), "task_id": task_id, "agent_id": agent_id, "category": category, "amount_cents": amount_cents, "units": units, "unit_name": unit_name, "metadata": metadata or {}}
+            {
+                "id": _id("cost"),
+                "task_id": task_id,
+                "agent_id": agent_id,
+                "category": category,
+                "amount_cents": amount_cents,
+                "units": units,
+                "unit_name": unit_name,
+                "metadata": metadata or {},
+            }
         )
-        self.store.publish_event("cost.recorded", task_id, {"agent_id": agent_id, "amount_cents": amount_cents, "category": category})
+        self.store.publish_event(
+            "cost.recorded", task_id, {"agent_id": agent_id, "amount_cents": amount_cents, "category": category}
+        )
         return self._task(task_id)
 
     def pause_agent(self, agent_id: str, reason: str, actor: str = "jarvis") -> dict[str, Any]:
@@ -542,8 +622,14 @@ class AmauraControlPlane:
         agent = self.store.set_agent_enabled(agent_id, False)
         for task in self.list_tasks(owner_id=agent_id):
             if task["state"] == TaskState.IN_PROGRESS.value:
-                self.store.update_work_item(task["id"], state=TaskState.BLOCKED.value, summary=f"PAUSED BY {actor.upper()}: {reason.strip()}\n\n{task['summary']}")
-                self.store.publish_event("task.blocked", task["id"], {"reason": "employee_paused", "agent_id": agent_id})
+                self.store.update_work_item(
+                    task["id"],
+                    state=TaskState.BLOCKED.value,
+                    summary=f"PAUSED BY {actor.upper()}: {reason.strip()}\n\n{task['summary']}",
+                )
+                self.store.publish_event(
+                    "task.blocked", task["id"], {"reason": "employee_paused", "agent_id": agent_id}
+                )
         self.store.publish_event("agent.paused", agent_id, {"reason": reason, "actor": actor})
         self.store.audit(actor, "pause_agent", "agent", agent_id, "allowed", {"reason": reason})
         return agent
@@ -559,14 +645,33 @@ class AmauraControlPlane:
         self.store.audit(actor, "resume_agent", "agent", agent_id, "allowed", {"reason": reason})
         return agent
 
-    def record_decision(self, *, decision: str, context: str, options: list[str], chosen_option: str, reason: str, actor: str, review_date: str | None = None) -> str:
+    def record_decision(
+        self,
+        *,
+        decision: str,
+        context: str,
+        options: list[str],
+        chosen_option: str,
+        reason: str,
+        actor: str,
+        review_date: str | None = None,
+    ) -> str:
         if actor not in {"jarvis", self.founder_id}:
             raise GovernanceError("Only JARVIS or the founder may record institutional decisions")
         if chosen_option not in options:
             raise GovernanceError("Chosen option must appear in the options considered")
         decision_id = _id("decision")
         self.store.record_decision(
-            {"id": decision_id, "decision": decision, "context": context, "options": options, "chosen_option": chosen_option, "reason": reason, "owner": actor, "review_date": review_date}
+            {
+                "id": decision_id,
+                "decision": decision,
+                "context": context,
+                "options": options,
+                "chosen_option": chosen_option,
+                "reason": reason,
+                "owner": actor,
+                "review_date": review_date,
+            }
         )
         self.store.publish_event("decision.recorded", decision_id, {"decision": decision, "owner": actor})
         self.store.audit(actor, "record_decision", "decision", decision_id, "allowed")
@@ -602,9 +707,7 @@ class AmauraControlPlane:
         receipt: ProviderReceipt | None = None
         if resolution == "completed":
             if provider_receipt is None:
-                raise GovernanceError(
-                    "A signed provider receipt is required to mark an ambiguous action completed"
-                )
+                raise GovernanceError("A signed provider receipt is required to mark an ambiguous action completed")
             raw_receipt = (
                 provider_receipt
                 if isinstance(provider_receipt, ProviderReceipt)
@@ -639,14 +742,17 @@ class AmauraControlPlane:
             elif event["operation"] == "publish_content":
                 expected_payload = event["payload"]
                 allowed_providers = {
-                    "approved-publication", "youtube", "instagram", "linkedin",
-                    "x", "github", "blog",
+                    "approved-publication",
+                    "youtube",
+                    "instagram",
+                    "linkedin",
+                    "x",
+                    "github",
+                    "blog",
                 }
                 allowed_statuses = {"public", "published"}
             else:
-                raise GovernanceError(
-                    f"No reconciliation contract exists for operation: {event['operation']}"
-                )
+                raise GovernanceError(f"No reconciliation contract exists for operation: {event['operation']}")
             if raw_receipt.provider not in allowed_providers:
                 raise GovernanceError("Provider receipt is not allowed for this operation")
             receipt = verify_provider_receipt(
@@ -696,13 +802,9 @@ class AmauraControlPlane:
                     resolution=resolution,
                 )
             if publication_id and resolution == "failed":
-                self.store.update_distribution_publication(
-                    publication_id, status="failed", error=reason.strip()
-                )
+                self.store.update_distribution_publication(publication_id, status="failed", error=reason.strip())
             elif publication_id and resolution == "requeue":
-                self.store.update_distribution_publication(
-                    publication_id, status="enqueued", error=reason.strip()
-                )
+                self.store.update_distribution_publication(publication_id, status="enqueued", error=reason.strip())
             self.store.publish_event("outbox.reconciled", event_id, details)
             self.store.audit(actor, "reconcile_outbox", "outbox_event", event_id, "allowed", details)
         return resolved
@@ -716,7 +818,12 @@ class AmauraControlPlane:
             "metrics": len(self.store.list_metrics()),
             "open_alerts": len(self.store.list_alerts(status="open")),
         }
-        dashboard["doctrine"] = {"master": "JARVIS", "independent_review": True, "evidence_required": True, "external_commitments_require_approval": True}
+        dashboard["doctrine"] = {
+            "master": "JARVIS",
+            "independent_review": True,
+            "evidence_required": True,
+            "external_commitments_require_approval": True,
+        }
         return dashboard
 
     def production_readiness(self) -> dict[str, Any]:
@@ -752,10 +859,22 @@ class AmauraControlPlane:
                         overdue.append(task)
                 except (TypeError, ValueError):
                     pass
-        budget_alerts = [task for task in tasks if task["budget_cents"] and task["spent_cents"] / task["budget_cents"] >= 0.8 and task["state"] not in terminal]
+        budget_alerts = [
+            task
+            for task in tasks
+            if task["budget_cents"]
+            and task["spent_cents"] / task["budget_cents"] >= 0.8
+            and task["state"] not in terminal
+        ]
         costs = sum(task["spent_cents"] for task in tasks)
         founder_decisions = [
-            {"approval_id": item["id"], "task_id": item["task_id"], "title": item["payload"].get("title", "Decision required"), "risk": item["risk"], "action_type": item["action_type"]}
+            {
+                "approval_id": item["id"],
+                "task_id": item["task_id"],
+                "title": item["payload"].get("title", "Decision required"),
+                "risk": item["risk"],
+                "action_type": item["action_type"],
+            }
             for item in pending[:3]
         ]
         active_objectives = self.store.list_objectives(status="active", limit=100)
@@ -781,18 +900,57 @@ class AmauraControlPlane:
         return {
             "generated_at": datetime.now(UTC).isoformat(),
             "company_status": self.dashboard(),
-            "revenue_opportunities": len([task for task in tasks if task["owner_id"] == "opportunity_scout" and task["state"] != TaskState.CANCELLED.value]),
-            "client_actions_requiring_approval": len([item for item in pending if item["action_type"] in {"external_proposal", "client_commitment", "contract_acceptance"}]),
+            "revenue_opportunities": len(
+                [
+                    task
+                    for task in tasks
+                    if task["owner_id"] == "opportunity_scout" and task["state"] != TaskState.CANCELLED.value
+                ]
+            ),
+            "client_actions_requiring_approval": len(
+                [
+                    item
+                    for item in pending
+                    if item["action_type"] in {"external_proposal", "client_commitment", "contract_acceptance"}
+                ]
+            ),
             "projects_completed": len(completed),
             "projects_blocked": len(blocked),
-            "stalled_tasks": [{"id": task["id"], "title": task["title"], "owner_id": task["owner_id"]} for task in stalled],
-            "overdue_tasks": [{"id": task["id"], "title": task["title"], "deadline": task["deadline"]} for task in overdue],
-            "budget_alerts": [{"id": task["id"], "title": task["title"], "spent_cents": task["spent_cents"], "budget_cents": task["budget_cents"]} for task in budget_alerts],
-            "engineering_failures": len([t for t in failed if get_agent(t["owner_id"]).department == "product_engineering"]),
+            "stalled_tasks": [
+                {"id": task["id"], "title": task["title"], "owner_id": task["owner_id"]} for task in stalled
+            ],
+            "overdue_tasks": [
+                {"id": task["id"], "title": task["title"], "deadline": task["deadline"]} for task in overdue
+            ],
+            "budget_alerts": [
+                {
+                    "id": task["id"],
+                    "title": task["title"],
+                    "spent_cents": task["spent_cents"],
+                    "budget_cents": task["budget_cents"],
+                }
+                for task in budget_alerts
+            ],
+            "engineering_failures": len(
+                [t for t in failed if get_agent(t["owner_id"]).department == "product_engineering"]
+            ),
             "research_results": len([t for t in completed if get_agent(t["owner_id"]).department == "ai_research"]),
-            "content_ready": len([t for t in tasks if t["action_type"] == "public_publish" and t["state"] == TaskState.AWAITING_APPROVAL.value]),
+            "content_ready": len(
+                [
+                    t
+                    for t in tasks
+                    if t["action_type"] == "public_publish" and t["state"] == TaskState.AWAITING_APPROVAL.value
+                ]
+            ),
             "costs_incurred_cents": costs,
-            "critical_risks": len([t for t in tasks if t["risk"] == RiskLevel.CRITICAL.value and t["state"] not in {TaskState.COMPLETED.value, TaskState.CANCELLED.value}]),
+            "critical_risks": len(
+                [
+                    t
+                    for t in tasks
+                    if t["risk"] == RiskLevel.CRITICAL.value
+                    and t["state"] not in {TaskState.COMPLETED.value, TaskState.CANCELLED.value}
+                ]
+            ),
             "top_founder_decisions": founder_decisions,
             "active_objectives": objective_summaries,
             "autopilot_enabled": self.store.get_control("autopilot_enabled", "1") == "1",
@@ -823,9 +981,7 @@ class AmauraControlPlane:
         if is_software_task(task) and task.get("metadata", {}).get("git_commit"):
             merge = merge_approved_task(task, cleanup=False)
         elif is_software_task(task) and os.environ.get("AMAURA_STRICT_GIT", "0") == "1":
-            raise GovernanceError(
-                "Strict launch mode blocks repository task completion without an approved Git commit"
-            )
+            raise GovernanceError("Strict launch mode blocks repository task completion without an approved Git commit")
 
         try:
             with self.store.atomic_block():
@@ -840,9 +996,7 @@ class AmauraControlPlane:
                         "sha256": merge_record.sha256,
                         "byte_length": merge_record.byte_length,
                         "success": True,
-                        "excerpt": (
-                            f"merged_head={merge.merged_head[:12]} branch={merge.branch}"
-                        ),
+                        "excerpt": (f"merged_head={merge.merged_head[:12]} branch={merge.branch}"),
                     }
                     task = self.store.update_work_item(
                         task_id,

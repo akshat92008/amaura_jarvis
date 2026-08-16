@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import uuid
@@ -52,10 +51,7 @@ class DistributionEngine:
 
     def _publication_payload(self, publication: dict[str, Any]) -> dict[str, Any]:
         assets = []
-        all_assets = {
-            asset["id"]: asset
-            for asset in self.store.list_content_assets(publication["campaign_id"])
-        }
+        all_assets = {asset["id"]: asset for asset in self.store.list_content_assets(publication["campaign_id"])}
         for asset_id in publication["asset_ids"]:
             if asset_id not in all_assets:
                 raise GovernanceError("Publication references an unknown campaign asset")
@@ -108,22 +104,17 @@ class DistributionEngine:
         readiness = self.content.publication_readiness(campaign_id)
         if not readiness["ready"]:
             raise GovernanceError(
-                "Campaign is not publication-ready: "
-                + ", ".join(readiness["missing_approved_asset_types"])
+                "Campaign is not publication-ready: " + ", ".join(readiness["missing_approved_asset_types"])
             )
         approved_assets = {
-            asset["id"]: asset
-            for asset in self.store.list_content_assets(campaign_id)
-            if asset["status"] == "approved"
+            asset["id"]: asset for asset in self.store.list_content_assets(campaign_id) if asset["status"] == "approved"
         }
         unique_asset_ids = list(dict.fromkeys(asset_ids))
         if not unique_asset_ids:
             raise GovernanceError("At least one approved content asset is required")
         missing = [asset_id for asset_id in unique_asset_ids if asset_id not in approved_assets]
         if missing:
-            raise GovernanceError(
-                "Publication may reference only approved campaign assets: " + ", ".join(missing)
-            )
+            raise GovernanceError("Publication may reference only approved campaign assets: " + ", ".join(missing))
         normalised_schedule = _normalise_schedule(scheduled_at)
         publication_id = _id("pub")
         provisional = {
@@ -257,18 +248,28 @@ class DistributionEngine:
             operation = "publish_content" if publication["visibility"] == "public" else "create_private_draft"
             provider = "approved-publication" if operation == "publish_content" else "private-publication"
             event = self.store.enqueue_outbox_event(
-                provider=provider, operation=operation, payload=current_payload,
+                provider=provider,
+                operation=operation,
+                payload=current_payload,
                 idempotency_key=publication["idempotency_key"],
             )
             updated = self.store.update_distribution_publication(
-                publication_id, status="enqueued", outbox_event_id=event["id"], error="",
+                publication_id,
+                status="enqueued",
+                outbox_event_id=event["id"],
+                error="",
             )
             self.store.publish_event(
-                "distribution.publication.enqueued", publication_id,
+                "distribution.publication.enqueued",
+                publication_id,
                 {"outbox_event_id": event["id"], "operation": operation},
             )
             self.store.audit(
-                actor, "enqueue_publication", "distribution_publication", publication_id, "allowed",
+                actor,
+                "enqueue_publication",
+                "distribution_publication",
+                publication_id,
+                "allowed",
                 {"outbox_event_id": event["id"], "operation": operation},
             )
             return updated, True

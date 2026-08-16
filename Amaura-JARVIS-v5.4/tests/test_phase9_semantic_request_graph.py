@@ -1,4 +1,5 @@
 """Adversarial qualification for the Phase 9 SemanticRequestGraph."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,7 +8,6 @@ import pytest
 
 from jarvis.amaura import direct_action as da
 from jarvis.amaura.semantic_core import SemanticAction, SemanticParser
-
 
 EXTENSIONS = da.RequestPreprocessor.KNOWN_EXTENSIONS
 
@@ -151,8 +151,7 @@ def test_repo_review_without_repo_keyword_routes_to_repository(tmp_path: Path) -
 
 def test_css_selector_list_is_data_not_action_words() -> None:
     graph = parse(
-        'Open https://example.test and report these CSS selectors: '
-        '".save-a", ".memory-b", ".open-c", ".screen-d".'
+        'Open https://example.test and report these CSS selectors: ".save-a", ".memory-b", ".open-c", ".screen-d".'
     )
     assert graph.action is SemanticAction.BROWSER
     assert graph.browser is not None

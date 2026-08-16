@@ -6,6 +6,7 @@ module preserves the old Nexus receipt/invocation surface for historical v3.x
 integrations and migrations only; the Amaura executor never selects it as a
 coding backend.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -15,7 +16,6 @@ import shlex
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any
 
 from jarvis.amaura.models import GovernanceError
 from jarvis.amaura.noryx_bridge import NoryxDeliveryAdapter, NoryxRunResult, _receipt
@@ -53,9 +53,7 @@ class NexusDeliveryAdapter(NoryxDeliveryAdapter):
         request_payload = {
             "schema": "amaura.noryx-task.v1",
             "objective": objective.strip(),
-            "acceptance_criteria": [
-                str(value).strip() for value in (acceptance_criteria or []) if str(value).strip()
-            ],
+            "acceptance_criteria": [str(value).strip() for value in (acceptance_criteria or []) if str(value).strip()],
             "repository_path": str(repository),
             "idempotency_key": idempotency_key,
             "requirements": {"fail_closed": True, "do_not_deploy": True, "result_schema": "amaura.noryx-result.v2"},

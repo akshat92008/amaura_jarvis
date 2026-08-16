@@ -13,9 +13,8 @@ the relative-looking candidate must be a suffix of an extracted absolute path,
 and every occurrence of it in the original sentence must be immediately
 preceded by ``/``. A genuinely independently written relative path is retained.
 """
-from __future__ import annotations
 
-from typing import Any
+from __future__ import annotations
 
 _INSTALLED = False
 
@@ -42,9 +41,7 @@ def install_semantic_path_normalization() -> None:
                     result.append(candidate)
                 continue
 
-            shadow_of_absolute = any(
-                absolute.endswith("/" + candidate) for absolute in absolute_paths
-            )
+            shadow_of_absolute = any(absolute.endswith("/" + candidate) for absolute in absolute_paths)
             if not shadow_of_absolute:
                 if candidate not in result:
                     result.append(candidate)
@@ -62,9 +59,7 @@ def install_semantic_path_normalization() -> None:
             # Drop only when every textual occurrence belongs to the already
             # extracted absolute path. If the user also wrote the relative path
             # independently, it remains a distinct semantic entity.
-            solely_absolute_shadow = bool(starts) and all(
-                index > 0 and text[index - 1] == "/" for index in starts
-            )
+            solely_absolute_shadow = bool(starts) and all(index > 0 and text[index - 1] == "/" for index in starts)
             if not solely_absolute_shadow and candidate not in result:
                 result.append(candidate)
 

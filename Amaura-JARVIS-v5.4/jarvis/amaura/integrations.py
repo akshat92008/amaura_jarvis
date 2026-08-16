@@ -14,8 +14,8 @@ from email.message import EmailMessage
 from typing import Any
 
 from jarvis.amaura.models import GovernanceError
-from jarvis.amaura.network import request_form_json, request_json, validate_public_url
 from jarvis.amaura.n8n import get_n8n_client
+from jarvis.amaura.network import request_form_json, request_json, validate_public_url
 
 Transport = Callable[..., tuple[int, dict[str, Any], dict[str, str]]]
 
@@ -31,15 +31,17 @@ def _canonical_bytes(value: Any) -> bytes:
 
 
 def _receipt_key(value: str | None = None) -> bytes:
-    raw = value if value is not None else os.environ.get(
-        "AMAURA_PROVIDER_RECEIPT_KEY",
-        "",
+    raw = (
+        value
+        if value is not None
+        else os.environ.get(
+            "AMAURA_PROVIDER_RECEIPT_KEY",
+            "",
+        )
     )
     encoded = raw.encode()
     if len(encoded) < 32:
-        raise GovernanceError(
-            "AMAURA_PROVIDER_RECEIPT_KEY must contain at least 32 bytes"
-        )
+        raise GovernanceError("AMAURA_PROVIDER_RECEIPT_KEY must contain at least 32 bytes")
     return encoded
 
 
@@ -108,9 +110,7 @@ class ProviderReceipt:
             "operation": operation,
             "external_id": external_id,
             "idempotency_key": idempotency_key,
-            "payload_sha256": hashlib.sha256(
-                _canonical_bytes(payload)
-            ).hexdigest(),
+            "payload_sha256": hashlib.sha256(_canonical_bytes(payload)).hexdigest(),
             "status": status,
             "created_at": datetime.now(UTC).isoformat(),
             "thread_id": thread_id,
@@ -154,7 +154,9 @@ class GmailAdapter:
         token_transport: Transport = request_form_json,
         receipt_key: str | None = None,
     ):
-        self.access_token = access_token if access_token is not None else os.environ.get("AMAURA_GMAIL_ACCESS_TOKEN", "")
+        self.access_token = (
+            access_token if access_token is not None else os.environ.get("AMAURA_GMAIL_ACCESS_TOKEN", "")
+        )
         self.client_id = os.environ.get("AMAURA_GMAIL_CLIENT_ID", "").strip()
         self.client_secret = os.environ.get("AMAURA_GMAIL_CLIENT_SECRET", "").strip()
         self.refresh_token = os.environ.get("AMAURA_GMAIL_REFRESH_TOKEN", "").strip()
@@ -236,10 +238,14 @@ class GmailAdapter:
         if not external_id:
             raise GovernanceError("Gmail returned no message identifier")
         return ProviderReceipt.issue(
-            provider="gmail", operation="send_email", external_id=external_id,
-            thread_id=thread_id, idempotency_key=idempotency_key,
+            provider="gmail",
+            operation="send_email",
+            external_id=external_id,
+            thread_id=thread_id,
+            idempotency_key=idempotency_key,
             payload={"recipient": recipient, "subject": subject, "body": body},
-            status="sent", key=self.receipt_key,
+            status="sent",
+            key=self.receipt_key,
         )
 
 
@@ -254,7 +260,9 @@ class N8nEmailAdapter:
     def configured(self) -> bool:
         return self.client.configured
 
-    def send(self, *, recipient: str, subject: str, body: str, idempotency_key: str, sender: str = "") -> ProviderReceipt:
+    def send(
+        self, *, recipient: str, subject: str, body: str, idempotency_key: str, sender: str = ""
+    ) -> ProviderReceipt:
         if not self.configured:
             raise GovernanceError("n8n is not configured")
         receipt_payload = {"recipient": recipient, "subject": subject, "body": body}
@@ -262,8 +270,12 @@ class N8nEmailAdapter:
         result = self.client.trigger_webhook(
             os.environ.get("N8N_WEBHOOK_EMAIL", "amaura-email"),
             {
-                "to": recipient, "from": sender, "subject": subject, "body": body,
-                "idempotency_key": idempotency_key, "payload_sha256": payload_sha256,
+                "to": recipient,
+                "from": sender,
+                "subject": subject,
+                "body": body,
+                "idempotency_key": idempotency_key,
+                "payload_sha256": payload_sha256,
             },
         )
         external_id = str(result.get("id", "")).strip()
@@ -276,10 +288,14 @@ class N8nEmailAdapter:
         if result.get("payload_sha256") != payload_sha256:
             raise GovernanceError("n8n did not confirm the approved payload digest")
         return ProviderReceipt.issue(
-            provider="n8n", operation="send_email", external_id=external_id,
+            provider="n8n",
+            operation="send_email",
+            external_id=external_id,
             thread_id=str(result.get("threadId", "")).strip(),
-            idempotency_key=idempotency_key, payload=receipt_payload,
-            status="sent", key=self.receipt_key,
+            idempotency_key=idempotency_key,
+            payload=receipt_payload,
+            status="sent",
+            key=self.receipt_key,
         )
 
 
@@ -310,9 +326,13 @@ class N8nCRMAdapter:
         if result.get("payload_sha256") != payload_sha256:
             raise GovernanceError("n8n CRM did not confirm the payload digest")
         return ProviderReceipt.issue(
-            provider="n8n", operation="sync_crm", external_id=external_id,
-            idempotency_key=idempotency_key, payload=receipt_payload,
-            status="synced", key=self.receipt_key,
+            provider="n8n",
+            operation="sync_crm",
+            external_id=external_id,
+            idempotency_key=idempotency_key,
+            payload=receipt_payload,
+            status="synced",
+            key=self.receipt_key,
         )
 
 
@@ -325,6 +345,7 @@ class IMessageAdapter:
     @property
     def configured(self) -> bool:
         import sys
+
         return os.environ.get("AMAURA_ENABLE_IMESSAGE", "0") == "1" and sys.platform == "darwin"
 
     def send(self, *, recipient: str, body: str, idempotency_key: str) -> ProviderReceipt:
@@ -333,14 +354,18 @@ class IMessageAdapter:
         if not recipient.strip() or not body.strip() or not idempotency_key.strip():
             raise GovernanceError("iMessage requires recipient, body, and idempotency key")
         from jarvis.tools.communication import send_imessage_local
+
         result = send_imessage_local(recipient, body)
         if result.startswith("❌"):
             raise GovernanceError(f"iMessage delivery failed: {result}")
         external_id = "imessage-" + hashlib.sha256(idempotency_key.encode()).hexdigest()[:24]
         return ProviderReceipt.issue(
-            provider="imessage", operation="send_imessage", external_id=external_id,
+            provider="imessage",
+            operation="send_imessage",
+            external_id=external_id,
             idempotency_key=idempotency_key,
-            payload={"recipient": recipient, "body": body}, status="sent",
+            payload={"recipient": recipient, "body": body},
+            status="sent",
             key=self.receipt_key,
         )
 
@@ -356,15 +381,9 @@ class PrivatePublicationAdapter:
         transport: Transport = request_json,
         receipt_key: str | None = None,
     ):
-        self.endpoint = (
-            endpoint
-            if endpoint is not None
-            else os.environ.get("AMAURA_PUBLICATION_ENDPOINT", "")
-        )
+        self.endpoint = endpoint if endpoint is not None else os.environ.get("AMAURA_PUBLICATION_ENDPOINT", "")
         self.access_token = (
-            access_token
-            if access_token is not None
-            else os.environ.get("AMAURA_PUBLICATION_ACCESS_TOKEN", "")
+            access_token if access_token is not None else os.environ.get("AMAURA_PUBLICATION_ACCESS_TOKEN", "")
         )
         self.transport = transport
         self.receipt_key = receipt_key
@@ -383,9 +402,7 @@ class PrivatePublicationAdapter:
             raise GovernanceError("Private publication adapter is not configured")
         validate_public_url(self.endpoint, resolve=True)
         if payload.get("visibility") not in {"private", "draft"}:
-            raise GovernanceError(
-                "Publication adapter accepts only private or draft visibility"
-            )
+            raise GovernanceError("Publication adapter accepts only private or draft visibility")
         if not idempotency_key.strip():
             raise GovernanceError("Publication idempotency key is required")
         status, response, _ = self.transport(
@@ -398,15 +415,11 @@ class PrivatePublicationAdapter:
             },
         )
         if status not in {200, 201, 202}:
-            raise GovernanceError(
-                f"Private publication draft failed with HTTP {status}"
-            )
+            raise GovernanceError(f"Private publication draft failed with HTTP {status}")
         external_id = str(response.get("id", "")).strip()
         visibility = str(response.get("visibility", "")).strip().lower()
         if not external_id or visibility not in {"private", "draft"}:
-            raise GovernanceError(
-                "Provider did not confirm a private publication draft"
-            )
+            raise GovernanceError("Provider did not confirm a private publication draft")
         return ProviderReceipt.issue(
             provider=str(response.get("provider", "private-publication")),
             operation="create_private_draft",
@@ -433,11 +446,9 @@ class ApprovedPublicationAdapter:
         transport: Transport = request_json,
         receipt_key: str | None = None,
     ):
-        self.endpoint = endpoint if endpoint is not None else os.environ.get(
-            "AMAURA_PUBLIC_PUBLISH_ENDPOINT", ""
-        )
-        self.access_token = access_token if access_token is not None else os.environ.get(
-            "AMAURA_PUBLIC_PUBLISH_ACCESS_TOKEN", ""
+        self.endpoint = endpoint if endpoint is not None else os.environ.get("AMAURA_PUBLIC_PUBLISH_ENDPOINT", "")
+        self.access_token = (
+            access_token if access_token is not None else os.environ.get("AMAURA_PUBLIC_PUBLISH_ACCESS_TOKEN", "")
         )
         self.transport = transport
         self.receipt_key = receipt_key
@@ -527,11 +538,19 @@ class ProviderMatrix:
 
     def __init__(self):
         from jarvis.amaura.channels import (
-            AssistedOutreachAdapter, LinkedInPublicationAdapter, MetaPublicationAdapter, TelegramNotificationAdapter,
+            AssistedOutreachAdapter,
+            LinkedInPublicationAdapter,
+            MetaPublicationAdapter,
+            TelegramNotificationAdapter,
         )
-        from jarvis.amaura.noryx_bridge import NoryxDeliveryAdapter
         from jarvis.amaura.nexus_bridge import NexusDeliveryAdapter
-        from jarvis.amaura.workspace_integrations import GoogleCalendarAdapter, GoogleDriveAdapter, GitHubAdapter, PostHogAdapter
+        from jarvis.amaura.noryx_bridge import NoryxDeliveryAdapter
+        from jarvis.amaura.workspace_integrations import (
+            GitHubAdapter,
+            GoogleCalendarAdapter,
+            GoogleDriveAdapter,
+            PostHogAdapter,
+        )
 
         self.gmail = GmailAdapter()
         self.n8n = N8nEmailAdapter()
@@ -558,14 +577,18 @@ class ProviderMatrix:
         if operation == "send_email":
             if provider == "n8n" or (provider == "auto" and self.n8n.configured):
                 return self.n8n.send(
-                    recipient=payload["recipient"], subject=payload["subject"],
-                    body=payload["body"], idempotency_key=idempotency_key,
+                    recipient=payload["recipient"],
+                    subject=payload["subject"],
+                    body=payload["body"],
+                    idempotency_key=idempotency_key,
                     sender=payload.get("sender", ""),
                 )
             if provider == "gmail" or (provider == "auto" and self.gmail.configured):
                 return self.gmail.send(
-                    recipient=payload["recipient"], subject=payload["subject"],
-                    body=payload["body"], idempotency_key=idempotency_key,
+                    recipient=payload["recipient"],
+                    subject=payload["subject"],
+                    body=payload["body"],
+                    idempotency_key=idempotency_key,
                     sender=payload.get("sender", ""),
                 )
             raise GovernanceError(f"No configured provider for send_email (requested: {provider})")
@@ -573,14 +596,16 @@ class ProviderMatrix:
             if provider != "imessage":
                 raise GovernanceError("iMessage delivery requires the imessage provider")
             return self.imessage.send(
-                recipient=payload["recipient"], body=payload["body"],
+                recipient=payload["recipient"],
+                body=payload["body"],
                 idempotency_key=idempotency_key,
             )
         if operation == "sync_crm":
             if provider != "n8n":
                 raise GovernanceError("CRM synchronization requires the n8n provider")
             return self.crm.sync(
-                lead_id=payload["lead_id"], data=payload["data"],
+                lead_id=payload["lead_id"],
+                data=payload["data"],
                 idempotency_key=idempotency_key,
             )
         if operation == "create_private_draft":
@@ -592,46 +617,87 @@ class ProviderMatrix:
         if operation == "prepare_assisted_message":
             if provider != "assisted-browser":
                 raise GovernanceError("Assisted messaging requires the assisted-browser provider")
-            return self.assisted.prepare(channel=payload["channel"], recipient=payload["recipient"],
-                                         subject=payload.get("subject", ""), body=payload["body"],
-                                         idempotency_key=idempotency_key)
+            return self.assisted.prepare(
+                channel=payload["channel"],
+                recipient=payload["recipient"],
+                subject=payload.get("subject", ""),
+                body=payload["body"],
+                idempotency_key=idempotency_key,
+            )
         if operation == "send_telegram_notification":
             if provider != "telegram":
                 raise GovernanceError("Founder notification requires Telegram")
             return self.telegram.send(text=payload["text"], idempotency_key=idempotency_key)
         if operation == "create_calendar_event":
-            return self.calendar.create_event(summary=payload["summary"], start=payload["start"], end=payload["end"],
-                                              description=payload.get("description", ""), attendees=payload.get("attendees", []),
-                                              calendar_id=payload.get("calendar_id", "primary"), idempotency_key=idempotency_key)
+            return self.calendar.create_event(
+                summary=payload["summary"],
+                start=payload["start"],
+                end=payload["end"],
+                description=payload.get("description", ""),
+                attendees=payload.get("attendees", []),
+                calendar_id=payload.get("calendar_id", "primary"),
+                idempotency_key=idempotency_key,
+            )
         if operation == "upload_drive_file":
-            return self.drive.upload_file(path=payload["path"], folder_id=payload.get("folder_id", ""),
-                                          name=payload.get("name", ""), mime_type=payload.get("mime_type", "application/octet-stream"),
-                                          idempotency_key=idempotency_key)
+            return self.drive.upload_file(
+                path=payload["path"],
+                folder_id=payload.get("folder_id", ""),
+                name=payload.get("name", ""),
+                mime_type=payload.get("mime_type", "application/octet-stream"),
+                idempotency_key=idempotency_key,
+            )
         if operation == "create_github_issue":
-            return self.github.create_issue(owner=payload["owner"], repo=payload["repo"], title=payload["title"],
-                                            body=payload.get("body", ""), labels=payload.get("labels", []),
-                                            idempotency_key=idempotency_key)
+            return self.github.create_issue(
+                owner=payload["owner"],
+                repo=payload["repo"],
+                title=payload["title"],
+                body=payload.get("body", ""),
+                labels=payload.get("labels", []),
+                idempotency_key=idempotency_key,
+            )
         if operation == "dispatch_github_workflow":
-            return self.github.dispatch_workflow(owner=payload["owner"], repo=payload["repo"], workflow_id=payload["workflow_id"],
-                                                 ref=payload["ref"], inputs=payload.get("inputs", {}), idempotency_key=idempotency_key)
+            return self.github.dispatch_workflow(
+                owner=payload["owner"],
+                repo=payload["repo"],
+                workflow_id=payload["workflow_id"],
+                ref=payload["ref"],
+                inputs=payload.get("inputs", {}),
+                idempotency_key=idempotency_key,
+            )
         if operation == "publish_linkedin_text":
             return self.linkedin.publish_text(text=payload["text"], idempotency_key=idempotency_key)
         if operation == "publish_facebook_text":
             return self.meta.publish_facebook_text(text=payload["text"], idempotency_key=idempotency_key)
         if operation == "publish_instagram_media":
-            return self.meta.publish_instagram_media(media_url=payload["media_url"], caption=payload.get("caption", ""),
-                                                     media_type=payload.get("media_type", "IMAGE"), idempotency_key=idempotency_key)
+            return self.meta.publish_instagram_media(
+                media_url=payload["media_url"],
+                caption=payload.get("caption", ""),
+                media_type=payload.get("media_type", "IMAGE"),
+                idempotency_key=idempotency_key,
+            )
         if operation == "capture_analytics_event":
-            return self.analytics.capture(event=payload["event"], distinct_id=payload["distinct_id"],
-                                          properties=payload.get("properties", {}), idempotency_key=idempotency_key)
+            return self.analytics.capture(
+                event=payload["event"],
+                distinct_id=payload["distinct_id"],
+                properties=payload.get("properties", {}),
+                idempotency_key=idempotency_key,
+            )
         if operation == "run_noryx_delivery":
-            return self.noryx.run(repository_path=payload["repository_path"], objective=payload["objective"],
-                                  acceptance_criteria=payload.get("acceptance_criteria", []),
-                                  timeout_seconds=payload.get("timeout_seconds", 1800), idempotency_key=idempotency_key)
+            return self.noryx.run(
+                repository_path=payload["repository_path"],
+                objective=payload["objective"],
+                acceptance_criteria=payload.get("acceptance_criteria", []),
+                timeout_seconds=payload.get("timeout_seconds", 1800),
+                idempotency_key=idempotency_key,
+            )
         if operation == "run_nexus_delivery":
-            return self.nexus.run(repository_path=payload["repository_path"], objective=payload["objective"],
-                                  acceptance_criteria=payload.get("acceptance_criteria", []),
-                                  timeout_seconds=payload.get("timeout_seconds", 1800), idempotency_key=idempotency_key)
+            return self.nexus.run(
+                repository_path=payload["repository_path"],
+                objective=payload["objective"],
+                acceptance_criteria=payload.get("acceptance_criteria", []),
+                timeout_seconds=payload.get("timeout_seconds", 1800),
+                idempotency_key=idempotency_key,
+            )
         raise GovernanceError(f"Unknown operation in matrix: {operation}")
 
 
