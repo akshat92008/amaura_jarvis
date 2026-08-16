@@ -1,0 +1,28 @@
+name: phase9r-import-order-fix
+on:
+  push:
+    branches: [agent/phase9-semantic-repair]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/phase9-semantic-repair
+      - name: Normalize import order
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('Amaura-JARVIS-v5.4/jarvis/amaura/antigravity_bridge.py')
+          text = p.read_text().replace('from typing import Any, cast, Literal', 'from typing import Any, Literal, cast', 1)
+          p.write_text(text)
+          PY
+          rm .github/workflows/phase9r-import-order-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(phase9r): normalize typing import order"
+          git push origin HEAD:agent/phase9-semantic-repair
