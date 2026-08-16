@@ -1,0 +1,42 @@
+--- a/Amaura-JARVIS-v5.4/jarvis/amaura/semantic_frontend.py
++++ b/Amaura-JARVIS-v5.4/jarvis/amaura/semantic_frontend.py
+@@ -95,7 +95,7 @@
+     ):
+         return True
+     if re.search(
+-        r"^\s*(?:please\s+|kindly\s+)?(?:list|enumerate|show|display|print|get)\b[^\n]{0,80}\b(?:files|entries|children|items|filenames|inventory|directory|folder|path|location|contents)\b",
++        r"^\s*(?:(?:please|kindly|can\s+you)\s+)?(?:list|enumerate|show|display|print|get|give\s+me)\b[^\n]{0,80}\b(?:files|entries|children|items|filenames|inventory|directory|folder|path|location|contents)\b",
+         masked, re.IGNORECASE,
+     ):
+         return True
+@@ -406,6 +406,8 @@
+ 
+ def _table_transform(text: str, paths: list[str]) -> dict[str, Any] | None:
+     lower = text.lower()
++    if re.search(r"\b(?:key[- /]?value|kv|config|env)\b", lower):
++        return None
+     if not ("json" in lower and re.search(r"\b(?:table|csv|tsv|semicolon|delimited|transform|convert)\b", lower)):
+         return None
+     output = _explicit_output(text, paths)
+@@ -1058,7 +1060,9 @@
+         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
+         if graph.action != core.SemanticAction.EXACT_LITERAL:
+             return None
+-        return _public_exact(graph)
++        result = _public_exact(graph)
++        result.execution_type = "semantic_graph"
++        return result
+ 
+     def exact_parse_intent(cls: Any, text: str) -> Any:
+         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
+--- a/Amaura-JARVIS-v5.4/jarvis/amaura/direct_action.py
++++ b/Amaura-JARVIS-v5.4/jarvis/amaura/direct_action.py
+@@ -1134,7 +1134,7 @@
+                 cand in all_paths
+                 or any(cand.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS)
+                 or "/" in cand
+-                or (cand.lower() not in {"the", "a", "an", "this", "that", "it", "content", "text", "payload"} and bool(re.fullmatch(r"[~/A-Za-z0-9_.-]+", cand)))
++                or (cand.lower() not in {"the", "a", "an", "this", "that", "it", "content", "text", "payload", "to", "into", "at", "in", "file", "path", "location", "destination", "target", "out", "output"} and bool(re.fullmatch(r"[~/A-Za-z0-9_.-]+", cand)))
+             ):
+                 target_path = cand
+ 
