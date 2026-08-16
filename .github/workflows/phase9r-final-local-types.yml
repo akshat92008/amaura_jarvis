@@ -27,16 +27,13 @@ jobs:
                   raise SystemExit(f'missing anchor {path}: {old[:100]!r}')
               p.write_text(text.replace(old, new, 1))
 
-          # Inbox: avoid reusing `text` for both WhatsApp JSON mapping and Messenger string.
           once('jarvis/amaura/inbox.py', '                text = cast(dict[str, Any], msg.get("text")) if isinstance(msg.get("text"), dict) else {}\n                body = str(text.get("body", "")).strip()\n', '                text_payload = cast(dict[str, Any], msg.get("text")) if isinstance(msg.get("text"), dict) else {}\n                body = str(text_payload.get("body", "")).strip()\n')
           once('jarvis/amaura/inbox.py', '            text = str(message.get("text", "")).strip()\n            external_id = str(message.get("mid", "")).strip()\n            if not text or not external_id:\n', '            message_text = str(message.get("text", "")).strip()\n            external_id = str(message.get("mid", "")).strip()\n            if not message_text or not external_id:\n')
           once('jarvis/amaura/inbox.py', '                    body=text,\n', '                    body=message_text,\n')
 
-          # Direct action: narrow regex match once and declare heterogeneous transform dict.
           once('jarvis/amaura/direct_action.py', '        if cls.COMMAND_PREFIX_RE.search(clean):\n            prefix_constraint = (\n                cls.COMMAND_PREFIX_RE.match(clean).group(0) if cls.COMMAND_PREFIX_RE.match(clean) else ""\n            )\n', '        if cls.COMMAND_PREFIX_RE.search(clean):\n            prefix_match = cls.COMMAND_PREFIX_RE.match(clean)\n            prefix_constraint = prefix_match.group(0) if prefix_match is not None else ""\n')
           once('jarvis/amaura/direct_action.py', '                res_dict = {}\n', '                res_dict: dict[str, Any] = {}\n')
 
-          # Executor: keep direct-action evidence separate and narrow review JSON values.
           p = Path('jarvis/amaura/executor.py'); text = p.read_text()
           text = text.replace('            evidence = []\n\n            direct_result = DirectActionRouter.execute', '            direct_evidence: list[dict[str, Any]] = []\n\n            direct_result = DirectActionRouter.execute', 1)
           text = text.replace('                evidence.append(\n', '                direct_evidence.append(\n', 1)
@@ -45,15 +42,13 @@ jobs:
           text = text.replace('        approve = decision.get("approve")\n        findings = decision.get("findings")\n        if not isinstance(approve, bool) or not isinstance(findings, str) or not findings.strip():\n            raise GovernanceError("Reviewer decision is missing approve/findings")\n', '        approve_value = decision.get("approve")\n        findings_value = decision.get("findings")\n        if not isinstance(approve_value, bool) or not isinstance(findings_value, str) or not findings_value.strip():\n            raise GovernanceError("Reviewer decision is missing approve/findings")\n        approve: bool = approve_value\n        findings: str = findings_value\n', 1)
           p.write_text(text)
 
-          # Cashflow and benchmark variable inference.
           p = Path('jarvis/amaura/ventures_cashflow.py'); text = p.read_text()
-          marker = '        if trust_level == "provider_verified":\n            idem_payload = {\n'
-          if marker not in text: raise SystemExit('cashflow idempotency marker missing')
-          text = text.replace(marker, '        idem_payload: dict[str, Any]\n        if trust_level == "provider_verified":\n            idem_payload = {\n', 1)
+          marker = '            idem_payload = {\n'
+          if marker not in text: raise SystemExit('cashflow idempotency assignment missing')
+          text = text.replace(marker, '            idem_payload: dict[str, Any] = {\n', 1)
           p.write_text(text)
           once('jarvis/amaura/intelligence_benchmark.py', '    passed = sum(1 for case in results if case.passed)\n    return BenchmarkResult(source_hash, len(results), passed, len(results) - passed, results)\n', '    passed_count = sum(1 for case in results if case.passed)\n    return BenchmarkResult(source_hash, len(results), passed_count, len(results) - passed_count, results)\n')
 
-          # Dynamic semantic callables cross an intentional runtime descriptor boundary.
           p = Path('jarvis/amaura/semantic_core.py'); text = p.read_text()
           text = text.replace('    original_diagnose = getattr(\n        da.RepositoryDiagnosticEngine.diagnose, "__func__", da.RepositoryDiagnosticEngine.diagnose\n    )\n', '    original_diagnose: Any = getattr(\n        da.RepositoryDiagnosticEngine.diagnose, "__func__", da.RepositoryDiagnosticEngine.diagnose\n    )\n', 1)
           p.write_text(text)
@@ -62,7 +57,6 @@ jobs:
           text = text.replace('    original_repo_try = getattr(\n', '    original_repo_try: Any = getattr(\n', 1)
           p.write_text(text)
 
-          # Experimental lead graph: fail clearly if required state IDs are absent.
           p = Path('jarvis/amaura/experimental/graphs/lead.py'); text = p.read_text()
           text = text.replace('from jarvis.amaura.actions import AmauraActions\n', 'from jarvis.amaura.actions import AmauraActions\nfrom jarvis.amaura.models import GovernanceError\n', 1)
           text = text.replace('    def discover(self, state: LeadWorkflowState) -> dict:\n', '    @staticmethod\n    def _required_id(state: LeadWorkflowState, key: Literal["lead_id", "draft_message_id"]) -> str:\n        value = state.get(key)\n        if not value:\n            raise GovernanceError(f"Lead workflow requires {key} before this stage")\n        return value\n\n    def discover(self, state: LeadWorkflowState) -> dict:\n', 1)
@@ -72,7 +66,6 @@ jobs:
           text = text.replace('message_id=state["draft_message_id"]', 'message_id=self._required_id(state, "draft_message_id")')
           p.write_text(text)
 
-          # Experimental supervisor: route contract says these values exist, but guard it at runtime too.
           p = Path('jarvis/amaura/experimental/graph_supervisor.py'); text = p.read_text()
           text = text.replace('    def execute(self, state: SupervisorState) -> dict:\n        task = state["claimed_task"]\n        workflow_type = str(task.get("workflow_id", ""))\n', '    def execute(self, state: SupervisorState) -> dict:\n        task = state.get("claimed_task")\n        if task is None:\n            return {"status": "failed", "error": "No claimed task is available for execution"}\n        workflow_type = str(task.get("workflow_id", ""))\n', 1)
           text = text.replace('    def finish(self, state: SupervisorState) -> dict:\n        run = state["run_info"]\n', '    def finish(self, state: SupervisorState) -> dict:\n        run = state.get("run_info")\n        if run is None:\n            return {"status": "failed", "error": "No execution run is available to finish"}\n', 1)
