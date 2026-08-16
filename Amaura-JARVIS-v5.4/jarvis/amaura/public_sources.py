@@ -224,7 +224,7 @@ class RobotsPolicy:
                 # Fail closed.  RobotFileParser.parse([]) means "allow all",
                 # which contradicted the policy comment and silently converted
                 # network failures into crawl permission.
-                parser.disallow_all = True
+                parser.__dict__["disallow_all"] = True
             self._cache[root] = parser
         return parser.can_fetch(user_agent, url)
 

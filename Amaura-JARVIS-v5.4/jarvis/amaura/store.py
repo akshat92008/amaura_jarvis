@@ -15,7 +15,7 @@ import weakref
 from contextlib import closing
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from jarvis.amaura.operation_policy import requires_reconciliation_after_lease_expiry
 from jarvis.paths import get_data_dir
@@ -38,16 +38,16 @@ def _compact_json_value(value: Any, *, depth: int = 0) -> Any:
     if isinstance(value, str):
         return value if len(value) <= 4000 else value[:4000] + "\n...[truncated]"
     if isinstance(value, list):
-        compacted = [_compact_json_value(item, depth=depth + 1) for item in value[:25]]
+        compacted_list = [_compact_json_value(item, depth=depth + 1) for item in value[:25]]
         if len(value) > 25:
-            compacted.append({"_truncated": True, "remaining": len(value) - 25})
-        return compacted
+            compacted_list.append({"_truncated": True, "remaining": len(value) - 25})
+        return compacted_list
     if isinstance(value, dict):
         items = list(value.items())
-        compacted = {str(key): _compact_json_value(item, depth=depth + 1) for key, item in items[:40]}
+        compacted_dict = {str(key): _compact_json_value(item, depth=depth + 1) for key, item in items[:40]}
         if len(items) > 40:
-            compacted["_truncated_keys"] = len(items) - 40
-        return compacted
+            compacted_dict["_truncated_keys"] = len(items) - 40
+        return compacted_dict
     return value
 
 
@@ -160,7 +160,7 @@ class CompanyStore:
         # Explicit service shutdown handles process-global stores.  Running many
         # SQLite close callbacks during late interpreter finalization can block
         # Python shutdown after a multiprocessing test or worker lifecycle.
-        self._finalizer.atexit = False
+        cast(Any, self._finalizer).atexit = False
 
     @staticmethod
     def _finalize_connection(connection: sqlite3.Connection) -> None:
@@ -1174,7 +1174,9 @@ class CompanyStore:
                         "SELECT entry_hash FROM audit_logs WHERE sequence=?", (checkpoint_sequence,)
                     ).fetchone()
                     if anchor is None:
-                        raise RuntimeError("Audit integrity failure: external checkpoint references a missing audit row")
+                        raise RuntimeError(
+                            "Audit integrity failure: external checkpoint references a missing audit row"
+                        )
                     anchored_head = str(anchor["entry_hash"])
 
                 checkpoint_head = str(saved.get("head", ""))
@@ -2071,6 +2073,8 @@ class CompanyStore:
                     created_at,
                 ),
             )
+            if cursor.lastrowid is None:
+                raise RuntimeError("Audit insert did not return a sequence")
             sequence = int(cursor.lastrowid)
         self._write_external_audit_checkpoint(sequence=sequence, head=entry_hash, signature=signature, key_id=key_id)
 
@@ -4901,7 +4905,7 @@ class CompanyStore:
             rows = self._connection.execute(
                 f"SELECT * FROM venture_cashflow_actions{where} ORDER BY priority ASC, created_at ASC LIMIT ?", params
             ).fetchall()
-        decoded = [self._decode_row(row) for row in rows]  # type: ignore[misc]
+        decoded = [decoded_row for row in rows if (decoded_row := self._decode_row(row)) is not None]
         for row in decoded:
             row["requires_founder_approval"] = bool(row.get("requires_founder_approval"))
         return decoded

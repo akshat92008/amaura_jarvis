@@ -263,8 +263,8 @@ def prepare_task_worktree(workspace: str | Path, task_id: str) -> WorktreeRecord
         existing_mode = "isolated_clone" if (worktree_path / ".git").is_dir() else "linked_worktree"
         return WorktreeRecord(str(repository), str(worktree_path), branch, base_branch, base_commit, existing_mode)
 
-    existing_branch = _run_git(repository, ["show-ref", "--verify", f"refs/heads/{branch}"], allow_failure=True)
-    if existing_branch.returncode == 0:
+    branch_probe = _run_git(repository, ["show-ref", "--verify", f"refs/heads/{branch}"], allow_failure=True)
+    if branch_probe.returncode == 0:
         raise GovernanceError(
             f"Task branch '{branch}' already exists without its expected worktree. Reconcile or remove it before retrying."
         )

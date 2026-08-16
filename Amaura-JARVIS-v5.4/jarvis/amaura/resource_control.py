@@ -29,9 +29,9 @@ from pathlib import Path
 from typing import Any
 
 try:  # psutil is a lightweight core dependency in v3.6.1, but fail safely if missing.
-    import psutil  # type: ignore
+    import psutil
 except Exception:  # pragma: no cover - fallback is for damaged/minimal installs.
-    psutil = None  # type: ignore
+    psutil = None
 
 from jarvis.tools.security import workspace_root
 

@@ -19,7 +19,8 @@ from jarvis.amaura.store import CompanyStore
 class InvoiceService:
     def __init__(self, store: CompanyStore, *, output_dir: str | Path | None = None) -> None:
         default = store.db_path.parent / "invoices"
-        self.output_dir = Path(output_dir or os.environ.get("AMAURA_INVOICE_DIR", default)).expanduser().resolve()
+        configured = output_dir if output_dir is not None else os.environ.get("AMAURA_INVOICE_DIR")
+        self.output_dir = (Path(configured) if configured is not None else default).expanduser().resolve()
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.store = store
 

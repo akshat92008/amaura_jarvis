@@ -210,7 +210,7 @@ class AntigravityDeliveryAdapter:
     @staticmethod
     def _version_tuple(value: str) -> tuple[int, int, int]:
         match = re.search(r"(\d+)\.(\d+)\.(\d+)", value or "")
-        return tuple(int(v) for v in match.groups()) if match else (0, 0, 0)
+        return (int(match.group(1)), int(match.group(2)), int(match.group(3))) if match else (0, 0, 0)
 
     def _environment(self) -> dict[str, str]:
         extra = {v.strip() for v in os.environ.get("AMAURA_ANTIGRAVITY_ENV_ALLOWLIST", "").split(",") if v.strip()}

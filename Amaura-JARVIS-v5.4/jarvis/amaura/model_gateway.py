@@ -623,7 +623,7 @@ class CognitiveModelGateway:
                 try:
                     import httpx
                 except ImportError:
-                    httpx = None  # type: ignore[assignment]
+                    httpx = None
                 latency_ms = int((_time.monotonic() - t0) * 1000)
                 if httpx is None or not isinstance(exc, (httpx.HTTPStatusError, httpx.RequestError)):
                     raise

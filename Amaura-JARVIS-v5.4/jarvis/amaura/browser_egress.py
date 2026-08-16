@@ -142,7 +142,8 @@ class BrowserEgressProxy:
     @property
     def url(self) -> str:
         host, port = self.server.server_address[:2]
-        return f"http://{host}:{port}"
+        host_text = host.decode() if isinstance(host, bytes) else str(host)
+        return f"http://{host_text}:{port}"
 
     def close(self) -> None:
         self.server.shutdown()
