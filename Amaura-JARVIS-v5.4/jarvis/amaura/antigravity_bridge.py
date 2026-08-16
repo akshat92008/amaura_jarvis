@@ -22,7 +22,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Literal
+from typing import Any, cast, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
