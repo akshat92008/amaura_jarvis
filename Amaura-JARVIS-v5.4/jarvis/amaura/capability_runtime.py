@@ -280,6 +280,12 @@ def _jsonable(value: Any) -> Any:
 class _BaseAdapter:
     descriptor: CapabilityDescriptor
 
+    def available(self) -> tuple[bool, str]:
+        raise NotImplementedError
+
+    def execute(self, operation: str, params: dict[str, Any]) -> CapabilityResult:
+        raise NotImplementedError
+
     def _check_operation(self, operation: str) -> None:
         if operation not in self.descriptor.operations:
             raise GovernanceError(
@@ -324,7 +330,7 @@ class PlaywrightAdapter(_BaseAdapter):
         if not _module_available("playwright"):
             return False, "Python package 'playwright' is not installed"
         try:
-            from playwright.sync_api import sync_playwright  # type: ignore
+            from playwright.sync_api import sync_playwright
 
             with sync_playwright() as p:
                 executable = Path(p.chromium.executable_path)
@@ -365,7 +371,7 @@ class PlaywrightAdapter(_BaseAdapter):
         timeout_ms = max(1_000, min(int(params.get("timeout_ms", 30_000)), 60_000))
         max_response_mb = max(1, min(int(os.environ.get("AMAURA_BROWSER_MAX_RESPONSE_MB", "20")), 100))
         started = time.monotonic()
-        from playwright.sync_api import sync_playwright  # type: ignore
+        from playwright.sync_api import sync_playwright
 
         with BrowserEgressProxy.start() as egress, sync_playwright() as p:
             browser = p.chromium.launch(headless=True, proxy={"server": egress.url})
@@ -440,7 +446,7 @@ class Crawl4AIAdapter(_BaseAdapter):
         started = time.monotonic()
 
         async def _crawl() -> dict[str, Any]:
-            from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig  # type: ignore
+            from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
             with BrowserEgressProxy.start() as egress:
                 parameters = inspect.signature(BrowserConfig).parameters
@@ -588,7 +594,13 @@ class BrowserUseAdapter(_BaseAdapter):
             BrowserProfile = getattr(browser_use, "BrowserProfile", None)
             BrowserSession = getattr(browser_use, "BrowserSession", None)
             ProxySettings = getattr(browser_use, "ProxySettings", None)
-            if None in {Agent, Tools, BrowserProfile, BrowserSession, ProxySettings}:
+            if (
+                Agent is None
+                or Tools is None
+                or BrowserProfile is None
+                or BrowserSession is None
+                or ProxySettings is None
+            ):
                 raise CapabilityUnavailable("Installed Browser Use is missing hardened security APIs")
             with BrowserEgressProxy.start() as egress:
                 tools = Tools(exclude_actions=list(self._READ_ONLY_EXCLUDES))
@@ -747,7 +759,7 @@ class DoclingAdapter(_BaseAdapter):
         if source.stat().st_size > max_file_size:
             raise GovernanceError("Document exceeds configured file-size limit")
         started = time.monotonic()
-        from docling.document_converter import DocumentConverter  # type: ignore
+        from docling.document_converter import DocumentConverter
 
         converter = DocumentConverter()
         result = converter.convert(str(source), max_num_pages=max_pages, max_file_size=max_file_size)
@@ -787,7 +799,7 @@ class PyMuPDFAdapter(_BaseAdapter):
             raise CapabilityUnavailable(reason)
         source = _safe_local_input(str(params.get("source_path", "")))
         started = time.monotonic()
-        import fitz  # type: ignore
+        import fitz
 
         doc = fitz.open(str(source))
         try:
@@ -841,7 +853,7 @@ class PaddleOCRAdapter(_BaseAdapter):
             raise CapabilityUnavailable(reason)
         source = _safe_local_input(str(params.get("source_path", "")))
         started = time.monotonic()
-        from paddleocr import PaddleOCR  # type: ignore
+        from paddleocr import PaddleOCR
 
         kwargs: dict[str, Any] = {
             "use_doc_orientation_classify": False,
@@ -886,7 +898,7 @@ class FastEmbedQdrantAdapter(_BaseAdapter):
 
     @staticmethod
     def _client():
-        from qdrant_client import QdrantClient  # type: ignore
+        from qdrant_client import QdrantClient
 
         url = os.environ.get("QDRANT_URL", "").strip()
         api_key = os.environ.get("QDRANT_API_KEY", "").strip() or None
@@ -961,8 +973,8 @@ class LlamaIndexAdapter(_BaseAdapter):
         chunk_size = max(128, min(int(params.get("chunk_size", 768)), 4096))
         overlap = max(0, min(int(params.get("chunk_overlap", 80)), chunk_size // 2))
         started = time.monotonic()
-        from llama_index.core import Document  # type: ignore
-        from llama_index.core.node_parser import SentenceSplitter  # type: ignore
+        from llama_index.core import Document
+        from llama_index.core.node_parser import SentenceSplitter
 
         splitter = SentenceSplitter(chunk_size=chunk_size, chunk_overlap=overlap)
         nodes = splitter.get_nodes_from_documents([Document(text=text)])
@@ -996,7 +1008,7 @@ class FasterWhisperAdapter(_BaseAdapter):
         source = _safe_local_input(str(params.get("source_path", "")))
         model_name = str(params.get("model", os.environ.get("AMAURA_WHISPER_MODEL", "small")))
         started = time.monotonic()
-        from faster_whisper import WhisperModel  # type: ignore
+        from faster_whisper import WhisperModel
 
         model = WhisperModel(
             model_name,
@@ -1016,7 +1028,7 @@ class FasterWhisperAdapter(_BaseAdapter):
         output_segments = [
             {"start": float(s.start), "end": float(s.end), "text": str(s.text).strip()} for s in segments
         ]
-        text = " ".join(item["text"] for item in output_segments).strip()
+        text = " ".join(str(item["text"]) for item in output_segments).strip()
         return self._result(
             operation,
             started=started,
@@ -1056,8 +1068,8 @@ class KokoroAdapter(_BaseAdapter):
         output_path = _safe_local_output(str(params.get("output_path", "amaura-voice.wav")))
         started = time.monotonic()
         import numpy as np
-        import soundfile as sf  # type: ignore
-        from kokoro import KPipeline  # type: ignore
+        import soundfile as sf
+        from kokoro import KPipeline
 
         pipeline = KPipeline(lang_code=str(params.get("lang_code", "a")))
         generator = pipeline(text, voice=str(params.get("voice", "af_heart")), speed=float(params.get("speed", 1.0)))
@@ -1954,8 +1966,8 @@ class MCPAdapter(_BaseAdapter):
         started = time.monotonic()
 
         async def _session_call() -> dict[str, Any]:
-            from mcp import ClientSession, StdioServerParameters  # type: ignore
-            from mcp.client.stdio import stdio_client  # type: ignore
+            from mcp import ClientSession, StdioServerParameters
+            from mcp.client.stdio import stdio_client
 
             command, args, cleanup = spec.command_argv()
             try:
@@ -2011,7 +2023,7 @@ class LangfuseAdapter(_BaseAdapter):
         if not available:
             raise CapabilityUnavailable(reason)
         started = time.monotonic()
-        from langfuse import get_client  # type: ignore
+        from langfuse import get_client
 
         client = get_client()
         if operation == "health":
@@ -2555,14 +2567,14 @@ def _deep_probe(key: str, adapter: CapabilityAdapter) -> tuple[bool, str]:
         return False, reason
     try:
         if key == "playwright":
-            from playwright.sync_api import sync_playwright  # type: ignore
+            from playwright.sync_api import sync_playwright
 
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
                 browser.close()
             return True, "Chromium launched and exited successfully"
         if key == "pymupdf":
-            import fitz  # type: ignore
+            import fitz
 
             document = fitz.open()
             document.close()
@@ -2585,8 +2597,8 @@ def _deep_probe(key: str, adapter: CapabilityAdapter) -> tuple[bool, str]:
                 "image tool version probe succeeded" if proc.returncode == 0 else _bounded_text(proc.stderr, 500),
             )
         if key == "llamaindex":
-            from llama_index.core import Document  # type: ignore
-            from llama_index.core.node_parser import SentenceSplitter  # type: ignore
+            from llama_index.core import Document
+            from llama_index.core.node_parser import SentenceSplitter
 
             nodes = SentenceSplitter(chunk_size=128, chunk_overlap=0).get_nodes_from_documents(
                 [Document(text="Amaura probe sentence.")]

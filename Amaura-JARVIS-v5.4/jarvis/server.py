@@ -18,6 +18,7 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+from typing import Literal, cast
 
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -1894,7 +1895,8 @@ async def jarvis_memory_list(
 
     if scope not in {"all", "personal", "project", "episodic"}:
         raise HTTPException(status_code=400, detail="scope must be all, personal, project, or episodic")
-    return {"memory": UnifiedMemoryService(_amaura_control()).list(scope=scope)}
+    typed_scope = cast(Literal["all", "personal", "project", "episodic"], scope)
+    return {"memory": UnifiedMemoryService(_amaura_control()).list(scope=typed_scope)}
 
 
 @app.post("/api/amaura/jarvis/memory")
@@ -1909,7 +1911,12 @@ async def jarvis_memory_write(
         raise HTTPException(status_code=400, detail="scope must be personal, project, or episodic")
     try:
         return UnifiedMemoryService(_amaura_control()).remember(
-            key=req.key, value=req.value, scope=req.scope, sensitivity=req.sensitivity, actor="founder", source="api"
+            key=req.key,
+            value=req.value,
+            scope=cast(Literal["personal", "project", "episodic"], req.scope),
+            sensitivity=req.sensitivity,
+            actor="founder",
+            source="api",
         )
     except (KeyError, ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -1925,7 +1932,8 @@ async def jarvis_memory_forget(
 
     if req.scope not in {"personal", "project", "episodic"}:
         raise HTTPException(status_code=400, detail="scope must be personal, project, or episodic")
-    return {"removed": UnifiedMemoryService(_amaura_control()).forget(key=req.key, scope=req.scope, actor="founder")}
+    typed_scope = cast(Literal["personal", "project", "episodic"], req.scope)
+    return {"removed": UnifiedMemoryService(_amaura_control()).forget(key=req.key, scope=typed_scope, actor="founder")}
 
 
 @app.get("/api/amaura/jarvis/world")

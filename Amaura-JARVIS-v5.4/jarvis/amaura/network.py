@@ -95,9 +95,12 @@ class _PinnedHTTPConnection(http.client.HTTPConnection):
         self._validated_address = address
 
     def connect(self) -> None:
-        self.sock = socket.create_connection((self._validated_address, self.port), self.timeout, self.source_address)
-        if self._tunnel_host:
-            self._tunnel()
+        connection: Any = self
+        self.sock = socket.create_connection(
+            (self._validated_address, self.port), self.timeout, connection.source_address
+        )
+        if connection._tunnel_host:
+            connection._tunnel()
 
 
 class _PinnedHTTPSConnection(http.client.HTTPSConnection):
@@ -106,13 +109,14 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
         self._validated_address = address
 
     def connect(self) -> None:
-        raw = socket.create_connection((self._validated_address, self.port), self.timeout, self.source_address)
-        if self._tunnel_host:
+        connection: Any = self
+        raw = socket.create_connection((self._validated_address, self.port), self.timeout, connection.source_address)
+        if connection._tunnel_host:
             self.sock = raw
-            self._tunnel()
+            connection._tunnel()
             raw = self.sock
         # Certificate verification and SNI remain bound to the validated hostname.
-        self.sock = self._context.wrap_socket(raw, server_hostname=self.host)
+        self.sock = connection._context.wrap_socket(raw, server_hostname=self.host)
 
 
 def _path_and_query(url: str) -> str:
