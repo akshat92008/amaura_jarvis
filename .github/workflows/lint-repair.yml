@@ -73,30 +73,14 @@ jobs:
 
           p = Path('jarvis/amaura/antigravity_bridge.py')
           text = p.read_text()
-          text = text.replace(
-              '                digest.update(relative.encode()); digest.update(path.read_bytes())',
-              '                digest.update(relative.encode())\n                digest.update(path.read_bytes())',
-              1,
-          )
-          text = text.replace(
-              '                out_thread.start(); err_thread.start()',
-              '                out_thread.start()\n                err_thread.start()',
-              1,
-          )
-          text = text.replace(
-              '                out_thread.join(timeout=2); err_thread.join(timeout=2)',
-              '                out_thread.join(timeout=2)\n                err_thread.join(timeout=2)',
-              1,
-          )
+          text = text.replace('                digest.update(relative.encode()); digest.update(path.read_bytes())', '                digest.update(relative.encode())\n                digest.update(path.read_bytes())', 1)
+          text = text.replace('                out_thread.start(); err_thread.start()', '                out_thread.start()\n                err_thread.start()', 1)
+          text = text.replace('                out_thread.join(timeout=2); err_thread.join(timeout=2)', '                out_thread.join(timeout=2)\n                err_thread.join(timeout=2)', 1)
           p.write_text(text)
 
           p = Path('jarvis/amaura/direct_action.py')
           text = p.read_text()
-          text = text.replace(
-              'def _helper_return_operator(helper_name: str) -> str:',
-              'def _helper_return_operator(helper_name: str, tree: ast.AST = tree) -> str:',
-              1,
-          )
+          text = text.replace('def _helper_return_operator(helper_name: str) -> str:', 'def _helper_return_operator(helper_name: str, tree: ast.AST = tree) -> str:', 1)
           text = text.replace('lines = [l for l in input_1.splitlines() if l.strip()]', 'lines = [line for line in input_1.splitlines() if line.strip()]', 1)
           text = text.replace('re.match(r"^[a-zA-Z0-9_.\\-]+\\s*[:=]\\s*", l.strip()) for l in lines if not l.strip().startswith("#")', 're.match(r"^[a-zA-Z0-9_.\\-]+\\s*[:=]\\s*", line.strip()) for line in lines if not line.strip().startswith("#")', 1)
           text = text.replace('not any("|" in l or "\\t" in l or "," in l for l in lines)', 'not any("|" in line or "\\t" in line or "," in line for line in lines)', 1)
@@ -109,6 +93,24 @@ jobs:
           text = p.read_text()
           text = text.replace('            raise GovernanceError(f"Invalid campaign schema: {exc}")', '            raise GovernanceError(f"Invalid campaign schema: {exc}") from exc', 1)
           text = text.replace('            raise GovernanceError(f"Invalid asset schema: {exc}")', '            raise GovernanceError(f"Invalid asset schema: {exc}") from exc', 1)
+          p.write_text(text)
+
+          p = Path('jarvis/amaura/model_gateway.py')
+          text = p.read_text()
+          late_imports = '''from dataclasses import dataclass as _dataclass\nimport json as _json\nimport threading as _threading\nimport time as _time\nimport urllib.error as _urlerror\nimport urllib.request as _urlrequest\nfrom typing import Any as _Any, Callable as _Callable\n'''
+          if late_imports in text:
+              text = text.replace(late_imports, '', 1)
+              text = text.replace('import os\n', 'import os\n' + late_imports, 1)
+          text = text.replace(
+              '        except Exception:\n            if chunks:\n                raise GovernanceError("OmniRoute stream interrupted after output began")\n',
+              '        except Exception as exc:\n            if chunks:\n                raise GovernanceError("OmniRoute stream interrupted after output began") from exc\n',
+              1,
+          )
+          p.write_text(text)
+
+          p = Path('jarvis/amaura/gitops.py')
+          text = p.read_text()
+          text = text.replace('                    raise GovernanceError("Timed out waiting for the repository merge lock")', '                    raise GovernanceError("Timed out waiting for the repository merge lock") from None', 1)
           p.write_text(text)
           PY
       - name: Enforce clean lint
