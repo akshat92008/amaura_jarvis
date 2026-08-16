@@ -48,7 +48,7 @@ jobs:
           p.write_text(''.join(repaired))
           PY
       - name: Enforce clean lint
-        run: .venv/bin/ruff check jarvis tests/test_phase9_semantic_hardening.py scripts/*.py
+        run: .venv/bin/ruff check --output-format=github jarvis tests/test_phase9_semantic_hardening.py scripts/*.py
       - name: Compile after lint repair
         run: .venv/bin/python -m compileall -q jarvis
       - name: Commit lint repair
