@@ -60,6 +60,12 @@ jobs:
       - name: Clean release build and wheel smoke
         if: matrix.python-version == '3.11'
         run: .venv/bin/python scripts/build_release.py --output release-ci
+      - name: Installer-based wheel qualification
+        if: matrix.python-version == '3.11'
+        run: |
+          wheel=$(find release-ci -maxdepth 1 -type f -name 'jarvis-*.whl' -print -quit)
+          test -n "$wheel"
+          .venv/bin/python scripts/verify_installed_wheel.py "$wheel"
       - name: Desktop secure-build contract
         if: matrix.python-version == '3.11'
         run: |
