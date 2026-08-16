@@ -1,17 +1,12 @@
 name: lint-repair
-
 on:
   push:
-    branches:
-      - agent/phase9-semantic-repair
-
+    branches: [agent/phase9-semantic-repair]
 permissions:
   contents: write
-
 defaults:
   run:
     working-directory: Amaura-JARVIS-v5.4
-
 jobs:
   repair:
     if: ${{ github.actor != 'github-actions[bot]' }}
@@ -33,6 +28,7 @@ jobs:
           .venv/bin/ruff check --fix --unsafe-fixes jarvis tests/test_phase9_semantic_hardening.py scripts/*.py || true
           python - <<'PY'
           from pathlib import Path
+          import re
 
           p = Path('jarvis/amaura/cognition.py')
           text = p.read_text()
@@ -84,8 +80,7 @@ jobs:
           lines = p.read_text().splitlines(keepends=True)
           marker = next(i for i, line in enumerate(lines) if 'Executive cognition gateway' in line)
           first_class = next(i for i in range(marker, len(lines)) if lines[i].startswith('@_dataclass'))
-          late = []
-          kept = []
+          late, kept = [], []
           for i, line in enumerate(lines):
               if marker < i < first_class and (line.startswith('import ') or line.startswith('from ')):
                   late.append(line)
@@ -94,8 +89,7 @@ jobs:
           if late:
               insert_at = next(i for i, line in enumerate(kept) if line.startswith('from dataclasses import asdict'))
               kept[insert_at:insert_at] = late
-          text = ''.join(kept)
-          text = text.replace('        except Exception:\n            if chunks:\n                raise GovernanceError("OmniRoute stream interrupted after output began")\n', '        except Exception as exc:\n            if chunks:\n                raise GovernanceError("OmniRoute stream interrupted after output began") from exc\n', 1)
+          text = ''.join(kept).replace('        except Exception:\n            if chunks:\n                raise GovernanceError("OmniRoute stream interrupted after output began")\n', '        except Exception as exc:\n            if chunks:\n                raise GovernanceError("OmniRoute stream interrupted after output began") from exc\n', 1)
           p.write_text(text)
 
           p = Path('jarvis/amaura/gitops.py')
@@ -104,21 +98,15 @@ jobs:
           p = Path('jarvis/amaura/readiness.py')
           text = p.read_text()
           needle = '    balanced_worker_key = bool(\n        nvidia_worker_key or os.environ.get("GROQ_API_KEY", "").strip()\n    )\n'
-          replacement = needle + '    cloud_worker_key = balanced_worker_key if model_mode == "balanced" else nvidia_worker_key\n'
           if 'cloud_worker_key =' not in text:
-              text = text.replace(needle, replacement, 1)
+              text = text.replace(needle, needle + '    cloud_worker_key = balanced_worker_key if model_mode == "balanced" else nvidia_worker_key\n', 1)
           p.write_text(text)
 
           p = Path('jarvis/amaura/prompts/__init__.py')
-          lines = p.read_text().splitlines(keepends=True)
-          p.write_text(''.join(line for line in lines if line.strip() != 'import os'))
+          p.write_text(''.join(line for line in p.read_text().splitlines(keepends=True) if line.strip() != 'import os'))
 
           p = Path('jarvis/fable_engine.py')
-          text = p.read_text().replace(
-              'relevant_lines = [l for l in lines if any(k in l.lower() for k in ["error", "exception", "failed", "assert", "traceback"])]',
-              'relevant_lines = [line for line in lines if any(keyword in line.lower() for keyword in ["error", "exception", "failed", "assert", "traceback"])]',
-              1,
-          )
+          text = p.read_text().replace('relevant_lines = [l for l in lines if any(k in l.lower() for k in ["error", "exception", "failed", "assert", "traceback"])]', 'relevant_lines = [line for line in lines if any(keyword in line.lower() for keyword in ["error", "exception", "failed", "assert", "traceback"])]', 1)
           p.write_text(text)
 
           p = Path('jarvis/cli.py')
@@ -131,12 +119,10 @@ jobs:
           p.write_text(text)
 
           p = Path('jarvis/amaura/store_api.py')
-          text = p.read_text()
-          text = text.replace('ContextManager[Any]', 'AbstractContextManager[Any]')
+          text = p.read_text().replace('ContextManager[Any]', 'AbstractContextManager[Any]')
           if 'AbstractContextManager' in text and 'from contextlib import AbstractContextManager' not in text:
               text = 'from contextlib import AbstractContextManager\n' + text
-          text = text.replace('from typing import Protocol, Any, ContextManager\n', 'from typing import Any, Protocol\n', 1)
-          text = text.replace('from typing import Any, ContextManager, Protocol\n', 'from typing import Any, Protocol\n', 1)
+          text = text.replace('from typing import Protocol, Any, ContextManager\n', 'from typing import Any, Protocol\n', 1).replace('from typing import Any, ContextManager, Protocol\n', 'from typing import Any, Protocol\n', 1)
           p.write_text(text)
 
           p = Path('jarvis/tools/advanced_coding.py')
@@ -144,20 +130,26 @@ jobs:
           text = text.replace('sum(1 for l in lines if l.strip() and not l.strip().startswith(("#", "//", "/*", "*", "<!--")))', 'sum(1 for line in lines if line.strip() and not line.strip().startswith(("#", "//", "/*", "*", "<!--")))', 1)
           text = text.replace('sum(1 for l in lines if l.strip().startswith(("#", "//", "/*", "*")))', 'sum(1 for line in lines if line.strip().startswith(("#", "//", "/*", "*")))', 1)
           text = text.replace('sum(1 for l in lines if not l.strip())', 'sum(1 for line in lines if not line.strip())', 1)
+          text = text.replace('todos = [(i, l.strip()) for i, l in enumerate(lines, 1) if re.search(r\'\\b(TODO|FIXME|HACK|XXX|BUG)\\b\', l, re.IGNORECASE)]', 'todos = [(i, line.strip()) for i, line in enumerate(lines, 1) if re.search(r\'\\b(TODO|FIXME|HACK|XXX|BUG)\\b\', line, re.IGNORECASE)]', 1)
+          for dep, label in [('react', 'React app'), ('next', 'Next.js app'), ('vue', 'Vue.js app'), ('express', 'Express server'), ('typescript', 'TypeScript')]:
+              text = text.replace(f'            if "{dep}" in deps: indicators.append("{label}")', f'            if "{dep}" in deps:\n                indicators.append("{label}")', 1)
+          for filename, manager in [('package-lock.json', 'npm'), ('yarn.lock', 'yarn'), ('pnpm-lock.yaml', 'pnpm'), ('package.json', 'npm'), ('Cargo.toml', 'cargo'), ('go.mod', 'go'), ('composer.json', 'composer'), ('Gemfile', 'gem')]:
+              text = text.replace(f'    if (p / "{filename}").exists(): return "{manager}"', f'    if (p / "{filename}").exists():\n        return "{manager}"', 1)
           p.write_text(text)
 
           p = Path('jarvis/telegram/bot.py')
-          text = p.read_text()
-          text = text.replace('        if not _is_authorized(update, allowed_user_id): return\n', '        if not _is_authorized(update, allowed_user_id):\n            return\n')
-          p.write_text(text)
+          p.write_text(p.read_text().replace('        if not _is_authorized(update, allowed_user_id): return\n', '        if not _is_authorized(update, allowed_user_id):\n            return\n'))
 
           p = Path('jarvis/api.py')
           text = p.read_text()
-          text = text.replace(
-              '                    if attempt + 1 < len(self.all_keys):\n                        self.switch_to_fallback()\n',
-              '                    if attempt + 1 < len(self.all_keys):\n                        if not self.switch_to_fallback():\n                            continue\n',
-              1,
+          text, count = re.subn(
+              r'(\s+)if attempt \+ 1 < len\(self\.all_keys\):\n\s+self\.switch_to_fallback\(\)',
+              lambda m: f'{m.group(1)}if attempt + 1 < len(self.all_keys):\n{m.group(1)}    switched = self.switch_to_fallback()\n{m.group(1)}    if not switched:\n{m.group(1)}        continue',
+              text,
+              count=1,
           )
+          if count != 1:
+              raise RuntimeError('Expected NVIDIA fallback call was not repaired exactly once')
           p.write_text(text)
           PY
           .venv/bin/ruff check --fix --unsafe-fixes jarvis tests/test_phase9_semantic_hardening.py scripts/*.py || true
