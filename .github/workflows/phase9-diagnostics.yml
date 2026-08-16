@@ -6,6 +6,7 @@ on:
       - 'Amaura-JARVIS-v5.4/jarvis/amaura/**'
       - 'Amaura-JARVIS-v5.4/tests/test_phase8_semantic_composition.py'
       - 'Amaura-JARVIS-v5.4/tests/test_phase9_*.py'
+      - 'Amaura-JARVIS-v5.4/scripts/phase9_semantic_repair.patch'
       - '.github/workflows/phase9-diagnostics.yml'
   push:
     branches:
