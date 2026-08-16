@@ -1,13 +1,14 @@
 --- a/Amaura-JARVIS-v5.4/jarvis/amaura/semantic_frontend.py
 +++ b/Amaura-JARVIS-v5.4/jarvis/amaura/semantic_frontend.py
-@@ -64,6 +64,7 @@
+@@ -67,6 +67,7 @@
+             "text in",
              "file contents",
              "contents of",
 +            "content of",
              "raw file",
              "file text",
              "read ",
-@@ -86,6 +87,21 @@
+@@ -86,6 +87,19 @@
      ):
          return True
  
@@ -27,7 +28,8 @@
      # Calculations are primary actions even when the request ends in
      # "return/reply only the number".  Mask quoted data first so action-like
      # words inside literal payloads cannot trigger this guard.
-@@ -145,8 +161,8 @@
+@@ -148,8 +162,8 @@
+     value = value.strip()
      # Declarative response contracts.
      value = re.sub(
 -        rf"^(?:your\s+)?(?:entire|whole|complete|full)?\s*{_SCOPE_NOUNS}\s+"
@@ -37,7 +39,8 @@
          "",
          value,
          flags=re.IGNORECASE,
-@@ -175,7 +191,7 @@
+@@ -168,7 +182,7 @@
+     ).strip()
      # Common semantic introducers are control language, not payload.
      value = re.sub(
 -        r"^(?:is|as|with\s*:|with\s+the\s+(?:value|token)|with\s+this\s+value|"
@@ -45,7 +48,8 @@
          r"this\s+value|the\s+token|following\s+token\s*:?)\s*",
          "",
          value,
-@@ -196,9 +212,9 @@
+@@ -188,9 +202,9 @@
+     # "send back" cannot be truncated to "send" and leak "back" into payload.
      signal = bool(re.match(rf"^\s*(?:please\s+|kindly\s+)?(?:{_EXCLUSIVE}\s+)?{_COMMAND}\b", masked, re.IGNORECASE))
      signal = signal or bool(
 -        re.search(
@@ -57,7 +61,7 @@
              masked,
              re.IGNORECASE,
          )
-@@ -279,6 +295,7 @@
+@@ -267,6 +281,7 @@
              rf"\b(?:destination|output|target)\s+(?:file\s+)?(?:is|to|in|at)?\s*['\"`]?{escaped}",
              rf"\b(?:create|make)\s+(?:an?\s+)?(?:empty\s+)?(?:(?:json|csv|tsv|text)\s+)?(?:file\s+)?(?:at\s+)?['\"`]?{escaped}",
              rf"\bthe\s+file\s+['\"`]?{escaped}\b[^\n]{{0,50}}\b(?:contain|hold|have)\b",
@@ -65,7 +69,8 @@
          )
          if any(re.search(pattern, lower, re.IGNORECASE) for pattern in patterns):
              return path
-@@ -754,6 +771,10 @@
+@@ -737,6 +752,10 @@
+             _, path = _resolve(graph.paths[0].path, workspace, must_exist=True)
              if not path.is_file():
                  return _result_failure(f"File not found or not a regular file: {path}", tool="read_file", provider="local-filesystem", reason="not_found")
 +            with da.tool_workspace(Path(workspace if workspace else da.workspace_root()).expanduser().resolve()):
@@ -74,7 +79,9 @@
 +                return _result_failure(f"File read failed: {receipt.error or 'read tool failed'}", tool="read_file", provider="local-filesystem", reason="tool_failed")
              raw = path.read_text(encoding="utf-8", errors="replace")
              return da.DirectActionResult(
-@@ -778,6 +799,10 @@
+                 True,
+@@ -759,6 +778,10 @@
+                 return da.DirectActionResult(True, raw, execution_type="tool", tool_name="read_file", provider="local-filesystem", telemetry={"path": str(path), "value": raw, "read_mode": "display", "verification_passed": True, "semantic_action": "file_read", "status": "completed"})
              if not path.is_dir():
                  return _result_failure(f"Directory not found: {path}", tool="list_directory", provider="local-filesystem", reason="directory_not_found")
 +            with da.tool_workspace(Path(workspace if workspace else da.workspace_root()).expanduser().resolve()):
@@ -83,7 +90,8 @@
 +                return _result_failure(f"Directory listing failed: {receipt.error or 'list tool failed'}", tool="list_directory", provider="local-filesystem", reason="tool_failed")
              entries = sorted(child.name for child in path.iterdir())
              return da.DirectActionResult(True, "\n".join(entries), execution_type="tool", tool_name="list_directory", provider="local-filesystem", telemetry={"path": str(path), "value": entries, "verification_passed": True, "semantic_action": graph.action.value, "status": "completed"})
-@@ -1052,9 +1077,7 @@
+         except FileNotFoundError as exc:
+@@ -1035,9 +1058,7 @@
          graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
          if graph.action != core.SemanticAction.EXACT_LITERAL:
              return None
@@ -93,3 +101,4 @@
 +        return _public_exact(graph)
  
      def exact_parse_intent(cls: Any, text: str) -> Any:
+         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
