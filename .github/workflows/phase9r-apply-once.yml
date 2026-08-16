@@ -1,0 +1,28 @@
+name: phase9r-apply-once
+
+on:
+  push:
+    branches: [agent/phase9-semantic-repair]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/phase9-semantic-repair
+      - name: Apply audited patch and self-clean
+        run: |
+          git apply --check Amaura-JARVIS-v5.4/phase9r_checkpoint_fix.patch
+          git apply Amaura-JARVIS-v5.4/phase9r_checkpoint_fix.patch
+          rm Amaura-JARVIS-v5.4/phase9r_checkpoint_fix.patch
+          rm .github/workflows/phase9r-apply-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(phase9r): fail closed on external checkpoint rollback"
+          git push origin HEAD:agent/phase9-semantic-repair
