@@ -39,6 +39,7 @@ jobs:
             scripts/qual_bb_harness.py \
             scripts/qual_bb_phase00.py \
             scripts/qual_harness_selftest.py
+          .venv/bin/ruff check --fix --select UP045,UP012 scripts/arch_holdout_v*.py
           .venv/bin/ruff check --fix --unsafe-fixes jarvis tests/test_phase9_semantic_hardening.py || true
       - name: Enforce clean lint
         run: .venv/bin/ruff check --output-format=github jarvis tests/test_phase9_semantic_hardening.py scripts/*.py
