@@ -1,0 +1,91 @@
+name: phase9r-mypy-zero
+on:
+  push:
+    branches: [agent/phase9-semantic-repair]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/phase9-semantic-repair
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Fix final two names and require mypy clean
+        run: |
+          cd Amaura-JARVIS-v5.4
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('jarvis/amaura/executor.py')
+          text = p.read_text()
+          old = '''        approve_value = decision.get("approve")
+        findings_value = decision.get("findings")
+        if not isinstance(approve_value, bool) or not isinstance(findings_value, str) or not findings_value.strip():
+            raise GovernanceError("Reviewer decision is missing approve/findings")
+        approve: bool = approve_value
+        findings: str = findings_value
+        criterion_review = validate_criterion_review(task, decision, self.control.evidence)
+        if not deterministic["approve"]:
+            approve = False
+            deterministic_findings = "; ".join(deterministic["findings"])
+            findings = f"Rejected by deterministic evidence verification: {deterministic_findings}. {findings.strip()}"
+        if not criterion_review["ok"]:
+            approve = False
+            findings = (
+                "Rejected by criterion coverage verification: "
+                + "; ".join(criterion_review["findings"])
+                + ". "
+                + findings.strip()
+            )
+        decision = {
+            "approve": approve,
+            "findings": findings.strip(),
+'''
+          new = '''        approve_value = decision.get("approve")
+        findings_value = decision.get("findings")
+        if not isinstance(approve_value, bool) or not isinstance(findings_value, str) or not findings_value.strip():
+            raise GovernanceError("Reviewer decision is missing approve/findings")
+        review_approve = approve_value
+        review_findings = findings_value
+        criterion_review = validate_criterion_review(task, decision, self.control.evidence)
+        if not deterministic["approve"]:
+            review_approve = False
+            deterministic_findings = "; ".join(deterministic["findings"])
+            review_findings = (
+                f"Rejected by deterministic evidence verification: {deterministic_findings}. {review_findings.strip()}"
+            )
+        if not criterion_review["ok"]:
+            review_approve = False
+            review_findings = (
+                "Rejected by criterion coverage verification: "
+                + "; ".join(criterion_review["findings"])
+                + ". "
+                + review_findings.strip()
+            )
+        decision = {
+            "approve": review_approve,
+            "findings": review_findings.strip(),
+'''
+          if old not in text:
+              raise SystemExit('final review block anchor missing')
+          text = text.replace(old, new, 1)
+          text = text.replace('approve=approve, findings=findings, attestation=attestation', 'approve=review_approve, findings=review_findings, attestation=attestation', 1)
+          p.write_text(text)
+          PY
+          python -m pip install --upgrade pip uv
+          uv sync --frozen --extra dev --python python
+          .venv/bin/ruff format jarvis/amaura/executor.py
+          .venv/bin/ruff check jarvis scripts tests
+          .venv/bin/python -m compileall -q jarvis aimodel scripts tests
+          .venv/bin/mypy jarvis/amaura jarvis/tools/amaura.py jarvis/server.py
+          cd ..
+          rm .github/workflows/phase9r-mypy-zero.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(phase9r): make release type gate clean"
+          git push origin HEAD:agent/phase9-semantic-repair
