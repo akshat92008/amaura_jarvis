@@ -63,7 +63,7 @@ jobs:
         run: .venv/bin/python -m compileall -q jarvis
       - name: Focused semantic compatibility gate
         run: |
-          .venv/bin/python -m pytest -q \
+          env -u PYTEST_DISABLE_PLUGIN_AUTOLOAD .venv/bin/python -m pytest -q \
             tests/test_generic_execution_repair.py \
             tests/test_intent_routing.py \
             tests/test_phase4_execution_semantics.py \
