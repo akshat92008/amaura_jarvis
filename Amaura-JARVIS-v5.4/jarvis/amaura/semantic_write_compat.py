@@ -17,6 +17,10 @@ from typing import Any
 _INSTALLED = False
 
 
+def _unwrap_classmethod(value: Any) -> Any:
+    return getattr(value, "__func__", value)
+
+
 def _install_attr(obj: object, name: str, value: object) -> None:
     setattr(obj, name, value)
 
@@ -28,7 +32,7 @@ def install_semantic_write_compat() -> None:
 
     from jarvis.amaura import semantic_core as core
 
-    current_parse = getattr(core.SemanticParser.parse, "__func__", core.SemanticParser.parse)
+    current_parse = _unwrap_classmethod(core.SemanticParser.parse)
 
     def parse_with_unquoted_create_payload(
         cls: Any,

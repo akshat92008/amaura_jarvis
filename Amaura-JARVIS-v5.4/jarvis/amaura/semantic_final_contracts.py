@@ -16,6 +16,10 @@ from typing import Any
 _INSTALLED = False
 
 
+def _unwrap_classmethod(value: Any) -> Any:
+    return getattr(value, "__func__", value)
+
+
 def _install_attr(obj: object, name: str, value: object) -> None:
     setattr(obj, name, value)
 
@@ -28,7 +32,7 @@ def install_semantic_final_contracts() -> None:
     from jarvis.amaura import direct_action as da
     from jarvis.amaura import semantic_core as core
 
-    current_parse = getattr(core.SemanticParser.parse, "__func__", core.SemanticParser.parse)
+    current_parse = _unwrap_classmethod(core.SemanticParser.parse)
 
     def _css_selectors(text: str) -> list[str]:
         scrubbed = re.sub(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s'\"),]+", " ", text)
@@ -163,7 +167,7 @@ def install_semantic_final_contracts() -> None:
         return graph
 
     _install_attr(core.SemanticParser, "parse", classmethod(parse_with_final_contracts))
-    current_execute = getattr(da.DirectActionRouter.execute, "__func__", da.DirectActionRouter.execute)
+    current_execute = _unwrap_classmethod(da.DirectActionRouter.execute)
 
     def _explicit_output(text: str, paths: list[str]) -> str:
         lower = text.lower()

@@ -23,6 +23,10 @@ from typing import Any
 _INSTALLED = False
 
 
+def _unwrap_classmethod(value: Any) -> Any:
+    return getattr(value, "__func__", value)
+
+
 def _install_attr(obj: object, name: str, value: object) -> None:
     setattr(obj, name, value)
 
@@ -35,7 +39,7 @@ def install_semantic_release_contracts() -> None:
     from jarvis.amaura import direct_action as da
     from jarvis.amaura import semantic_core as core
 
-    current_parse = getattr(core.SemanticParser.parse, "__func__", core.SemanticParser.parse)
+    current_parse = _unwrap_classmethod(core.SemanticParser.parse)
 
     def _explicit_transform_output(text: str, paths: list[str]) -> str:
         lower = text.lower()
@@ -249,7 +253,7 @@ def install_semantic_release_contracts() -> None:
             core._OUTPUT_SCOPE.reset(output_token)
             core._EFFECT_SCOPE.reset(effect_token)
 
-    current_router_execute = getattr(da.DirectActionRouter.execute, "__func__", da.DirectActionRouter.execute)
+    current_router_execute = _unwrap_classmethod(da.DirectActionRouter.execute)
 
     def execute_with_release_contracts(
         cls: Any,
@@ -282,7 +286,7 @@ def install_semantic_release_contracts() -> None:
         return result
 
     _install_attr(da.DirectActionRouter, "execute", classmethod(execute_with_release_contracts))
-    current_exact_parse = getattr(da.ExactResponseParser.parse, "__func__", da.ExactResponseParser.parse)
+    current_exact_parse = _unwrap_classmethod(da.ExactResponseParser.parse)
 
     def exact_with_public_provenance(cls: Any, text: str, workspace: str = "") -> Any:
         result = current_exact_parse(cls, text, workspace=workspace)

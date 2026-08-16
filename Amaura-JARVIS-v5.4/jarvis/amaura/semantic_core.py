@@ -103,6 +103,10 @@ _OUTPUT_SCOPE: ContextVar[frozenset[str]] = ContextVar("amaura_semantic_output_s
 _INSTALLED = False
 
 
+def _unwrap_classmethod(value: Any) -> Any:
+    return getattr(value, "__func__", value)
+
+
 def _install_attr(obj: object, name: str, value: object) -> None:
     setattr(obj, name, value)
 

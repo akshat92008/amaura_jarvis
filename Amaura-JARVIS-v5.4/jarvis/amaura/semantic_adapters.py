@@ -15,6 +15,10 @@ from typing import Any
 _INSTALLED = False
 
 
+def _unwrap_classmethod(value: Any) -> Any:
+    return getattr(value, "__func__", value)
+
+
 def _install_attr(obj: object, name: str, value: object) -> None:
     setattr(obj, name, value)
 
@@ -27,7 +31,7 @@ def install_semantic_adapters() -> None:
     from jarvis.amaura import direct_action as da
     from jarvis.amaura import semantic_core as core
 
-    original_parse = getattr(core.SemanticParser.parse, "__func__", core.SemanticParser.parse)
+    original_parse = _unwrap_classmethod(core.SemanticParser.parse)
 
     def explicit_transform_output(text: str, paths: list[str]) -> str:
         """Recognize only language-explicit transformation destinations."""
@@ -285,8 +289,8 @@ def install_semantic_adapters() -> None:
                 _install_attr(cls, "_is_repository_inspection_request", original_descriptor)
 
     _install_attr(da.DirectActionRouter, "_try_repository_inspection", classmethod(graph_authorized_repo_try))
-    core_can_handle = getattr(da.DirectActionRouter.can_handle, "__func__", da.DirectActionRouter.can_handle)
-    core_execute = getattr(da.DirectActionRouter.execute, "__func__", da.DirectActionRouter.execute)
+    core_can_handle = _unwrap_classmethod(da.DirectActionRouter.can_handle)
+    core_execute = _unwrap_classmethod(da.DirectActionRouter.execute)
 
     def safe_legacy_workflow(cls: Any, text: str) -> tuple[bool, str]:
         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
