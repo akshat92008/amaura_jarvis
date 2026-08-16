@@ -1325,24 +1325,26 @@ class GovernedReviewRunner:
         findings_value = decision.get("findings")
         if not isinstance(approve_value, bool) or not isinstance(findings_value, str) or not findings_value.strip():
             raise GovernanceError("Reviewer decision is missing approve/findings")
-        approve: bool = approve_value
-        findings: str = findings_value
+        review_approve = approve_value
+        review_findings = findings_value
         criterion_review = validate_criterion_review(task, decision, self.control.evidence)
         if not deterministic["approve"]:
-            approve = False
+            review_approve = False
             deterministic_findings = "; ".join(deterministic["findings"])
-            findings = f"Rejected by deterministic evidence verification: {deterministic_findings}. {findings.strip()}"
+            review_findings = (
+                f"Rejected by deterministic evidence verification: {deterministic_findings}. {review_findings.strip()}"
+            )
         if not criterion_review["ok"]:
-            approve = False
-            findings = (
+            review_approve = False
+            review_findings = (
                 "Rejected by criterion coverage verification: "
                 + "; ".join(criterion_review["findings"])
                 + ". "
-                + findings.strip()
+                + review_findings.strip()
             )
         decision = {
-            "approve": approve,
-            "findings": findings.strip(),
+            "approve": review_approve,
+            "findings": review_findings.strip(),
             "criteria": criterion_review["criteria"],
         }
         attestation = create_review_attestation(
