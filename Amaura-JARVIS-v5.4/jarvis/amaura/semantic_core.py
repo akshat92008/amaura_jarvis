@@ -85,6 +85,7 @@ class SemanticRequestGraph:
     write_payload: str | None = None
     arithmetic: ArithmeticPlan | None = None
     browser: BrowserPlan | None = None
+    transform_plan: dict[str, Any] | None = None
     errors: list[str] = field(default_factory=list)
     evidence: list[str] = field(default_factory=list)
 
@@ -100,6 +101,10 @@ class SemanticRequestGraph:
 _EFFECT_SCOPE: ContextVar[frozenset[str]] = ContextVar("amaura_semantic_effect_scope", default=frozenset())
 _OUTPUT_SCOPE: ContextVar[frozenset[str]] = ContextVar("amaura_semantic_output_scope", default=frozenset())
 _INSTALLED = False
+
+
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
 
 
 _MUTATING_TOOLS = {
@@ -902,7 +907,7 @@ def _execute_browser(da: Any, graph: SemanticRequestGraph) -> Any:
             fields["links"] = _tool_output(links)
         if not fields:
             fields["page"] = nav_value
-        value: Any = next(iter(fields.values())) if len(fields) == 1 else fields
+        browser_value: Any = next(iter(fields.values())) if len(fields) == 1 else fields
         return da.DirectActionResult(
             True,
             json.dumps(fields, ensure_ascii=False, default=str),
@@ -911,7 +916,7 @@ def _execute_browser(da: Any, graph: SemanticRequestGraph) -> Any:
             provider="browser-automation",
             telemetry={
                 "url": plan.url,
-                "value": value,
+                "value": browser_value,
                 "structured_result": fields,
                 "selectors": plan.selectors,
                 "verification_passed": True,
@@ -1009,9 +1014,15 @@ def _eval_function(
             branch = stmt.body if _eval_expr(stmt.test, env, functions, overrides, depth + 1) else stmt.orelse
             for child in branch:
                 if isinstance(child, ast.Return):
-                    return _eval_expr(child.value, env, functions, overrides, depth + 1), env
+                    return (
+                        _eval_expr(child.value, env, functions, overrides, depth + 1)
+                        if child.value is not None
+                        else None
+                    ), env
         elif isinstance(stmt, ast.Return):
-            return _eval_expr(stmt.value, env, functions, overrides, depth + 1), env
+            return (
+                _eval_expr(stmt.value, env, functions, overrides, depth + 1) if stmt.value is not None else None
+            ), env
     raise ValueError("no evaluable return")
 
 
@@ -1122,14 +1133,17 @@ def install_semantic_core() -> None:
         return
 
     from jarvis.amaura import direct_action as da
+    from jarvis.amaura.models import GovernanceError
 
     original_execute_tool = da.execute_tool
-    original_diagnose = da.RepositoryDiagnosticEngine.diagnose.__func__
+    original_diagnose = getattr(
+        da.RepositoryDiagnosticEngine.diagnose, "__func__", da.RepositoryDiagnosticEngine.diagnose
+    )
 
     def guarded_execute_tool(name: str, arguments: dict[str, Any] | None = None, *args: Any, **kwargs: Any) -> Any:
         arguments = dict(arguments or {})
         if name in _MUTATING_TOOLS and name not in _EFFECT_SCOPE.get():
-            raise da.GovernanceError(
+            raise GovernanceError(
                 f"semantic effect firewall blocked {name}: action was not authorized by request graph"
             )
         if name == "write_file":
@@ -1141,7 +1155,7 @@ def install_semantic_core() -> None:
                     requested_path == Path(candidate).expanduser() or requested_path.name == Path(candidate).name
                     for candidate in allowed
                 ):
-                    raise da.GovernanceError(
+                    raise GovernanceError(
                         f"semantic effect firewall blocked write_file target {requested!r}: not an authorized output role"
                     )
         return original_execute_tool(name, arguments, *args, **kwargs)
@@ -1173,8 +1187,8 @@ def install_semantic_core() -> None:
             args["path"] = paths[0]
         return args
 
-    da.PathExtractor.extract_all_paths = classmethod(safe_extract_all_paths)
-    da.PathExtractor.extract_structured_arguments = classmethod(safe_extract_structured_arguments)
+    _install_attr(da.PathExtractor, "extract_all_paths", classmethod(safe_extract_all_paths))
+    _install_attr(da.PathExtractor, "extract_structured_arguments", classmethod(safe_extract_structured_arguments))
 
     def enhanced_diagnose(cls: Any, repo_path: Path) -> dict[str, Any]:
         result = original_diagnose(cls, repo_path)
@@ -1186,7 +1200,7 @@ def install_semantic_core() -> None:
             result["findings"] = flow + existing
         return result
 
-    da.RepositoryDiagnosticEngine.diagnose = classmethod(enhanced_diagnose)
+    _install_attr(da.RepositoryDiagnosticEngine, "diagnose", classmethod(enhanced_diagnose))
 
     def can_handle(cls: Any, text: str) -> bool:
         graph = SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
@@ -1259,6 +1273,6 @@ def install_semantic_core() -> None:
             _EFFECT_SCOPE.reset(token_effect)
         return _render(da, graph, result)
 
-    da.DirectActionRouter.can_handle = classmethod(can_handle)
-    da.DirectActionRouter.execute = classmethod(execute)
+    _install_attr(da.DirectActionRouter, "can_handle", classmethod(can_handle))
+    _install_attr(da.DirectActionRouter, "execute", classmethod(execute))
     _INSTALLED = True

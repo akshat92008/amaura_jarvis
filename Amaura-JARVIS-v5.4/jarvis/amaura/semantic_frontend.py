@@ -24,6 +24,11 @@ from typing import Any
 
 _INSTALLED = False
 
+
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
+
+
 _SCOPE_NOUNS = r"(?:response|answer|reply|output|string|token|value|text|word|payload)"
 _EXCLUSIVE = r"(?:only|solely|just|exactly|strictly|verbatim|precisely)"
 _COMMAND = r"(?:write\s+back|send\s+back|give\s+back|respond\s+with|reply\s+with|give\s+me|reply|respond|return|say|echo|repeat|print|output|produce|send|type)"
@@ -573,8 +578,8 @@ def install_semantic_frontend() -> None:
 
     base_extract = core.extract_paths
 
-    def unified_extract(text: str, extensions: tuple[str, ...]) -> list[str]:
-        return _normalized_paths(base_extract, text, extensions)
+    def unified_extract(text: str, known_extensions: tuple[str, ...]) -> list[str]:
+        return _normalized_paths(base_extract, text, known_extensions)
 
     # Make every legacy helper that consults semantic_core.extract_paths observe
     # the same normalized entities.  This is normalization, not another parser.
@@ -805,7 +810,7 @@ def install_semantic_frontend() -> None:
             return core.SemanticRequestGraph(clean, core.SemanticAction.CALENDAR, mode, evidence=["calendar_grammar"])
         return core.SemanticRequestGraph(clean, core.SemanticAction.UNKNOWN, response_mode=mode)
 
-    core.SemanticParser.parse = classmethod(parse)
+    _install_attr(core.SemanticParser, "parse", classmethod(parse))
 
     def _result_failure(message: str, *, tool: str, provider: str, reason: str, policy: str = "allowed") -> Any:
         return da.DirectActionResult(
@@ -1401,7 +1406,7 @@ def install_semantic_frontend() -> None:
                     "reason": "browser_failed",
                 },
             )
-        value: Any = next(iter(successful.values())) if len(successful) == 1 else successful
+        browser_value: Any = next(iter(successful.values())) if len(successful) == 1 else successful
         return da.DirectActionResult(
             True,
             json.dumps(successful, ensure_ascii=False, default=str),
@@ -1413,7 +1418,7 @@ def install_semantic_frontend() -> None:
                 "successful_fields": successful,
                 "failed_fields": [],
                 "structured_result": successful,
-                "value": value,
+                "value": browser_value,
                 "selectors": plan.selectors,
                 "verification_passed": True,
                 "semantic_action": graph.action.value,
@@ -1545,8 +1550,8 @@ def install_semantic_frontend() -> None:
             confidence=1.0,
         )
 
-    da.DirectActionRouter.can_handle = classmethod(can_handle)
-    da.DirectActionRouter.execute = classmethod(execute)
-    da.ExactResponseParser.parse = classmethod(exact_parse)
-    da.ExactResponseParser.parse_intent = classmethod(exact_parse_intent)
+    _install_attr(da.DirectActionRouter, "can_handle", classmethod(can_handle))
+    _install_attr(da.DirectActionRouter, "execute", classmethod(execute))
+    _install_attr(da.ExactResponseParser, "parse", classmethod(exact_parse))
+    _install_attr(da.ExactResponseParser, "parse_intent", classmethod(exact_parse_intent))
     _INSTALLED = True

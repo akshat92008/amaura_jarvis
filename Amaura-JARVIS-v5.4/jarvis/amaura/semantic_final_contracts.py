@@ -16,6 +16,10 @@ from typing import Any
 _INSTALLED = False
 
 
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
+
+
 def install_semantic_final_contracts() -> None:
     global _INSTALLED
     if _INSTALLED:
@@ -24,7 +28,7 @@ def install_semantic_final_contracts() -> None:
     from jarvis.amaura import direct_action as da
     from jarvis.amaura import semantic_core as core
 
-    current_parse = core.SemanticParser.parse.__func__
+    current_parse = getattr(core.SemanticParser.parse, "__func__", core.SemanticParser.parse)
 
     def _css_selectors(text: str) -> list[str]:
         scrubbed = re.sub(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s'\"),]+", " ", text)
@@ -158,8 +162,8 @@ def install_semantic_final_contracts() -> None:
                 )
         return graph
 
-    core.SemanticParser.parse = classmethod(parse_with_final_contracts)
-    current_execute = da.DirectActionRouter.execute.__func__
+    _install_attr(core.SemanticParser, "parse", classmethod(parse_with_final_contracts))
+    current_execute = getattr(da.DirectActionRouter.execute, "__func__", da.DirectActionRouter.execute)
 
     def _explicit_output(text: str, paths: list[str]) -> str:
         lower = text.lower()
@@ -676,7 +680,7 @@ def install_semantic_final_contracts() -> None:
                 result.telemetry["reason"] = "workspace_escape"
         return _restore_public_metadata(result, text)
 
-    da.DirectActionRouter.execute = classmethod(execute_with_final_contracts)
+    _install_attr(da.DirectActionRouter, "execute", classmethod(execute_with_final_contracts))
 
     def exact_with_public_metadata(cls: Any, text: str, workspace: str = "") -> Any:
         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
@@ -694,5 +698,5 @@ def install_semantic_final_contracts() -> None:
         )
         return _restore_public_metadata(result, text)
 
-    da.ExactResponseParser.parse = classmethod(exact_with_public_metadata)
+    _install_attr(da.ExactResponseParser, "parse", classmethod(exact_with_public_metadata))
     _INSTALLED = True

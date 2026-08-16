@@ -17,6 +17,10 @@ from typing import Any
 _INSTALLED = False
 
 
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
+
+
 def install_semantic_write_compat() -> None:
     global _INSTALLED
     if _INSTALLED:
@@ -24,7 +28,7 @@ def install_semantic_write_compat() -> None:
 
     from jarvis.amaura import semantic_core as core
 
-    current_parse = core.SemanticParser.parse.__func__
+    current_parse = getattr(core.SemanticParser.parse, "__func__", core.SemanticParser.parse)
 
     def parse_with_unquoted_create_payload(
         cls: Any,
@@ -49,5 +53,5 @@ def install_semantic_write_compat() -> None:
         graph.original_text = text
         return graph
 
-    core.SemanticParser.parse = classmethod(parse_with_unquoted_create_payload)
+    _install_attr(core.SemanticParser, "parse", classmethod(parse_with_unquoted_create_payload))
     _INSTALLED = True

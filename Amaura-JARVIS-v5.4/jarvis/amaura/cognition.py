@@ -16,6 +16,7 @@ to the existing Company OS policy/supervisor/evidence stack.
 
 from __future__ import annotations
 
+import builtins
 import contextvars
 import inspect
 import json
@@ -150,7 +151,7 @@ class UnifiedMemoryService:
         return key[:180]
 
     @staticmethod
-    def _extract_entities(text: str) -> list[str]:
+    def _extract_entities(text: str) -> builtins.list[str]:
         # Lightweight local entity extraction.  It intentionally avoids making
         # identity claims; entities are merely retrieval anchors.
         candidates = re.findall(
@@ -158,7 +159,7 @@ class UnifiedMemoryService:
             text,
         )
         seen: set[str] = set()
-        result: list[str] = []
+        result: builtins.list[str] = []
         for item in candidates:
             clean = item.strip()
             if clean.lower() not in seen:
@@ -176,7 +177,7 @@ class UnifiedMemoryService:
         actor: str = "founder",
         confidence: float = 1.0,
         source: str = "explicit",
-        entities: list[str] | None = None,
+        entities: builtins.list[str] | None = None,
         trust: Literal["founder", "system", "internal", "untrusted"] | None = None,
     ) -> dict[str, Any]:
         namespace = self.NAMESPACES[scope]
@@ -204,7 +205,7 @@ class UnifiedMemoryService:
             if source.startswith("external") or source.startswith("web") or source.startswith("email")
             else "internal"
         )
-        history: list[dict[str, Any]] = []
+        history: builtins.list[dict[str, Any]] = []
         if isinstance(existing_value, dict):
             history = list(existing_value.get("history") or [])
             previous_content = existing_value.get("content")
@@ -267,7 +268,7 @@ class UnifiedMemoryService:
         scope: str,
         memory_key: str,
         text: str,
-        entities: list[str],
+        entities: builtins.list[str],
         source: str,
         trust: str,
         actor: str,
@@ -280,7 +281,7 @@ class UnifiedMemoryService:
         now = _utc_now()
         for entity in entities:
             entity_key = self._key(entity.lower())
-            mentions: list[dict[str, Any]] = []
+            mentions: builtins.list[dict[str, Any]] = []
             try:
                 current = self.control.store.get_knowledge(self.NAMESPACES["entity"], entity_key).get("value") or {}
                 mentions = list(current.get("mentions") or []) if isinstance(current, dict) else []
@@ -439,9 +440,9 @@ class UnifiedMemoryService:
 
     def list(
         self, *, scope: Literal["personal", "project", "episodic", "all"] = "all", limit: int = 200
-    ) -> list[dict[str, Any]]:
+    ) -> builtins.list[dict[str, Any]]:
         scopes = ["personal", "project", "episodic"] if scope == "all" else [scope]
-        rows: list[dict[str, Any]] = []
+        rows: builtins.list[dict[str, Any]] = []
         for item_scope in scopes:
             namespace = self.NAMESPACES[item_scope]
             rows.extend(self.control.store.list_knowledge(namespace=namespace, limit=limit))
@@ -454,16 +455,16 @@ class UnifiedMemoryService:
         rows.sort(key=lambda row: str(row.get("updated_at") or ""), reverse=True)
         return rows[: max(1, min(int(limit), 1000))]
 
-    def _knowledge_hits(self, query: str, limit: int) -> list[MemoryHit]:
+    def _knowledge_hits(self, query: str, limit: int) -> builtins.list[MemoryHit]:
         query_terms = _tokens(query)
-        rows: list[dict[str, Any]] = []
+        rows: builtins.list[dict[str, Any]] = []
         namespaces = list(self.NAMESPACES.values()) + list(self.LEGACY_NAMESPACES)
         for namespace in namespaces:
             try:
                 rows.extend(self.control.store.list_knowledge(namespace=namespace, limit=500))
             except Exception:
                 continue
-        hits: list[MemoryHit] = []
+        hits: builtins.list[MemoryHit] = []
         for row in rows:
             value = row.get("value")
             if isinstance(value, dict) and "content" in value:
@@ -541,9 +542,9 @@ class UnifiedMemoryService:
         hits.sort(key=lambda item: (item.score, item.updated_at), reverse=True)
         return hits[:limit]
 
-    def _work_hits(self, query: str, limit: int) -> list[MemoryHit]:
+    def _work_hits(self, query: str, limit: int) -> builtins.list[MemoryHit]:
         query_terms = _tokens(query)
-        hits: list[MemoryHit] = []
+        hits: builtins.list[MemoryHit] = []
         for item in self.control.store.list_work_items(limit=600):
             haystack = " ".join(
                 str(item.get(field) or "") for field in ("title", "description", "summary", "workflow_id")
@@ -574,14 +575,14 @@ class UnifiedMemoryService:
         hits.sort(key=lambda item: (item.score, item.updated_at), reverse=True)
         return hits[:limit]
 
-    def _legacy_user_hits(self, query: str, limit: int) -> list[MemoryHit]:
+    def _legacy_user_hits(self, query: str, limit: int) -> builtins.list[MemoryHit]:
         query_terms = _tokens(query)
-        hits: list[MemoryHit] = []
+        hits: builtins.list[MemoryHit] = []
         try:
             from jarvis.user_memory import UserMemory
 
             prefs = UserMemory().load()
-            rows: list[tuple[str, Any]] = []
+            rows: builtins.list[tuple[str, Any]] = []
             for key in ("name", "nickname", "preferred_model", "preferred_language", "coding_style"):
                 value = getattr(prefs, key, None)
                 if value:
@@ -612,9 +613,9 @@ class UnifiedMemoryService:
         hits.sort(key=lambda item: item.score, reverse=True)
         return hits[:limit]
 
-    def _conversation_hits(self, query: str, limit: int) -> list[MemoryHit]:
+    def _conversation_hits(self, query: str, limit: int) -> builtins.list[MemoryHit]:
         query_terms = _tokens(query)
-        hits: list[MemoryHit] = []
+        hits: builtins.list[MemoryHit] = []
         if not query_terms:
             return hits
         try:
@@ -624,7 +625,7 @@ class UnifiedMemoryService:
             for summary in memory.list_conversations(limit=30):
                 conversation = memory.load_conversation(str(summary.get("id") or "")) or {}
                 messages = conversation.get("messages") or []
-                selected: list[str] = []
+                selected: builtins.list[str] = []
                 overlap_total = 0
                 for message in messages[-40:]:
                     content = str(message.get("content") or "")
@@ -652,7 +653,7 @@ class UnifiedMemoryService:
         hits.sort(key=lambda item: (item.score, item.updated_at), reverse=True)
         return hits[:limit]
 
-    def query(self, query: str, *, limit: int = 16) -> list[MemoryHit]:
+    def query(self, query: str, *, limit: int = 16) -> builtins.list[MemoryHit]:
         maximum = max(1, min(int(limit), 50))
         merged = (
             self._knowledge_hits(query, maximum)
@@ -717,7 +718,7 @@ class UnifiedMemoryService:
                     )
                     indices = parsed.get("indices") or []
                     if isinstance(indices, list):
-                        ordered: list[MemoryHit] = []
+                        ordered: builtins.list[MemoryHit] = []
                         seen: set[int] = set()
                         for value in indices:
                             try:
@@ -733,12 +734,12 @@ class UnifiedMemoryService:
                 pass
         return candidates[:maximum]
 
-    def context(self, query: str, *, limit: int = 12) -> tuple[str, list[str]]:
+    def context(self, query: str, *, limit: int = 12) -> tuple[str, builtins.list[str]]:
         hits = self.query(query, limit=limit)
         if not hits:
             return "", []
-        lines: list[str] = []
-        sources: list[str] = []
+        lines: builtins.list[str] = []
+        sources: builtins.list[str] = []
         for hit in hits:
             sources.append(f"{hit.source}:{hit.key}")
             lines.append(

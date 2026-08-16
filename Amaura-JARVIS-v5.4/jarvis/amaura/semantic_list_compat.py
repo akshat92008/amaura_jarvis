@@ -14,6 +14,10 @@ from typing import Any
 _INSTALLED = False
 
 
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
+
+
 def install_semantic_list_compat() -> None:
     global _INSTALLED
     if _INSTALLED:
@@ -21,7 +25,7 @@ def install_semantic_list_compat() -> None:
 
     from jarvis.amaura import semantic_core as core
 
-    current_parse = core.SemanticParser.parse.__func__
+    current_parse = getattr(core.SemanticParser.parse, "__func__", core.SemanticParser.parse)
 
     def parse_with_directory_precedence(
         cls: Any,
@@ -66,5 +70,5 @@ def install_semantic_list_compat() -> None:
             )
         return graph
 
-    core.SemanticParser.parse = classmethod(parse_with_directory_precedence)
+    _install_attr(core.SemanticParser, "parse", classmethod(parse_with_directory_precedence))
     _INSTALLED = True

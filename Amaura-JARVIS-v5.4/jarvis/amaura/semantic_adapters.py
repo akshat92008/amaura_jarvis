@@ -15,6 +15,10 @@ from typing import Any
 _INSTALLED = False
 
 
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
+
+
 def install_semantic_adapters() -> None:
     global _INSTALLED
     if _INSTALLED:
@@ -23,7 +27,7 @@ def install_semantic_adapters() -> None:
     from jarvis.amaura import direct_action as da
     from jarvis.amaura import semantic_core as core
 
-    original_parse = core.SemanticParser.parse.__func__
+    original_parse = getattr(core.SemanticParser.parse, "__func__", core.SemanticParser.parse)
 
     def explicit_transform_output(text: str, paths: list[str]) -> str:
         """Recognize only language-explicit transformation destinations."""
@@ -220,10 +224,11 @@ def install_semantic_adapters() -> None:
                     )
         return graph
 
-    core.SemanticParser.parse = classmethod(normalized_parse)
-
+    _install_attr(core.SemanticParser, "parse", classmethod(normalized_parse))
     # Extend structured arguments only with language-proven transformation roles.
-    base_structured_args = da.PathExtractor.extract_structured_arguments.__func__
+    base_structured_args = getattr(
+        da.PathExtractor.extract_structured_arguments, "__func__", da.PathExtractor.extract_structured_arguments
+    )
 
     def structured_args_with_explicit_transforms(cls: Any, text: str, *, default_workspace: str = "") -> dict[str, Any]:
         args = dict(base_structured_args(cls, text, default_workspace=default_workspace))
@@ -238,7 +243,9 @@ def install_semantic_adapters() -> None:
                 args["secondary_input_path"] = inputs[1]
         return args
 
-    da.PathExtractor.extract_structured_arguments = classmethod(structured_args_with_explicit_transforms)
+    _install_attr(
+        da.PathExtractor, "extract_structured_arguments", classmethod(structured_args_with_explicit_transforms)
+    )
 
     # Collapse cognition.py's direct exact fast path onto the same graph while
     # retaining the public provenance contract expected by callers.
@@ -261,25 +268,25 @@ def install_semantic_adapters() -> None:
             },
         )
 
-    da.ExactResponseParser.parse = classmethod(exact_via_graph)
-
+    _install_attr(da.ExactResponseParser, "parse", classmethod(exact_via_graph))
     # Repository execution is invoked only after the graph classified REPOSITORY;
     # the legacy adapter must not re-veto that already-typed action.
-    original_repo_try = da.DirectActionRouter._try_repository_inspection.__func__
+    original_repo_try = getattr(
+        da.DirectActionRouter._try_repository_inspection, "__func__", da.DirectActionRouter._try_repository_inspection
+    )
 
     def graph_authorized_repo_try(cls: Any, text: str, workspace: str = "") -> Any:
         original_descriptor = cls.__dict__.get("_is_repository_inspection_request")
-        cls._is_repository_inspection_request = classmethod(lambda _cls, _text: True)
+        _install_attr(cls, "_is_repository_inspection_request", classmethod(lambda _cls, _text: True))
         try:
             return original_repo_try(cls, text, workspace=workspace)
         finally:
             if original_descriptor is not None:
-                cls._is_repository_inspection_request = original_descriptor
+                _install_attr(cls, "_is_repository_inspection_request", original_descriptor)
 
-    da.DirectActionRouter._try_repository_inspection = classmethod(graph_authorized_repo_try)
-
-    core_can_handle = da.DirectActionRouter.can_handle.__func__
-    core_execute = da.DirectActionRouter.execute.__func__
+    _install_attr(da.DirectActionRouter, "_try_repository_inspection", classmethod(graph_authorized_repo_try))
+    core_can_handle = getattr(da.DirectActionRouter.can_handle, "__func__", da.DirectActionRouter.can_handle)
+    core_execute = getattr(da.DirectActionRouter.execute, "__func__", da.DirectActionRouter.execute)
 
     def safe_legacy_workflow(cls: Any, text: str) -> tuple[bool, str]:
         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
@@ -524,6 +531,6 @@ def install_semantic_adapters() -> None:
         )
         return core._render(da, render_graph, result)
 
-    da.DirectActionRouter.can_handle = classmethod(compat_can_handle)
-    da.DirectActionRouter.execute = classmethod(compat_execute)
+    _install_attr(da.DirectActionRouter, "can_handle", classmethod(compat_can_handle))
+    _install_attr(da.DirectActionRouter, "execute", classmethod(compat_execute))
     _INSTALLED = True

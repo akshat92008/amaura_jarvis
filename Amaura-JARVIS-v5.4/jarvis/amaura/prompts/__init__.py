@@ -12,7 +12,7 @@ _PROMPTS_DIR = Path(__file__).parent
 @lru_cache(maxsize=1)
 def load_prompt_catalogue() -> dict[str, str]:
     """Load the founder-approved fenced prompts from the individual markdown files."""
-    catalogue = {}
+    catalogue: dict[str, str] = {}
     if not _PROMPTS_DIR.exists():
         return catalogue
 

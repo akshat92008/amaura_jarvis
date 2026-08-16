@@ -23,6 +23,10 @@ from typing import Any
 _INSTALLED = False
 
 
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
+
+
 def install_semantic_release_contracts() -> None:
     global _INSTALLED
     if _INSTALLED:
@@ -31,7 +35,7 @@ def install_semantic_release_contracts() -> None:
     from jarvis.amaura import direct_action as da
     from jarvis.amaura import semantic_core as core
 
-    current_parse = core.SemanticParser.parse.__func__
+    current_parse = getattr(core.SemanticParser.parse, "__func__", core.SemanticParser.parse)
 
     def _explicit_transform_output(text: str, paths: list[str]) -> str:
         lower = text.lower()
@@ -76,7 +80,7 @@ def install_semantic_release_contracts() -> None:
             )
         return graph
 
-    core.SemanticParser.parse = classmethod(parse_with_workflow_precedence)
+    _install_attr(core.SemanticParser, "parse", classmethod(parse_with_workflow_precedence))
 
     def _parse_scalar(value: str) -> Any:
         stripped = value.strip()
@@ -245,7 +249,7 @@ def install_semantic_release_contracts() -> None:
             core._OUTPUT_SCOPE.reset(output_token)
             core._EFFECT_SCOPE.reset(effect_token)
 
-    current_router_execute = da.DirectActionRouter.execute.__func__
+    current_router_execute = getattr(da.DirectActionRouter.execute, "__func__", da.DirectActionRouter.execute)
 
     def execute_with_release_contracts(
         cls: Any,
@@ -277,9 +281,8 @@ def install_semantic_release_contracts() -> None:
             result.tool_name = "echo"
         return result
 
-    da.DirectActionRouter.execute = classmethod(execute_with_release_contracts)
-
-    current_exact_parse = da.ExactResponseParser.parse.__func__
+    _install_attr(da.DirectActionRouter, "execute", classmethod(execute_with_release_contracts))
+    current_exact_parse = getattr(da.ExactResponseParser.parse, "__func__", da.ExactResponseParser.parse)
 
     def exact_with_public_provenance(cls: Any, text: str, workspace: str = "") -> Any:
         result = current_exact_parse(cls, text, workspace=workspace)
@@ -287,5 +290,5 @@ def install_semantic_release_contracts() -> None:
             result.tool_name = "echo"
         return result
 
-    da.ExactResponseParser.parse = classmethod(exact_with_public_provenance)
+    _install_attr(da.ExactResponseParser, "parse", classmethod(exact_with_public_provenance))
     _INSTALLED = True

@@ -1,7 +1,9 @@
 from sqlalchemy import Column, ForeignKey, Integer, String, Text, create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class WorkItem(Base):
