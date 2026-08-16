@@ -35,11 +35,14 @@ jobs:
           .venv/bin/python scripts/lint_repair_finalize.py
           .venv/bin/ruff format \
             scripts/arch_holdout_v*.py \
+            scripts/arch_truth_benchmark.py \
             scripts/qual_bb_master.py \
             scripts/qual_bb_harness.py \
             scripts/qual_bb_phase00.py \
             scripts/qual_harness_selftest.py
           .venv/bin/ruff check --fix --select UP045,UP012,F401,I001,E401 scripts/arch_holdout_v*.py
+          .venv/bin/ruff check --fix --select UP045,F401,I001,E401 scripts/arch_truth_benchmark.py
+          .venv/bin/ruff check --fix --unsafe-fixes --select B905 scripts/arch_holdout_v*.py
           .venv/bin/ruff check --fix --unsafe-fixes jarvis tests/test_phase9_semantic_hardening.py || true
       - name: Enforce clean lint
         run: .venv/bin/ruff check --output-format=github jarvis tests/test_phase9_semantic_hardening.py scripts/*.py
@@ -52,6 +55,7 @@ jobs:
           git add \
             jarvis \
             scripts/arch_holdout_v*.py \
+            scripts/arch_truth_benchmark.py \
             scripts/qual_bb_master.py \
             scripts/qual_bb_harness.py \
             scripts/qual_bb_phase00.py \
