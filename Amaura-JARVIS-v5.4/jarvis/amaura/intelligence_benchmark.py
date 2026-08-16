@@ -218,8 +218,8 @@ def run_benchmark(
                     )
                 )
 
-    passed = sum(1 for case in results if case.passed)
-    return BenchmarkResult(source_hash, len(results), passed, len(results) - passed, results)
+    passed_count = sum(1 for case in results if case.passed)
+    return BenchmarkResult(source_hash, len(results), passed_count, len(results) - passed_count, results)
 
 
 __all__ = [

@@ -3,6 +3,7 @@ from typing import Literal
 from langgraph.graph import END, StateGraph
 
 from jarvis.amaura.actions import AmauraActions
+from jarvis.amaura.models import GovernanceError
 from jarvis.amaura.state import LeadWorkflowState
 
 
@@ -42,6 +43,13 @@ class LeadWorkflowGraph:
 
         self.compiled = self.graph.compile()
 
+    @staticmethod
+    def _required_id(state: LeadWorkflowState, key: Literal["lead_id", "draft_message_id"]) -> str:
+        value = state.get(key)
+        if not value:
+            raise GovernanceError(f"Lead workflow requires {key} before this stage")
+        return value
+
     def discover(self, state: LeadWorkflowState) -> dict:
         lead_data = state["lead_data"]
         lead_id = self.actions.discover_lead(
@@ -56,7 +64,9 @@ class LeadWorkflowGraph:
         # In a real impl, you'd check domains, verify company exists
         if not state.get("lead_id"):
             return {"status": "invalid"}
-        self.actions.transition_lead(state["lead_id"], "validated", "Domain is active and company exists.")
+        self.actions.transition_lead(
+            self._required_id(state, "lead_id"), "validated", "Domain is active and company exists."
+        )
         return {"status": "validated"}
 
     def route_after_validate(self, state: LeadWorkflowState) -> Literal["research", "END"]:
@@ -67,24 +77,24 @@ class LeadWorkflowGraph:
     def research(self, state: LeadWorkflowState) -> dict:
         # Example of adding evidence
         self.actions.add_evidence(
-            lead_id=state["lead_id"],
+            lead_id=self._required_id(state, "lead_id"),
             claim_type="technology_stack",
             claim="Uses Python",
             source_url="http://example.com",
             source_excerpt="Built with Python.",
             confidence=0.9,
         )
-        self.actions.transition_lead(state["lead_id"], "researched", "Gathered initial evidence.")
+        self.actions.transition_lead(self._required_id(state, "lead_id"), "researched", "Gathered initial evidence.")
         return {"status": "researched"}
 
     def qualify(self, state: LeadWorkflowState) -> dict:
-        res = self.actions.score_lead(state["lead_id"], {"tech_stack": 10, "company_size": 5})
+        res = self.actions.score_lead(self._required_id(state, "lead_id"), {"tech_stack": 10, "company_size": 5})
         score = res.get("score", 0)
         if score >= 10:
-            self.actions.transition_lead(state["lead_id"], "qualified", "Score meets threshold.")
+            self.actions.transition_lead(self._required_id(state, "lead_id"), "qualified", "Score meets threshold.")
             return {"status": "qualified"}
 
-        self.actions.transition_lead(state["lead_id"], "unqualified", "Score too low.")
+        self.actions.transition_lead(self._required_id(state, "lead_id"), "unqualified", "Score too low.")
         return {"status": "unqualified"}
 
     def route_after_qualify(self, state: LeadWorkflowState) -> Literal["draft", "END"]:
@@ -94,7 +104,7 @@ class LeadWorkflowGraph:
 
     def draft(self, state: LeadWorkflowState) -> dict:
         msg_id = self.actions.stage_message(
-            lead_id=state["lead_id"],
+            lead_id=self._required_id(state, "lead_id"),
             recipient="contact@" + state["lead_data"].get("domain_name", "example.com"),
             channel="email",
             message_type="outbound",
@@ -116,6 +126,8 @@ class LeadWorkflowGraph:
     def approve(self, state: LeadWorkflowState) -> dict:
         # Founder approval or auto-approve
         self.actions.decide_message(
-            message_id=state["draft_message_id"], approve=True, reason="Auto-approved by LangGraph worker"
+            message_id=self._required_id(state, "draft_message_id"),
+            approve=True,
+            reason="Auto-approved by LangGraph worker",
         )
         return {"status": "approved"}

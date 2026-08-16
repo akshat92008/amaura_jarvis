@@ -2048,9 +2048,8 @@ class ExactResponseParser:
         prefix_constraint = ""
         remaining = clean
         if cls.COMMAND_PREFIX_RE.search(clean):
-            prefix_constraint = (
-                cls.COMMAND_PREFIX_RE.match(clean).group(0) if cls.COMMAND_PREFIX_RE.match(clean) else ""
-            )
+            prefix_match = cls.COMMAND_PREFIX_RE.match(clean)
+            prefix_constraint = prefix_match.group(0) if prefix_match is not None else ""
             remaining = cls.COMMAND_PREFIX_RE.sub("", clean).strip()
         elif cls.REPLY_MUST_BE_RE.search(clean):
             remaining = cls.REPLY_MUST_BE_RE.sub("", clean).strip()
@@ -3774,7 +3773,7 @@ class DirectActionRouter:
                     for line_item in input_1.splitlines()
                     if line_item.strip() and not line_item.strip().startswith("#")
                 ]
-                res_dict = {}
+                res_dict: dict[str, Any] = {}
                 for line_item in lines:
                     m = re.match(r"^\s*([a-zA-Z0-9_.\-]+)\s*[:=]\s*(.*)$", line_item)
                     if m:

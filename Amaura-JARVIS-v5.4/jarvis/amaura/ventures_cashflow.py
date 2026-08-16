@@ -522,7 +522,7 @@ class CashflowEngine:
                     "Founder-certified financial events require a stable manual_event_id (for example a bank/order/statement reference)"
                 )
         if trust_level == "provider_verified" and external_event_id:
-            idem_payload = {
+            idem_payload: dict[str, Any] = {
                 "stream_id": stream_id,
                 "event_type": event_type,
                 "provider": provider,

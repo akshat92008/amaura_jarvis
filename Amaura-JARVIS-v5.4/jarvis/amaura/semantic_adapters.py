@@ -230,7 +230,7 @@ def install_semantic_adapters() -> None:
 
     _install_attr(core.SemanticParser, "parse", classmethod(normalized_parse))
     # Extend structured arguments only with language-proven transformation roles.
-    base_structured_args = getattr(
+    base_structured_args: Any = getattr(
         da.PathExtractor.extract_structured_arguments, "__func__", da.PathExtractor.extract_structured_arguments
     )
 
@@ -275,7 +275,7 @@ def install_semantic_adapters() -> None:
     _install_attr(da.ExactResponseParser, "parse", classmethod(exact_via_graph))
     # Repository execution is invoked only after the graph classified REPOSITORY;
     # the legacy adapter must not re-veto that already-typed action.
-    original_repo_try = getattr(
+    original_repo_try: Any = getattr(
         da.DirectActionRouter._try_repository_inspection, "__func__", da.DirectActionRouter._try_repository_inspection
     )
 

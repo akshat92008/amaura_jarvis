@@ -426,8 +426,8 @@ def parse_meta_webhook(payload: dict[str, Any]) -> list[InboundMessage]:
             for msg in cast(list[Any], value.get("messages")) if isinstance(value.get("messages"), list) else []:
                 if not isinstance(msg, dict):
                     continue
-                text = cast(dict[str, Any], msg.get("text")) if isinstance(msg.get("text"), dict) else {}
-                body = str(text.get("body", "")).strip()
+                text_payload = cast(dict[str, Any], msg.get("text")) if isinstance(msg.get("text"), dict) else {}
+                body = str(text_payload.get("body", "")).strip()
                 if not body:
                     continue
                 sender = str(msg.get("from", "")).strip()
@@ -455,9 +455,9 @@ def parse_meta_webhook(payload: dict[str, Any]) -> list[InboundMessage]:
             message = (
                 cast(dict[str, Any], messaging.get("message")) if isinstance(messaging.get("message"), dict) else {}
             )
-            text = str(message.get("text", "")).strip()
+            message_text = str(message.get("text", "")).strip()
             external_id = str(message.get("mid", "")).strip()
-            if not text or not external_id:
+            if not message_text or not external_id:
                 continue
             sender_data = (
                 cast(dict[str, Any], messaging.get("sender")) if isinstance(messaging.get("sender"), dict) else {}
@@ -483,7 +483,7 @@ def parse_meta_webhook(payload: dict[str, Any]) -> list[InboundMessage]:
                     sender=sender,
                     recipient=recipient,
                     subject="",
-                    body=text,
+                    body=message_text,
                     received_at=received,
                     raw_metadata={"object": payload.get("object", "")},
                 )

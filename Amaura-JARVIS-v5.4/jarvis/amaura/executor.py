@@ -796,7 +796,7 @@ class GovernedTaskRunner:
             desc = task.get("description", "")
             workspace = packet_dict.pop("_workspace", "")
             approved_names = set(packet_dict.pop("_approved_tools", []))
-            evidence = []
+            direct_evidence: list[dict[str, Any]] = []
 
             direct_result = DirectActionRouter.execute(desc, context="", control=self.control, workspace=workspace)
 
@@ -814,7 +814,7 @@ class GovernedTaskRunner:
                     },
                     source=f"task:{task_id}:direct_action",
                 )
-                evidence.append(
+                direct_evidence.append(
                     {
                         "type": "direct_action",
                         "reference": record.reference,
@@ -826,14 +826,14 @@ class GovernedTaskRunner:
                 )
                 metadata = dict(task.get("metadata") or {})
                 self.control.store.update_work_item(task_id, metadata=metadata)
-                submitted = self.control.submit_task(task_id, "builder", direct_result.output, evidence)
+                submitted = self.control.submit_task(task_id, "builder", direct_result.output, direct_evidence)
                 return {
                     "status": submitted["state"],
                     "task_id": task_id,
                     "employee": "builder",
                     "iterations": 1,
                     "summary": direct_result.output,
-                    "evidence": evidence,
+                    "evidence": direct_evidence,
                     "model_execution_receipt": {
                         "requested_route": "deterministic-direct-action",
                         "actual_model": direct_result.model or direct_result.tool_name,
@@ -1321,10 +1321,12 @@ class GovernedReviewRunner:
                 raise GovernanceError("Actual reviewer model must differ from every worker model used for the task")
         content = response.choices[0].message.content or ""
         decision = _extract_json_object(content)
-        approve = decision.get("approve")
-        findings = decision.get("findings")
-        if not isinstance(approve, bool) or not isinstance(findings, str) or not findings.strip():
+        approve_value = decision.get("approve")
+        findings_value = decision.get("findings")
+        if not isinstance(approve_value, bool) or not isinstance(findings_value, str) or not findings_value.strip():
             raise GovernanceError("Reviewer decision is missing approve/findings")
+        approve: bool = approve_value
+        findings: str = findings_value
         criterion_review = validate_criterion_review(task, decision, self.control.evidence)
         if not deterministic["approve"]:
             approve = False

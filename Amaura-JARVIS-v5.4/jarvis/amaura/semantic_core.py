@@ -1140,7 +1140,7 @@ def install_semantic_core() -> None:
     from jarvis.amaura.models import GovernanceError
 
     original_execute_tool = da.execute_tool
-    original_diagnose = getattr(
+    original_diagnose: Any = getattr(
         da.RepositoryDiagnosticEngine.diagnose, "__func__", da.RepositoryDiagnosticEngine.diagnose
     )
 
