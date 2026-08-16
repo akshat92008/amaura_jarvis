@@ -8,6 +8,7 @@ on:
       - 'Amaura-JARVIS-v5.4/scripts/phase9_compat_repair.patch'
       - 'Amaura-JARVIS-v5.4/scripts/phase9_compat_v2.patch'
       - 'Amaura-JARVIS-v5.4/scripts/phase9_compat_v3.patch'
+      - 'Amaura-JARVIS-v5.4/scripts/phase9_compat_v4.patch'
       - '.github/workflows/phase9-diagnostics.yml'
       - 'Amaura-JARVIS-v5.4/jarvis/amaura/**'
 
@@ -66,6 +67,8 @@ jobs:
           git apply scripts/phase9_compat_v2.patch
           git apply --check scripts/phase9_compat_v3.patch
           git apply scripts/phase9_compat_v3.patch
+          git apply --check scripts/phase9_compat_v4.patch
+          git apply scripts/phase9_compat_v4.patch
           python -m py_compile jarvis/amaura/semantic_frontend.py jarvis/amaura/direct_action.py
       - name: Install frozen environment
         run: |
@@ -97,7 +100,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase9-compatibility-v3-diagnostics
+          name: phase9-compatibility-v4-diagnostics
           path: |
             Amaura-JARVIS-v5.4/compatibility-diagnostics.txt
             Amaura-JARVIS-v5.4/compatibility-exit.txt
