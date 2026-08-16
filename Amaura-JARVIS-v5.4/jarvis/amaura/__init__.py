@@ -6,17 +6,15 @@ from jarvis.amaura.integrations import ProviderReceipt
 from jarvis.amaura.models import ApprovalStatus, RiskLevel, TaskState
 from jarvis.amaura.semantic_core import install_semantic_core
 from jarvis.amaura.semantic_frontend import install_semantic_frontend
-from jarvis.amaura.semantic_phase9 import install_semantic_phase9
 from jarvis.amaura.supervisor import AmauraSupervisor
 from jarvis.amaura.telemetry import OperationalTelemetry
 
 # ARCH semantic execution boundary.
 # There is exactly one active language front-end above the typed request graph.
-# Phase 9 hardening extends that boundary with span/role/postcondition contracts;
-# historical compatibility modules remain inert and do not form a parser stack.
+# Historical compatibility and repair modules remain inert and never form a
+# second parser/executor stack.
 install_semantic_core()
 install_semantic_frontend()
-install_semantic_phase9()
 
 __all__ = [
     "AmauraControlPlane",
