@@ -18,7 +18,7 @@ import webbrowser
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import quote, urlencode, urlsplit
 
 from jarvis.amaura.models import GovernanceError
@@ -221,9 +221,9 @@ class TelegramNotificationAdapter:
         )
         if status != 200 or response.get("ok") is not True:
             raise GovernanceError(f"Telegram notification failed with HTTP {status}")
-        result = response.get("result") if isinstance(response.get("result"), dict) else {}
+        result = cast(dict[str, Any], response.get("result")) if isinstance(response.get("result"), dict) else {}
         message_id = str(result.get("message_id", "")).strip()
-        chat = result.get("chat") if isinstance(result.get("chat"), dict) else {}
+        chat = cast(dict[str, Any], result.get("chat")) if isinstance(result.get("chat"), dict) else {}
         if not message_id or str(chat.get("id", "")) != str(self.chat_id):
             raise GovernanceError("Telegram did not confirm the configured founder chat")
         return _provider_receipt(

@@ -544,7 +544,7 @@ class MissionControl:
     ) -> list[dict[str, Any]]:
         actor = actor or self.control.founder_id
         existing_titles = {item["title"] for item in self.control.store.list_objectives(limit=1000)}
-        definitions = [
+        definitions: list[dict[str, Any]] = [
             {
                 "title": "Build Amaura's owned audience",
                 "objective": "Produce the Amaura build-in-public content package for {cadence_key}",

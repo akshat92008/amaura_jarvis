@@ -203,8 +203,11 @@ def evaluation_pack_status(
         payload = json.loads(target.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise GovernanceError("Evaluation pack must be a JSON object")
-        unsigned = {"version": int(payload.get("version", 1)), "cases": payload.get("cases")}
-        cases = tuple(_validate_case(case, index) for index, case in enumerate(unsigned["cases"] or [], 1))
+        raw_cases = payload.get("cases")
+        if raw_cases is not None and not isinstance(raw_cases, list):
+            raise GovernanceError("Evaluation pack cases must be a list")
+        unsigned: dict[str, Any] = {"version": int(payload.get("version", 1)), "cases": raw_cases or []}
+        cases = tuple(_validate_case(case, index) for index, case in enumerate(raw_cases or [], 1))
         if len(cases) < minimum_cases:
             raise GovernanceError(f"Private evaluation pack requires at least {minimum_cases} cases")
         secret = (key if key is not None else os.environ.get("AMAURA_EVALUATION_PACK_HMAC_KEY", "")).encode()

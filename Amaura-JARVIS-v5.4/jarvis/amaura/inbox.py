@@ -11,7 +11,7 @@ import re
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from email.utils import parseaddr
-from typing import Any
+from typing import Any, cast
 from urllib.parse import quote, urlencode
 
 from jarvis.amaura.models import GovernanceError
@@ -31,7 +31,7 @@ def _b64url(value: str) -> bytes:
 
 def _plain_from_part(part: dict[str, Any]) -> str:
     mime = str(part.get("mimeType", "")).lower()
-    body = part.get("body") if isinstance(part.get("body"), dict) else {}
+    body = cast(dict[str, Any], part.get("body")) if isinstance(part.get("body"), dict) else {}
     data = str(body.get("data", ""))
     if data and mime in {"text/plain", "text/html"}:
         decoded = _b64url(data).decode("utf-8", errors="replace")
@@ -113,7 +113,7 @@ class GmailInboxAdapter:
             status, response, _ = self._call(url)
             if status != 200:
                 raise GovernanceError(f"Gmail message listing failed with HTTP {status}")
-            page_refs = response.get("messages") if isinstance(response.get("messages"), list) else []
+            page_refs = cast(list[Any], response.get("messages")) if isinstance(response.get("messages"), list) else []
             for ref in page_refs:
                 if not isinstance(ref, dict):
                     continue
@@ -136,8 +136,8 @@ class GmailInboxAdapter:
             status, raw, _ = self._call(f"{self.list_endpoint}/{quote(external_id, safe='')}?format=full")
             if status != 200:
                 continue
-            payload = raw.get("payload") if isinstance(raw.get("payload"), dict) else {}
-            headers = payload.get("headers") if isinstance(payload.get("headers"), list) else []
+            payload = cast(dict[str, Any], raw.get("payload")) if isinstance(raw.get("payload"), dict) else {}
+            headers = cast(list[Any], payload.get("headers")) if isinstance(payload.get("headers"), list) else []
             values = {str(v.get("name", "")).lower(): str(v.get("value", "")) for v in headers if isinstance(v, dict)}
             sender = parseaddr(values.get("from", ""))[1] or values.get("from", "")
             recipient = parseaddr(values.get("to", ""))[1] or values.get("to", "")
@@ -415,18 +415,18 @@ def parse_meta_webhook(payload: dict[str, Any]) -> list[InboundMessage]:
         for change in entry.get("changes", []) if isinstance(entry.get("changes"), list) else []:
             if not isinstance(change, dict):
                 continue
-            value = change.get("value") if isinstance(change.get("value"), dict) else {}
-            metadata = value.get("metadata") if isinstance(value.get("metadata"), dict) else {}
-            contacts = value.get("contacts") if isinstance(value.get("contacts"), list) else []
+            value = cast(dict[str, Any], change.get("value")) if isinstance(change.get("value"), dict) else {}
+            metadata = cast(dict[str, Any], value.get("metadata")) if isinstance(value.get("metadata"), dict) else {}
+            contacts = cast(list[Any], value.get("contacts")) if isinstance(value.get("contacts"), list) else []
             names = {
-                str(c.get("wa_id", "")): str((c.get("profile") or {}).get("name", ""))
+                str(c.get("wa_id", "")): str(cast(dict[str, Any], c.get("profile")).get("name", ""))
                 for c in contacts
-                if isinstance(c, dict)
+                if isinstance(c, dict) and isinstance(c.get("profile"), dict)
             }
-            for msg in value.get("messages", []) if isinstance(value.get("messages"), list) else []:
+            for msg in cast(list[Any], value.get("messages")) if isinstance(value.get("messages"), list) else []:
                 if not isinstance(msg, dict):
                     continue
-                text = msg.get("text") if isinstance(msg.get("text"), dict) else {}
+                text = cast(dict[str, Any], msg.get("text")) if isinstance(msg.get("text"), dict) else {}
                 body = str(text.get("body", "")).strip()
                 if not body:
                     continue
@@ -449,19 +449,29 @@ def parse_meta_webhook(payload: dict[str, Any]) -> list[InboundMessage]:
                         raw_metadata={"contact_name": names.get(sender, ""), "type": msg.get("type", "")},
                     )
                 )
-        for messaging in entry.get("messaging", []) if isinstance(entry.get("messaging"), list) else []:
+        for messaging in cast(list[Any], entry.get("messaging")) if isinstance(entry.get("messaging"), list) else []:
             if not isinstance(messaging, dict):
                 continue
-            message = messaging.get("message") if isinstance(messaging.get("message"), dict) else {}
+            message = (
+                cast(dict[str, Any], messaging.get("message")) if isinstance(messaging.get("message"), dict) else {}
+            )
             text = str(message.get("text", "")).strip()
             external_id = str(message.get("mid", "")).strip()
             if not text or not external_id:
                 continue
-            sender = str((messaging.get("sender") or {}).get("id", ""))
-            recipient = str((messaging.get("recipient") or {}).get("id", ""))
+            sender_data = (
+                cast(dict[str, Any], messaging.get("sender")) if isinstance(messaging.get("sender"), dict) else {}
+            )
+            recipient_data = (
+                cast(dict[str, Any], messaging.get("recipient")) if isinstance(messaging.get("recipient"), dict) else {}
+            )
+            sender = str(sender_data.get("id", ""))
+            recipient = str(recipient_data.get("id", ""))
             provider = "instagram" if str(payload.get("object", "")).lower() == "instagram" else "facebook"
             timestamp = messaging.get("timestamp")
             try:
+                if timestamp is None:
+                    raise ValueError("missing timestamp")
                 received = datetime.fromtimestamp(int(timestamp) / 1000, tz=UTC).isoformat()
             except (TypeError, ValueError, OSError):
                 received = datetime.now(UTC).isoformat()

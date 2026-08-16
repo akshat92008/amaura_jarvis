@@ -212,7 +212,7 @@ class GitHubAdapter:
         if not self.configured:
             raise GovernanceError("GitHub token is not configured")
         owner, repo = self._repo(owner, repo)
-        payload = {"title": title.strip(), "body": body}
+        payload: dict[str, Any] = {"title": title.strip(), "body": body}
         if labels:
             payload["labels"] = [str(v).strip() for v in labels if str(v).strip()]
         if not payload["title"]:

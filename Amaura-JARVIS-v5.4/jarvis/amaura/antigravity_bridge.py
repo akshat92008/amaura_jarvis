@@ -417,7 +417,7 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         tool_permission = str(data.get("toolPermission", "request-review"))
         artifact_policy = str(data.get("artifactReviewPolicy", "asks-for-review"))
         non_workspace = bool(data.get("allowNonWorkspaceAccess", False))
-        permissions = data.get("permissions") if isinstance(data.get("permissions"), dict) else {}
+        permissions = cast(dict[str, Any], data.get("permissions")) if isinstance(data.get("permissions"), dict) else {}
         allows = [str(v) for v in (permissions.get("allow") or []) if isinstance(v, str)]
         risky_global_allows = [
             rule

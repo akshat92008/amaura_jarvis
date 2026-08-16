@@ -18,7 +18,7 @@ import tempfile
 from collections.abc import Iterable
 from contextlib import closing
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.evaluation import (
@@ -304,9 +304,14 @@ def certify_release(
                     unique_routes.append(route)
             expected_routes = unique_routes
 
-            installed_local_models = set(
-                readiness.get("details", {}).get("live", {}).get("ollama", {}).get("models", [])
-            )
+            details = readiness.get("details")
+            details_map = cast(dict[str, Any], details) if isinstance(details, dict) else {}
+            live = details_map.get("live")
+            live_map = cast(dict[str, Any], live) if isinstance(live, dict) else {}
+            ollama = live_map.get("ollama")
+            ollama_map = cast(dict[str, Any], ollama) if isinstance(ollama, dict) else {}
+            models = ollama_map.get("models")
+            installed_local_models = {str(model) for model in models} if isinstance(models, list) else set()
             missing_routes: list[str] = []
             for route in expected_routes:
                 if route["provider"] == "omniroute":
@@ -364,7 +369,8 @@ def certify_release(
             flush=True,
         )
     production_ready = source_certified and not static_only and bool(readiness["ready"]) and model_gate
-    blockers = list(readiness.get("blockers", []))
+    raw_blockers = readiness.get("blockers")
+    blockers = [str(item) for item in raw_blockers] if isinstance(raw_blockers, list) else []
     if not security["ok"]:
         blockers.append("repository_secret_scan")
     if not backup_restore["ok"]:

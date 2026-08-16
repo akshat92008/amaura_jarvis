@@ -20,6 +20,7 @@ class CommandBus:
         # Resolve the domain handler
         domain = command.domain
         handler_name = command.handler
+        handler_obj: Any
 
         if domain == "control_plane":
             handler_obj = self.control_plane
