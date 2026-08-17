@@ -24,6 +24,7 @@ from jarvis.amaura.network import request_bytes
 from jarvis.amaura.trust import SIGNAL_TRUST_KEY, TrustLevel, make_signal_trust, render_untrusted_external_text
 
 _REPO_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+_SAFE_LABEL_PATTERN = re.compile(r"^[A-Za-z0-9_.:-]{1,80}$")
 
 
 class SignalIngestionEngine:
@@ -81,7 +82,6 @@ class SignalIngestionEngine:
                 "inbound_id": record["id"],
                 "lead_id": str(record.get("lead_id") or ""),
                 "classification": classification,
-                # Subject is preserved as external evidence, never as instruction.
                 "subject": render_untrusted_external_text(subject, field="subject") if subject else "",
                 "received_at": str(record.get("received_at") or ""),
                 SIGNAL_TRUST_KEY: make_signal_trust(
@@ -208,18 +208,20 @@ class SignalIngestionEngine:
                     updated_at = str(issue.get("updated_at") or "")
                     source = f"github:{repository}"
                     title = str(issue.get("title") or "GitHub issue")[:500]
+                    safe_labels = sorted(
+                        label for label in labels if label and _SAFE_LABEL_PATTERN.fullmatch(label.strip())
+                    )[:30]
                     signal = self.company.ingest_signal(
                         signal_type=signal_type,
                         source=source,
                         severity=severity,
                         idempotency_key=f"v7:github:{repository}:{number}:{updated_at}",
                         payload={
-                            # The title is useful evidence but remains untrusted natural language.
                             "summary": render_untrusted_external_text(title, field="summary"),
                             "repository": repository,
                             "issue_number": number,
                             "url": str(issue.get("html_url") or "")[:1000],
-                            "labels": sorted(label for label in labels if label)[:30],
+                            "labels": safe_labels,
                             "updated_at": updated_at,
                             SIGNAL_TRUST_KEY: make_signal_trust(
                                 TrustLevel.EXTERNAL_UNTRUSTED,
