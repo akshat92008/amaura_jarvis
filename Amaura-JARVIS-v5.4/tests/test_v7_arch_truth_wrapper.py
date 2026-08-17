@@ -6,7 +6,6 @@ import pytest
 
 import scripts.run_v7_arch_truth as wrapper
 
-
 SHA = "a" * 40
 
 
