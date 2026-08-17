@@ -19,7 +19,7 @@ from typing import Any
 
 COMPANY_RUNTIME_LOCK_SUFFIX = ".amaura-company-runtime.lock"
 _registry_lock = threading.RLock()
-_active_leases: dict[str, "LeaderLease"] = {}
+_active_leases: dict[str, LeaderLease] = {}
 
 
 @dataclass(frozen=True, slots=True)
