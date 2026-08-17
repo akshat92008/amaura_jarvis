@@ -43,8 +43,6 @@ RISK_ORDER = {RiskLevel.LOW: 0, RiskLevel.MEDIUM: 1, RiskLevel.HIGH: 2, RiskLeve
 
 @dataclass(frozen=True, slots=True)
 class CompanyAgent:
-    """An AI employee's enforceable operating envelope."""
-
     agent_id: str
     name: str
     department: str
@@ -107,8 +105,12 @@ class GovernanceError(ValueError):
     """Raised when an action violates the Amaura operating doctrine."""
 
 
-class AmauraFatalIntegrityError(GovernanceError):
-    """Integrity failure that must escape every retry/defer boundary."""
+class AmauraFatalIntegrityError(BaseException):
+    """Integrity failure intentionally outside the normal retry hierarchy.
+
+    Fatal integrity failures bypass broad ``except Exception`` retry/defer
+    boundaries by construction. ``finally`` cleanup still runs as they escape.
+    """
 
     def __init__(self, message: str):
         text = str(message)
@@ -148,7 +150,6 @@ _FATAL_INTEGRITY_TERMS: tuple[tuple[tuple[str, ...], type[AmauraFatalIntegrityEr
 
 
 def fatal_integrity_error(exc: BaseException) -> AmauraFatalIntegrityError | None:
-    """Normalize legacy text-signalled integrity failures into typed fatal errors."""
     if isinstance(exc, AmauraFatalIntegrityError):
         return exc
     text = f"{type(exc).__name__}: {exc}".lower()
@@ -159,7 +160,6 @@ def fatal_integrity_error(exc: BaseException) -> AmauraFatalIntegrityError | Non
 
 
 def raise_if_fatal_integrity(exc: BaseException) -> None:
-    """Raise integrity failures before ordinary retry/defer logic can swallow them."""
     fatal = fatal_integrity_error(exc)
     if fatal is None:
         return
