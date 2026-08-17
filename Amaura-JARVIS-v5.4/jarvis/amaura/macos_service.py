@@ -1,9 +1,8 @@
 """Canonical macOS LaunchAgent support for the Amaura company runtime.
 
-There is exactly one supported company-runtime service definition. The generated
+There is exactly one supported company-runtime service identity. The generated
 plist contains no credentials; the daemon loads the mode-0600 ``.env.amaura``
-file after launch. Historical callers of this module therefore produce the same
-LaunchAgent as ``scripts/install_v7_launchd.py`` instead of a second scheduler.
+file after launch. Historical callers cannot mint a second scheduler label.
 """
 
 from __future__ import annotations
@@ -25,6 +24,13 @@ def _runtime_paths(repository_root: str | Path) -> tuple[Path, Path, Path, Path]
     return root, python, env_file, logs
 
 
+def _require_canonical_label(label: str) -> str:
+    clean = str(label).strip()
+    if clean != DEFAULT_LABEL:
+        raise ValueError(f"Amaura company runtime label is fixed to {DEFAULT_LABEL}")
+    return DEFAULT_LABEL
+
+
 def launch_agent_payload(
     repository_root: str | Path,
     *,
@@ -32,6 +38,7 @@ def launch_agent_payload(
     poll_seconds: float = 30.0,
 ) -> dict[str, Any]:
     """Return the one canonical credential-free company LaunchAgent payload."""
+    label = _require_canonical_label(label)
     root, python, env_file, logs = _runtime_paths(repository_root)
     if not python.is_file():
         raise FileNotFoundError(f"Amaura virtualenv Python is missing: {python}")
@@ -71,12 +78,13 @@ def write_launch_agent(
     poll_seconds: float = 30.0,
 ) -> Path:
     """Write the canonical private plist atomically enough for local installation."""
+    label = _require_canonical_label(label)
     root, _python, _env_file, logs = _runtime_paths(repository_root)
     payload = launch_agent_payload(root, label=label, poll_seconds=poll_seconds)
     path = (
         Path(destination).expanduser().resolve()
         if destination
-        else Path.home() / "Library" / "LaunchAgents" / f"{label}.plist"
+        else Path.home() / "Library" / "LaunchAgents" / f"{DEFAULT_LABEL}.plist"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     logs.mkdir(parents=True, exist_ok=True)
@@ -94,13 +102,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Generate Amaura's canonical credential-free macOS LaunchAgent")
     parser.add_argument("--repository", required=True)
     parser.add_argument("--destination", default="")
-    parser.add_argument("--label", default=DEFAULT_LABEL)
     parser.add_argument("--poll-seconds", type=float, default=30.0)
     args = parser.parse_args()
     path = write_launch_agent(
         args.repository,
         destination=args.destination or None,
-        label=args.label,
         poll_seconds=args.poll_seconds,
     )
     print(path)
