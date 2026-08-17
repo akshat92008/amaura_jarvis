@@ -70,6 +70,29 @@ def test_company_runtime_lease_allows_only_one_scheduler(monkeypatch):
             control.close()
 
 
+def test_run_forever_holds_leadership_for_entire_lifetime(monkeypatch):
+    with TemporaryDirectory() as temp:
+        control = _control(monkeypatch, temp)
+        try:
+            runtime = AutonomousCompanyRuntime(control)
+            runtime.tick = MagicMock(side_effect=[{"status": "ok"}, {"status": "ok"}])
+            competing_attempts: list[bool] = []
+
+            def sleep_probe(_seconds: float) -> None:
+                with company_runtime_leader_lock(control) as competing:
+                    competing_attempts.append(competing)
+
+            runtime.run_forever(max_cycles=2, poll_seconds=5, sleep_fn=sleep_probe)
+
+            assert runtime.tick.call_count == 2
+            assert competing_attempts == [False]
+            assert runtime._leader_owned is False
+            with company_runtime_leader_lock(control) as after_shutdown:
+                assert after_shutdown is True
+        finally:
+            control.close()
+
+
 def test_mission_runner_uses_same_company_runtime_lease(monkeypatch):
     with TemporaryDirectory() as temp:
         control = _control(monkeypatch, temp)
