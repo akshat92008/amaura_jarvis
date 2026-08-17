@@ -212,7 +212,7 @@ class CanonicalTaskPacket(BaseModel):
     doctrine: list[str]
 
     @model_validator(mode="after")
-    def bind_external_data_doctrine(self) -> "CanonicalTaskPacket":
+    def bind_external_data_doctrine(self) -> CanonicalTaskPacket:
         if _TASK_TRUST_DOCTRINE not in self.doctrine:
             self.doctrine.append(_TASK_TRUST_DOCTRINE)
         return self
