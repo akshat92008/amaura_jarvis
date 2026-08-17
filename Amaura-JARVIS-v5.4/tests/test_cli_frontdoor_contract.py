@@ -199,6 +199,7 @@ def test_regression_a_b_c_d_oneshot_engineering_execution_and_verify(
     monkeypatch.setenv("AMAURA_ANTIGRAVITY_REQUIRE_AUTONOMY_SETTINGS", "0")
     monkeypatch.setenv("AMAURA_ANTIGRAVITY_REQUIRE_MODEL_PROVENANCE", "1")
     monkeypatch.setenv("AMAURA_PROVIDER_RECEIPT_KEY", "a" * 32)
+    monkeypatch.setenv("AMAURA_REVIEW_MODE", "deterministic")
 
     prompt = (
         "Fix the failing implementation in this repository with the smallest correct change. "
