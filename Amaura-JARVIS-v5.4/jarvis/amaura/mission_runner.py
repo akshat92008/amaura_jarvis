@@ -49,8 +49,8 @@ class MissionRunner:
 
     @contextlib.contextmanager
     def _leader_lock(self):
-        with company_runtime_leader_lock(self.control) as lease:
-            yield lease
+        with company_runtime_leader_lock(self.control) as acquired:
+            yield acquired
 
     def _validated_lease(self, *, lease: LeaderLease | None, leader_owned: bool) -> LeaderLease | None:
         candidate = lease
@@ -197,8 +197,9 @@ class MissionRunner:
                         "missions": [],
                         "reason": "another company runtime process holds the leader lease",
                     }
-                if not isinstance(acquired, LeaderLease) or not validate_company_runtime_lease(self.control, acquired):
-                    raise GovernanceError("Company runtime returned an invalid leadership capability")
+                active = current_company_runtime_lease(self.control)
+                if active is None or not validate_company_runtime_lease(self.control, active):
+                    raise GovernanceError("Company runtime failed to establish an active leadership capability")
                 return self._tick_locked(max_goals=max_goals)
 
     def run_goal_until_terminal(
@@ -260,12 +261,13 @@ class MissionRunner:
 
             with self._local_lock:
                 validated = self._validated_lease(lease=lease, leader_owned=leader_owned)
-                manager = contextlib.nullcontext(validated) if validated is not None else self._leader_lock()
-                with manager as active:
-                    if active is False:
+                manager = contextlib.nullcontext(True) if validated is not None else self._leader_lock()
+                with manager as acquired:
+                    if acquired is False:
                         time.sleep(max(0.05, poll_seconds))
                         continue
-                    if not isinstance(active, LeaderLease) or not validate_company_runtime_lease(self.control, active):
+                    active = validated or current_company_runtime_lease(self.control)
+                    if active is None or not validate_company_runtime_lease(self.control, active):
                         raise GovernanceError("Mission execution requires a valid active company LeaderLease")
                     try:
                         execution = brain.run_goal(goal_id, max_ticks=1, auto_replan=True)
