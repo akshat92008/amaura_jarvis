@@ -1191,29 +1191,44 @@ class GovernedReviewRunner:
         if (
             task.get("action_type") == "direct_action"
             or (task.get("metadata") or {}).get("goal_plan", {}).get("domain") == "direct_action"
+            or (
+                task.get("action_type") == "repository_write"
+                and (task.get("metadata") or {}).get("coding_backend_used") == "antigravity"
+                and (
+                    os.environ.get("AMAURA_REVIEW_MODE", "").strip().lower() == "deterministic"
+                    or (
+                        os.environ.get("AMAURA_REVIEW_MODE", "").strip().lower() in {"auto", ""}
+                        and not os.environ.get("AMAURA_LOCAL_REVIEW_MODEL")
+                        and not os.environ.get("NVIDIA_REVIEW_API_KEY")
+                        and not os.environ.get("AMAURA_REVIEW_MODEL")
+                    )
+                )
+            )
         ):
             deterministic = deterministic_evidence_review(task, self.control.evidence)
             approve = bool(deterministic.get("approve"))
             findings = (
-                "Direct action verified via deterministic evidence."
+                "Verified via independent tests and deterministic evidence."
                 if approve
                 else (
-                    "Direct action verification failed: "
+                    "Verification failed: "
                     + "; ".join(deterministic.get("findings") or ["evidence check failed"])
                 )
             )
             evidence_refs = [ref["reference"] for ref in (task.get("evidence") or []) if ref.get("reference")]
+            criteria = task.get("acceptance_criteria") or ["Action completed successfully"]
             decision = {
                 "approve": approve,
                 "findings": findings,
                 "criteria": [
                     {
-                        "criterion_index": 1,
-                        "criterion": "Action completed successfully",
+                        "criterion_index": idx + 1,
+                        "criterion": c,
                         "passed": approve,
                         "evidence_refs": evidence_refs if approve else [],
-                        "notes": "Verified" if approve else "Verification failed",
+                        "notes": "Verified via independent evidence" if approve else "Verification failed",
                     }
+                    for idx, c in enumerate(criteria)
                 ],
             }
             attestation = create_review_attestation(

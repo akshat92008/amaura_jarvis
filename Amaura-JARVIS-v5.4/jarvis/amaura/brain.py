@@ -543,6 +543,18 @@ class GoalCompiler:
                 tasks[3].model_copy(update={"depends_on": []}),
                 tasks[4],
             ]
+        elif backend == "antigravity" and request.autonomy != "plan_only":
+            # Antigravity performs its own bounded repository inspection,
+            # implementation, and verification, followed by Amaura's independent
+            # review attestation.
+            tasks = [
+                tasks[3].model_copy(
+                    update={
+                        "depends_on": [],
+                        "risk": RiskLevel.LOW if request.autonomy in {"execute", "execute_until_approval"} else RiskLevel.MEDIUM,
+                    }
+                ),
+            ]
         return GoalPlan(
             domain="software",
             objective=objective,

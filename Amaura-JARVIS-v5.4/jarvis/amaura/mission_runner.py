@@ -189,6 +189,89 @@ class MissionRunner:
                         results.append(MissionRunnerResult(goal_id, detail["class"], False, detail).to_dict())
         return {"status": "advanced" if results else "idle", "missions": results}
 
+    def run_goal_until_terminal(
+        self,
+        goal_id: str,
+        *,
+        timeout_seconds: float = 300.0,
+        poll_seconds: float = 0.25,
+        max_ticks: int = 100,
+    ) -> dict[str, Any]:
+        """Synchronously drive or wait for a specific goal until a terminal or blocked state."""
+        import time
+
+        from jarvis.amaura.cognition import ExecutiveKernel
+
+        start_time = time.monotonic()
+        brain = JarvisBrain(self.control)
+        terminal_or_blocked = {
+            "completed",
+            "awaiting_approval",
+            "failed",
+            "cancelled",
+            "held",
+            "handoff_required",
+            "authorization_required",
+            "rejected",
+            "reference_required",
+        }
+
+        ticks_executed = 0
+        while True:
+            try:
+                current_status = brain.status(goal_id)
+            except Exception as exc:
+                return {
+                    "goal_id": goal_id,
+                    "state": "failed",
+                    "error": str(exc),
+                    "message": f"Mission {goal_id} failed to query status: {exc}",
+                    "status": {},
+                }
+
+            state = current_status.get("state", "queued")
+            if state in terminal_or_blocked:
+                message = ExecutiveKernel._mission_message(current_status)
+                return {
+                    "goal_id": goal_id,
+                    "state": state,
+                    "status": current_status,
+                    "message": message,
+                    "ticks_executed": ticks_executed,
+                }
+
+            if (time.monotonic() - start_time) >= timeout_seconds or ticks_executed >= max_ticks:
+                message = f"Mission {goal_id} timed out before reaching a terminal state."
+                return {
+                    "goal_id": goal_id,
+                    "state": "timeout",
+                    "status": current_status,
+                    "message": message,
+                    "ticks_executed": ticks_executed,
+                }
+
+            with self._local_lock:
+                with self._leader_lock() as leader:
+                    if leader is False:
+                        # Another runner process holds the leader lease; wait and observe.
+                        time.sleep(max(0.05, poll_seconds))
+                        continue
+
+                    try:
+                        execution = brain.run_goal(goal_id, max_ticks=1, auto_replan=True)
+                        self._clear_failure(goal_id)
+                        ticks_executed += len(execution.ticks) if execution.ticks else 1
+                        if not execution.ticks or execution.state in terminal_or_blocked:
+                            pass
+                        else:
+                            time.sleep(0.02)
+                            continue
+                    except (GovernanceError, KeyError, ValueError, RuntimeError, OSError) as exc:
+                        self._record_failure(goal_id, exc)
+                        ticks_executed += 1
+
+            time.sleep(max(0.05, poll_seconds))
+
     def run_forever(
         self, *, poll_seconds: float = 2.0, max_goals: int = 3, stop_event: threading.Event | None = None
     ) -> None:

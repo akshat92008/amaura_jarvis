@@ -636,7 +636,18 @@ def main():
             autonomy="execute_until_approval",
             coding_backend="antigravity",
         )
-        msg = str(result.get("message") or "").strip()
+        goal_id = str(result.get("goal_id") or (result.get("result") or {}).get("goal", {}).get("id") or "")
+        state = str(result.get("state") or "")
+        if goal_id and state in {"queued", "running"} and result.get("intent") == "mission":
+            from jarvis.amaura.mission_runner import MissionRunner
+
+            runner = MissionRunner(control)
+            final_result = runner.run_goal_until_terminal(
+                goal_id, timeout_seconds=float(os.environ.get("AMAURA_MISSION_TIMEOUT", "300"))
+            )
+            msg = str(final_result.get("message") or "").strip()
+        else:
+            msg = str(result.get("message") or "").strip()
         if msg:
             ui.console.print(msg)
         return
