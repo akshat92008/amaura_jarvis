@@ -24,8 +24,14 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _shutdown(signum: int, _frame) -> NoReturn:
-    raise SystemExit(128 + int(signum))
+def _shutdown(_signum: int, _frame) -> NoReturn:
+    """Treat an operator/launchd stop request as a successful service exit.
+
+    The LaunchAgent uses KeepAlive.SuccessfulExit=false: unexpected daemon
+    failures return non-zero and are restarted, while an intentional SIGTERM or
+    SIGINT must return zero or launchd would create a restart loop.
+    """
+    raise SystemExit(0)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -33,15 +39,8 @@ def main(argv: list[str] | None = None) -> int:
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
 
-    # Service startup uses the same strict parser as the operator CLI and never
-    # executes shell text from the env file. POSIX deployments require private
-    # permissions because this file contains independent authority secrets.
     load_amaura_env(args.env_file, require_private_permissions=True)
 
-    # Heavy execution is intentionally conservative on the target small-Mac
-    # deployment. The scheduler can manage many missions, but only one heavy
-    # execution slot is enabled by default and this daemon caps explicit values
-    # at two until resource-aware worker pooling is separately qualified.
     max_work_units = max(1, min(int(args.max_work_units), 2))
     poll_seconds = max(5.0, min(float(args.poll_seconds), 3600.0))
 
@@ -73,10 +72,6 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"event": "amaura_company_runtime_stopped", "code": code}, sort_keys=True), flush=True)
         return code
     except Exception as exc:
-        # Integrity failures intentionally reach this boundary rather than being
-        # swallowed by the service loop. launchd may restart the process, but the
-        # same fail-closed check will block again until the underlying state is
-        # repaired by the founder/operator.
         print(
             json.dumps(
                 {
