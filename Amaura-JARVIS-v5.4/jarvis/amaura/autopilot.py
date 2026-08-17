@@ -81,9 +81,6 @@ class AutonomousCompanyRuntime:
 
     @staticmethod
     def _proactive_enabled() -> bool:
-        # CompanyAutonomy already converts known operational pressure into
-        # bounded workflows. Broad autonomous investigation is opt-in until the
-        # strategic-radar layer can prove it will not duplicate those workflows.
         return os.environ.get("AMAURA_V7_AUTO_INVESTIGATE", "0").strip().lower() not in {
             "0",
             "false",
@@ -208,14 +205,7 @@ class AutonomousCompanyRuntime:
         max_signals: int = 3,
         max_dynamic_goals: int = 3,
     ) -> dict[str, Any]:
-        """Run one deterministic company cycle while leadership is already held.
-
-        Canonical order:
-        recover/sync -> external observations -> internal signals -> signal
-        workflows -> world/proactive cognition -> recurring objectives -> dynamic
-        missions -> governed execution/outbox -> circuits -> final world/attention
-        -> venture accounting -> briefing/backup.
-        """
+        """Run one deterministic company cycle while leadership is already held."""
         now = now or datetime.now(UTC)
         run = self.control.store.start_autonomy_run(
             worker_id=str(getattr(self.supervisor, "worker_id", "amaura-autopilot")),
@@ -254,22 +244,17 @@ class AutonomousCompanyRuntime:
 
         try:
             progress_updates = self.mission.sync_completed_programmes()
-
             external_signal_ingestion = self.signal_ingestion.poll()
             signals_detected = self.company.detect_signals(now=now)
             signal_programmes = self.company.process_signals(now=now, max_signals=max_signals)
-
             self.world.refresh()
             proactive_cycle = self.proactive.tick(auto_investigate=self._proactive_enabled())
-
             created = self.ensure_operating_cadence(now)
             objective_programmes = self.mission.plan_due_work(now=now, max_new_programmes=max_new_programmes)
-
             dynamic_missions = self.mission_runner.tick(
                 max_goals=max(1, min(int(max_dynamic_goals), 20)),
                 leader_owned=True,
             )
-
             publications = self.control.distribution.dispatch_due(now=now, limit=5)
             units = max(1, min(int(max_work_units), 20))
             executions: list[dict[str, Any]] = []
@@ -383,6 +368,7 @@ class AutonomousCompanyRuntime:
         failures = 0
         cycles = 0
         actor = str(getattr(self.supervisor, "worker_id", "amaura-autopilot"))
+        details: dict[str, Any]
 
         with self._leader_lock() as leader:
             if leader is False:
@@ -442,8 +428,6 @@ class AutonomousCompanyRuntime:
                         continue
 
                     if result.get("status") == "standby":
-                        # This should not occur while the lifetime lease is owned,
-                        # but preserve defensive compatibility for mocked tests.
                         if max_cycles is None or cycles < max_cycles:
                             sleeper(delay)
                         continue
