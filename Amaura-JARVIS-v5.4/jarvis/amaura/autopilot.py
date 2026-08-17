@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import random
 import sqlite3
+import threading
 import time
 import uuid
 from contextlib import closing, contextmanager
@@ -65,6 +66,7 @@ class AutonomousCompanyRuntime:
         self.proactive = ProactiveCognition(control, world=self.world)
         self.attention = FounderAttentionEngine(control, world=self.world)
         self._leader_owned = False
+        self._leader_thread_id: int | None = None
 
     @contextmanager
     def _leader_lock(self):
@@ -332,7 +334,7 @@ class AutonomousCompanyRuntime:
         max_signals: int = 3,
         max_dynamic_goals: int = 3,
     ) -> dict[str, Any]:
-        if self._leader_owned:
+        if self._leader_owned and self._leader_thread_id == threading.get_ident():
             return self._tick_locked(
                 now=now,
                 max_work_units=max_work_units,
@@ -389,6 +391,7 @@ class AutonomousCompanyRuntime:
                 self.control.store.audit(actor, "autopilot_leadership", "runtime", "company", "standby", details)
                 return
             self._leader_owned = True
+            self._leader_thread_id = threading.get_ident()
             try:
                 while max_cycles is None or cycles < max_cycles:
                     cycles += 1
@@ -452,6 +455,7 @@ class AutonomousCompanyRuntime:
                     if max_cycles is None or cycles < max_cycles:
                         sleeper(delay)
             finally:
+                self._leader_thread_id = None
                 self._leader_owned = False
 
 
