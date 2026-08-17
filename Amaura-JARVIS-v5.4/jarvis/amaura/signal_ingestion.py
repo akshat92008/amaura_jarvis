@@ -21,6 +21,7 @@ from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.inbox import GmailInboxAdapter, InboxService
 from jarvis.amaura.models import GovernanceError
 from jarvis.amaura.network import request_bytes
+from jarvis.amaura.trust import SIGNAL_TRUST_KEY, TrustLevel, make_signal_trust, render_untrusted_external_text
 
 _REPO_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 
@@ -67,18 +68,27 @@ class SignalIngestionEngine:
         else:
             return None
 
+        provider = str(record.get("provider") or "unknown")
+        source = f"inbox:{provider}"
+        subject = str(record.get("subject") or "")[:500]
         return self.company.ingest_signal(
             signal_type=signal_type,
-            source=f"inbox:{record.get('provider') or 'unknown'}",
+            source=source,
             severity=severity,
             idempotency_key=f"v7:inbound:{record['id']}:{label}",
             payload={
-                "summary": f"Inbound {record.get('provider') or 'message'} classified as {label}",
+                "summary": f"Inbound {provider} classified as {label}",
                 "inbound_id": record["id"],
                 "lead_id": str(record.get("lead_id") or ""),
                 "classification": classification,
-                "subject": str(record.get("subject") or "")[:500],
+                # Subject is preserved as external evidence, never as instruction.
+                "subject": render_untrusted_external_text(subject, field="subject") if subject else "",
                 "received_at": str(record.get("received_at") or ""),
+                SIGNAL_TRUST_KEY: make_signal_trust(
+                    TrustLevel.EXTERNAL_UNTRUSTED,
+                    source=source,
+                    untrusted_fields=("subject",),
+                ),
             },
             actor="jarvis",
         )
@@ -196,18 +206,26 @@ class SignalIngestionEngine:
                     signal_type, severity = mapped
                     number = str(issue.get("number") or "")
                     updated_at = str(issue.get("updated_at") or "")
+                    source = f"github:{repository}"
+                    title = str(issue.get("title") or "GitHub issue")[:500]
                     signal = self.company.ingest_signal(
                         signal_type=signal_type,
-                        source=f"github:{repository}",
+                        source=source,
                         severity=severity,
                         idempotency_key=f"v7:github:{repository}:{number}:{updated_at}",
                         payload={
-                            "summary": str(issue.get("title") or "GitHub issue")[:500],
+                            # The title is useful evidence but remains untrusted natural language.
+                            "summary": render_untrusted_external_text(title, field="summary"),
                             "repository": repository,
                             "issue_number": number,
                             "url": str(issue.get("html_url") or "")[:1000],
                             "labels": sorted(label for label in labels if label)[:30],
                             "updated_at": updated_at,
+                            SIGNAL_TRUST_KEY: make_signal_trust(
+                                TrustLevel.EXTERNAL_UNTRUSTED,
+                                source=source,
+                                untrusted_fields=("summary",),
+                            ),
                         },
                         actor="jarvis",
                     )
