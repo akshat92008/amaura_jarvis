@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Install/uninstall the canonical Amaura company daemon LaunchAgent.
+"""Install/uninstall the one canonical Amaura company daemon LaunchAgent.
 
-The service definition lives in ``jarvis.amaura.macos_service`` so historical
-and v7 installation paths cannot create competing company schedulers.
+Installation migrates the historical ``com.amaura.company-os`` service only
+after the canonical daemon is verified. Any failure after bootstrap rolls the
+canonical service back instead of leaving a half-installed scheduler.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from pathlib import Path
 from jarvis.amaura.macos_service import DEFAULT_LABEL, launch_agent_payload
 
 LABEL = DEFAULT_LABEL
+LEGACY_LABEL = "com.amaura.company-os"
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -45,11 +47,51 @@ def _paths(repo_root: Path) -> tuple[Path, Path, Path, Path]:
     return plist, stdout, stderr, python
 
 
+def _legacy_plist() -> Path:
+    return Path.home() / "Library" / "LaunchAgents" / f"{LEGACY_LABEL}.plist"
+
+
 def _payload(repo_root: Path, *, poll_seconds: float) -> dict:
     try:
-        return launch_agent_payload(repo_root, label=LABEL, poll_seconds=poll_seconds)
-    except (FileNotFoundError, PermissionError) as exc:
+        return launch_agent_payload(repo_root, poll_seconds=poll_seconds)
+    except (FileNotFoundError, PermissionError, ValueError) as exc:
         raise RuntimeError(str(exc)) from exc
+
+
+def _write_private(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_bytes(data)
+    temporary.chmod(0o600)
+    os.replace(temporary, path)
+    path.chmod(0o600)
+
+
+def _require_success(result: subprocess.CompletedProcess[str], operation: str) -> None:
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "unknown launchctl failure").strip()
+        raise RuntimeError(f"launchctl {operation} failed: {detail}")
+
+
+def _restore_previous_service(
+    *,
+    domain: str,
+    canonical: Path,
+    previous_canonical: bytes | None,
+    legacy: Path,
+    legacy_existed: bool,
+) -> None:
+    _launchctl("bootout", domain, str(canonical))
+    if previous_canonical is not None:
+        _write_private(canonical, previous_canonical)
+        restored = _launchctl("bootstrap", domain, str(canonical))
+        if restored.returncode == 0:
+            _launchctl("enable", f"{domain}/{LABEL}")
+            _launchctl("kickstart", "-k", f"{domain}/{LABEL}")
+        return
+    canonical.unlink(missing_ok=True)
+    if legacy_existed and legacy.exists():
+        _launchctl("bootstrap", domain, str(legacy))
 
 
 def install(repo_root: Path, *, poll_seconds: float, dry_run: bool) -> int:
@@ -57,32 +99,46 @@ def install(repo_root: Path, *, poll_seconds: float, dry_run: bool) -> int:
         raise RuntimeError("Amaura LaunchAgent installation is supported only on macOS")
     repo_root = repo_root.expanduser().resolve()
     plist, stdout, _stderr, _python = _paths(repo_root)
+    legacy = _legacy_plist()
     payload = _payload(repo_root, poll_seconds=poll_seconds)
     rendered = plistlib.dumps(payload, fmt=plistlib.FMT_XML, sort_keys=True)
     if dry_run:
         sys.stdout.buffer.write(rendered)
         return 0
 
-    plist.parent.mkdir(parents=True, exist_ok=True)
-    stdout.parent.mkdir(parents=True, exist_ok=True)
-    temporary = plist.with_suffix(".plist.tmp")
-    temporary.write_bytes(rendered)
-    temporary.chmod(0o600)
-    os.replace(temporary, plist)
-    plist.chmod(0o600)
-
+    previous_canonical = plist.read_bytes() if plist.exists() else None
+    legacy_existed = legacy.exists()
     domain = f"gui/{os.getuid()}"
+    stdout.parent.mkdir(parents=True, exist_ok=True)
+
+    # Stop historical authority before starting the canonical daemon, but retain
+    # its plist until canonical verification succeeds so rollback is possible.
+    if legacy_existed:
+        _launchctl("bootout", domain, str(legacy))
     _launchctl("bootout", domain, str(plist))
-    boot = _launchctl("bootstrap", domain, str(plist))
-    if boot.returncode != 0:
-        raise RuntimeError(f"launchctl bootstrap failed: {boot.stderr.strip()}")
-    enable = _launchctl("enable", f"{domain}/{LABEL}")
-    if enable.returncode != 0:
-        raise RuntimeError(f"launchctl enable failed: {enable.stderr.strip()}")
-    kick = _launchctl("kickstart", "-k", f"{domain}/{LABEL}")
-    if kick.returncode != 0:
-        raise RuntimeError(f"launchctl kickstart failed: {kick.stderr.strip()}")
-    print(f"Installed and started {LABEL}: {plist}")
+    _write_private(plist, rendered)
+
+    try:
+        _require_success(_launchctl("bootstrap", domain, str(plist)), "bootstrap")
+        _require_success(_launchctl("enable", f"{domain}/{LABEL}"), "enable")
+        _require_success(_launchctl("kickstart", "-k", f"{domain}/{LABEL}"), "kickstart")
+        verify = _launchctl("print", f"{domain}/{LABEL}")
+        _require_success(verify, "print")
+        if LABEL not in (verify.stdout or "") and LABEL not in (verify.stderr or ""):
+            raise RuntimeError("launchctl verification did not identify the canonical Amaura service")
+    except Exception:
+        _restore_previous_service(
+            domain=domain,
+            canonical=plist,
+            previous_canonical=previous_canonical,
+            legacy=legacy,
+            legacy_existed=legacy_existed,
+        )
+        raise
+
+    if legacy_existed:
+        legacy.unlink(missing_ok=True)
+    print(f"Installed and verified {LABEL}: {plist}")
     return 0
 
 
@@ -90,13 +146,16 @@ def uninstall(repo_root: Path, *, dry_run: bool) -> int:
     if sys.platform != "darwin":
         raise RuntimeError("Amaura LaunchAgent installation is supported only on macOS")
     plist, _stdout, _stderr, _python = _paths(repo_root.expanduser().resolve())
+    legacy = _legacy_plist()
     if dry_run:
-        print(f"Would remove {plist}")
+        print(f"Would remove {plist} and obsolete {legacy}")
         return 0
     domain = f"gui/{os.getuid()}"
     _launchctl("bootout", domain, str(plist))
+    _launchctl("bootout", domain, str(legacy))
     plist.unlink(missing_ok=True)
-    print(f"Removed {LABEL}")
+    legacy.unlink(missing_ok=True)
+    print(f"Removed {LABEL} and any obsolete {LEGACY_LABEL} service")
     return 0
 
 
