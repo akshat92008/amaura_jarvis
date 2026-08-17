@@ -1,13 +1,14 @@
 """Safe external-to-company signal ingestion for the canonical v7 runtime.
 
-This layer is intentionally read-mostly. It may observe configured provider
-inboxes/workspaces and convert durable inbound facts into existing
-``company_signals``; it never sends replies, marks messages read, publishes
-content, spends money, dispatches workflows, or grants itself new authority.
+The provider boundary is externally read-only: this layer never sends replies,
+marks Gmail read, mutates GitHub, publishes content, spends money, or grants new
+authority. Internally it may classify stored inbound mail and update CRM/opt-out
+state before converting observations into durable company signals.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -19,7 +20,7 @@ from urllib.parse import urlencode
 from jarvis.amaura.company_autonomy import CompanyAutonomyEngine
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.inbox import GmailInboxAdapter, InboxService
-from jarvis.amaura.models import GovernanceError
+from jarvis.amaura.models import GovernanceError, raise_if_fatal_integrity
 from jarvis.amaura.network import request_bytes
 from jarvis.amaura.trust import SIGNAL_TRUST_KEY, TrustLevel, make_signal_trust, render_untrusted_external_text
 
@@ -93,8 +94,23 @@ class SignalIngestionEngine:
             actor="jarvis",
         )
 
+    @staticmethod
+    def _gmail_query_from_cursor(cursor: str) -> str:
+        """Build a bounded unread query from the last durably observed receive time."""
+        if not cursor:
+            return "is:unread"
+        try:
+            parsed = datetime.fromisoformat(cursor.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=UTC)
+            # Overlap one second to avoid edge loss; inbox IDs make overlap idempotent.
+            epoch = max(0, int(parsed.timestamp()) - 1)
+            return f"is:unread after:{epoch}"
+        except (TypeError, ValueError, OSError):
+            return "is:unread"
+
     def poll_gmail(self, *, max_results: int | None = None) -> dict[str, Any]:
-        """Observe unread Gmail without acknowledging or sending anything."""
+        """Observe Gmail without acknowledging mail; advance a local observation cursor."""
         if not self._enabled():
             return {"status": "disabled", "provider": "gmail", "messages": 0, "signals": []}
         adapter = self.gmail_factory()
@@ -108,18 +124,27 @@ class SignalIngestionEngine:
         inserted = 0
         processed = 0
         signals: list[dict[str, Any]] = []
+        cursor_key = "v7.signal_ingestion.gmail.cursor_received_at"
+        cursor = self.control.store.get_control(cursor_key, "")
+        query = self._gmail_query_from_cursor(cursor)
+        newest = cursor
 
         try:
-            messages = adapter.list_messages(query="is:unread", max_results=limit)
+            messages = adapter.list_messages(query=query, max_results=limit)
             for message in messages:
                 record, created = self.inbox.ingest(message)
                 if created:
                     inserted += 1
-                updated = self.inbox.process(record["id"], stage_reply=False)
-                processed += 1
-                signal = self._signal_from_inbound(updated)
-                if signal is not None:
-                    signals.append(signal)
+                    updated = self.inbox.process(record["id"], stage_reply=False)
+                    processed += 1
+                    signal = self._signal_from_inbound(updated)
+                    if signal is not None:
+                        signals.append(signal)
+                received_at = str(record.get("received_at") or "")
+                if received_at and (not newest or received_at > newest):
+                    newest = received_at
+            if newest and newest != cursor:
+                self.control.store.set_control(cursor_key, newest, "jarvis")
             self.control.store.set_control("v7.signal_ingestion.gmail.last_success", datetime.now(UTC).isoformat(), "jarvis")
             return {
                 "status": "ok",
@@ -127,9 +152,11 @@ class SignalIngestionEngine:
                 "messages": len(messages),
                 "inserted": inserted,
                 "processed": processed,
+                "cursor": newest,
                 "signals": [item["id"] for item in signals],
             }
         except (GovernanceError, OSError, RuntimeError, ValueError) as exc:
+            raise_if_fatal_integrity(exc)
             return self._deferred("gmail", exc)
 
     @staticmethod
@@ -159,8 +186,13 @@ class SignalIngestionEngine:
             return "customer_feedback", "medium"
         return None
 
+    @staticmethod
+    def _github_material_key(repository: str, number: str, signal_type: str, title: str) -> str:
+        """Ignore comment-only/updated_at churn; react to meaningful title/type changes."""
+        digest = hashlib.sha256(title.strip().encode("utf-8", errors="replace")).hexdigest()[:20]
+        return f"v7:github:{repository}:{number}:{signal_type}:{digest}"
+
     def poll_github(self, *, max_results: int | None = None) -> dict[str, Any]:
-        """Read labelled open GitHub issues and convert only explicit signals."""
         if not self._enabled():
             return {"status": "disabled", "provider": "github", "issues": 0, "signals": []}
         token = os.environ.get("AMAURA_GITHUB_TOKEN", "").strip()
@@ -215,7 +247,7 @@ class SignalIngestionEngine:
                         signal_type=signal_type,
                         source=source,
                         severity=severity,
-                        idempotency_key=f"v7:github:{repository}:{number}:{updated_at}",
+                        idempotency_key=self._github_material_key(repository, number, signal_type, title),
                         payload={
                             "summary": render_untrusted_external_text(title, field="summary"),
                             "repository": repository,
@@ -241,9 +273,11 @@ class SignalIngestionEngine:
                 "signals": [item["id"] for item in signals],
             }
         except (GovernanceError, OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+            raise_if_fatal_integrity(exc)
             return self._deferred("github", exc)
 
     def _deferred(self, provider: str, exc: Exception) -> dict[str, Any]:
+        raise_if_fatal_integrity(exc)
         details = {"provider": provider, "error_type": type(exc).__name__, "error": str(exc)[:1000]}
         self.control.store.publish_event("company.signal_ingestion.failed", provider, details)
         self.control.store.audit("jarvis", "ingest_external_signal", "provider", provider, "deferred", details)
@@ -251,7 +285,6 @@ class SignalIngestionEngine:
         return {"status": "deferred", **details, noun: 0, "signals": []}
 
     def poll(self) -> dict[str, Any]:
-        """Run one bounded external observation cycle."""
         gmail = self.poll_gmail()
         github = self.poll_github()
         components = (gmail, github)
