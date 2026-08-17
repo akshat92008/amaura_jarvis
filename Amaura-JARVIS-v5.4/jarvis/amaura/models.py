@@ -110,6 +110,12 @@ class GovernanceError(ValueError):
 class AmauraFatalIntegrityError(GovernanceError):
     """Integrity failure that must escape every retry/defer boundary."""
 
+    def __init__(self, message: str):
+        text = str(message)
+        if "security policy" not in text.lower():
+            text = f"Security policy integrity failure: {text}"
+        super().__init__(text)
+
 
 class AuditIntegrityError(AmauraFatalIntegrityError):
     pass
