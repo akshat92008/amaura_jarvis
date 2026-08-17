@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import os
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -20,6 +21,7 @@ from jarvis.amaura.macos_service import DEFAULT_LABEL, launch_agent_payload
 
 LABEL = DEFAULT_LABEL
 LEGACY_LABEL = "com.amaura.company-os"
+_PID_PATTERN = re.compile(r"(?m)^\s*pid\s*=\s*(\d+)\s*$")
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -73,6 +75,35 @@ def _require_success(result: subprocess.CompletedProcess[str], operation: str) -
         raise RuntimeError(f"launchctl {operation} failed: {detail}")
 
 
+def _verify_installed_service(
+    *,
+    domain: str,
+    canonical: Path,
+    expected_payload: dict,
+) -> int:
+    """Prove launchd loaded exactly the canonical payload and has a live PID."""
+    try:
+        installed_payload = plistlib.loads(canonical.read_bytes())
+    except (OSError, plistlib.InvalidFileException) as exc:
+        raise RuntimeError(f"Canonical LaunchAgent plist could not be verified: {exc}") from exc
+    if installed_payload != expected_payload:
+        raise RuntimeError("Installed LaunchAgent payload does not match the canonical Amaura service contract")
+
+    verify = _launchctl("print", f"{domain}/{LABEL}")
+    _require_success(verify, "print")
+    output = "\n".join(part for part in (verify.stdout, verify.stderr) if part)
+    if LABEL not in output:
+        raise RuntimeError("launchctl verification did not identify the canonical Amaura service")
+    match = _PID_PATTERN.search(output)
+    if match is None or int(match.group(1)) <= 1:
+        raise RuntimeError("launchctl verification did not report a running PID for the canonical Amaura service")
+
+    legacy = _launchctl("print", f"{domain}/{LEGACY_LABEL}")
+    if legacy.returncode == 0:
+        raise RuntimeError(f"Obsolete LaunchAgent {LEGACY_LABEL} is still loaded after canonical startup")
+    return int(match.group(1))
+
+
 def _restore_previous_service(
     *,
     domain: str,
@@ -122,10 +153,7 @@ def install(repo_root: Path, *, poll_seconds: float, dry_run: bool) -> int:
         _require_success(_launchctl("bootstrap", domain, str(plist)), "bootstrap")
         _require_success(_launchctl("enable", f"{domain}/{LABEL}"), "enable")
         _require_success(_launchctl("kickstart", "-k", f"{domain}/{LABEL}"), "kickstart")
-        verify = _launchctl("print", f"{domain}/{LABEL}")
-        _require_success(verify, "print")
-        if LABEL not in (verify.stdout or "") and LABEL not in (verify.stderr or ""):
-            raise RuntimeError("launchctl verification did not identify the canonical Amaura service")
+        pid = _verify_installed_service(domain=domain, canonical=plist, expected_payload=payload)
     except Exception:
         _restore_previous_service(
             domain=domain,
@@ -138,7 +166,7 @@ def install(repo_root: Path, *, poll_seconds: float, dry_run: bool) -> int:
 
     if legacy_existed:
         legacy.unlink(missing_ok=True)
-    print(f"Installed and verified {LABEL}: {plist}")
+    print(f"Installed and verified {LABEL} pid={pid}: {plist}")
     return 0
 
 
