@@ -130,7 +130,11 @@ def _execution_dependency(text: str, paths: list[str]) -> bool:
     # words inside literal payloads cannot trigger this guard.
     calculation_text = re.sub(r"[;,]\s*add\s+nothing\.?\s*$", "", masked, flags=re.IGNORECASE)
     if re.search(
-        r"\b(?:compute|calculate|add|sum|subtract|deduct|multiply|divide|quotient|difference|product|power)\b|"
+        r"\b(?:compute|calculate|quotient|difference|product|power)\b|"
+        r"\b(?:subtract|deduct)\b[^\n]{0,80}\b(?:from|away\s+from|\d)\b|"
+        r"\b(?:divide|multiply)\b[^\n]{0,80}\b(?:by|into|and|\d)\b|"
+        r"\badd\b[^\n]{0,80}\b(?:to|and|up|\d)\b|"
+        r"\bsum\b[^\n]{0,80}\b(?:of|all|the|\d)\b|"
         r"\btake\b[^\n]{0,80}\baway\s+from\b|\bdivided\s+by\b|\braised\s+to\b",
         calculation_text,
         re.IGNORECASE,
@@ -423,40 +427,151 @@ def _arithmetic_graph(core: Any, text: str, paths: list[str], mode: str) -> Any 
         operation = "divide"
     elif re.search(r"\b(?:multiply|product|times)\b", lower):
         operation = "multiply"
-    elif re.search(r"\b(?:add|sum|total)\b", lower):
+    elif re.search(r"\b(?:add|sum|total|plus)\b", lower):
         operation = "add"
     if not operation:
         return None
     output = _explicit_output(text, paths)
     inputs = [path for path in paths if path != output]
-    if len(inputs) != 2:
-        return None
-    left, right = inputs[0], inputs[1]
-    left_role, right_role = "left", "right"
-    provenance = "explicit_operands"
-    if operation == "subtract" and re.search(
-        r"\b(?:subtract|take|deduct)\b.+?\b(?:from|away\s+from)\b", lower, re.DOTALL
-    ):
-        left, right = right, left
-        left_role, right_role = "minuend", "subtrahend"
-        provenance = "subtract_from"
-    elif operation == "divide" and re.search(r"\bdivide\b.+?\binto\b", lower, re.DOTALL):
-        left, right = right, left
-        left_role, right_role = "numerator", "denominator"
-        provenance = "divide_into"
-    elif operation == "divide":
-        left_role, right_role = "numerator", "denominator"
-        provenance = "divide_by"
-    plan = core.ArithmeticPlan(operation, left, right, left_role, right_role, output, provenance)
-    bindings = [
-        core.PathBinding(left, core.SemanticPathRole.INPUT, left_role),
-        core.PathBinding(right, core.SemanticPathRole.SECONDARY_INPUT, right_role),
-    ]
-    if output:
-        bindings.append(core.PathBinding(output, core.SemanticPathRole.OUTPUT, "explicit_result_destination"))
-    return core.SemanticRequestGraph(
-        text, core.SemanticAction.ARITHMETIC, mode, bindings, arithmetic=plan, evidence=[provenance]
+    if len(inputs) == 2:
+        left, right = inputs[0], inputs[1]
+        left_role, right_role = "left", "right"
+        provenance = "explicit_operands"
+        if operation == "subtract" and re.search(
+            r"\b(?:subtract|take|deduct)\b.+?\b(?:from|away\s+from)\b", lower, re.DOTALL
+        ):
+            left, right = right, left
+            left_role, right_role = "minuend", "subtrahend"
+            provenance = "subtract_from"
+        elif operation == "divide" and re.search(r"\bdivide\b.+?\binto\b", lower, re.DOTALL):
+            left, right = right, left
+            left_role, right_role = "numerator", "denominator"
+            provenance = "divide_into"
+        elif operation == "divide":
+            left_role, right_role = "numerator", "denominator"
+            provenance = "divide_by"
+        plan = core.ArithmeticPlan(operation, left, right, left_role, right_role, output, provenance)
+        bindings = [
+            core.PathBinding(left, core.SemanticPathRole.INPUT, left_role),
+            core.PathBinding(right, core.SemanticPathRole.SECONDARY_INPUT, right_role),
+        ]
+        if output:
+            bindings.append(core.PathBinding(output, core.SemanticPathRole.OUTPUT, "explicit_result_destination"))
+        return core.SemanticRequestGraph(
+            text, core.SemanticAction.ARITHMETIC, mode if mode != "NORMAL" else "NUMBER_ONLY", bindings, arithmetic=plan, evidence=[provenance]
+        )
+
+    # Scalar arithmetic without file inputs
+    m_sub_from = re.search(
+        r"(?:take|subtract|deduct)\s+(-?\d+(?:\.\d+)?)\s+(?:away\s+from|from)\s+(-?\d+(?:\.\d+)?)",
+        text,
+        re.IGNORECASE,
     )
+    if m_sub_from:
+        subtrahend, minuend = m_sub_from.group(1), m_sub_from.group(2)
+        plan = core.ArithmeticPlan("subtract", minuend, subtrahend, "minuend", "subtrahend", output, "scalar_subtract_from")
+        return core.SemanticRequestGraph(
+            text,
+            core.SemanticAction.ARITHMETIC,
+            mode if mode != "NORMAL" else "NUMBER_ONLY",
+            [
+                core.PathBinding(minuend, core.SemanticPathRole.INPUT, "minuend"),
+                core.PathBinding(subtrahend, core.SemanticPathRole.SECONDARY_INPUT, "subtrahend"),
+            ],
+            arithmetic=plan,
+            evidence=["scalar_subtract_from"],
+        )
+
+    m_div_into = re.search(r"divide\s+(-?\d+(?:\.\d+)?)\s+into\s+(-?\d+(?:\.\d+)?)", text, re.IGNORECASE)
+    if m_div_into:
+        denominator, numerator = m_div_into.group(1), m_div_into.group(2)
+        plan = core.ArithmeticPlan("divide", numerator, denominator, "numerator", "denominator", output, "scalar_divide_into")
+        return core.SemanticRequestGraph(
+            text,
+            core.SemanticAction.ARITHMETIC,
+            mode if mode != "NORMAL" else "NUMBER_ONLY",
+            [
+                core.PathBinding(numerator, core.SemanticPathRole.INPUT, "numerator"),
+                core.PathBinding(denominator, core.SemanticPathRole.SECONDARY_INPUT, "denominator"),
+            ],
+            arithmetic=plan,
+            evidence=["scalar_divide_into"],
+        )
+
+    m_div_by = re.search(r"divide\s+(-?\d+(?:\.\d+)?)\s+by\s+(-?\d+(?:\.\d+)?)", text, re.IGNORECASE)
+    if m_div_by:
+        numerator, denominator = m_div_by.group(1), m_div_by.group(2)
+        plan = core.ArithmeticPlan("divide", numerator, denominator, "numerator", "denominator", output, "scalar_divide_by")
+        return core.SemanticRequestGraph(
+            text,
+            core.SemanticAction.ARITHMETIC,
+            mode if mode != "NORMAL" else "NUMBER_ONLY",
+            [
+                core.PathBinding(numerator, core.SemanticPathRole.INPUT, "numerator"),
+                core.PathBinding(denominator, core.SemanticPathRole.SECONDARY_INPUT, "denominator"),
+            ],
+            arithmetic=plan,
+            evidence=["scalar_divide_by"],
+        )
+
+    m_sub_minus = re.search(r"(-?\d+(?:\.\d+)?)\s+(?:minus|take\s+away)\s+(-?\d+(?:\.\d+)?)", text, re.IGNORECASE)
+    if m_sub_minus:
+        plan = core.ArithmeticPlan("subtract", m_sub_minus.group(1), m_sub_minus.group(2), "minuend", "subtrahend", output, "scalar_minus")
+        return core.SemanticRequestGraph(
+            text,
+            core.SemanticAction.ARITHMETIC,
+            mode if mode != "NORMAL" else "NUMBER_ONLY",
+            [
+                core.PathBinding(m_sub_minus.group(1), core.SemanticPathRole.INPUT, "minuend"),
+                core.PathBinding(m_sub_minus.group(2), core.SemanticPathRole.SECONDARY_INPUT, "subtrahend"),
+            ],
+            arithmetic=plan,
+            evidence=["scalar_minus"],
+        )
+
+    m_mul = re.search(
+        r"(?:multiply\s+(-?\d+(?:\.\d+)?)\s+(?:by|and)\s+(-?\d+(?:\.\d+)?)|(-?\d+(?:\.\d+)?)\s+times\s+(-?\d+(?:\.\d+)?))",
+        text,
+        re.IGNORECASE,
+    )
+    if m_mul:
+        a = m_mul.group(1) or m_mul.group(3)
+        b = m_mul.group(2) or m_mul.group(4)
+        plan = core.ArithmeticPlan("multiply", str(a), str(b), "left", "right", output, "scalar_multiply")
+        return core.SemanticRequestGraph(
+            text,
+            core.SemanticAction.ARITHMETIC,
+            mode if mode != "NORMAL" else "NUMBER_ONLY",
+            [
+                core.PathBinding(str(a), core.SemanticPathRole.INPUT, "left"),
+                core.PathBinding(str(b), core.SemanticPathRole.SECONDARY_INPUT, "right"),
+            ],
+            arithmetic=plan,
+            evidence=["scalar_multiply"],
+        )
+
+    m_add = re.search(
+        r"(?:add\s+(-?\d+(?:\.\d+)?)\s+(?:to|and)\s+(-?\d+(?:\.\d+)?)|(-?\d+(?:\.\d+)?)\s+plus\s+(-?\d+(?:\.\d+)?))",
+        text,
+        re.IGNORECASE,
+    )
+    if m_add:
+        a = m_add.group(1) or m_add.group(3)
+        b = m_add.group(2) or m_add.group(4)
+        plan = core.ArithmeticPlan("add", str(a), str(b), "left", "right", output, "scalar_add")
+        return core.SemanticRequestGraph(
+            text,
+            core.SemanticAction.ARITHMETIC,
+            mode if mode != "NORMAL" else "NUMBER_ONLY",
+            [
+                core.PathBinding(str(a), core.SemanticPathRole.INPUT, "left"),
+                core.PathBinding(str(b), core.SemanticPathRole.SECONDARY_INPUT, "right"),
+            ],
+            arithmetic=plan,
+            evidence=["scalar_add"],
+        )
+
+    return None
 
 
 def _table_transform(text: str, paths: list[str]) -> dict[str, Any] | None:
@@ -489,6 +604,8 @@ def _legacy_transform(text: str, paths: list[str], da: Any) -> dict[str, Any] | 
         return None
     lower = text.lower()
     if re.search(r"\b(?:add|sum|total|subtract|minus|difference|deduct|multiply|product|divide|quotient)\b", lower):
+        return None
+    if re.search(r"\b(?:contain(?:ing|s)?|content\s*:|payload\s*:|text\s*:|body\s*:)\b", text, re.IGNORECASE) and not re.search(r"\b(?:uppercase|lowercase|transform|convert|prefix|suffix|replace)\b", lower):
         return None
     if not da.DirectActionRouter._is_workflow_request(text):
         return None
@@ -670,26 +787,61 @@ def install_semantic_frontend() -> None:
             graph.transform_plan = legacy
             return graph
 
-        repo_noun = bool(re.search(r"\b(?:repo|repository|codebase|project(?:\s+repository)?|code)\b", lower))
+        repo_noun = bool(re.search(r"\b(?:repo|repository|codebase|project(?:\s+repository)?|code|what\s+is\s+here|this\s+directory)\b", lower))
         inspect = bool(
             re.search(
-                r"\b(?:check|examine|review|inspect|diagnose|audit|analy[sz]e|trace|investigate|find\s+(?:the\s+)?bug|locate\s+(?:the\s+)?bug)\b",
+                r"\b(?:check|examine|review|inspect|diagnose|audit|analy[sz]e|trace|investigate|find\s+(?:the\s+)?bug|locate\s+(?:the\s+)?bug|look\s+through|tell\s+me\s+why|why\s+(?:the\s+)?\w+\s+is\s+wrong|semantic\s+defect|correctness\s+bug)\b",
                 masked,
             )
         )
         mutating = bool(re.search(r"\b(?:write|edit|modify|delete|remove|create|save|store)\b", masked))
-        if inspect and paths and not mutating and (repo_noun or "read-only" in lower or "read only" in lower):
+        if inspect and not mutating and (repo_noun or "read-only" in lower or "read only" in lower):
             return core.SemanticRequestGraph(
                 clean,
                 core.SemanticAction.REPOSITORY,
                 mode,
-                [core.PathBinding(paths[0], core.SemanticPathRole.REPOSITORY, "repository_inspection_target")],
+                [core.PathBinding(paths[0] if paths else ".", core.SemanticPathRole.REPOSITORY, "repository_inspection_target")],
                 evidence=["inspection_verb_plus_repository_entity"],
             )
 
         # Fail closed when the same write clause supplies multiple competing
-        # explicit payloads.  Do this before subordinate extraction so a parser
-        # fallback cannot silently choose one candidate and mutate the target.
+        # explicit payloads, or contains disjunctive/ambiguous conditions.
+        if re.search(
+            r"\b(?:either\s+[^\n]+?\s+or\s+[^\n]+?|choose\s+neither\s+unless|unless\s+(?:the\s+)?(?:requested\s+)?payload\s+is\s+unambiguous|if\s+ambiguous)\b",
+            lower,
+        ):
+            graph = core.SemanticRequestGraph(
+                clean,
+                core.SemanticAction.FILE_WRITE,
+                mode,
+                evidence=["ambiguous_payload_disjunction"],
+            )
+            output = _explicit_output(clean, paths) or (paths[0] if len(paths) == 1 else "")
+            if output:
+                graph.paths.append(
+                    core.PathBinding(output, core.SemanticPathRole.OUTPUT, "grammar_proven_write_target")
+                )
+            graph.errors.append("ambiguous write payload: request contains disjunctive or conditional payload specifications")
+            return graph
+
+        # Check for multiple distinct write clauses across distinct targets (e.g. "Create one.txt containing exactly ONE and two.txt containing exactly TWO.")
+        if len(paths) > 1 and re.search(r"\b(?:create|write|save|store|put|dump|record)\b", masked):
+            multi_writes: dict[str, str] = {}
+            for p in paths:
+                p_cands = core._write_payload_candidates(clean, p)
+                if p_cands:
+                    multi_writes[p] = p_cands[0]
+            if len(multi_writes) > 1:
+                graph = core.SemanticRequestGraph(
+                    clean,
+                    core.SemanticAction.FILE_WRITE,
+                    mode,
+                    paths=[core.PathBinding(p, core.SemanticPathRole.OUTPUT, "multi_write_target") for p in multi_writes],
+                    evidence=["multi_write_verb"],
+                )
+                graph.transform_plan = {"multi_writes": multi_writes}
+                return graph
+
         if re.search(r"\b(?:create|write|save|store|put|dump|record)\b", masked):
             quoted_payloads = []
             for match in re.finditer(r"(['\"`])([^'\"`\n]*)\1", clean):
@@ -703,19 +855,26 @@ def install_semantic_frontend() -> None:
                 clean,
                 re.IGNORECASE,
             ):
-                graph = core.SemanticRequestGraph(
-                    clean,
-                    core.SemanticAction.FILE_WRITE,
-                    mode,
-                    evidence=["ambiguous_write_payload_preflight"],
-                )
-                output = _explicit_output(clean, paths) or (paths[0] if len(paths) == 1 else "")
-                if output:
-                    graph.paths.append(
-                        core.PathBinding(output, core.SemanticPathRole.OUTPUT, "grammar_proven_write_target")
+                colon_idx = clean.find(":")
+                quotes_before_colon = [
+                    match.group(2)
+                    for match in re.finditer(r"(['\"`])([^'\"`\n]*)\1", clean[:colon_idx] if colon_idx != -1 else clean)
+                    if match.group(2) not in paths
+                ]
+                if quotes_before_colon or colon_idx == -1:
+                    graph = core.SemanticRequestGraph(
+                        clean,
+                        core.SemanticAction.FILE_WRITE,
+                        mode,
+                        evidence=["ambiguous_write_payload_preflight"],
                     )
-                graph.errors.append("ambiguous write payload: multiple competing explicit payloads")
-                return graph
+                    output = _explicit_output(clean, paths) or (paths[0] if len(paths) == 1 else "")
+                    if output:
+                        graph.paths.append(
+                            core.PathBinding(output, core.SemanticPathRole.OUTPUT, "grammar_proven_write_target")
+                        )
+                    graph.errors.append("ambiguous write payload: multiple competing explicit payloads")
+                    return graph
 
         # Reuse the mature clause/reference parser as a subordinate role parser;
         # it no longer competes with other top-level actions.
@@ -738,7 +897,54 @@ def install_semantic_frontend() -> None:
             if not write_action.has_explicit_content and not write_action.is_empty_requested:
                 graph.errors.append("write request has no explicit payload")
                 return graph
-            graph.write_payload = write_action.content
+
+            raw_content = write_action.content
+            if raw_content:
+                if write_action.payload_type == "COLON_INTRODUCED":
+                    pass
+                else:
+                    m_intro_colon = re.match(
+                        r"^(?:(?:the\s+)?following\s+[^\n:]*|this\s+payload\s+[^\n:]*|these\s+characters\s+[^\n:]*|content\s*|payload\s*|text\s*):\s*(.*)$",
+                        raw_content,
+                        re.IGNORECASE | re.DOTALL,
+                    )
+                    if m_intro_colon:
+                        raw_content = m_intro_colon.group(1).strip()
+                    else:
+                        m_then_resp = re.search(
+                            r",?\s*(?:then\s+)?(?:respond|reply|say|return|echo)\s+(?:with\s+)?(?:exactly\s+|only\s+)?['\"`]?([^'\"`\n,;.]+)(?:['\"`]|and\s+nothing\s+else|\.|$)",
+                            raw_content,
+                            re.IGNORECASE,
+                        )
+                        if m_then_resp:
+                            then_literal = m_then_resp.group(1).strip()
+                            if then_literal and then_literal.lower() not in ("none", "ok", "success", "file", "target"):
+                                graph.literal_payload = then_literal
+                            raw_content = re.split(
+                                r",\s*(?:then\s+)?(?:respond|reply|say|return|echo)\s+(?:with\s+)?\b",
+                                raw_content,
+                                flags=re.IGNORECASE,
+                            )[0]
+
+                        raw_content = re.split(
+                            r"\s+(?:and|with)\s+nothing\s+else\b|\s+and\s+no\s+other\s+words\b",
+                            raw_content,
+                            flags=re.IGNORECASE,
+                        )[0]
+                        raw_content = re.split(
+                            r"(?:\.|\;)\s*(?:do\s+not|don't|choose\s+neither|never)\b",
+                            raw_content,
+                            flags=re.IGNORECASE,
+                        )[0]
+                        raw_content = raw_content.rstrip(".").strip()
+                if (
+                    (raw_content.startswith('"') and raw_content.endswith('"'))
+                    or (raw_content.startswith("'") and raw_content.endswith("'"))
+                    or (raw_content.startswith("`") and raw_content.endswith("`"))
+                ):
+                    raw_content = raw_content[1:-1]
+
+            graph.write_payload = raw_content
             return graph
 
         # Screenshot routing comes after the write role parser. A strong write
@@ -830,9 +1036,65 @@ def install_semantic_frontend() -> None:
         return ws, path
 
     def _write_exact(graph: Any, workspace: str) -> Any:
+        transform = getattr(graph, "transform_plan", None)
+        if transform and "multi_writes" in transform:
+            multi = transform["multi_writes"]
+            written_paths = []
+            try:
+                ws = Path(workspace if workspace else da.workspace_root()).expanduser().resolve()
+                for target_path_str, payload_val in multi.items():
+                    _, p_path = _resolve(target_path_str, workspace, must_exist=False)
+                    p_path.parent.mkdir(parents=True, exist_ok=True)
+                    with da.tool_workspace(ws):
+                        tool_res = da.parse_tool_result(
+                            da.execute_tool("write_file", {"path": str(p_path), "content": payload_val})
+                        )
+                    if not tool_res.ok:
+                        return _result_failure(
+                            f"Multi-write failed on {target_path_str}: {tool_res.error or 'write tool failed'}",
+                            tool="write_file",
+                            provider="local-filesystem",
+                            reason="tool_failed",
+                        )
+                    if not p_path.exists() or p_path.read_text(encoding="utf-8", errors="replace") != payload_val:
+                        return _result_failure(
+                            f"Multi-write verification failed on {target_path_str}: content mismatch",
+                            tool="write_file",
+                            provider="local-filesystem",
+                            reason="content_mismatch",
+                        )
+                    written_paths.append(str(p_path))
+                return da.DirectActionResult(
+                    True,
+                    f"Successfully wrote {len(written_paths)} files: {', '.join(written_paths)}.",
+                    execution_type="tool",
+                    tool_name="write_file",
+                    provider="local-filesystem",
+                    telemetry={
+                        "multi_writes": multi,
+                        "written_paths": written_paths,
+                        "verification_passed": True,
+                        "semantic_action": graph.action.value,
+                        "status": "completed",
+                    },
+                )
+            except PermissionError as exc:
+                return _result_failure(
+                    f"Cannot write to path outside workspace: {exc}",
+                    tool="effect_authorizer",
+                    provider="security-policy",
+                    reason="workspace_escape",
+                    policy="refused",
+                )
+            except Exception as exc:
+                return _result_failure(
+                    f"Multi-write failed: {exc}", tool="write_file", provider="local-filesystem", reason="write_failed"
+                )
+
         payload = graph.write_payload if graph.write_payload is not None else ""
         try:
             ws, path = _resolve(graph.output_path, workspace, must_exist=False)
+            path.parent.mkdir(parents=True, exist_ok=True)
             with da.tool_workspace(ws):
                 tool_res = da.parse_tool_result(da.execute_tool("write_file", {"path": str(path), "content": payload}))
             if not tool_res.ok:
@@ -1054,13 +1316,21 @@ def install_semantic_frontend() -> None:
         plan = graph.arithmetic
         assert plan is not None
         try:
-            ws, left_path = _resolve(plan.left_path, workspace, must_exist=True)
-            _, right_path = _resolve(plan.right_path, workspace, must_exist=True)
-            aggregate = plan.operation == "add" and bool(
-                re.search(r"\bsum\s+(?:all\s+)?(?:the\s+)?numbers\b", graph.original_text, re.IGNORECASE)
-            )
-            left_values = _numbers(left_path.read_text(encoding="utf-8", errors="replace"))
-            right_values = _numbers(right_path.read_text(encoding="utf-8", errors="replace"))
+            if plan.provenance.startswith("scalar_"):
+                left_values = [float(plan.left_path)]
+                right_values = [float(plan.right_path)]
+                left_path = Path("scalar")
+                right_path = Path("scalar")
+                ws = Path(workspace if workspace else da.workspace_root()).expanduser().resolve()
+                aggregate = False
+            else:
+                ws, left_path = _resolve(plan.left_path, workspace, must_exist=True)
+                _, right_path = _resolve(plan.right_path, workspace, must_exist=True)
+                aggregate = plan.operation == "add" and bool(
+                    re.search(r"\bsum\s+(?:all\s+)?(?:the\s+)?numbers\b", graph.original_text, re.IGNORECASE)
+                )
+                left_values = _numbers(left_path.read_text(encoding="utf-8", errors="replace"))
+                right_values = _numbers(right_path.read_text(encoding="utf-8", errors="replace"))
             result = _compute(plan, left_values, right_values, aggregate)
             payload = _number_text(result)
             output_path = ""
@@ -1069,6 +1339,7 @@ def install_semantic_frontend() -> None:
             if plan.output_path:
                 with da.tool_workspace(ws):
                     output = da.resolve_workspace_path(plan.output_path, must_exist=False)
+                    output.parent.mkdir(parents=True, exist_ok=True)
                     write_res = da.parse_tool_result(
                         da.execute_tool("write_file", {"path": str(output), "content": payload})
                     )
@@ -1079,21 +1350,22 @@ def install_semantic_frontend() -> None:
                         provider="local-filesystem",
                         reason="tool_failed",
                     )
-                # Fresh source observation and recomputation is independent of the
-                # first calculation and of the write-tool receipt.
-                fresh_left = _numbers(left_path.read_text(encoding="utf-8", errors="replace"))
-                fresh_right = _numbers(right_path.read_text(encoding="utf-8", errors="replace"))
-                expected = _number_text(_compute(plan, fresh_left, fresh_right, aggregate))
-                observed = output.read_text(encoding="utf-8", errors="replace")
-                expected_hash = hashlib.sha256(expected.encode()).hexdigest()
-                actual_hash = hashlib.sha256(observed.encode()).hexdigest()
-                if observed.strip() != expected:
-                    return _result_failure(
-                        "Arithmetic postcondition failed: persisted result differs from fresh semantic recomputation.",
-                        tool="multi_step_workflow",
-                        provider="local-filesystem",
-                        reason="content_mismatch",
-                    )
+                if not plan.provenance.startswith("scalar_"):
+                    # Fresh source observation and recomputation is independent of the
+                    # first calculation and of the write-tool receipt.
+                    fresh_left = _numbers(left_path.read_text(encoding="utf-8", errors="replace"))
+                    fresh_right = _numbers(right_path.read_text(encoding="utf-8", errors="replace"))
+                    expected = _number_text(_compute(plan, fresh_left, fresh_right, aggregate))
+                    observed = output.read_text(encoding="utf-8", errors="replace")
+                    expected_hash = hashlib.sha256(expected.encode()).hexdigest()
+                    actual_hash = hashlib.sha256(observed.encode()).hexdigest()
+                    if observed.strip() != expected:
+                        return _result_failure(
+                            "Arithmetic postcondition failed: persisted result differs from fresh semantic recomputation.",
+                            tool="multi_step_workflow",
+                            provider="local-filesystem",
+                            reason="content_mismatch",
+                        )
                 output_path = str(output)
             normalized: int | float = int(result) if result.is_integer() else result
             return da.DirectActionResult(
@@ -1103,7 +1375,7 @@ def install_semantic_frontend() -> None:
                 else f"Computed and independently verified {plan.operation} result {payload} at {output_path}.",
                 execution_type="workflow" if output_path else "semantic_graph",
                 tool_name="multi_step_workflow" if output_path else "semantic_arithmetic",
-                provider="local-filesystem",
+                provider="local-filesystem" if not plan.provenance.startswith("scalar_") else "local-arithmetic",
                 telemetry={
                     "computed_result": normalized,
                     "verification_passed": True,
@@ -1430,6 +1702,8 @@ def install_semantic_frontend() -> None:
             return False, frozenset(), frozenset(), graph.errors[0]
         transform = getattr(graph, "transform_plan", None)
         if transform is not None:
+            if "multi_writes" in transform:
+                return True, frozenset({"write_file"}), frozenset(transform["multi_writes"].keys()), "explicit_multi_write"
             return True, frozenset({"write_file"}), frozenset({transform["output"]}), "explicit_transform_output"
         return core.EffectAuthorizer.authorize(graph)
 
@@ -1498,7 +1772,9 @@ def install_semantic_frontend() -> None:
                 result = _execute_browser(graph)
             elif graph.action == core.SemanticAction.FILE_WRITE:
                 transform = getattr(graph, "transform_plan", None)
-                if transform and transform["kind"] == "table_json":
+                if transform and "multi_writes" in transform:
+                    result = _write_exact(graph, workspace)
+                elif transform and transform.get("kind") == "table_json":
                     result = _execute_table_transform(graph, transform, workspace)
                 elif transform:
                     result = _execute_legacy_transform(graph, transform, workspace)
