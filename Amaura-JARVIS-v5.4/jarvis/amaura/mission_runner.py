@@ -6,7 +6,7 @@ Transient failures back off; configuration/provider failures enter explicit
 waiting states instead of spinning every polling interval.
 
 v7 convergence note: MissionRunner is no longer an independent company-level
-scheduler.  It shares the canonical company-runtime leader lease and exposes a
+scheduler. It shares the canonical company-runtime leader lease and exposes a
 ``leader_owned`` compatibility path so AutonomousCompanyRuntime can advance
 missions while already holding that lease.
 """
@@ -22,6 +22,7 @@ from typing import Any
 from jarvis.amaura.brain import JarvisBrain
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.models import GovernanceError, TaskState
+from jarvis.amaura.portfolio import PortfolioArbitrator
 from jarvis.amaura.runtime_lease import company_runtime_leader_lock
 
 TERMINAL_STATES = {TaskState.COMPLETED.value, TaskState.CANCELLED.value, TaskState.FAILED.value}
@@ -43,6 +44,7 @@ class MissionRunner:
 
     def __init__(self, control: AmauraControlPlane) -> None:
         self.control = control
+        self.portfolio = PortfolioArbitrator(control)
         self._local_lock = threading.RLock()
 
     @contextlib.contextmanager
@@ -78,18 +80,7 @@ class MissionRunner:
     def runnable_goals(self, *, limit: int = 100) -> list[dict[str, Any]]:
         goals = self.control.store.list_work_items(item_type="programme", limit=max(1, min(limit, 500)))
         runnable = [goal for goal in goals if self._is_runnable(goal)]
-
-        def fairness_key(goal: dict[str, Any]) -> tuple[Any, ...]:
-            metadata = dict(goal.get("metadata") or {})
-            # Older/never-served missions are selected before recently advanced
-            # missions at the same founder priority.  This prevents one large
-            # mission from permanently monopolising the compatibility runner.
-            last_advanced = str(metadata.get("runner_last_advanced_at") or "")
-            priority = int(goal.get("priority") or 3)
-            created = str(goal.get("created_at") or "")
-            return (priority, last_advanced, created, str(goal.get("id") or ""))
-
-        return sorted(runnable, key=fairness_key)
+        return self.portfolio.rank_goals(runnable)
 
     @staticmethod
     def _failure_class(exc: Exception) -> tuple[str, int]:
@@ -180,7 +171,7 @@ class MissionRunner:
         """Advance bounded dynamic goals under the canonical runtime lease.
 
         ``leader_owned`` is reserved for ``AutonomousCompanyRuntime`` while it
-        already owns the company lease.  External callers keep the default and
+        already owns the company lease. External callers keep the default and
         therefore cannot establish a second scheduling authority.
         """
         with self._local_lock:
@@ -256,11 +247,7 @@ class MissionRunner:
                 }
 
             with self._local_lock:
-                if leader_owned:
-                    leader = True
-                    manager = contextlib.nullcontext(True)
-                else:
-                    manager = self._leader_lock()
+                manager = contextlib.nullcontext(True) if leader_owned else self._leader_lock()
                 with manager as leader:
                     if leader is False:
                         time.sleep(max(0.05, poll_seconds))
