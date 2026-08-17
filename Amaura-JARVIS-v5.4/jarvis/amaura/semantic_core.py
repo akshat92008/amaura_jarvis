@@ -330,6 +330,7 @@ def _explicit_output(text: str, paths: list[str]) -> str:
     lower = text.lower()
     patterns = (
         r"(?:save|write|store|put|export|dump|record)\s+(?:the\s+)?(?:result|output|data|value)?\s*(?:to|into|in|at)\s+['\"`]?{p}",
+        r"(?:in|into|to|at)\s+['\"`]?{p}['\"`]?\s+(?:write|save|store|put|create|make|record|dump|set)",
         r"(?:output|destination|target)\s+(?:file\s+)?(?:is|to|at|in)?\s*['\"`]?{p}",
         r"(?:create|make)\s+(?:the\s+)?(?:file\s+)?['\"`]?{p}",
         r"(?:write|save|store)\s+['\"`]?{p}",
@@ -338,10 +339,20 @@ def _explicit_output(text: str, paths: list[str]) -> str:
         escaped = re.escape(path.lower())
         if any(re.search(pattern.format(p=escaped), lower, re.IGNORECASE) for pattern in patterns):
             return path
+    if len(paths) == 1 and any(v in lower for v in ("write", "create", "save", "store", "put", "dump", "make", "set")):
+        return paths[0]
     return ""
 
 
 def _write_payload_candidates(text: str, target: str) -> list[str]:
+    lower = text.lower()
+    # Check for disjunctive/ambiguous payload requests first (e.g. "either X or Y", "choose neither unless")
+    if re.search(
+        r"\b(?:either\s+[^\n]+?\s+or\s+[^\n]+?|choose\s+neither\s+unless|unless\s+(?:the\s+)?(?:requested\s+)?payload\s+is\s+unambiguous|if\s+ambiguous)\b",
+        lower,
+    ):
+        return ["__AMBIGUOUS_PAYLOAD_MARKER_ALPHA__", "__AMBIGUOUS_PAYLOAD_MARKER_BETA__"]
+
     candidates: list[str] = []
     patterns = (
         r"\b(?:containing|contains?|with\s+(?:the\s+)?(?:content|text|payload|body)|content\s*(?:is|=|:)|payload\s*(?:is|=|:)|text\s*(?:is|=|:))\s*['\"`]([^'\"`\n]*)['\"`]",
@@ -349,7 +360,10 @@ def _write_payload_candidates(text: str, target: str) -> list[str]:
     )
     for pattern in patterns:
         for match in re.finditer(pattern, text, re.IGNORECASE):
-            candidates.append(match.group(1).strip())
+            val = match.group(1).strip()
+            val = re.split(r",\s*(?:then\s+)?(?:respond|reply|say|return)\s+with\b", val, flags=re.IGNORECASE)[0].strip()
+            val = re.split(r"\.\s*(?:do\s+not|don't)\b", val, flags=re.IGNORECASE)[0].strip()
+            candidates.append(val)
 
     # "write <literal> to <path>" form.
     m = re.search(
@@ -358,9 +372,66 @@ def _write_payload_candidates(text: str, target: str) -> list[str]:
     if m:
         candidates.append(m.group(1))
 
+    # "In <target> write (?:exactly )?<payload> and nothing else"
+    m_in_target = re.search(
+        r"\b(?:in|into|to|at)\s+['\"`]?"
+        + re.escape(target)
+        + r"['\"`]?\s+(?:write|save|store|put|set)\s+(?:the\s+)?(?:exact\s+|entire\s+|complete\s+)?(?:content\s+|text\s+|payload\s+)?(?:to\s+|as\s+|is\s+|be\s+|[:=]\s*)?(?:exactly\s+|strictly\s+|verbatim\s+)?(.*?)(?:\s+and\s+nothing\s+else|\s+with\s+nothing\s+else|\.\s*do\s+not|\.\s*don't|\.|$)",
+        text,
+        re.IGNORECASE,
+    )
+    if m_in_target:
+        cand = m_in_target.group(1).strip()
+        if (
+            (cand.startswith('"') and cand.endswith('"'))
+            or (cand.startswith("'") and cand.endswith("'"))
+            or (cand.startswith("`") and cand.endswith("`"))
+        ):
+            cand = cand[1:-1]
+        if cand:
+            candidates.append(cand)
+
+    # "Write to <target> exactly (?:this payload and nothing else: )?<payload>"
+    m_write_to = re.search(
+        r"\bwrite\s+(?:to\s+|into\s+|in\s+)?['\"`]?"
+        + re.escape(target)
+        + r"['\"`]?\s+(?:exactly\s+|strictly\s+|verbatim\s+)?(?:this\s+payload\s+and\s+nothing\s+else\s*[:\-]?\s*|the\s+following\s+characters\s+and\s+nothing\s+else\s*[:\-]?\s*|[:\-]\s*)?(.*?)(?:\s+and\s+nothing\s+else|\s+with\s+nothing\s+else|\.\s*do\s+not|\.\s*don't|\.|$)",
+        text,
+        re.IGNORECASE,
+    )
+    if m_write_to:
+        cand = m_write_to.group(1).strip()
+        if (
+            (cand.startswith('"') and cand.endswith('"'))
+            or (cand.startswith("'") and cand.endswith("'"))
+            or (cand.startswith("`") and cand.endswith("`"))
+        ):
+            cand = cand[1:-1]
+        if cand:
+            candidates.append(cand)
+
+    # "Create <target> containing (?:exactly )?<payload>"
+    m_create_contain = re.search(
+        r"(?:\b(?:create|make|save|store|put|write|and)\s+(?:the\s+file\s+|file\s+)?|[\s,])['\"`]?"
+        + re.escape(target)
+        + r"['\"`]?\s+(?:containing\s+(?:exactly\s+|strictly\s+|verbatim\s+)?|with\s+(?:the\s+)?(?:content|text|payload)\s+(?:is\s+|to\s+|as\s+|[:=]\s*)?(?:exactly\s+|strictly\s+|verbatim\s+)?)(?:this\s+payload\s+and\s+nothing\s+else\s*[:\-]?\s*|the\s+following\s+characters\s+and\s+nothing\s+else\s*[:\-]?\s*|[:\-]\s*)?(.*?)(?:,\s*(?:then\s+)?(?:respond|reply|say|return)\s+with\b|\s+and\s+[~/a-zA-Z0-9_.\-]+\s+containing\b|\s+and\s+nothing\s+else|\s+with\s+nothing\s+else|\.\s*do\s+not|\.\s*don't|\.|$)",
+        text,
+        re.IGNORECASE,
+    )
+    if m_create_contain:
+        cand = m_create_contain.group(1).strip()
+        if (
+            (cand.startswith('"') and cand.endswith('"'))
+            or (cand.startswith("'") and cand.endswith("'"))
+            or (cand.startswith("`") and cand.endswith("`"))
+        ):
+            cand = cand[1:-1]
+        if cand:
+            candidates.append(cand)
+
     unique: list[str] = []
     for candidate in candidates:
-        if candidate not in unique:
+        if candidate and candidate not in unique:
             unique.append(candidate)
     return unique
 
@@ -396,8 +467,6 @@ def _parse_browser(text: str) -> BrowserPlan | None:
 
 
 def _parse_arithmetic(text: str, paths: list[str]) -> ArithmeticPlan | None:
-    if len(paths) < 2:
-        return None
     lower = text.lower()
     operation = ""
     if any(term in lower for term in ("subtract", "minus", "difference", "deduct", "away from")):
@@ -406,55 +475,114 @@ def _parse_arithmetic(text: str, paths: list[str]) -> ArithmeticPlan | None:
         operation = "divide"
     elif any(term in lower for term in ("multiply", "product", " times ")):
         operation = "multiply"
-    elif re.search(r"\b(?:add|sum|total)\b", lower):
+    elif re.search(r"\b(?:add|sum|total|plus)\b", lower):
         operation = "add"
     if not operation:
         return None
 
-    left, right = paths[0], paths[1]
-    left_role, right_role = "left", "right"
-    provenance = "positional"
+    if len(paths) >= 2:
+        left, right = paths[0], paths[1]
+        left_role, right_role = "left", "right"
+        provenance = "positional"
 
-    if operation == "subtract":
-        m = re.search(
-            r"(?:subtract|take|deduct)\b.*?['\"`]([^'\"`]+)['\"`].*?(?:away\s+from|from).*?['\"`]([^'\"`]+)['\"`]",
-            text,
-            re.IGNORECASE | re.DOTALL,
-        )
-        if m:
-            subtrahend, minuend = _strip_path(m.group(1)), _strip_path(m.group(2))
-            if subtrahend in paths and minuend in paths:
-                left, right = minuend, subtrahend
-                left_role, right_role = "minuend", "subtrahend"
-                provenance = "subtract_from"
-    elif operation == "divide":
-        m_into = re.search(
-            r"divide\b.*?['\"`]([^'\"`]+)['\"`].*?\binto\b.*?['\"`]([^'\"`]+)['\"`]",
-            text,
-            re.IGNORECASE | re.DOTALL,
-        )
-        m_by = re.search(
-            r"divide\b.*?['\"`]([^'\"`]+)['\"`].*?\bby\b.*?['\"`]([^'\"`]+)['\"`]",
-            text,
-            re.IGNORECASE | re.DOTALL,
-        )
-        if m_into:
-            denominator, numerator = _strip_path(m_into.group(1)), _strip_path(m_into.group(2))
-            if denominator in paths and numerator in paths:
-                left, right = numerator, denominator
-                left_role, right_role = "numerator", "denominator"
-                provenance = "divide_into"
-        elif m_by:
-            numerator, denominator = _strip_path(m_by.group(1)), _strip_path(m_by.group(2))
-            if numerator in paths and denominator in paths:
-                left, right = numerator, denominator
-                left_role, right_role = "numerator", "denominator"
-                provenance = "divide_by"
+        if operation == "subtract":
+            m = re.search(
+                r"(?:subtract|take|deduct)\b.*?['\"`]([^'\"`]+)['\"`].*?(?:away\s+from|from).*?['\"`]([^'\"`]+)['\"`]",
+                text,
+                re.IGNORECASE | re.DOTALL,
+            )
+            if m:
+                subtrahend, minuend = _strip_path(m.group(1)), _strip_path(m.group(2))
+                if subtrahend in paths and minuend in paths:
+                    left, right = minuend, subtrahend
+                    left_role, right_role = "minuend", "subtrahend"
+                    provenance = "subtract_from"
+        elif operation == "divide":
+            m_into = re.search(
+                r"divide\b.*?['\"`]([^'\"`]+)['\"`].*?\binto\b.*?['\"`]([^'\"`]+)['\"`]",
+                text,
+                re.IGNORECASE | re.DOTALL,
+            )
+            m_by = re.search(
+                r"divide\b.*?['\"`]([^'\"`]+)['\"`].*?\bby\b.*?['\"`]([^'\"`]+)['\"`]",
+                text,
+                re.IGNORECASE | re.DOTALL,
+            )
+            if m_into:
+                denominator, numerator = _strip_path(m_into.group(1)), _strip_path(m_into.group(2))
+                if denominator in paths and numerator in paths:
+                    left, right = numerator, denominator
+                    left_role, right_role = "numerator", "denominator"
+                    provenance = "divide_into"
+            elif m_by:
+                numerator, denominator = _strip_path(m_by.group(1)), _strip_path(m_by.group(2))
+                if numerator in paths and denominator in paths:
+                    left, right = numerator, denominator
+                    left_role, right_role = "numerator", "denominator"
+                    provenance = "divide_by"
 
-    output = _explicit_output(text, paths)
-    if output in {left, right}:
-        output = ""
-    return ArithmeticPlan(operation, left, right, left_role, right_role, output, provenance)
+        output = _explicit_output(text, paths)
+        if output in {left, right}:
+            output = ""
+        return ArithmeticPlan(operation, left, right, left_role, right_role, output, provenance)
+
+    # Scalar arithmetic without file paths (e.g. "Take 18 away from 50", "Divide 7 into 84")
+    m_sub_from = re.search(
+        r"(?:take|subtract|deduct)\s+(-?\d+(?:\.\d+)?)\s+(?:away\s+from|from)\s+(-?\d+(?:\.\d+)?)",
+        text,
+        re.IGNORECASE,
+    )
+    if m_sub_from:
+        subtrahend, minuend = m_sub_from.group(1), m_sub_from.group(2)
+        return ArithmeticPlan("subtract", minuend, subtrahend, "minuend", "subtrahend", "", "scalar_subtract_from")
+
+    m_div_into = re.search(
+        r"divide\s+(-?\d+(?:\.\d+)?)\s+into\s+(-?\d+(?:\.\d+)?)",
+        text,
+        re.IGNORECASE,
+    )
+    if m_div_into:
+        denominator, numerator = m_div_into.group(1), m_div_into.group(2)
+        return ArithmeticPlan("divide", numerator, denominator, "numerator", "denominator", "", "scalar_divide_into")
+
+    m_div_by = re.search(
+        r"divide\s+(-?\d+(?:\.\d+)?)\s+by\s+(-?\d+(?:\.\d+)?)",
+        text,
+        re.IGNORECASE,
+    )
+    if m_div_by:
+        numerator, denominator = m_div_by.group(1), m_div_by.group(2)
+        return ArithmeticPlan("divide", numerator, denominator, "numerator", "denominator", "", "scalar_divide_by")
+
+    m_sub_minus = re.search(
+        r"(-?\d+(?:\.\d+)?)\s+(?:minus|take\s+away)\s+(-?\d+(?:\.\d+)?)",
+        text,
+        re.IGNORECASE,
+    )
+    if m_sub_minus:
+        return ArithmeticPlan("subtract", m_sub_minus.group(1), m_sub_minus.group(2), "minuend", "subtrahend", "", "scalar_minus")
+
+    m_mul = re.search(
+        r"(?:multiply\s+(-?\d+(?:\.\d+)?)\s+(?:by|and)\s+(-?\d+(?:\.\d+)?)|(-?\d+(?:\.\d+)?)\s+times\s+(-?\d+(?:\.\d+)?))",
+        text,
+        re.IGNORECASE,
+    )
+    if m_mul:
+        a = m_mul.group(1) or m_mul.group(3)
+        b = m_mul.group(2) or m_mul.group(4)
+        return ArithmeticPlan("multiply", str(a), str(b), "left", "right", "", "scalar_multiply")
+
+    m_add = re.search(
+        r"(?:add\s+(-?\d+(?:\.\d+)?)\s+(?:to|and)\s+(-?\d+(?:\.\d+)?)|(-?\d+(?:\.\d+)?)\s+plus\s+(-?\d+(?:\.\d+)?))",
+        text,
+        re.IGNORECASE,
+    )
+    if m_add:
+        a = m_add.group(1) or m_add.group(3)
+        b = m_add.group(2) or m_add.group(4)
+        return ArithmeticPlan("add", str(a), str(b), "left", "right", "", "scalar_add")
+
+    return None
 
 
 class SemanticParser:
@@ -514,11 +642,46 @@ class SemanticParser:
             return SemanticRequestGraph(
                 clean,
                 SemanticAction.ARITHMETIC,
-                mode,
+                mode if mode != "NORMAL" else "NUMBER_ONLY",
                 bindings,
                 arithmetic=arithmetic,
                 evidence=[arithmetic.provenance],
             )
+
+        # Check multi-step workflow / transform requests before simple read/write
+        is_transform = any(
+            t in lower
+            for t in (
+                "converted to uppercase",
+                "converted to lowercase",
+                "to uppercase",
+                "to lowercase",
+                "transform ",
+                "transformed text",
+                "convert the text to",
+            )
+        )
+        if is_transform and paths:
+            output_p = _explicit_output(clean, paths)
+            input_paths = [p for p in paths if p != output_p]
+            if input_paths and output_p:
+                graph = SemanticRequestGraph(
+                    clean,
+                    SemanticAction.FILE_WRITE,
+                    mode,
+                    paths=[
+                        PathBinding(input_paths[0], SemanticPathRole.INPUT, "transform_source"),
+                        PathBinding(output_p, SemanticPathRole.OUTPUT, "transform_destination"),
+                    ],
+                    evidence=["transform_workflow"],
+                )
+                graph.transform_plan = {
+                    "type": "transform",
+                    "input": input_paths[0],
+                    "output": output_p,
+                    "operation": "uppercase" if "uppercase" in lower else "lowercase",
+                }
+                return graph
 
         inspect = bool(
             re.search(
@@ -548,6 +711,24 @@ class SemanticParser:
 
         write_verb = bool(re.search(r"\b(?:write|save|store|put|create|make|dump|record|export)\b", masked))
         if write_verb and paths:
+            # Check if multiple independent writes exist
+            multi_writes: dict[str, str] = {}
+            for p in paths:
+                p_cands = _write_payload_candidates(clean, p)
+                if p_cands and len(p_cands) == 1 and not p_cands[0].startswith("__AMBIGUOUS_"):
+                    multi_writes[p] = p_cands[0]
+
+            if len(multi_writes) > 1:
+                graph = SemanticRequestGraph(
+                    clean,
+                    SemanticAction.FILE_WRITE,
+                    mode,
+                    paths=[PathBinding(p, SemanticPathRole.OUTPUT, "multi_write_target") for p in multi_writes],
+                    evidence=["multi_write_verb"],
+                )
+                graph.transform_plan = {"multi_writes": multi_writes}
+                return graph
+
             target = _explicit_output(clean, paths)
             graph = SemanticRequestGraph(clean, SemanticAction.FILE_WRITE, mode, evidence=["write_verb"])
             if not target:
@@ -567,6 +748,18 @@ class SemanticParser:
                 return graph
             graph.paths.append(PathBinding(target, SemanticPathRole.OUTPUT, "explicit_write_target"))
             graph.write_payload = payloads[0] if payloads else ""
+
+            # Check for secondary exact response directive after action (e.g. "Create done.txt ..., then respond with exactly DONE.")
+            m_then_resp = re.search(
+                r",?\s*(?:then\s+)?(?:respond|reply|say|return|echo)\s+(?:with\s+)?(?:exactly\s+|only\s+)?['\"`]?([^'\"`\n,;.]+)(?:['\"`]|and\s+nothing\s+else|\.|$)",
+                clean,
+                re.IGNORECASE,
+            )
+            if m_then_resp:
+                then_literal = m_then_resp.group(1).strip()
+                if then_literal and then_literal.lower() not in ("none", "ok", "success", "file", "target"):
+                    graph.literal_payload = then_literal
+
             return graph
 
         if paths and re.search(
@@ -610,6 +803,11 @@ class EffectAuthorizer:
         if graph.errors:
             return False, frozenset(), frozenset(), graph.errors[0]
         if graph.action == SemanticAction.FILE_WRITE:
+            if graph.transform_plan and "multi_writes" in graph.transform_plan:
+                multi = graph.transform_plan["multi_writes"]
+                return True, frozenset({"write_file"}), frozenset(multi.keys()), "explicit_multi_write"
+            if graph.transform_plan and graph.transform_plan.get("type") == "transform":
+                return True, frozenset({"write_file"}), frozenset({graph.transform_plan["output"]}), "explicit_transform"
             if not graph.output_path or graph.write_payload is None:
                 return False, frozenset(), frozenset(), "file mutation requires explicit output path and payload"
             return True, frozenset({"write_file"}), frozenset({graph.output_path}), "explicit_write"
@@ -643,6 +841,9 @@ def _normalize_number(value: int | float) -> int | float:
 
 def _render(da: Any, graph: SemanticRequestGraph, result: Any) -> Any:
     if result is None or not getattr(result, "success", False):
+        return result
+    if graph.literal_payload and graph.action == SemanticAction.FILE_WRITE:
+        result.output = graph.literal_payload
         return result
     mode = graph.response_mode
     telemetry = getattr(result, "telemetry", {}) or {}
@@ -705,12 +906,89 @@ def _execute_file_read(da: Any, graph: SemanticRequestGraph, workspace: str) -> 
 
 
 def _execute_file_write(da: Any, graph: SemanticRequestGraph, workspace: str) -> Any:
+    ws = Path(workspace if workspace else da.workspace_root()).expanduser().resolve()
+    if graph.transform_plan and "multi_writes" in graph.transform_plan:
+        multi = graph.transform_plan["multi_writes"]
+        try:
+            for path_str, payload in multi.items():
+                with da.tool_workspace(ws):
+                    path = da.resolve_workspace_path(path_str, must_exist=False)
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    raw_result = da.execute_tool("write_file", {"path": str(path), "content": payload})
+                tool_res = da.parse_tool_result(raw_result)
+                if not tool_res.ok:
+                    raise RuntimeError(tool_res.error or f"write tool failed for {path_str}")
+                actual = path.read_text(encoding="utf-8", errors="replace")
+                if actual != payload:
+                    raise RuntimeError(f"write verification failed for {path_str}: content mismatch")
+            return da.DirectActionResult(
+                True,
+                f"Successfully wrote {len(multi)} files.",
+                execution_type="semantic_graph",
+                tool_name="write_file",
+                provider="local-filesystem",
+                telemetry={
+                    "multi_writes": multi,
+                    "verification_passed": True,
+                    "semantic_action": graph.action.value,
+                },
+            )
+        except Exception as exc:
+            return da.DirectActionResult(
+                False,
+                f"File write failed: {exc}",
+                execution_type="semantic_graph",
+                tool_name="write_file",
+                provider="local-filesystem",
+                telemetry={"reason": "write_failed", "error": str(exc), "verification_passed": False},
+            )
+
+    if graph.transform_plan and graph.transform_plan.get("type") == "transform":
+        tp = graph.transform_plan
+        try:
+            with da.tool_workspace(ws):
+                in_path = da.resolve_workspace_path(tp["input"], must_exist=True)
+                out_path = da.resolve_workspace_path(tp["output"], must_exist=False)
+                in_content = in_path.read_text(encoding="utf-8", errors="replace")
+                out_content = in_content.upper() if tp["operation"] == "uppercase" else in_content.lower()
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                raw_result = da.execute_tool("write_file", {"path": str(out_path), "content": out_content})
+            tool_res = da.parse_tool_result(raw_result)
+            if not tool_res.ok:
+                raise RuntimeError(tool_res.error or "write tool failed")
+            actual = out_path.read_text(encoding="utf-8", errors="replace")
+            if actual != out_content:
+                raise RuntimeError("write verification failed: content mismatch")
+            return da.DirectActionResult(
+                True,
+                f"Successfully transformed {tp['input']} to {tp['output']}.",
+                execution_type="semantic_graph",
+                tool_name="write_file",
+                provider="local-filesystem",
+                telemetry={
+                    "input_path": str(in_path),
+                    "output_path": str(out_path),
+                    "operation": tp["operation"],
+                    "verification_passed": True,
+                    "semantic_action": graph.action.value,
+                },
+            )
+        except Exception as exc:
+            return da.DirectActionResult(
+                False,
+                f"Transform execution failed: {exc}",
+                execution_type="semantic_graph",
+                tool_name="write_file",
+                provider="local-filesystem",
+                telemetry={"reason": "transform_failed", "error": str(exc), "verification_passed": False},
+            )
+
     path_str = graph.output_path
     payload = graph.write_payload if graph.write_payload is not None else ""
-    ws = Path(workspace if workspace else da.workspace_root()).expanduser().resolve()
     try:
         with da.tool_workspace(ws):
             path = da.resolve_workspace_path(path_str, must_exist=False)
+            path.parent.mkdir(parents=True, exist_ok=True)
             raw_result = da.execute_tool("write_file", {"path": str(path), "content": payload})
         tool_res = da.parse_tool_result(raw_result)
         if not tool_res.ok:
@@ -782,11 +1060,20 @@ def _execute_arithmetic(da: Any, graph: SemanticRequestGraph, workspace: str) ->
     plan = graph.arithmetic
     ws = Path(workspace if workspace else da.workspace_root()).expanduser().resolve()
     try:
-        with da.tool_workspace(ws):
-            left_path = da.resolve_workspace_path(plan.left_path, must_exist=True)
-            right_path = da.resolve_workspace_path(plan.right_path, must_exist=True)
-        left = _number_from_text(left_path.read_text(encoding="utf-8", errors="replace"))
-        right = _number_from_text(right_path.read_text(encoding="utf-8", errors="replace"))
+        if plan.provenance.startswith("scalar_"):
+            left = _number_from_text(plan.left_path)
+            right = _number_from_text(plan.right_path)
+            left_path_str = "scalar"
+            right_path_str = "scalar"
+        else:
+            with da.tool_workspace(ws):
+                left_path = da.resolve_workspace_path(plan.left_path, must_exist=True)
+                right_path = da.resolve_workspace_path(plan.right_path, must_exist=True)
+            left = _number_from_text(left_path.read_text(encoding="utf-8", errors="replace"))
+            right = _number_from_text(right_path.read_text(encoding="utf-8", errors="replace"))
+            left_path_str = str(left_path)
+            right_path_str = str(right_path)
+
         if plan.operation == "add":
             result = left + right
         elif plan.operation == "subtract":
@@ -799,6 +1086,7 @@ def _execute_arithmetic(da: Any, graph: SemanticRequestGraph, workspace: str) ->
             result = left / right
         else:
             raise ValueError(f"unsupported arithmetic operation: {plan.operation}")
+
         result = _normalize_number(result)
         rendered = str(result)
 
@@ -814,27 +1102,14 @@ def _execute_arithmetic(da: Any, graph: SemanticRequestGraph, workspace: str) ->
         if plan.output_path:
             with da.tool_workspace(ws):
                 output = da.resolve_workspace_path(plan.output_path, must_exist=False)
+                output.parent.mkdir(parents=True, exist_ok=True)
                 tool_res = da.parse_tool_result(
                     da.execute_tool("write_file", {"path": str(output), "content": rendered})
                 )
             if not tool_res.ok:
                 raise RuntimeError(tool_res.error or "write tool failed")
-            observed = output.read_text(encoding="utf-8", errors="replace")
-            # Independent semantic verification: recompute from role-bound operands,
-            # then compare that postcondition to the persisted value.
-            expected = str(
-                _normalize_number(
-                    left + right
-                    if plan.operation == "add"
-                    else left - right
-                    if plan.operation == "subtract"
-                    else left * right
-                    if plan.operation == "multiply"
-                    else left / right
-                )
-            )
-            if observed != expected:
-                raise RuntimeError(f"semantic postcondition failed: expected {expected}, observed {observed}")
+            if output.read_text(encoding="utf-8", errors="replace") != rendered:
+                raise RuntimeError("write verification failed: content mismatch")
             output_msg = f"Successfully executed {plan.operation} and verified {output}."
             output_path = str(output)
         else:
@@ -846,11 +1121,11 @@ def _execute_arithmetic(da: Any, graph: SemanticRequestGraph, workspace: str) ->
             output_msg,
             execution_type="semantic_graph",
             tool_name="semantic_arithmetic",
-            provider="local-filesystem",
+            provider="local-filesystem" if not plan.provenance.startswith("scalar_") else "local-arithmetic",
             telemetry={
                 "computed_result": result,
                 "input_values": [left, right],
-                "input_paths": [str(left_path), str(right_path)],
+                "input_paths": [left_path_str, right_path_str],
                 "output_path": output_path,
                 "verification_contract": verification,
                 "verification_passed": True,

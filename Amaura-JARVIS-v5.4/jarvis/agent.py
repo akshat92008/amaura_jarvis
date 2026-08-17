@@ -12,6 +12,7 @@ import sys
 import threading
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from jarvis import ui
 from jarvis.api import NvidiaClient
@@ -263,8 +264,8 @@ class JarvisAgent:
         # ExecutiveKernel owns short-lived conversational continuity and its
         # bounded consolidation worker. Keep one per agent/control plane rather
         # than rebuilding it for every REST request.
-        self._executive_kernel = None
-        self._executive_control = None
+        self._executive_kernel: Any | None = None
+        self._executive_control: Any | None = None
         self._executive_lock = threading.Lock()
 
         # Build system prompt with personal memory
@@ -696,6 +697,11 @@ class JarvisAgent:
 
     def _should_auto_fable(self, prompt: str) -> bool:
         """Determine if a prompt involves complex problem solving, planning, refactoring, or multi-file engineering."""
+        # Normal founder-facing CLI requests must never reach auto-Fable before governance.
+        if os.environ.get("JARVIS_ENABLE_AUTO_FABLE", "0") != "1":
+            if self.model_key in ("fable-5-reasoning", "fable-5-engine", "mythos", "aimodel"):
+                return True
+            return False
         company_terms = ("amaura", "company programme", "company program", "workforce", "founder briefing")
         if any(term in prompt.lower() for term in company_terms):
             return False

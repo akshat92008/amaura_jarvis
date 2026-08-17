@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from jarvis import ui
@@ -228,8 +229,20 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
             ui.print_info("Usage: /spawn <task description>")
             ui.print_info("Creates a quick agent and runs it on the task.")
             return True
-        # Quick-spawn: create a temporary agent and run it
-        agent.run(f"Create a temporary AI agent to handle this task, then run it: {arg}")
+        from jarvis.tools.amaura import get_control_plane
+
+        control = get_control_plane()
+        result = agent.run_executive(
+            f"Create a temporary AI agent to handle this task, then run it: {arg}",
+            control=control,
+            session_id=f"cli-{agent.conversation_id}",
+            workspace=str(Path(agent.working_dir or os.getcwd()).resolve()),
+            autonomy="execute_until_approval",
+            coding_backend="antigravity",
+        )
+        msg = str(result.get("message") or "").strip()
+        if msg:
+            ui.console.print(msg)
         return True
 
     elif command == "/tools":
@@ -256,7 +269,20 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
                 "Templates: python-cli, python-api, flask, react, nextjs, vue, express, go, rust, django, fullstack"
             )
             return True
-        agent.run(f"Generate a project using the generate_project tool: {arg}")
+        from jarvis.tools.amaura import get_control_plane
+
+        control = get_control_plane()
+        result = agent.run_executive(
+            f"Generate a project using the generate_project tool: {arg}",
+            control=control,
+            session_id=f"cli-{agent.conversation_id}",
+            workspace=str(Path(agent.working_dir or os.getcwd()).resolve()),
+            autonomy="execute_until_approval",
+            coding_backend="antigravity",
+        )
+        msg = str(result.get("message") or "").strip()
+        if msg:
+            ui.console.print(msg)
         return True
 
     return False
@@ -341,8 +367,14 @@ def handle_natural_or_slash_command(user_input: str, agent: JarvisAgent, voice_e
     return False
 
 
-def run_interactive(agent: JarvisAgent, voice_engine: VoiceEngine):
+def run_interactive(agent: JarvisAgent, voice_engine: VoiceEngine, working_dir: str = ""):
     """Run the interactive CLI loop."""
+    from jarvis.tools.amaura import get_control_plane
+
+    control = get_control_plane()
+    session_id = f"cli-interactive-{agent.conversation_id}"
+    resolved_workspace = str(Path(working_dir or agent.working_dir or os.getcwd()).resolve())
+
     while True:
         try:
             # Voice input mode
@@ -371,8 +403,18 @@ def run_interactive(agent: JarvisAgent, voice_engine: VoiceEngine):
             if handle_natural_or_slash_command(user_input, agent, voice_engine):
                 continue
 
-            # Run the agent
-            response = agent.run(user_input)
+            # Run through executive kernel
+            result = agent.run_executive(
+                user_input,
+                control=control,
+                session_id=session_id,
+                workspace=resolved_workspace,
+                autonomy="execute_until_approval",
+                coding_backend="antigravity",
+            )
+            response = str(result.get("message") or "").strip()
+            if response:
+                ui.console.print(response)
 
             # Voice output
             if voice_engine.enabled and response:
@@ -583,7 +625,20 @@ def main():
 
     # Single prompt mode
     if args.prompt:
-        agent.run(args.prompt)
+        from jarvis.tools.amaura import get_control_plane
+
+        control = get_control_plane()
+        result = agent.run_executive(
+            args.prompt,
+            control=control,
+            session_id=f"cli-{agent.conversation_id}",
+            workspace=str(Path(working_dir).resolve()),
+            autonomy="execute_until_approval",
+            coding_backend="antigravity",
+        )
+        msg = str(result.get("message") or "").strip()
+        if msg:
+            ui.console.print(msg)
         return
 
     # Interactive mode — automatically launches Web HUD alongside CLI
@@ -595,7 +650,7 @@ def main():
         ui.print_success("Voice mode active. Speak your commands.")
         voice_engine.greet()
 
-    run_interactive(agent, voice_engine)
+    run_interactive(agent, voice_engine, working_dir=working_dir)
 
 
 if __name__ == "__main__":

@@ -1500,7 +1500,18 @@ class WriteActionParser:
         ):
             if not any(
                 w in clean_lower
-                for w in (" and write", " and save", " and put", " and store", " then write", " then save")
+                for w in (
+                    " and write",
+                    " and save",
+                    " and put",
+                    " and store",
+                    " and create",
+                    " and make",
+                    " then write",
+                    " then save",
+                    " then create",
+                    " then make",
+                )
             ):
                 return None
 
@@ -1638,6 +1649,46 @@ class WriteActionParser:
                 payload_type = cb.span_type.value
                 has_explicit_content = True
                 break
+
+        # 4b. Check Colon Introducers (e.g., 'payload and nothing else: ...', 'content: ...')
+        if parsed_content is None and ":" in clean:
+            colon_in_clean = clean.find(":")
+            non_path_quotes_before = [
+                q for q in (parsed.quoted_literals or [])
+                if q.end <= colon_in_clean and q.raw_text.strip("'\"`") != target_path and q.metadata.get("inner", "") != target_path
+            ]
+            if not non_path_quotes_before:
+                tgt_idx = clean.find(target_path) if target_path else -1
+                search_span = clean[tgt_idx + len(target_path):] if tgt_idx != -1 else clean
+                m_intro_colon = re.search(
+                    r"\b(?:content|payload|text|body|characters?|following|this\s+payload)\b[^\n:]*:\s*(.+)$",
+                    search_span,
+                    re.IGNORECASE | re.DOTALL,
+                )
+                if not m_intro_colon and ":" in search_span:
+                    m_intro_colon = re.search(r":\s*(.+)$", search_span, re.DOTALL)
+                if m_intro_colon:
+                    body = m_intro_colon.group(1).strip()
+                    body = re.split(r"\s+(?:and|with)\s+nothing\s+else\b|\s+and\s+no\s+other\s+words\b", body, flags=re.IGNORECASE)[0]
+                    body = re.split(r"(?:\.|\;)\s*(?:do\s+not|don't|choose\s+neither|never)\b", body, flags=re.IGNORECASE)[0]
+                    body = body.strip()
+                    if body in ("''", '""', "``"):
+                        if not is_empty_requested:
+                            is_ambiguous = True
+                            invalid_reason = (
+                                "Write precondition failed: empty quoted payload supplied without explicit empty request"
+                            )
+                            parsed_content = ""
+                            payload_span_start = clean.find(body)
+                            payload_span_end = payload_span_start + len(body)
+                            payload_type = "COLON_INTRODUCED"
+                            has_explicit_content = True
+                    elif body:
+                        parsed_content = body
+                        payload_span_start = clean.find(body)
+                        payload_span_end = payload_span_start + len(body)
+                        payload_type = "COLON_INTRODUCED"
+                        has_explicit_content = True
 
         # 5. Check Quoted Literals
         if parsed_content is None and parsed.quoted_literals:
@@ -2891,7 +2942,7 @@ class RepositoryDiagnosticEngine:
                             if isinstance(child, ast.Return) and isinstance(child.value, ast.BinOp):
                                 op = child.value.op
                                 if (
-                                    "add" in fn_name.lower() or "sum" in fn_name.lower() or "plus" in doc.lower()
+                                    "add" in fn_name.lower() or "sum" in fn_name.lower() or "total" in fn_name.lower() or "plus" in doc.lower()
                                 ) and isinstance(op, ast.Sub):
                                     findings.append(
                                         {
@@ -2899,7 +2950,7 @@ class RepositoryDiagnosticEngine:
                                             "category": "operator_mismatch",
                                             "observed_operator": "-",
                                             "expected_operator": "+",
-                                            "description": f"Function '{fn_name}' subtracts instead of adding",
+                                            "description": f"Function '{fn_name}' subtracts instead of adding (return a - b instead of addition or computed answer)",
                                             "confidence": 1.0,
                                             "file": str(py_file),
                                         }
@@ -3539,6 +3590,10 @@ class DirectActionRouter:
             if m_rep:
                 params["target"] = m_rep.group(1)
                 params["replacement"] = m_rep.group(2)
+        elif any(w in clean for w in ("uppercase", "upper case", "to upper", "to uppercase")):
+            op = "uppercase"
+        elif any(w in clean for w in ("lowercase", "lower case", "to lower", "to lowercase")):
+            op = "lowercase"
         elif is_json_output:
             op = "kv_to_json"
         else:
@@ -3663,6 +3718,12 @@ class DirectActionRouter:
                 tgt = plan.parameters.get("target", "")
                 rep = plan.parameters.get("replacement", "")
                 transformed_content = input_1.replace(tgt, rep)
+                computed_result = transformed_content
+            elif plan.operation == "uppercase":
+                transformed_content = input_1.upper()
+                computed_result = transformed_content
+            elif plan.operation == "lowercase":
+                transformed_content = input_1.lower()
                 computed_result = transformed_content
             elif plan.operation == "concatenate":
                 transformed_content = "\n".join(r.strip() for r in raw_contents if r.strip())
@@ -3907,6 +3968,10 @@ class DirectActionRouter:
             "identify defect",
             "locate bug",
             "diagnose defect",
+            "look through",
+            "what is here",
+            "tell me why",
+            "why the calculation is wrong",
         )
         return any(ind in clean for ind in repo_indicators) or (
             ("repo" in clean or "project" in clean or "codebase" in clean or "repository" in clean)
@@ -3970,16 +4035,23 @@ class DirectActionRouter:
                 summary = f"Inspected repository at {repo_p}. Analyzed {len(pre_hashes)} Python file(s) with read-only isolation. Function '{primary_fn}' has defect: {bug_desc}."
             else:
                 defined_fns: list[str] = []
+                file_names = [Path(fp).name for fp in pre_hashes]
+                entry_point = "main"
                 for file_path_str in pre_hashes:
                     try:
-                        tree = ast.parse(Path(file_path_str).read_text(encoding="utf-8", errors="replace"))
+                        p_obj = Path(file_path_str)
+                        p_code = p_obj.read_text(encoding="utf-8", errors="replace")
+                        if "__main__" in p_code or "main(" in p_code or p_obj.name in ("app.py", "main.py", "cli.py"):
+                            entry_point = p_obj.name
+                        tree = ast.parse(p_code)
                         for node in ast.walk(tree):
                             if isinstance(node, ast.FunctionDef):
                                 defined_fns.append(node.name)
                     except Exception:
                         pass
                 primary_fn = defined_fns[0] if defined_fns else "none"
-                summary = f"Inspected repository at {repo_p}. Analyzed {len(pre_hashes)} Python file(s). Function name is '{primary_fn}'. No active defect detected."
+                files_list_str = ", ".join(file_names) if file_names else "none"
+                summary = f"Inspected repository at {repo_p}. Analyzed {len(pre_hashes)} Python file(s): {files_list_str}. Likely entry point is {entry_point}. Function: '{primary_fn}'. No active defect detected."
 
             return DirectActionResult(
                 success=True,
