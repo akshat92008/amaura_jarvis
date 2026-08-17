@@ -16,7 +16,11 @@ from jarvis.amaura.models import (
     raise_if_fatal_integrity,
 )
 from jarvis.amaura.runtime import load_amaura_env
-from jarvis.amaura.runtime_lease import LeaderLease, company_runtime_leader_lock, validate_company_runtime_lease
+from jarvis.amaura.runtime_lease import (
+    company_runtime_leader_lock,
+    current_company_runtime_lease,
+    validate_company_runtime_lease,
+)
 from jarvis.amaura.trust import SIGNAL_TRUST_KEY, TrustLevel, make_signal_trust
 
 
@@ -27,8 +31,10 @@ def test_leader_owned_boolean_cannot_self_assert_scheduler_authority(tmp_path, m
         with pytest.raises(GovernanceError, match="cannot self-assert"):
             MissionRunner(control).tick(leader_owned=True)
 
-        with company_runtime_leader_lock(control) as lease:
-            assert isinstance(lease, LeaderLease)
+        with company_runtime_leader_lock(control) as acquired:
+            assert acquired is True
+            lease = current_company_runtime_lease(control)
+            assert lease is not None
             assert validate_company_runtime_lease(control, lease)
             result = MissionRunner(control).tick(lease=lease)
             assert result["status"] == "idle"
@@ -42,10 +48,12 @@ def test_user_level_runtime_lock_blocks_second_store(tmp_path, monkeypatch):
     first = AmauraControlPlane(tmp_path / "a" / "company.db")
     second = AmauraControlPlane(tmp_path / "b" / "company.db")
     try:
-        with company_runtime_leader_lock(first) as first_lease:
-            assert isinstance(first_lease, LeaderLease)
-            with company_runtime_leader_lock(second) as second_lease:
-                assert second_lease is False
+        with company_runtime_leader_lock(first) as first_acquired:
+            assert first_acquired is True
+            first_lease = current_company_runtime_lease(first)
+            assert first_lease is not None and validate_company_runtime_lease(first, first_lease)
+            with company_runtime_leader_lock(second) as second_acquired:
+                assert second_acquired is False
     finally:
         first.close()
         second.close()
