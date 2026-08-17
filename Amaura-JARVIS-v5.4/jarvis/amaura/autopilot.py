@@ -64,6 +64,7 @@ class AutonomousCompanyRuntime:
         self.world = WorldModel(control)
         self.proactive = ProactiveCognition(control, world=self.world)
         self.attention = FounderAttentionEngine(control, world=self.world)
+        self._leader_owned = False
 
     @contextmanager
     def _leader_lock(self):
@@ -331,6 +332,14 @@ class AutonomousCompanyRuntime:
         max_signals: int = 3,
         max_dynamic_goals: int = 3,
     ) -> dict[str, Any]:
+        if self._leader_owned:
+            return self._tick_locked(
+                now=now,
+                max_work_units=max_work_units,
+                max_new_programmes=max_new_programmes,
+                max_signals=max_signals,
+                max_dynamic_goals=max_dynamic_goals,
+            )
         with self._leader_lock() as leader:
             if leader is False:
                 return {
@@ -357,6 +366,7 @@ class AutonomousCompanyRuntime:
         max_cycles: int | None = None,
         sleep_fn=None,
     ) -> None:
+        """Run under one process leadership lease for the entire service lifetime."""
         delay = max(5.0, min(float(poll_seconds), 3600.0))
         base_backoff = max(
             1.0,
@@ -372,65 +382,77 @@ class AutonomousCompanyRuntime:
         cycles = 0
         actor = str(getattr(self.supervisor, "worker_id", "amaura-autopilot"))
 
-        while max_cycles is None or cycles < max_cycles:
-            cycles += 1
+        with self._leader_lock() as leader:
+            if leader is False:
+                details = {"reason": "another company runtime process holds the lifetime leader lease"}
+                self.control.store.publish_event("company.autopilot.standby", "company", details)
+                self.control.store.audit(actor, "autopilot_leadership", "runtime", "company", "standby", details)
+                return
+            self._leader_owned = True
             try:
-                result = self.tick(
-                    max_work_units=max_work_units,
-                    max_new_programmes=max_new_programmes,
-                    max_signals=max_signals,
-                    max_dynamic_goals=max_dynamic_goals,
-                )
-            except Exception as exc:
-                if self._must_fail_closed(exc):
-                    details = {
-                        "error_type": type(exc).__name__,
-                        "error": str(exc)[:1000],
-                        "fail_closed": True,
-                    }
-                    self.control.store.publish_event("company.autopilot.integrity_blocked", "company", details)
-                    self.control.store.audit(actor, "autopilot_cycle", "runtime", "company", "blocked", details)
-                    raise
+                while max_cycles is None or cycles < max_cycles:
+                    cycles += 1
+                    try:
+                        result = self.tick(
+                            max_work_units=max_work_units,
+                            max_new_programmes=max_new_programmes,
+                            max_signals=max_signals,
+                            max_dynamic_goals=max_dynamic_goals,
+                        )
+                    except Exception as exc:
+                        if self._must_fail_closed(exc):
+                            details = {
+                                "error_type": type(exc).__name__,
+                                "error": str(exc)[:1000],
+                                "fail_closed": True,
+                            }
+                            self.control.store.publish_event("company.autopilot.integrity_blocked", "company", details)
+                            self.control.store.audit(actor, "autopilot_cycle", "runtime", "company", "blocked", details)
+                            raise
 
-                failures += 1
-                raw_backoff = min(max_backoff, base_backoff * (2 ** (failures - 1)))
-                jitter = random.uniform(0.0, min(base_backoff, raw_backoff * 0.25))
-                backoff = min(max_backoff, raw_backoff + jitter)
-                details = {
-                    "consecutive_failures": failures,
-                    "threshold": crash_threshold,
-                    "backoff_seconds": backoff,
-                    "error_type": type(exc).__name__,
-                    "error": str(exc)[:1000],
-                }
-                self.control.store.set_control("autopilot.consecutive_failures", str(failures), actor)
-                self.control.store.publish_event("company.autopilot.cycle_failed", str(failures), details)
-                self.control.store.audit(actor, "autopilot_cycle", "runtime", "company", "failed", details)
-                if failures == crash_threshold:
-                    self.control.store.set_control("autopilot.crash_circuit", "open", actor)
-                    self.control.store.publish_event("company.autopilot.circuit_opened", "company", details)
-                    self.control.store.audit(
-                        actor,
-                        "autopilot_crash_circuit",
-                        "runtime",
-                        "company",
-                        "degraded",
-                        details,
-                    )
-                sleeper(backoff)
-                continue
+                        failures += 1
+                        raw_backoff = min(max_backoff, base_backoff * (2 ** (failures - 1)))
+                        jitter = random.uniform(0.0, min(base_backoff, raw_backoff * 0.25))
+                        backoff = min(max_backoff, raw_backoff + jitter)
+                        details = {
+                            "consecutive_failures": failures,
+                            "threshold": crash_threshold,
+                            "backoff_seconds": backoff,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc)[:1000],
+                        }
+                        self.control.store.set_control("autopilot.consecutive_failures", str(failures), actor)
+                        self.control.store.publish_event("company.autopilot.cycle_failed", str(failures), details)
+                        self.control.store.audit(actor, "autopilot_cycle", "runtime", "company", "failed", details)
+                        if failures == crash_threshold:
+                            self.control.store.set_control("autopilot.crash_circuit", "open", actor)
+                            self.control.store.publish_event("company.autopilot.circuit_opened", "company", details)
+                            self.control.store.audit(
+                                actor,
+                                "autopilot_crash_circuit",
+                                "runtime",
+                                "company",
+                                "degraded",
+                                details,
+                            )
+                        sleeper(backoff)
+                        continue
 
-            if result.get("status") == "standby":
-                if max_cycles is None or cycles < max_cycles:
-                    sleeper(delay)
-                continue
+                    if result.get("status") == "standby":
+                        # This should not occur while the lifetime lease is owned,
+                        # but preserve defensive compatibility for mocked tests.
+                        if max_cycles is None or cycles < max_cycles:
+                            sleeper(delay)
+                        continue
 
-            if failures:
-                failures = 0
-                self.control.store.set_control("autopilot.consecutive_failures", "0", actor)
-                self.control.store.set_control("autopilot.crash_circuit", "closed", actor)
-            if max_cycles is None or cycles < max_cycles:
-                sleeper(delay)
+                    if failures:
+                        failures = 0
+                        self.control.store.set_control("autopilot.consecutive_failures", "0", actor)
+                        self.control.store.set_control("autopilot.crash_circuit", "closed", actor)
+                    if max_cycles is None or cycles < max_cycles:
+                        sleeper(delay)
+            finally:
+                self._leader_owned = False
 
 
 __all__ = ["AutonomousCompanyRuntime"]
