@@ -1,8 +1,9 @@
 """Canonical company-runtime leadership lease for Amaura v7.
 
-The OS lock prevents competing company schedulers on the same user account. An
-opaque in-process capability also binds the fast path to the exact process,
-thread, store identity, and active lock acquisition that owns leadership.
+The public lock context remains boolean-compatible with historical callers, but
+a successful ``True`` is not authority. Internally an opaque LeaderLease is
+registered and bound to the exact process, thread, store, and active OS lock;
+leader-owned execution must resolve and validate that capability.
 """
 
 from __future__ import annotations
@@ -64,7 +65,6 @@ def _retire_lease(lease: LeaderLease) -> None:
 
 
 def validate_company_runtime_lease(control: Any, lease: LeaderLease | None) -> bool:
-    """Return True only for an active capability on its exact owning thread/store."""
     if not isinstance(lease, LeaderLease):
         return False
     with _registry_lock:
@@ -93,15 +93,15 @@ def current_company_runtime_lease(control: Any) -> LeaderLease | None:
 
 
 @contextmanager
-def company_runtime_leader_lock(control: Any) -> Iterator[LeaderLease | bool]:
-    """Acquire nonblocking leadership and yield its opaque capability, else False."""
+def company_runtime_leader_lock(control: Any) -> Iterator[bool]:
+    """Acquire leadership; expose only compatibility boolean, never the capability."""
     lock_path = company_runtime_lock_path(control)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
 
     if os.name != "posix":
         lease = _issue_lease(control, lock_path)
         try:
-            yield lease
+            yield True
         finally:
             _retire_lease(lease)
         return
@@ -114,10 +114,9 @@ def company_runtime_leader_lock(control: Any) -> Iterator[LeaderLease | bool]:
         except BlockingIOError:
             yield False
             return
-
         lease = _issue_lease(control, lock_path)
         try:
-            yield lease
+            yield True
         finally:
             _retire_lease(lease)
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
