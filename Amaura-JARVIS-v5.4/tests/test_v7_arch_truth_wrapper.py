@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 import pytest
+
 import scripts.run_v7_arch_truth as wrapper
 
 
