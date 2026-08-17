@@ -252,21 +252,16 @@ class AutonomousCompanyRuntime:
         try:
             progress_updates = self.mission.sync_completed_programmes()
 
-            # Read-only provider observation happens before company-signal claims.
-            # The signal bridge never marks mail read or stages outbound replies.
             external_signal_ingestion = self.signal_ingestion.poll()
             signals_detected = self.company.detect_signals(now=now)
             signal_programmes = self.company.process_signals(now=now, max_signals=max_signals)
 
-            pre_world = self.world.refresh()
+            self.world.refresh()
             proactive_cycle = self.proactive.tick(auto_investigate=self._proactive_enabled())
 
             created = self.ensure_operating_cadence(now)
             objective_programmes = self.mission.plan_due_work(now=now, max_new_programmes=max_new_programmes)
 
-            # Dynamic founder/proactive missions advance inside the same company
-            # lease and are portfolio-ranked before execution. A mission waiting
-            # for founder approval does not stop unrelated reversible work.
             dynamic_missions = self.mission_runner.tick(
                 max_goals=max(1, min(int(max_dynamic_goals), 20)),
                 leader_owned=True,
@@ -362,13 +357,6 @@ class AutonomousCompanyRuntime:
         max_cycles: int | None = None,
         sleep_fn=None,
     ) -> None:
-        """Run continuously with bounded recovery for transient cycle failures.
-
-        Transient failures back off with bounded jitter and no longer permanently
-        disable the company runtime. Integrity/security failures still terminate
-        immediately and remain fail-closed. ``max_cycles``/``sleep_fn`` exist for
-        deterministic tests and service probes.
-        """
         delay = max(5.0, min(float(poll_seconds), 3600.0))
         base_backoff = max(
             1.0,
@@ -419,8 +407,6 @@ class AutonomousCompanyRuntime:
                 self.control.store.publish_event("company.autopilot.cycle_failed", str(failures), details)
                 self.control.store.audit(actor, "autopilot_cycle", "runtime", "company", "failed", details)
                 if failures == crash_threshold:
-                    # Open a visible circuit once at the threshold while keeping
-                    # the daemon alive. A successful cycle closes it later.
                     self.control.store.set_control("autopilot.crash_circuit", "open", actor)
                     self.control.store.publish_event("company.autopilot.circuit_opened", "company", details)
                     self.control.store.audit(
@@ -435,8 +421,6 @@ class AutonomousCompanyRuntime:
                 continue
 
             if result.get("status") == "standby":
-                # Another process owns leadership; this process remains a passive
-                # standby and must not mutate scheduling state.
                 if max_cycles is None or cycles < max_cycles:
                     sleeper(delay)
                 continue
