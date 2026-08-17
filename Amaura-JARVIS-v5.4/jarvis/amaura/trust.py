@@ -1,8 +1,8 @@
 """Trust provenance for company signals and external observations.
 
-Trust metadata is data-plane provenance, not authorization. It follows a signal
-into downstream workflow inputs so model-facing text can distinguish founder
-instructions from system observations and untrusted external evidence.
+Trust metadata is data-plane provenance, not authorization. Founder provenance
+is accepted only when an already-authenticated founder code path explicitly
+permits it; serialized JARVIS/system data cannot self-assert founder authority.
 """
 
 from __future__ import annotations
@@ -16,8 +16,6 @@ _UNTRUSTED_TAG = "<untrusted_external_data "
 
 
 class TrustLevel(StrEnum):
-    """Origin trust level for durable company-signal data."""
-
     EXTERNAL_UNTRUSTED = "external_untrusted"
     SYSTEM_OBSERVED = "system_observed"
     FOUNDER = "founder"
@@ -29,7 +27,6 @@ def make_signal_trust(
     source: str,
     untrusted_fields: tuple[str, ...] | list[str] = (),
 ) -> dict[str, Any]:
-    """Build normalized, JSON-safe provenance metadata."""
     fields = list(dict.fromkeys(str(field).strip() for field in untrusted_fields if str(field).strip()))
     return {
         "level": level.value,
@@ -39,13 +36,20 @@ def make_signal_trust(
     }
 
 
-def trust_from_payload(payload: dict[str, Any], *, default_source: str = "internal") -> dict[str, Any]:
-    """Return validated provenance, defaulting legacy/internal data safely."""
+def trust_from_payload(
+    payload: dict[str, Any],
+    *,
+    default_source: str = "internal",
+    allow_serialized_founder: bool = False,
+) -> dict[str, Any]:
+    """Return normalized provenance, defaulting legacy/internal data safely."""
     raw = payload.get(SIGNAL_TRUST_KEY)
     if isinstance(raw, dict):
         try:
             level = TrustLevel(str(raw.get("level") or ""))
         except ValueError:
+            level = TrustLevel.SYSTEM_OBSERVED
+        if level is TrustLevel.FOUNDER and not allow_serialized_founder:
             level = TrustLevel.SYSTEM_OBSERVED
         source = str(raw.get("source") or default_source).strip() or default_source
         fields_raw = raw.get("untrusted_fields")
@@ -55,7 +59,6 @@ def trust_from_payload(payload: dict[str, Any], *, default_source: str = "intern
 
 
 def render_untrusted_external_text(value: str, *, field: str) -> str:
-    """Render external natural language as evidence, never as instruction text."""
     if value.startswith(_UNTRUSTED_TAG) and value.endswith("</untrusted_external_data>"):
         return value
     return (
@@ -69,10 +72,14 @@ def protect_signal_payload(
     payload: dict[str, Any],
     *,
     default_source: str = "internal",
+    allow_serialized_founder: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Carry trust metadata forward and fence declared untrusted text fields."""
     protected = dict(payload)
-    trust = trust_from_payload(protected, default_source=default_source)
+    trust = trust_from_payload(
+        protected,
+        default_source=default_source,
+        allow_serialized_founder=allow_serialized_founder,
+    )
     if trust["level"] == TrustLevel.EXTERNAL_UNTRUSTED.value:
         for field in trust["untrusted_fields"]:
             value = protected.get(field)
