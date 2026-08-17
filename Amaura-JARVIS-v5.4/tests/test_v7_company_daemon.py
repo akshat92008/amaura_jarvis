@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import signal
+
+import pytest
+
 from jarvis.amaura import company_daemon
 
 
@@ -63,3 +67,9 @@ def test_daemon_defaults_to_one_heavy_execution_slot(monkeypatch):
     assert company_daemon.main([]) == 0
     call = _FakeRuntime.instances[-1].calls[-1]
     assert call["max_work_units"] == 1
+
+
+def test_intentional_signal_shutdown_is_successful_for_launchd():
+    with pytest.raises(SystemExit) as stopped:
+        company_daemon._shutdown(signal.SIGTERM, None)
+    assert stopped.value.code == 0
