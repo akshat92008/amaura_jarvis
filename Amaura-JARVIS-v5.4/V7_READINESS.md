@@ -39,6 +39,8 @@ All of the following must be green on the exact candidate SHA:
 The candidate must prove:
 
 - one canonical company-runtime leader across Autopilot and MissionRunner;
+- `run_forever()` owns the company-runtime process lease for its entire service lifetime, not merely one tick;
+- only the thread that owns that lifetime lease may use the internal leader-owned execution path;
 - no duplicate mission advancement when two runtime processes start;
 - transactional task leasing remains the final execution guard;
 - transient provider/runtime failures back off without permanently killing the company daemon;
@@ -47,9 +49,32 @@ The candidate must prove:
 - multiple dynamic missions receive fair company attention rather than FIFO starvation;
 - default heavy execution is one slot on the target small-Mac deployment;
 - Gmail/GitHub observation is read-only and cannot stage an external reply/action by itself;
-- untrusted external message/issue bodies are not promoted into executable authority;
+- external message bodies and GitHub issue bodies are not promoted into company workflow inputs;
+- external natural-language metadata that is retained (for example Gmail subjects or GitHub issue titles) carries `external_untrusted` provenance and is fenced as data with `instruction_authority=false` before downstream cognition;
 - founder-attention summarization cannot approve anything;
 - daemon shutdown releases runtime leadership cleanly.
+
+## Canonical macOS service invariant
+
+There is one supported company LaunchAgent identity: `com.amaura.jarvis.company`.
+
+Both the compatibility module `jarvis.amaura.macos_service` and `scripts/install_v7_launchd.py` must generate the same direct daemon launch contract:
+
+`<repo>/.venv/bin/python -m jarvis.amaura.company_daemon --env-file <repo>/.env.amaura ...`
+
+The historical `com.amaura.company-os` / `Launch_Amaura.command` service definition must not be generated. The private environment file must be mode `0600`, and no authority secret may be embedded in the plist.
+
+## Repository release hygiene
+
+Before v7 is merged:
+
+- `main` must be protected against force-push/direct release bypass;
+- changes to `main` should require a pull request and the required `release-gate` status;
+- the v7 PR must remain draft until real-machine gates pass;
+- already-merged historical repair branches should be removed or archived after branch-retention confirmation;
+- the exact candidate SHA must be recorded before target-Mac qualification, and a moved head invalidates prior qualification evidence.
+
+These are repository-host settings, not properties that source code can enforce by itself.
 
 ## Target-Mac qualification gates
 
@@ -73,7 +98,8 @@ GitHub CI cannot establish these. They must be reproduced after cloning the exac
    - runtime starts after login/reboot;
    - unexpected process failure is restarted by launchd;
    - clean stop does not create a restart storm;
-   - only one process holds company-runtime leadership.
+   - only one process holds company-runtime leadership for the full daemon lifetime;
+   - attempting to start a second company runtime leaves it in standby rather than alternating scheduler ticks.
 
 4. **Resource safety on the 8-GB target**
    - one heavy worker by default;
@@ -84,6 +110,7 @@ GitHub CI cannot establish these. They must be reproduced after cloning the exac
 5. **Real signal ingestion**
    - configured Gmail unread observation produces durable inbound/company signals without sending or marking read;
    - configured GitHub labelled issue observation produces the expected signal without mutating GitHub;
+   - hostile external titles/subjects remain untrusted evidence and do not gain instruction authority;
    - provider outages become deferred/partial telemetry, not silent success.
 
 6. **Mission lifecycle**
@@ -111,4 +138,4 @@ Passing means the runtime creates and advances useful bounded work across more t
 
 A green GitHub branch is a **v7 code candidate**, not automatically a release-qualified autonomous company operator.
 
-Only after the target-Mac gates above pass should the project version/tag be changed to `7.0.0` and the branch be considered for merge/release.
+Only after the repository release hygiene and target-Mac gates above pass should the project version/tag be changed to `7.0.0` and the branch be considered for merge/release.
