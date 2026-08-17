@@ -416,3 +416,314 @@ def test_cloud_reviewer_rejects_same_worker_model(monkeypatch, tmp_path):
             GovernedReviewRunner(control, client_factory=lambda route, reviewer: None).run(task["id"])
     finally:
         control.close()
+
+
+def _setup_antigravity_task(control, tmp_path, *, test_passed=True, corrupt_sha=False):
+    program = control.create_program(
+        objective="Antigravity repository write task",
+        success_metric="Passes independent evidence review",
+        workflow_key="software_delivery",
+        inputs={"repository_path": str(tmp_path)},
+    )
+    task = program["tasks"][0]
+    control.start_task(task["id"], actor="jarvis")
+
+    execution_record = control.evidence.put_json(
+        {"summary": "Antigravity modified math_utils.py", "changed_files": ["math_utils.py"]},
+        source=f"task:{task['id']}:antigravity_execution",
+    )
+    verify_record = control.evidence.put_json(
+        {
+            "diff_hash": "abc12345",
+            "changed_files": ["math_utils.py"],
+            "independent_tests": [{"passed": test_passed, "exit_code": 0 if test_passed else 1}],
+        },
+        source=f"task:{task['id']}:antigravity_verification",
+    )
+    test_record = control.evidence.put_json(
+        {"passed": test_passed, "exit_code": 0 if test_passed else 1, "command": "pytest test_math_utils.py"},
+        source=f"task:{task['id']}:amaura_antigravity_test:0",
+    )
+    receipt_record = control.evidence.put_json(
+        {
+            "backend": "antigravity",
+            "external_id": "ext-1",
+            "models_used": ["gemini-test"],
+            "actual_model": "gemini-test",
+        },
+        source=f"task:{task['id']}:external_executor_receipt",
+    )
+
+    evidence = [
+        {
+            "type": "antigravity_execution",
+            "reference": execution_record.reference,
+            "sha256": "bad-sha" if corrupt_sha else execution_record.sha256,
+            "success": True,
+        },
+        {
+            "type": "antigravity_verification",
+            "reference": verify_record.reference,
+            "sha256": verify_record.sha256,
+            "success": True,
+        },
+        {
+            "type": "independent_test",
+            "reference": test_record.reference,
+            "sha256": test_record.sha256,
+            "success": test_passed,
+        },
+        {
+            "type": "external_executor_receipt",
+            "reference": receipt_record.reference,
+            "sha256": receipt_record.sha256,
+            "success": True,
+        },
+    ]
+
+    meta = dict(task.get("metadata") or {})
+    meta.update(
+        {
+            "coding_backend_used": "antigravity",
+            "antigravity_diff_hash": "abc12345",
+            "antigravity_changed_files": ["math_utils.py"],
+        }
+    )
+    control.store.update_work_item(task["id"], action_type="repository_write", metadata=meta)
+
+    control.submit_task(
+        task["id"],
+        actor=task["owner_id"],
+        summary="Antigravity completed and verified changes.",
+        evidence=evidence,
+    )
+    return task["id"]
+
+
+def test_regression_a_auto_mode_with_local_review_model_deterministically_approves(monkeypatch, tmp_path):
+    """5.A: auto mode + AMAURA_LOCAL_REVIEW_MODEL configured still deterministically approves."""
+    from jarvis.amaura.executor import GovernedReviewRunner
+
+    monkeypatch.setenv("AMAURA_REVIEW_MODE", "auto")
+    monkeypatch.setenv("AMAURA_LOCAL_REVIEW_MODEL", "qwen2.5-coder:3b")
+    monkeypatch.setenv("AMAURA_REVIEW_ATTESTATION_KEY", "r" * 64)
+
+    control = AmauraControlPlane(tmp_path / "reg_a.db")
+    try:
+        task_id = _setup_antigravity_task(control, tmp_path)
+        # Should deterministically approve without calling any LLM model client
+        result = GovernedReviewRunner(control, client_factory=lambda route, reviewer: None).run(task_id)
+        assert result["state"] == "completed" or result["summary"].startswith("Verified")
+        attestations = control.store.list_review_attestations(task_id=task_id)
+        assert len(attestations) > 0
+        assert attestations[0]["reviewer_model"] == "deterministic-fast-path"
+        assert attestations[0]["decision"]["approve"] is True
+    finally:
+        control.close()
+
+
+def test_regression_b_auto_mode_with_review_model_env_deterministically_approves(monkeypatch, tmp_path):
+    """5.B: auto mode + AMAURA_REVIEW_MODEL configured behaves the same."""
+    from jarvis.amaura.executor import GovernedReviewRunner
+
+    monkeypatch.setenv("AMAURA_REVIEW_MODE", "auto")
+    monkeypatch.setenv("AMAURA_REVIEW_MODEL", "some-qa-model")
+    monkeypatch.setenv("NVIDIA_REVIEW_API_KEY", "nv-test-key")
+    monkeypatch.setenv("AMAURA_REVIEW_ATTESTATION_KEY", "r" * 64)
+
+    control = AmauraControlPlane(tmp_path / "reg_b.db")
+    try:
+        task_id = _setup_antigravity_task(control, tmp_path)
+        result = GovernedReviewRunner(control, client_factory=lambda route, reviewer: None).run(task_id)
+        assert result["state"] == "completed" or result["summary"].startswith("Verified")
+        attestations = control.store.list_review_attestations(task_id=task_id)
+        assert len(attestations) > 0
+        assert attestations[0]["reviewer_model"] == "deterministic-fast-path"
+        assert attestations[0]["decision"]["approve"] is True
+    finally:
+        control.close()
+
+
+def test_regression_c_deterministic_mode_approves(monkeypatch, tmp_path):
+    """5.C: deterministic mode behaves the same."""
+    from jarvis.amaura.executor import GovernedReviewRunner
+
+    monkeypatch.setenv("AMAURA_REVIEW_MODE", "deterministic")
+    monkeypatch.setenv("AMAURA_LOCAL_REVIEW_MODEL", "qwen2.5-coder:3b")
+    monkeypatch.setenv("AMAURA_REVIEW_ATTESTATION_KEY", "r" * 64)
+
+    control = AmauraControlPlane(tmp_path / "reg_c.db")
+    try:
+        task_id = _setup_antigravity_task(control, tmp_path)
+        GovernedReviewRunner(control, client_factory=lambda route, reviewer: None).run(task_id)
+        attestations = control.store.list_review_attestations(task_id=task_id)
+        assert len(attestations) > 0
+        assert attestations[0]["reviewer_model"] == "deterministic-fast-path"
+        assert attestations[0]["decision"]["approve"] is True
+    finally:
+        control.close()
+
+
+def test_regression_d_invalid_independent_evidence_is_rejected(monkeypatch, tmp_path):
+    """5.D: invalid independent evidence is rejected."""
+    from jarvis.amaura.executor import GovernedReviewRunner
+
+    monkeypatch.setenv("AMAURA_REVIEW_MODE", "auto")
+    monkeypatch.setenv("AMAURA_LOCAL_REVIEW_MODEL", "qwen2.5-coder:3b")
+    monkeypatch.setenv("AMAURA_REVIEW_ATTESTATION_KEY", "r" * 64)
+
+    # Sub-case 1: Independent test failed
+    control1 = AmauraControlPlane(tmp_path / "reg_d1.db")
+    try:
+        task_id1 = _setup_antigravity_task(control1, tmp_path, test_passed=False)
+        result1 = GovernedReviewRunner(control1, client_factory=lambda route, reviewer: None).run(task_id1)
+        assert result1["state"] == "assigned"  # rejected tasks are returned to assigned
+        assert "REVIEW REJECTED" in result1["summary"]
+        attestations1 = control1.store.list_review_attestations(task_id=task_id1)
+        assert len(attestations1) > 0
+        assert attestations1[0]["decision"]["approve"] is False
+    finally:
+        control1.close()
+
+    # Sub-case 2: Evidence integrity failure (corrupt SHA)
+    control2 = AmauraControlPlane(tmp_path / "reg_d2.db")
+    try:
+        task_id2 = _setup_antigravity_task(control2, tmp_path, corrupt_sha=True)
+        result2 = GovernedReviewRunner(control2, client_factory=lambda route, reviewer: None).run(task_id2)
+        assert result2["state"] == "assigned"
+        assert "REVIEW REJECTED" in result2["summary"]
+        attestations2 = control2.store.list_review_attestations(task_id=task_id2)
+        assert len(attestations2) > 0
+        assert attestations2[0]["decision"]["approve"] is False
+    finally:
+        control2.close()
+
+
+def test_regression_e_explicit_model_review_mode_routes_to_model(monkeypatch, tmp_path):
+    """5.E: explicit model-review mode (local / cloud / omniroute) still routes to the model reviewer."""
+    import json
+    from types import SimpleNamespace
+
+    from jarvis.amaura.executor import GovernedReviewRunner
+
+    monkeypatch.setenv("AMAURA_REVIEW_MODE", "local")
+    monkeypatch.setenv("AMAURA_LOCAL_MODEL", "worker-model")
+    monkeypatch.setenv("AMAURA_LOCAL_REVIEW_MODEL", "reviewer-model")
+    monkeypatch.setenv("AMAURA_REVIEW_ATTESTATION_KEY", "r" * 64)
+
+    control = AmauraControlPlane(tmp_path / "reg_e.db")
+    try:
+        task_id = _setup_antigravity_task(control, tmp_path)
+        seen = {}
+
+        class Client:
+            def chat_sync(self, *, model_id, messages, tools=None):
+                seen["called"] = True
+                seen["model_id"] = model_id
+                packet = json.loads(messages[-1]["content"].split("\n", 1)[1])
+                refs = [item["reference"] for item in packet["evidence"] if item.get("success")]
+                decision = {
+                    "approve": True,
+                    "findings": "Model verified all criteria.",
+                    "criteria": [
+                        {
+                            "criterion_index": index,
+                            "criterion": criterion,
+                            "passed": True,
+                            "evidence_refs": refs,
+                            "notes": "Verified.",
+                        }
+                        for index, criterion in enumerate(packet["acceptance_criteria"], start=1)
+                    ],
+                }
+                message = SimpleNamespace(content=json.dumps(decision), tool_calls=[])
+                return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+
+        def factory(route, reviewer):
+            seen["route"] = route
+            return Client()
+
+        GovernedReviewRunner(control, client_factory=factory).run(task_id)
+        assert seen.get("called") is True
+        assert seen["model_id"] == "reviewer-model"
+        assert seen["route"]["provider"] == "local"
+        attestations = control.store.list_review_attestations(task_id=task_id)
+        assert len(attestations) > 0
+        assert attestations[0]["reviewer_model"] == "reviewer-model"
+    finally:
+        control.close()
+
+
+def test_regression_f_non_antigravity_tasks_preserve_review_behavior(monkeypatch, tmp_path):
+    """5.F: no regression to non-Antigravity review behavior."""
+    import json
+    from types import SimpleNamespace
+
+    from jarvis.amaura.executor import GovernedReviewRunner
+
+    monkeypatch.setenv("AMAURA_REVIEW_MODE", "auto")
+    monkeypatch.setenv("AMAURA_LOCAL_MODEL", "worker-model")
+    monkeypatch.setenv("AMAURA_LOCAL_REVIEW_MODEL", "reviewer-model")
+    monkeypatch.setenv("AMAURA_REVIEW_ATTESTATION_KEY", "r" * 64)
+
+    control = AmauraControlPlane(tmp_path / "reg_f.db")
+    try:
+        task = control.create_program(
+            objective="Standard non-antigravity task",
+            success_metric="Passes model review",
+            workflow_key="software_delivery",
+            inputs={"repository_path": str(tmp_path)},
+        )["tasks"][0]
+        control.start_task(task["id"], actor="jarvis")
+
+        report = control.evidence.put_text("checks passed", source="test")
+        receipt = control.evidence.put_json(
+            {"actual_model": "worker-model", "models_used": ["worker-model"]},
+            source="test:worker-receipt",
+        )
+        control.submit_task(
+            task["id"],
+            actor=task["owner_id"],
+            summary="Standard submission.",
+            evidence=[
+                {"type": "test_report", "reference": report.reference, "sha256": report.sha256, "success": True},
+                {
+                    "type": "model_execution_receipt",
+                    "reference": receipt.reference,
+                    "sha256": receipt.sha256,
+                    "success": True,
+                },
+            ],
+        )
+
+        seen = {}
+
+        class Client:
+            def chat_sync(self, *, model_id, messages, tools=None):
+                seen["called"] = True
+                packet = json.loads(messages[-1]["content"].split("\n", 1)[1])
+                refs = [item["reference"] for item in packet["evidence"] if item.get("success")]
+                decision = {
+                    "approve": True,
+                    "findings": "Model approved standard task.",
+                    "criteria": [
+                        {
+                            "criterion_index": index,
+                            "criterion": criterion,
+                            "passed": True,
+                            "evidence_refs": refs,
+                            "notes": "Verified.",
+                        }
+                        for index, criterion in enumerate(packet["acceptance_criteria"], start=1)
+                    ],
+                }
+                message = SimpleNamespace(content=json.dumps(decision), tool_calls=[])
+                return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+
+        result = GovernedReviewRunner(
+            control, client_factory=lambda route, reviewer: Client()
+        ).run(task["id"])
+        assert seen.get("called") is True
+        assert result["state"] == "completed" or result["summary"].startswith("Verified")
+    finally:
+        control.close()
