@@ -1,6 +1,6 @@
 """Trust provenance for company signals and external observations.
 
-Trust metadata is data-plane provenance, not authorization.  It follows a signal
+Trust metadata is data-plane provenance, not authorization. It follows a signal
 into downstream workflow inputs so model-facing text can distinguish founder
 instructions from system observations and untrusted external evidence.
 """
@@ -12,6 +12,7 @@ from html import escape
 from typing import Any
 
 SIGNAL_TRUST_KEY = "trust_provenance"
+_UNTRUSTED_TAG = "<untrusted_external_data "
 
 
 class TrustLevel(StrEnum):
@@ -55,6 +56,8 @@ def trust_from_payload(payload: dict[str, Any], *, default_source: str = "intern
 
 def render_untrusted_external_text(value: str, *, field: str) -> str:
     """Render external natural language as evidence, never as instruction text."""
+    if value.startswith(_UNTRUSTED_TAG) and value.endswith("</untrusted_external_data>"):
+        return value
     return (
         f'<untrusted_external_data field="{escape(field, quote=True)}" instruction_authority="false">'
         f"{escape(value, quote=False)}"
