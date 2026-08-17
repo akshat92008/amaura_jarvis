@@ -4,12 +4,16 @@ Mission submission is decoupled from execution. The runner scans CompanyStore
 for runnable dynamic goals and advances them through the governed Supervisor.
 Transient failures back off; configuration/provider failures enter explicit
 waiting states instead of spinning every polling interval.
+
+v7 convergence note: MissionRunner is no longer an independent company-level
+scheduler.  It shares the canonical company-runtime leader lease and exposes a
+``leader_owned`` compatibility path so AutonomousCompanyRuntime can advance
+missions while already holding that lease.
 """
 
 from __future__ import annotations
 
 import contextlib
-import os
 import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -18,6 +22,7 @@ from typing import Any
 from jarvis.amaura.brain import JarvisBrain
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.models import GovernanceError, TaskState
+from jarvis.amaura.runtime_lease import company_runtime_leader_lock
 
 TERMINAL_STATES = {TaskState.COMPLETED.value, TaskState.CANCELLED.value, TaskState.FAILED.value}
 
@@ -42,27 +47,9 @@ class MissionRunner:
 
     @contextlib.contextmanager
     def _leader_lock(self):
-        """Ensure only one local process advances mission-level state at once."""
-        if os.name != "posix":
-            # Task claiming is still atomic on non-POSIX hosts; Amaura's target
-            # desktop platform is macOS, where flock provides the stronger
-            # mission-level leader invariant.
-            yield
-            return
-        import fcntl
-
-        lock_path = self.control.store.db_path.with_suffix(".mission-runner.lock")
-        lock_path.parent.mkdir(parents=True, exist_ok=True)
-        with lock_path.open("a+", encoding="utf-8") as handle:
-            try:
-                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                yield False
-                return
-            try:
-                yield True
-            finally:
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        """Share the single canonical company-runtime leadership lease."""
+        with company_runtime_leader_lock(self.control) as leader:
+            yield leader
 
     @staticmethod
     def _parse_time(value: Any) -> datetime | None:
@@ -91,7 +78,18 @@ class MissionRunner:
     def runnable_goals(self, *, limit: int = 100) -> list[dict[str, Any]]:
         goals = self.control.store.list_work_items(item_type="programme", limit=max(1, min(limit, 500)))
         runnable = [goal for goal in goals if self._is_runnable(goal)]
-        return sorted(runnable, key=lambda g: g.get("created_at") or "", reverse=True)
+
+        def fairness_key(goal: dict[str, Any]) -> tuple[Any, ...]:
+            metadata = dict(goal.get("metadata") or {})
+            # Older/never-served missions are selected before recently advanced
+            # missions at the same founder priority.  This prevents one large
+            # mission from permanently monopolising the compatibility runner.
+            last_advanced = str(metadata.get("runner_last_advanced_at") or "")
+            priority = int(goal.get("priority") or 3)
+            created = str(goal.get("created_at") or "")
+            return (priority, last_advanced, created, str(goal.get("id") or ""))
+
+        return sorted(runnable, key=fairness_key)
 
     @staticmethod
     def _failure_class(exc: Exception) -> tuple[str, int]:
@@ -147,7 +145,9 @@ class MissionRunner:
     def _clear_failure(self, goal_id: str) -> None:
         goal = self.control.store.get_work_item(goal_id)
         metadata = dict(goal.get("metadata") or {})
+        metadata["runner_last_advanced_at"] = datetime.now(UTC).isoformat()
         if not any(k in metadata for k in ("runner_status", "runner_last_error", "runner_next_attempt_at")):
+            self.control.store.update_work_item(goal_id, metadata=metadata)
             return
         metadata["runner_status"] = "running"
         metadata["runner_failure_count"] = 0
@@ -156,38 +156,44 @@ class MissionRunner:
         metadata.pop("runner_next_attempt_at", None)
         self.control.store.update_work_item(goal_id, metadata=metadata)
 
-    def tick(self, *, max_goals: int = 3) -> dict[str, Any]:
+    def _tick_locked(self, *, max_goals: int = 3) -> dict[str, Any]:
         results: list[dict[str, Any]] = []
+        scan_limit = max(100, max_goals * 20)
+        for goal in self.runnable_goals(limit=scan_limit)[: max(1, min(max_goals, 20))]:
+            goal_id = str(goal["id"])
+            try:
+                before = JarvisBrain(self.control).status(goal_id)
+                if before["state"] in {"completed", "awaiting_approval", "cancelled", "held", "failed"}:
+                    results.append(MissionRunnerResult(goal_id, before["state"], False, {}).to_dict())
+                    continue
+                execution = JarvisBrain(self.control).run_goal(goal_id, max_ticks=1, auto_replan=True)
+                self._clear_failure(goal_id)
+                results.append(
+                    MissionRunnerResult(goal_id, execution.state, bool(execution.ticks), execution.to_dict()).to_dict()
+                )
+            except (GovernanceError, KeyError, ValueError, RuntimeError, OSError) as exc:
+                detail = self._record_failure(goal_id, exc)
+                results.append(MissionRunnerResult(goal_id, detail["class"], False, detail).to_dict())
+        return {"status": "advanced" if results else "idle", "missions": results}
+
+    def tick(self, *, max_goals: int = 3, leader_owned: bool = False) -> dict[str, Any]:
+        """Advance bounded dynamic goals under the canonical runtime lease.
+
+        ``leader_owned`` is reserved for ``AutonomousCompanyRuntime`` while it
+        already owns the company lease.  External callers keep the default and
+        therefore cannot establish a second scheduling authority.
+        """
         with self._local_lock:
+            if leader_owned:
+                return self._tick_locked(max_goals=max_goals)
             with self._leader_lock() as leader:
                 if leader is False:
                     return {
                         "status": "standby",
                         "missions": [],
-                        "reason": "another MissionRunner process holds the leader lease",
+                        "reason": "another company runtime process holds the leader lease",
                     }
-                # Filtering happens after the store query. A tiny pre-filter
-                # limit lets old completed/cancelled programmes permanently
-                # hide newer runnable missions once enough history exists.
-                scan_limit = max(100, max_goals * 20)
-                for goal in self.runnable_goals(limit=scan_limit)[: max(1, min(max_goals, 20))]:
-                    goal_id = str(goal["id"])
-                    try:
-                        before = JarvisBrain(self.control).status(goal_id)
-                        if before["state"] in {"completed", "awaiting_approval", "cancelled", "held", "failed"}:
-                            results.append(MissionRunnerResult(goal_id, before["state"], False, {}).to_dict())
-                            continue
-                        execution = JarvisBrain(self.control).run_goal(goal_id, max_ticks=1, auto_replan=True)
-                        self._clear_failure(goal_id)
-                        results.append(
-                            MissionRunnerResult(
-                                goal_id, execution.state, bool(execution.ticks), execution.to_dict()
-                            ).to_dict()
-                        )
-                    except (GovernanceError, KeyError, ValueError, RuntimeError, OSError) as exc:
-                        detail = self._record_failure(goal_id, exc)
-                        results.append(MissionRunnerResult(goal_id, detail["class"], False, detail).to_dict())
-        return {"status": "advanced" if results else "idle", "missions": results}
+                return self._tick_locked(max_goals=max_goals)
 
     def run_goal_until_terminal(
         self,
@@ -196,8 +202,9 @@ class MissionRunner:
         timeout_seconds: float = 300.0,
         poll_seconds: float = 0.25,
         max_ticks: int = 100,
+        leader_owned: bool = False,
     ) -> dict[str, Any]:
-        """Synchronously drive or wait for a specific goal until a terminal or blocked state."""
+        """Synchronously drive or wait for a goal until terminal/blocked state."""
         import time
 
         from jarvis.amaura.cognition import ExecutiveKernel
@@ -231,39 +238,38 @@ class MissionRunner:
 
             state = current_status.get("state", "queued")
             if state in terminal_or_blocked:
-                message = ExecutiveKernel._mission_message(current_status)
                 return {
                     "goal_id": goal_id,
                     "state": state,
                     "status": current_status,
-                    "message": message,
+                    "message": ExecutiveKernel._mission_message(current_status),
                     "ticks_executed": ticks_executed,
                 }
 
             if (time.monotonic() - start_time) >= timeout_seconds or ticks_executed >= max_ticks:
-                message = f"Mission {goal_id} timed out before reaching a terminal state."
                 return {
                     "goal_id": goal_id,
                     "state": "timeout",
                     "status": current_status,
-                    "message": message,
+                    "message": f"Mission {goal_id} timed out before reaching a terminal state.",
                     "ticks_executed": ticks_executed,
                 }
 
             with self._local_lock:
-                with self._leader_lock() as leader:
+                if leader_owned:
+                    leader = True
+                    manager = contextlib.nullcontext(True)
+                else:
+                    manager = self._leader_lock()
+                with manager as leader:
                     if leader is False:
-                        # Another runner process holds the leader lease; wait and observe.
                         time.sleep(max(0.05, poll_seconds))
                         continue
-
                     try:
                         execution = brain.run_goal(goal_id, max_ticks=1, auto_replan=True)
                         self._clear_failure(goal_id)
                         ticks_executed += len(execution.ticks) if execution.ticks else 1
-                        if not execution.ticks or execution.state in terminal_or_blocked:
-                            pass
-                        else:
+                        if execution.ticks and execution.state not in terminal_or_blocked:
                             time.sleep(0.02)
                             continue
                     except (GovernanceError, KeyError, ValueError, RuntimeError, OSError) as exc:
@@ -275,6 +281,7 @@ class MissionRunner:
     def run_forever(
         self, *, poll_seconds: float = 2.0, max_goals: int = 3, stop_event: threading.Event | None = None
     ) -> None:
+        """Compatibility service loop sharing company-runtime leadership."""
         stop = stop_event or threading.Event()
         delay = max(0.25, min(float(poll_seconds), 60.0))
         while not stop.is_set():
