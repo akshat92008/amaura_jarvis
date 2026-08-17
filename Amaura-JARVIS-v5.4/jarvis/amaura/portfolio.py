@@ -1,9 +1,8 @@
 """Deterministic cross-mission portfolio arbitration for Amaura v7.
 
-The arbitrator changes *attention*, not authority. It ranks already-runnable
-internal missions using founder priority, unresolved company signals, retry
-health and starvation age. It cannot approve, execute, spend, publish or
-create external side effects.
+The arbitrator changes *attention*, not authority. It provides bounded fairness
+within comparable founder priorities; starvation bonuses intentionally do not
+override a full founder-priority tier.
 """
 
 from __future__ import annotations
@@ -38,7 +37,7 @@ def _parse_time(value: typing.Any) -> datetime.datetime | None:
 
 
 class PortfolioArbitrator:
-    """Rank runnable founder missions using current company pressure."""
+    """Rank runnable founder missions using one consistent company-pressure snapshot."""
 
     def __init__(self, control: AmauraControlPlane) -> None:
         self.control = control
@@ -57,8 +56,10 @@ class PortfolioArbitrator:
         goal: dict[str, typing.Any],
         *,
         now: datetime.datetime | None = None,
+        signals: list[dict[str, typing.Any]] | None = None,
     ) -> dict[str, typing.Any]:
         now = now or datetime.datetime.now(datetime.UTC)
+        signal_snapshot = signals if signals is not None else self._signals()
         metadata = dict(goal.get("metadata") or {})
         priority = max(1, min(int(goal.get("priority") or 3), 5))
         domain = self._domain(goal)
@@ -68,7 +69,7 @@ class PortfolioArbitrator:
         matching_types = _DOMAIN_SIGNALS.get(domain, set())
         signal_boost = 0.0
         matched: list[str] = []
-        for signal in self._signals():
+        for signal in signal_snapshot:
             signal_type = str(signal.get("signal_type") or "")
             if signal_type not in matching_types:
                 continue
@@ -89,7 +90,7 @@ class PortfolioArbitrator:
             starvation_boost = min(40.0, age_minutes / 15.0 * 5.0)
         score += starvation_boost
         if starvation_boost:
-            reasons.append(f"fairness=+{starvation_boost:.1f}")
+            reasons.append(f"bounded_fairness=+{starvation_boost:.1f}")
 
         failures = max(0, int(metadata.get("runner_failure_count", 0) or 0))
         if failures:
@@ -112,7 +113,8 @@ class PortfolioArbitrator:
         now: datetime.datetime | None = None,
     ) -> list[dict[str, typing.Any]]:
         now = now or datetime.datetime.now(datetime.UTC)
-        scored = [(self.score_goal(goal, now=now), goal) for goal in goals]
+        signals = self._signals()
+        scored = [(self.score_goal(goal, now=now, signals=signals), goal) for goal in goals]
         scored.sort(
             key=lambda pair: (
                 -float(pair[0]["score"]),
@@ -129,7 +131,8 @@ class PortfolioArbitrator:
         now: datetime.datetime | None = None,
     ) -> list[dict[str, typing.Any]]:
         now = now or datetime.datetime.now(datetime.UTC)
-        rows = [self.score_goal(goal, now=now) for goal in goals]
+        signals = self._signals()
+        rows = [self.score_goal(goal, now=now, signals=signals) for goal in goals]
         return sorted(rows, key=lambda row: (-float(row["score"]), row["goal_id"]))
 
 
