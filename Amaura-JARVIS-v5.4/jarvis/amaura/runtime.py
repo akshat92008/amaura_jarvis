@@ -15,6 +15,16 @@ from pathlib import Path
 
 _ENV_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _LOADED_FILES: set[Path] = set()
+_SAFE_SERVER_DEFAULTS = {
+    "AMAURA_JARVIS_PROACTIVE": "0",
+    "AMAURA_JARVIS_MISSION_RUNNER": "0",
+    "AMAURA_COMPANY_AUTOPILOT_RUNTIME": "0",
+}
+
+
+def _apply_safe_server_defaults() -> None:
+    for key, value in _SAFE_SERVER_DEFAULTS.items():
+        os.environ.setdefault(key, value)
 
 
 def _candidate_files(explicit: str | Path | None = None) -> Iterable[Path]:
@@ -65,19 +75,20 @@ def load_amaura_env(
     override: bool = False,
     require_private_permissions: bool = False,
 ) -> Path | None:
-    """Load the first available Amaura env file without executing shell code.
+    """Load Amaura env data; embedded server schedulers default off.
 
-    Existing process environment values win unless ``override`` is explicitly
-    requested. On POSIX, launch tooling can require mode ``0600`` (or stricter).
+    Explicit process environment or ``.env.amaura`` values may still opt into a
+    compatibility scheduler. Otherwise ``jarvis.server`` remains a control surface.
     """
-
     if path is None and os.environ.get("AMAURA_SKIP_ENV_FILE", "0") == "1":
+        _apply_safe_server_defaults()
         return None
 
     for candidate in _candidate_files(path):
         if not candidate.is_file():
             continue
         if candidate in _LOADED_FILES and not override:
+            _apply_safe_server_defaults()
             return candidate
         if require_private_permissions and os.name == "posix":
             permissions = stat.S_IMODE(candidate.stat().st_mode)
@@ -101,7 +112,9 @@ def load_amaura_env(
             if override or not os.environ.get(key):
                 os.environ[key] = _decode_value(raw_value)
         _LOADED_FILES.add(candidate)
+        _apply_safe_server_defaults()
         return candidate
+    _apply_safe_server_defaults()
     return None
 
 
