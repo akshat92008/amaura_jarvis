@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -70,6 +71,8 @@ def test_autopilot_poison_cycle_opens_circuit_without_killing_runtime():
     store = _Store()
     runtime.control = SimpleNamespace(store=store)
     runtime.supervisor = SimpleNamespace(worker_id="test-autopilot")
+    runtime._leader_owned = False
+    runtime._leader_lock = lambda: nullcontext(True)
     runtime.tick = Mock(side_effect=RuntimeError("poison event"))
     sleeps = []
     with patch.dict(
@@ -84,6 +87,7 @@ def test_autopilot_poison_cycle_opens_circuit_without_killing_runtime():
         runtime.run_forever(max_cycles=10, sleep_fn=sleeps.append)
     assert runtime.tick.call_count == 10
     assert sleeps == [1.0, 2.0, 4.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0]
+    assert runtime._leader_owned is False
     assert "autopilot_enabled" not in store.controls
     assert store.controls["autopilot.crash_circuit"] == "open"
     assert any(event[0] == "company.autopilot.circuit_opened" for event in store.events)
