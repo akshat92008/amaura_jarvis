@@ -1,18 +1,17 @@
 """Deterministic cross-mission portfolio arbitration for Amaura v7.
 
-The arbitrator changes *attention*, not authority.  It ranks already-runnable
+The arbitrator changes *attention*, not authority. It ranks already-runnable
 internal missions using founder priority, unresolved company signals, retry
-health and starvation age.  It cannot approve, execute, spend, publish or
+health and starvation age. It cannot approve, execute, spend, publish or
 create external side effects.
 """
 
 from __future__ import annotations
 
 import datetime
-from typing import Any
+import typing
 
 from jarvis.amaura.control_plane import AmauraControlPlane
-
 
 _DOMAIN_SIGNALS: dict[str, set[str]] = {
     "software": {"build_failure", "release_ready", "security_incident"},
@@ -28,7 +27,7 @@ _DOMAIN_SIGNALS: dict[str, set[str]] = {
 _SEVERITY_BOOST = {"critical": 120.0, "high": 70.0, "medium": 35.0, "low": 10.0}
 
 
-def _parse_time(value: Any) -> datetime.datetime | None:
+def _parse_time(value: typing.Any) -> datetime.datetime | None:
     if not value:
         return None
     try:
@@ -44,18 +43,21 @@ class PortfolioArbitrator:
     def __init__(self, control: AmauraControlPlane) -> None:
         self.control = control
 
-    def _signals(self) -> list[dict[str, Any]]:
-        # Claimed signals are already being handled by another bounded workflow;
-        # only unresolved pending pressure should influence new scheduling.
+    def _signals(self) -> list[dict[str, typing.Any]]:
         return self.control.store.list_company_signals(status="pending", limit=500)
 
     @staticmethod
-    def _domain(goal: dict[str, Any]) -> str:
+    def _domain(goal: dict[str, typing.Any]) -> str:
         metadata = dict(goal.get("metadata") or {})
         plan = dict(metadata.get("goal_plan") or {})
         return str(plan.get("domain") or metadata.get("domain") or "operations").strip().lower()
 
-    def score_goal(self, goal: dict[str, Any], *, now: datetime.datetime | None = None) -> dict[str, Any]:
+    def score_goal(
+        self,
+        goal: dict[str, typing.Any],
+        *,
+        now: datetime.datetime | None = None,
+    ) -> dict[str, typing.Any]:
         now = now or datetime.datetime.now(datetime.UTC)
         metadata = dict(goal.get("metadata") or {})
         priority = max(1, min(int(goal.get("priority") or 3), 5))
@@ -74,8 +76,6 @@ class PortfolioArbitrator:
             boost = _SEVERITY_BOOST.get(severity, 0.0)
             signal_boost += boost
             matched.append(f"{signal_type}:{severity}")
-        # Multiple correlated signals matter, but an unbounded signal backlog
-        # must not starve every other mission forever.
         signal_boost = min(signal_boost, 180.0)
         if signal_boost:
             score += signal_boost
@@ -105,7 +105,12 @@ class PortfolioArbitrator:
             "reasons": reasons,
         }
 
-    def rank_goals(self, goals: list[dict[str, Any]], *, now: datetime.datetime | None = None) -> list[dict[str, Any]]:
+    def rank_goals(
+        self,
+        goals: list[dict[str, typing.Any]],
+        *,
+        now: datetime.datetime | None = None,
+    ) -> list[dict[str, typing.Any]]:
         now = now or datetime.datetime.now(datetime.UTC)
         scored = [(self.score_goal(goal, now=now), goal) for goal in goals]
         scored.sort(
@@ -117,7 +122,12 @@ class PortfolioArbitrator:
         )
         return [goal for _score, goal in scored]
 
-    def snapshot(self, goals: list[dict[str, Any]], *, now: datetime.datetime | None = None) -> list[dict[str, Any]]:
+    def snapshot(
+        self,
+        goals: list[dict[str, typing.Any]],
+        *,
+        now: datetime.datetime | None = None,
+    ) -> list[dict[str, typing.Any]]:
         now = now or datetime.datetime.now(datetime.UTC)
         rows = [self.score_goal(goal, now=now) for goal in goals]
         return sorted(rows, key=lambda row: (-float(row["score"]), row["goal_id"]))
