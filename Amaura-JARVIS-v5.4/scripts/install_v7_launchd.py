@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Install/uninstall the Amaura v7 company daemon as a macOS LaunchAgent.
+"""Install/uninstall the canonical Amaura company daemon LaunchAgent.
 
-This installer is intentionally explicit and local-only. It writes no secrets to
-the plist; ``amaura-company`` loads the private ``.env.amaura`` file itself.
+The service definition lives in ``jarvis.amaura.macos_service`` so historical
+and v7 installation paths cannot create competing company schedulers.
 """
 
 from __future__ import annotations
@@ -15,7 +15,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-LABEL = "com.amaura.jarvis.company"
+from jarvis.amaura.macos_service import DEFAULT_LABEL, launch_agent_payload
+
+LABEL = DEFAULT_LABEL
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -44,43 +46,17 @@ def _paths(repo_root: Path) -> tuple[Path, Path, Path, Path]:
 
 
 def _payload(repo_root: Path, *, poll_seconds: float) -> dict:
-    plist, stdout, stderr, python = _paths(repo_root)
-    del plist
-    if not python.is_file():
-        raise RuntimeError(f"Amaura virtualenv Python not found: {python}")
-    env_file = repo_root / ".env.amaura"
-    if not env_file.is_file():
-        raise RuntimeError(f"Amaura private environment file not found: {env_file}")
-    if os.name == "posix" and env_file.stat().st_mode & 0o077:
-        raise RuntimeError(f"Amaura environment file must be private (chmod 600): {env_file}")
-    return {
-        "Label": LABEL,
-        "ProgramArguments": [
-            str(python),
-            "-m",
-            "jarvis.amaura.company_daemon",
-            "--env-file",
-            str(env_file),
-            "--poll-seconds",
-            str(max(5.0, min(float(poll_seconds), 3600.0))),
-            "--max-work-units",
-            "1",
-        ],
-        "WorkingDirectory": str(repo_root),
-        "RunAtLoad": True,
-        "KeepAlive": {"SuccessfulExit": False},
-        "ThrottleInterval": 30,
-        "ProcessType": "Background",
-        "StandardOutPath": str(stdout),
-        "StandardErrorPath": str(stderr),
-    }
+    try:
+        return launch_agent_payload(repo_root, label=LABEL, poll_seconds=poll_seconds)
+    except (FileNotFoundError, PermissionError) as exc:
+        raise RuntimeError(str(exc)) from exc
 
 
 def install(repo_root: Path, *, poll_seconds: float, dry_run: bool) -> int:
     if sys.platform != "darwin":
         raise RuntimeError("Amaura LaunchAgent installation is supported only on macOS")
     repo_root = repo_root.expanduser().resolve()
-    plist, stdout, stderr, _python = _paths(repo_root)
+    plist, stdout, _stderr, _python = _paths(repo_root)
     payload = _payload(repo_root, poll_seconds=poll_seconds)
     rendered = plistlib.dumps(payload, fmt=plistlib.FMT_XML, sort_keys=True)
     if dry_run:
