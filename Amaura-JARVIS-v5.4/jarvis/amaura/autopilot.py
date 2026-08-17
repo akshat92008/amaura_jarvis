@@ -21,9 +21,11 @@ from typing import Any
 from jarvis.amaura.cognition import ProactiveCognition, WorldModel
 from jarvis.amaura.company_autonomy import CompanyAutonomyEngine
 from jarvis.amaura.control_plane import AmauraControlPlane
+from jarvis.amaura.founder_attention import FounderAttentionEngine
 from jarvis.amaura.mission_control import MissionControl
 from jarvis.amaura.mission_runner import MissionRunner
 from jarvis.amaura.runtime_lease import company_runtime_leader_lock
+from jarvis.amaura.signal_ingestion import SignalIngestionEngine
 from jarvis.amaura.supervisor import AmauraSupervisor
 
 
@@ -58,6 +60,10 @@ class AutonomousCompanyRuntime:
         self.mission = MissionControl(control)
         self.mission_runner = MissionRunner(control)
         self.company = CompanyAutonomyEngine(control, worker_id=worker_id)
+        self.signal_ingestion = SignalIngestionEngine(control, company=self.company)
+        self.world = WorldModel(control)
+        self.proactive = ProactiveCognition(control, world=self.world)
+        self.attention = FounderAttentionEngine(control, world=self.world)
 
     @contextmanager
     def _leader_lock(self):
@@ -69,6 +75,15 @@ class AutonomousCompanyRuntime:
     def _week_key(now: datetime) -> str:
         year, week, _ = now.isocalendar()
         return f"{year}-W{week:02d}"
+
+    @staticmethod
+    def _proactive_enabled() -> bool:
+        return os.environ.get("AMAURA_V7_AUTO_INVESTIGATE", "1").strip().lower() not in {
+            "0",
+            "false",
+            "off",
+            "disabled",
+        }
 
     @classmethod
     def _must_fail_closed(cls, exc: BaseException) -> bool:
@@ -189,10 +204,11 @@ class AutonomousCompanyRuntime:
     ) -> dict[str, Any]:
         """Run one deterministic company cycle while leadership is already held.
 
-        Cycle order is intentionally explicit: recover/observe -> sync -> ingest
-        signals -> plan recurring objectives -> advance dynamic goals -> execute
-        bounded supervised work -> evaluate circuits -> refresh world -> venture
-        accounting -> briefing/backup.
+        Canonical order:
+        recover/sync -> external observations -> internal signals -> signal
+        workflows -> world/proactive cognition -> recurring objectives -> dynamic
+        missions -> governed execution/outbox -> circuits -> final world/attention
+        -> venture accounting -> briefing/backup.
         """
         now = now or datetime.now(UTC)
         run = self.control.store.start_autonomy_run(
@@ -202,10 +218,12 @@ class AutonomousCompanyRuntime:
         backup = self.ensure_daily_backup(now)
         enabled = self.control.store.get_control("autopilot_enabled", "1") == "1"
         if not enabled:
+            world = self.world.refresh()
             result = {
                 "status": "paused",
                 "run_id": run["id"],
                 "backup": backup,
+                "external_signal_ingestion": {"status": "paused"},
                 "cadence_programmes_created": [],
                 "objective_programmes_created": [],
                 "signals_detected": [],
@@ -214,8 +232,10 @@ class AutonomousCompanyRuntime:
                 "dynamic_missions": {"status": "paused", "missions": []},
                 "publications_enqueued": [],
                 "circuit_breakers": [],
-                "proactive_insights": ProactiveCognition(self.control).scan(),
-                "world": WorldModel(self.control).refresh(),
+                "proactive_insights": self.proactive.scan(snapshot=world),
+                "proactive_investigations": [],
+                "world": world,
+                "founder_attention": self.attention.summary(snapshot=world),
                 "executions": [],
                 "execution": {"status": "paused"},
                 "company": self.company.status(),
@@ -228,14 +248,22 @@ class AutonomousCompanyRuntime:
 
         try:
             progress_updates = self.mission.sync_completed_programmes()
+
+            # Read-only provider observation happens before company-signal claims.
+            # The signal bridge never marks mail read or stages outbound replies.
+            external_signal_ingestion = self.signal_ingestion.poll()
             signals_detected = self.company.detect_signals(now=now)
             signal_programmes = self.company.process_signals(now=now, max_signals=max_signals)
+
+            pre_world = self.world.refresh()
+            proactive_cycle = self.proactive.tick(auto_investigate=self._proactive_enabled())
+
             created = self.ensure_operating_cadence(now)
             objective_programmes = self.mission.plan_due_work(now=now, max_new_programmes=max_new_programmes)
 
-            # Dynamic founder missions now advance inside the same company lease.
-            # Waiting-for-approval missions are filtered by MissionRunner/JarvisBrain
-            # and do not prevent other runnable missions from making progress.
+            # Dynamic founder/proactive missions advance inside the same company
+            # lease and are portfolio-ranked before execution. A mission waiting
+            # for founder approval does not stop unrelated reversible work.
             dynamic_missions = self.mission_runner.tick(
                 max_goals=max(1, min(int(max_dynamic_goals), 20)),
                 leader_owned=True,
@@ -252,8 +280,8 @@ class AutonomousCompanyRuntime:
             execution = executions[-1] if executions else {"status": "idle"}
             progress_updates.extend(self.mission.sync_completed_programmes())
             circuit_breakers = self.company.evaluate_circuit_breakers(now=now)
-            world = WorldModel(self.control).refresh()
-            proactive_insights = ProactiveCognition(self.control).scan()
+            world = self.world.refresh()
+            attention = self.attention.summary(snapshot=world)
 
             from jarvis.amaura.ventures_cashflow import CashflowEngine
 
@@ -265,6 +293,7 @@ class AutonomousCompanyRuntime:
                 "status": "ok",
                 "run_id": run["id"],
                 "backup": backup,
+                "external_signal_ingestion": external_signal_ingestion,
                 "cadence_programmes_created": [item["programme"]["id"] for item in created],
                 "objective_programmes_created": [item["programme"]["id"] for item in objective_programmes],
                 "signals_detected": [item["id"] for item in signals_detected],
@@ -273,9 +302,12 @@ class AutonomousCompanyRuntime:
                 "dynamic_missions": dynamic_missions,
                 "publications_enqueued": [item["id"] for item in publications],
                 "circuit_breakers": [item["id"] for item in circuit_breakers],
-                "proactive_insights": proactive_insights,
+                "proactive_insights": proactive_cycle["insights"],
+                "proactive_investigations": proactive_cycle["investigations"],
+                "pre_execution_world": pre_world,
                 "ventures_cashflow": venture_cashflow,
                 "world": world,
+                "founder_attention": attention,
                 "executions": executions,
                 "execution": execution,
                 "company": self.company.status(),
@@ -331,7 +363,7 @@ class AutonomousCompanyRuntime:
         """Run continuously with bounded recovery for transient cycle failures.
 
         Transient failures back off with bounded jitter and no longer permanently
-        disable the company runtime.  Integrity/security failures still terminate
+        disable the company runtime. Integrity/security failures still terminate
         immediately and remain fail-closed. ``max_cycles``/``sleep_fn`` exist for
         deterministic tests and service probes.
         """
@@ -385,8 +417,8 @@ class AutonomousCompanyRuntime:
                 self.control.store.publish_event("company.autopilot.cycle_failed", str(failures), details)
                 self.control.store.audit(actor, "autopilot_cycle", "runtime", "company", "failed", details)
                 if failures >= crash_threshold:
-                    # Open a visible circuit but keep the daemon alive.  The next
-                    # successful cycle closes it.  Consequential side effects remain
+                    # Open a visible circuit but keep the daemon alive. The next
+                    # successful cycle closes it. Consequential side effects remain
                     # governed by their own policy/outbox circuits.
                     self.control.store.set_control("autopilot.crash_circuit", "open", actor)
                     self.control.store.publish_event("company.autopilot.circuit_opened", "company", details)
