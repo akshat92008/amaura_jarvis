@@ -11,8 +11,9 @@ from __future__ import annotations
 import json
 import os
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import urlencode
 
 from jarvis.amaura.company_autonomy import CompanyAutonomyEngine
@@ -77,9 +78,6 @@ class SignalIngestionEngine:
                 "lead_id": str(record.get("lead_id") or ""),
                 "classification": classification,
                 "subject": str(record.get("subject") or "")[:500],
-                # Deliberately omit the message body from the company signal.
-                # The canonical inbound record remains available under its
-                # original authorization boundary if a later task needs it.
                 "received_at": str(record.get("received_at") or ""),
             },
             actor="jarvis",
@@ -107,9 +105,6 @@ class SignalIngestionEngine:
                 record, created = self.inbox.ingest(message)
                 if created:
                     inserted += 1
-                # Classification and CRM stage changes are internal and
-                # governed. stage_reply=False is essential: observation must
-                # never stage an outbound message by itself.
                 updated = self.inbox.process(record["id"], stage_reply=False)
                 processed += 1
                 signal = self._signal_from_inbound(updated)
@@ -170,14 +165,7 @@ class SignalIngestionEngine:
         signals: list[dict[str, Any]] = []
         try:
             for repository in repositories:
-                params = urlencode(
-                    {
-                        "state": "open",
-                        "sort": "updated",
-                        "direction": "desc",
-                        "per_page": limit,
-                    }
-                )
+                params = urlencode({"state": "open", "sort": "updated", "direction": "desc", "per_page": limit})
                 status, raw, _headers = self.github_transport(
                     f"https://api.github.com/repos/{repository}/issues?{params}",
                     method="GET",
@@ -220,8 +208,6 @@ class SignalIngestionEngine:
                             "url": str(issue.get("html_url") or "")[:1000],
                             "labels": sorted(label for label in labels if label)[:30],
                             "updated_at": updated_at,
-                            # Issue bodies are untrusted external text and are not
-                            # copied into an executable company signal.
                         },
                         actor="jarvis",
                     )
@@ -238,11 +224,7 @@ class SignalIngestionEngine:
             return self._deferred("github", exc)
 
     def _deferred(self, provider: str, exc: Exception) -> dict[str, Any]:
-        details = {
-            "provider": provider,
-            "error_type": type(exc).__name__,
-            "error": str(exc)[:1000],
-        }
+        details = {"provider": provider, "error_type": type(exc).__name__, "error": str(exc)[:1000]}
         self.control.store.publish_event("company.signal_ingestion.failed", provider, details)
         self.control.store.audit("jarvis", "ingest_external_signal", "provider", provider, "deferred", details)
         noun = "issues" if provider == "github" else "messages"
