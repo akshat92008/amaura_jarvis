@@ -78,7 +78,10 @@ class AutonomousCompanyRuntime:
 
     @staticmethod
     def _proactive_enabled() -> bool:
-        return os.environ.get("AMAURA_V7_AUTO_INVESTIGATE", "1").strip().lower() not in {
+        # CompanyAutonomy already converts known operational pressure into
+        # bounded workflows. Broad autonomous investigation is opt-in until the
+        # strategic-radar layer can prove it will not duplicate those workflows.
+        return os.environ.get("AMAURA_V7_AUTO_INVESTIGATE", "0").strip().lower() not in {
             "0",
             "false",
             "off",
@@ -304,7 +307,6 @@ class AutonomousCompanyRuntime:
                 "circuit_breakers": [item["id"] for item in circuit_breakers],
                 "proactive_insights": proactive_cycle["insights"],
                 "proactive_investigations": proactive_cycle["investigations"],
-                "pre_execution_world": pre_world,
                 "ventures_cashflow": venture_cashflow,
                 "world": world,
                 "founder_attention": attention,
@@ -416,10 +418,9 @@ class AutonomousCompanyRuntime:
                 self.control.store.set_control("autopilot.consecutive_failures", str(failures), actor)
                 self.control.store.publish_event("company.autopilot.cycle_failed", str(failures), details)
                 self.control.store.audit(actor, "autopilot_cycle", "runtime", "company", "failed", details)
-                if failures >= crash_threshold:
-                    # Open a visible circuit but keep the daemon alive. The next
-                    # successful cycle closes it. Consequential side effects remain
-                    # governed by their own policy/outbox circuits.
+                if failures == crash_threshold:
+                    # Open a visible circuit once at the threshold while keeping
+                    # the daemon alive. A successful cycle closes it later.
                     self.control.store.set_control("autopilot.crash_circuit", "open", actor)
                     self.control.store.publish_event("company.autopilot.circuit_opened", "company", details)
                     self.control.store.audit(
