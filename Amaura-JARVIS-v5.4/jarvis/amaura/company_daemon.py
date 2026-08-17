@@ -10,6 +10,7 @@ from typing import NoReturn
 
 from jarvis.amaura.autopilot import AutonomousCompanyRuntime
 from jarvis.amaura.control_plane import AmauraControlPlane
+from jarvis.amaura.runtime import load_amaura_env
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -19,6 +20,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-new-programmes", type=int, default=None)
     parser.add_argument("--max-signals", type=int, default=3)
     parser.add_argument("--max-dynamic-goals", type=int, default=3)
+    parser.add_argument("--env-file", default=None)
     return parser
 
 
@@ -30,6 +32,11 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
+
+    # Service startup uses the same strict parser as the operator CLI and never
+    # executes shell text from the env file. POSIX deployments require private
+    # permissions because this file contains independent authority secrets.
+    load_amaura_env(args.env_file, require_private_permissions=True)
 
     # Heavy execution is intentionally conservative on the target small-Mac
     # deployment. The scheduler can manage many missions, but only one heavy
