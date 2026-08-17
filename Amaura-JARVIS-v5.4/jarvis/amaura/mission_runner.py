@@ -213,6 +213,7 @@ class MissionRunner:
         leader_owned: bool = False,
     ) -> dict[str, Any]:
         import time
+
         from jarvis.amaura.cognition import ExecutiveKernel
 
         start_time = time.monotonic()
