@@ -8,7 +8,7 @@ create external side effects.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import datetime
 from typing import Any
 
 from jarvis.amaura.control_plane import AmauraControlPlane
@@ -28,12 +28,12 @@ _DOMAIN_SIGNALS: dict[str, set[str]] = {
 _SEVERITY_BOOST = {"critical": 120.0, "high": 70.0, "medium": 35.0, "low": 10.0}
 
 
-def _parse_time(value: Any) -> datetime | None:
+def _parse_time(value: Any) -> datetime.datetime | None:
     if not value:
         return None
     try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+        parsed = datetime.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=datetime.UTC)
     except (TypeError, ValueError):
         return None
 
@@ -55,8 +55,8 @@ class PortfolioArbitrator:
         plan = dict(metadata.get("goal_plan") or {})
         return str(plan.get("domain") or metadata.get("domain") or "operations").strip().lower()
 
-    def score_goal(self, goal: dict[str, Any], *, now: datetime | None = None) -> dict[str, Any]:
-        now = now or datetime.now(UTC)
+    def score_goal(self, goal: dict[str, Any], *, now: datetime.datetime | None = None) -> dict[str, Any]:
+        now = now or datetime.datetime.now(datetime.UTC)
         metadata = dict(goal.get("metadata") or {})
         priority = max(1, min(int(goal.get("priority") or 3), 5))
         domain = self._domain(goal)
@@ -105,8 +105,8 @@ class PortfolioArbitrator:
             "reasons": reasons,
         }
 
-    def rank_goals(self, goals: list[dict[str, Any]], *, now: datetime | None = None) -> list[dict[str, Any]]:
-        now = now or datetime.now(UTC)
+    def rank_goals(self, goals: list[dict[str, Any]], *, now: datetime.datetime | None = None) -> list[dict[str, Any]]:
+        now = now or datetime.datetime.now(datetime.UTC)
         scored = [(self.score_goal(goal, now=now), goal) for goal in goals]
         scored.sort(
             key=lambda pair: (
@@ -117,8 +117,8 @@ class PortfolioArbitrator:
         )
         return [goal for _score, goal in scored]
 
-    def snapshot(self, goals: list[dict[str, Any]], *, now: datetime | None = None) -> list[dict[str, Any]]:
-        now = now or datetime.now(UTC)
+    def snapshot(self, goals: list[dict[str, Any]], *, now: datetime.datetime | None = None) -> list[dict[str, Any]]:
+        now = now or datetime.datetime.now(datetime.UTC)
         rows = [self.score_goal(goal, now=now) for goal in goals]
         return sorted(rows, key=lambda row: (-float(row["score"]), row["goal_id"]))
 
