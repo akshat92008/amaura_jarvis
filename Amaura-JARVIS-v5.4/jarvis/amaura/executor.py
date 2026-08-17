@@ -1188,21 +1188,14 @@ class GovernedReviewRunner:
         self.control._ensure_agent_enabled(reviewer_id)
         reviewer = get_agent(reviewer_id)
 
+        review_mode_raw = os.environ.get("AMAURA_REVIEW_MODE", "").strip().lower()
         if (
             task.get("action_type") == "direct_action"
             or (task.get("metadata") or {}).get("goal_plan", {}).get("domain") == "direct_action"
             or (
                 task.get("action_type") == "repository_write"
                 and (task.get("metadata") or {}).get("coding_backend_used") == "antigravity"
-                and (
-                    os.environ.get("AMAURA_REVIEW_MODE", "").strip().lower() == "deterministic"
-                    or (
-                        os.environ.get("AMAURA_REVIEW_MODE", "").strip().lower() in {"auto", ""}
-                        and not os.environ.get("AMAURA_LOCAL_REVIEW_MODEL")
-                        and not os.environ.get("NVIDIA_REVIEW_API_KEY")
-                        and not os.environ.get("AMAURA_REVIEW_MODEL")
-                    )
-                )
+                and review_mode_raw in {"", "auto", "deterministic"}
             )
         ):
             deterministic = deterministic_evidence_review(task, self.control.evidence)
