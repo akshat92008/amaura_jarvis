@@ -1,13 +1,14 @@
 """Narrow semantic repairs discovered during v7 target-Mac qualification.
 
 These repairs do not add new authority or a second execution stack. They wrap the
-canonical semantic parser / deterministic workflow path to close two proven
+canonical semantic parser / deterministic workflow path to close proven
 front-door correctness gaps:
 
 * explicit directory requests phrased as "file names inside <path>" must route
   to DIRECTORY_LIST rather than conversational generation;
 * explicit JSON field type constraints (for example "budget must be a number")
-  must be satisfied and independently re-checked before workflow success.
+  must be satisfied and independently re-checked before workflow success;
+* multiline quoted write payloads must never be mistaken for filesystem targets.
 """
 
 from __future__ import annotations
@@ -23,6 +24,10 @@ _INSTALLED = False
 
 def _unwrap_classmethod(value: Any) -> Any:
     return getattr(value, "__func__", value)
+
+
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
 
 
 def _explicit_directory_request(text: str) -> bool:
@@ -51,6 +56,25 @@ def _directory_target(text: str, paths: list[str]) -> str:
     if match:
         return match.group(1).strip()
     return paths[0] if paths else ""
+
+
+def _quoted_spans(text: str) -> list[re.Match[str]]:
+    return list(re.finditer(r"(['\"`])((?:(?!\1).)*)\1", text, re.DOTALL))
+
+
+def _target_occurs_inside_quoted_payload(text: str, target: str) -> bool:
+    if not target:
+        return False
+    return any(target in match.group(2) for match in _quoted_spans(text))
+
+
+def _mask_quoted_spans(text: str) -> str:
+    chars = list(text)
+    for match in _quoted_spans(text):
+        for index in range(match.start(), match.end()):
+            if chars[index] not in "\r\n":
+                chars[index] = " "
+    return "".join(chars)
 
 
 def _numeric_constraints(text: str) -> tuple[str, ...]:
@@ -114,7 +138,7 @@ def _normalize_numeric_payload(payload: Any, fields: tuple[str, ...]) -> tuple[A
 
 
 def install_v7_semantic_repairs() -> None:
-    """Install the two qualification-found repairs on the canonical stack."""
+    """Install qualification-found repairs on the canonical stack."""
     global _INSTALLED
     if _INSTALLED:
         return
@@ -124,6 +148,7 @@ def install_v7_semantic_repairs() -> None:
 
     current_parse = _unwrap_classmethod(core.SemanticParser.parse)
     current_workflow = _unwrap_classmethod(da.DirectActionRouter._try_multi_step_workflow)
+    current_write_parse = _unwrap_classmethod(da.WriteActionParser.parse)
 
     def parse_with_directory_filename_grammar(
         cls: Any,
@@ -155,6 +180,22 @@ def install_v7_semantic_repairs() -> None:
             ],
             evidence=["directory_file_names_clause"],
         )
+
+    def parse_write_with_quoted_payload_isolation(
+        cls: Any,
+        text: str,
+        default_workspace: str = "",
+    ) -> Any:
+        action = current_write_parse(cls, text, default_workspace=default_workspace)
+        if action is None or not _target_occurs_inside_quoted_payload(text, action.target_path):
+            return action
+
+        outside_literals = _mask_quoted_spans(text)
+        external_paths = da.PathExtractor.extract_all_paths(outside_literals)
+        external_paths = [candidate for candidate in external_paths if candidate != action.target_path]
+        if len(external_paths) == 1:
+            action.target_path = external_paths[0]
+        return action
 
     def workflow_with_typed_constraints(
         cls: Any,
@@ -294,8 +335,9 @@ def install_v7_semantic_repairs() -> None:
         result.telemetry = telemetry
         return result
 
-    setattr(core.SemanticParser, "parse", classmethod(parse_with_directory_filename_grammar))
-    setattr(da.DirectActionRouter, "_try_multi_step_workflow", classmethod(workflow_with_typed_constraints))
+    _install_attr(core.SemanticParser, "parse", classmethod(parse_with_directory_filename_grammar))
+    _install_attr(da.WriteActionParser, "parse", classmethod(parse_write_with_quoted_payload_isolation))
+    _install_attr(da.DirectActionRouter, "_try_multi_step_workflow", classmethod(workflow_with_typed_constraints))
     _INSTALLED = True
 
 
