@@ -327,18 +327,14 @@ class PlaywrightAdapter(_BaseAdapter):
     )
 
     def available(self) -> tuple[bool, str]:
+        """Report package availability without starting Playwright's driver.
+
+        Capability discovery and inventory must remain passive. Browser binary
+        readiness is verified only when the capability is actually executed.
+        """
         if not _module_available("playwright"):
             return False, "Python package 'playwright' is not installed"
-        try:
-            from playwright.sync_api import sync_playwright
-
-            with sync_playwright() as p:
-                executable = Path(p.chromium.executable_path)
-                if not executable.is_file():
-                    return False, "Playwright is installed but Chromium is missing; run: playwright install chromium"
-        except Exception as exc:
-            return False, f"Playwright Chromium readiness check failed: {_bounded_text(exc, 500)}"
-        return True, "installed; Chromium executable present"
+        return True, "installed; Chromium readiness is checked at execution"
 
     @staticmethod
     def _route_guard(route) -> None:  # noqa: ANN001
