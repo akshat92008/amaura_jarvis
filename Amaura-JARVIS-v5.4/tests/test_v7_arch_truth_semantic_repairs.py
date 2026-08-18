@@ -4,7 +4,11 @@ import json
 from pathlib import Path
 
 from jarvis.amaura import semantic_core as core
-from jarvis.amaura.direct_action import DirectActionRouter, RequestPreprocessor
+from jarvis.amaura.direct_action import (
+    DirectActionRouter,
+    RequestPreprocessor,
+    WriteActionParser,
+)
 
 
 def test_arch_truth_t03_file_names_inside_routes_to_directory_list(tmp_path: Path) -> None:
@@ -98,3 +102,15 @@ def test_unconstrained_unit_bearing_value_is_not_silently_retyped(tmp_path: Path
     assert result.success is True
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["budget"] == "30591 credits"
+
+
+def test_multiline_quoted_payload_cannot_steal_write_target() -> None:
+    target = "test_dir/file_72_ihO4.txt"
+    payload = "line1_TRH-in\nline2_sb7erZ"
+    prompt = f"Write entire body '{payload}' in {target}"
+
+    action = WriteActionParser.parse(prompt)
+
+    assert action is not None
+    assert action.target_path == target
+    assert action.content == payload
