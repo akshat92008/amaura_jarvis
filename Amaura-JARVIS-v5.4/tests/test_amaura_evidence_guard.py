@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -41,6 +42,24 @@ def _tool_definition():
             "name": "web_fetch",
             "description": "Fetch public text",
             "parameters": {"type": "object"},
+        },
+    }
+
+
+def _web_search_definition():
+    return {
+        "type": "function",
+        "function": {
+            "name": "web_search",
+            "description": "Search public web results",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string"},
+                    "max_results": {"type": "integer"},
+                },
+                "required": ["query"],
+            },
         },
     }
 
@@ -143,6 +162,43 @@ def test_failed_tool_result_does_not_count_as_successful_evidence():
 
     assert result.choices[0].message.tool_calls
     assert len(inner.calls) == 2
+
+
+def test_second_prose_only_research_response_bootstraps_authorized_web_search():
+    inner = _FakeClient(
+        [
+            _response("I can answer from general knowledge", prompt_tokens=3, completion_tokens=2),
+            _response("Here is the answer without sources", prompt_tokens=4, completion_tokens=3),
+        ]
+    )
+    client = _EvidenceAwareClient(inner, evidence_required=True)
+    objective = "Collect real Amaura product evidence, credible sources, audience questions, and content gaps."
+    packet = {
+        "objective": objective,
+        "acceptance_criteria": ["Source register complete"],
+    }
+    messages = [
+        {
+            "role": "user",
+            "content": "JARVIS TASK PACKET:\n" + json.dumps(packet),
+        }
+    ]
+
+    result = client.chat_sync(
+        model_id="fake-model",
+        messages=messages,
+        tools=[_web_search_definition()],
+    )
+
+    assert len(inner.calls) == 2
+    call = result.choices[0].message.tool_calls[0]
+    assert call.function.name == "web_search"
+    assert json.loads(call.function.arguments) == {"max_results": 5, "query": objective}
+    assert call.id.startswith("call_arch_evidence_bootstrap_")
+    assert result.usage.prompt_tokens == 7
+    assert result.usage.completion_tokens == 5
+    assert client.last_execution_metadata["evidence_guard"] == "deterministic_read_only_bootstrap"
+    assert client.last_execution_metadata["evidence_guard_bootstrap_tool"] == "web_search"
 
 
 def test_second_prose_only_response_fails_closed_after_one_corrective_reprompt():
