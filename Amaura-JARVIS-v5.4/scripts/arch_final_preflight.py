@@ -3,8 +3,9 @@
 
 This script never starts, stops, installs, or mutates ARCH. It verifies the
 exact checkout, private environment permissions, launchd ownership, health/PID
-agreement, absence of the legacy company daemon, idle RSS, and hosted cognition
-redundancy. Provider names are reported; credentials are never printed.
+and source-tree agreement, absence of the legacy company daemon, idle RSS, and
+hosted cognition redundancy. Provider names are reported; credentials are never
+printed.
 """
 
 from __future__ import annotations
@@ -28,6 +29,11 @@ def _run(command: list[str], *, cwd: Path | None = None, timeout: int = 15) -> s
     return subprocess.run(command, cwd=cwd, capture_output=True, text=True, check=False, timeout=timeout)
 
 
+def _git_value(repo_root: Path, expression: str) -> str:
+    result = _run(["git", "rev-parse", expression], cwd=repo_root)
+    return result.stdout.strip() if result.returncode == 0 else "unknown"
+
+
 def _check(name: str, ok: bool, detail: Any) -> dict[str, Any]:
     return {"name": name, "status": "PASS" if ok else "FAIL", "detail": detail}
 
@@ -35,7 +41,7 @@ def _check(name: str, ok: bool, detail: Any) -> dict[str, Any]:
 def _health(url: str) -> dict[str, Any]:
     request = urllib.request.Request(url, method="GET")
     try:
-        with urllib.request.urlopen(request, timeout=5) as response:  # noqa: S310 - fixed loopback URL by default
+        with urllib.request.urlopen(request, timeout=5) as response:  # noqa: S310 - caller defaults to fixed loopback URL
             return json.loads(response.read().decode("utf-8"))
     except (OSError, urllib.error.URLError, ValueError, json.JSONDecodeError) as exc:
         return {"_error": f"{type(exc).__name__}: {exc}"}
@@ -90,8 +96,8 @@ def main(argv: list[str] | None = None) -> int:
     env_file = Path(args.env_file).expanduser().resolve()
     checks: list[dict[str, Any]] = []
 
-    sha_result = _run(["git", "rev-parse", "HEAD"], cwd=repo_root)
-    actual_sha = sha_result.stdout.strip() if sha_result.returncode == 0 else "unknown"
+    actual_sha = _git_value(repo_root, "HEAD")
+    tree_sha = _git_value(repo_root, "HEAD^{tree}")
     checks.append(_check("exact_sha", actual_sha == args.expected_sha, {"expected": args.expected_sha, "actual": actual_sha}))
 
     dirty_result = _run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=repo_root)
@@ -133,6 +139,25 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
 
+    # Development health currently exposes the Git tree hash as build_id. Bind
+    # that value to the exact checked-out source tree so an old launchd process
+    # cannot accidentally qualify merely because it is healthy.
+    health_build_id = str(health.get("build_id") or "").strip()
+    provenance_ok = tree_sha != "unknown" and health_build_id == tree_sha
+    checks.append(
+        _check(
+            "running_source_tree_matches_checkout",
+            provenance_ok,
+            {
+                "commit_sha": actual_sha,
+                "checkout_tree_sha": tree_sha,
+                "health_build_id": health_build_id,
+                "bootstrap_proof": health.get("bootstrap_proof", ""),
+                "service_proof": health.get("service_proof", ""),
+            },
+        )
+    )
+
     legacy = _legacy_processes()
     checks.append(_check("no_legacy_company_daemon", not legacy, legacy))
 
@@ -164,6 +189,7 @@ def main(argv: list[str] | None = None) -> int:
         "qualification": "ARCH_FINAL_PREFLIGHT",
         "status": "PASS" if passed else "FAIL",
         "candidate_sha": actual_sha,
+        "candidate_tree_sha": tree_sha,
         "checks": checks,
     }
     print(json.dumps(report, indent=2, sort_keys=True))
