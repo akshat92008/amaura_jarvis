@@ -90,14 +90,16 @@ def main(argv: list[str] | None = None) -> None:
     from jarvis import ui
     from jarvis.agent import JarvisAgent
     from jarvis.arch_gateway import install_arch_gateway
+    from jarvis.arch_grounding import install_arch_grounding
     from jarvis.cli import launch_background_web, run_interactive
     from jarvis.tools.amaura import get_control_plane
     from jarvis.voice.engine import VoiceEngine
 
-    # The HUD/WebSocket and the terminal must be the same founder session. This
-    # gateway promotes validated loopback JARVIS auth to operator authority
-    # without exposing AMAURA_OPERATOR_KEY to browser JavaScript.
+    # Every founder-facing surface uses the same authenticated local authority,
+    # and company-related conversation is grounded in the authoritative live
+    # WorldModel rather than model priors.
     install_arch_gateway()
+    install_arch_grounding()
 
     working_dir = str(Path(args.working_dir or os.getcwd()).resolve())
     agent = JarvisAgent(api_key=args.api_key, model_key=args.model, working_dir=working_dir)
