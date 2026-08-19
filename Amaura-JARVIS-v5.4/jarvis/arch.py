@@ -1,8 +1,8 @@
 """Unified ARCH runtime entrypoint.
 
 ARCH is the single founder-facing process. It owns the interactive executive,
-web HUD, mission runner, proactive cognition, and company autopilot while
-preserving the existing governed authority boundaries.
+web HUD, mission runner, proactive cognition, company autopilot, and configured
+remote surfaces while preserving the existing governed authority boundaries.
 """
 
 from __future__ import annotations
@@ -103,8 +103,6 @@ def _assert_arch_port_available() -> None:
     except TimeoutError:
         return
     except OSError:
-        # No listener is the expected state. Bind/security validation still
-        # happens in the canonical server startup path.
         return
 
 
@@ -117,6 +115,7 @@ def main(argv: list[str] | None = None) -> None:
     from jarvis.agent import JarvisAgent
     from jarvis.arch_gateway import install_arch_gateway
     from jarvis.arch_grounding import install_arch_grounding
+    from jarvis.arch_telegram import start_arch_telegram
     from jarvis.cli import launch_background_web, run_interactive
     from jarvis.tools.amaura import get_control_plane
     from jarvis.voice.engine import VoiceEngine
@@ -148,6 +147,10 @@ def main(argv: list[str] | None = None) -> None:
         ui.print_success(f"ARCH HUD live at {web_url}")
     else:
         ui.print_success(f"ARCH runtime live at {web_url} (browser HUD not opened)")
+
+    telegram_thread = start_arch_telegram(agent)
+    if telegram_thread is not None:
+        ui.print_success("ARCH Telegram surface active")
 
     if args.prompt:
         control = get_control_plane()
