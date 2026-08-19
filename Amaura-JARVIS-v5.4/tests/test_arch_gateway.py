@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 
 from jarvis.arch_gateway import ArchFounderGateway
 
@@ -76,17 +77,21 @@ def test_arch_gateway_reuses_ephemeral_cookie_for_operator_api(monkeypatch):
     assert observed["x-amaura-operator-key"] == "operator-secret-value"
 
 
-def test_arch_gateway_promotes_authenticated_websocket_protocol(monkeypatch):
+def test_arch_gateway_promotes_authenticated_websocket_protocol_and_chat_payload(monkeypatch):
     api_key = "k" * 48
+    operator_key = "operator-secret-value"
     monkeypatch.setenv("ARCH_RUNTIME", "1")
     monkeypatch.setenv("JARVIS_API_KEY", api_key)
-    monkeypatch.setenv("AMAURA_OPERATOR_KEY", "operator-secret-value")
+    monkeypatch.setenv("AMAURA_OPERATOR_KEY", operator_key)
 
     encoded = base64.urlsafe_b64encode(api_key.encode()).decode().rstrip("=")
     observed = {}
+    observed_message = {}
 
     async def app(scope, receive, send):
         observed.update(_headers(scope))
+        message = await receive()
+        observed_message.update(json.loads(message["text"]))
 
     gateway = ArchFounderGateway(app, session_token="ephemeral-session")
     scope = {
@@ -96,13 +101,15 @@ def test_arch_gateway_promotes_authenticated_websocket_protocol(monkeypatch):
     }
 
     async def receive():
-        return {"type": "websocket.disconnect"}
+        return {"type": "websocket.receive", "text": json.dumps({"type": "chat", "content": "Open Safari"})}
 
     async def send(_message):
         return None
 
     asyncio.run(gateway(scope, receive, send))
-    assert observed["x-amaura-operator-key"] == "operator-secret-value"
+    assert observed["x-amaura-operator-key"] == operator_key
+    assert observed_message["operator_key"] == operator_key
+    assert observed_message["content"] == "Open Safari"
 
 
 def test_arch_gateway_does_not_promote_remote_or_unauthenticated_requests(monkeypatch):
