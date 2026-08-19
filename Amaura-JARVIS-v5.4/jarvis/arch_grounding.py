@@ -91,10 +91,12 @@ class ArchExecutiveKernel(_BaseExecutiveKernel):
                 allow_memory_mutation=allow_memory_mutation,
             )
 
-        # This path is deliberately conversational/read-only. Actionable turns
-        # stay on the original mission/direct-action path and retain all policy
-        # and approval enforcement.
-        snapshot: dict[str, Any] = self.world.get(refresh=False)
+        # Company-state questions are comparatively rare and correctness matters
+        # more than the ordinary chat fast path. Force exactly one fresh rebuild
+        # from CompanyStore, then render context from that freshly cached snapshot.
+        # This prevents a persisted jarvis.world/current snapshot from being
+        # structurally "authoritative" while still describing an older company.
+        snapshot: dict[str, Any] = self.world.get(refresh=True)
         world_context = self.world.context(request.text, refresh=False)
         memory_context, memory_sources = self.memory.context(request.text, limit=10)
         combined_context = (
