@@ -164,6 +164,12 @@ class GovernedTaskRunner(_BaseGovernedTaskRunner):
         )
 
     def run(self, task_id: str, max_iterations: int = 12) -> dict[str, Any]:
+        """Delegate to the core runner without changing its execution receipt contract.
+
+        The delegated core implementation still records requested_route,
+        actual_model, provider, input_tokens, and output_tokens in the model
+        execution receipt; this wrapper only scopes the evidence guard.
+        """
         task = self.control.store.get_work_item(task_id)
         token = _EVIDENCE_REQUIRED.set(bool(task.get("acceptance_criteria")))
         try:
