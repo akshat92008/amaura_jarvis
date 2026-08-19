@@ -86,29 +86,63 @@ def _task_objective(messages: list[dict[str, Any]]) -> str:
 def _deterministic_bootstrap(
     messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None
 ) -> tuple[str, dict[str, Any]] | None:
-    """Choose one safe evidence-gathering call from the already-authorized tools.
+    """Choose one safe evidence-gathering call from already-authorized tools.
 
-    This is intentionally tiny and read-only. It does not invent URLs, paths, or
-    external side effects. The core runner will still authorize and execute the
-    returned call exactly like a model-generated call.
+    Only read-only calls with deterministic arguments are eligible. Selection is
+    objective-aware so an operations or repository task is not forced through a
+    generic web search merely because that tool is also available. The core
+    runner still authorizes and executes the call through the normal policy and
+    evidence pipeline.
     """
     if _bootstrap_already_attempted(messages):
         return None
     objective = _task_objective(messages)
     if not objective:
         return None
+    objective_lower = objective.lower()
     names = {
         str((definition.get("function") or {}).get("name") or "").strip()
         for definition in tools or []
     }
+
+    if "amaura_cashflow_dashboard" in names and any(
+        term in objective_lower for term in ("cash-flow", "cashflow", "cash flow", "runway", "financial stream")
+    ):
+        return "amaura_cashflow_dashboard", {}
+    if "amaura_venture_dashboard" in names and any(
+        term in objective_lower for term in ("venture", "experiment", "portfolio", "monetisation", "monetization")
+    ):
+        return "amaura_venture_dashboard", {}
+    if "amaura_company_status" in names and any(
+        term in objective_lower
+        for term in ("company", "operating", "operations", "task", "blocker", "programme", "program", "capacity")
+    ):
+        return "amaura_company_status", {}
+    if "amaura_resource_inventory" in names and any(
+        term in objective_lower for term in ("resource", "capability", "availability", "installed", "8gb", "8 gb")
+    ):
+        return "amaura_resource_inventory", {}
+    if any(term in objective_lower for term in ("repository", "repo", "codebase", "security posture", "source code")):
+        if "get_project_structure" in names:
+            return "get_project_structure", {"max_depth": 3}
+        if "git_status" in names:
+            return "git_status", {}
     if "web_search" in names:
         return "web_search", {"query": objective, "max_results": 5}
     if "deep_research" in names:
         return "deep_research", {"topic": objective, "num_queries": 3}
     if "amaura_company_status" in names:
         return "amaura_company_status", {}
+    if "amaura_cashflow_dashboard" in names:
+        return "amaura_cashflow_dashboard", {}
+    if "amaura_venture_dashboard" in names:
+        return "amaura_venture_dashboard", {}
     if "amaura_resource_inventory" in names:
         return "amaura_resource_inventory", {}
+    if "get_project_structure" in names:
+        return "get_project_structure", {"max_depth": 3}
+    if "git_status" in names:
+        return "git_status", {}
     return None
 
 
