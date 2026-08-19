@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import argparse
 import os
+import signal
 import socket
+import threading
 from pathlib import Path
 
 from jarvis.amaura.runtime import load_amaura_env
@@ -32,16 +34,10 @@ def _cap_int_env(name: str, *, default: int, maximum: int) -> None:
 def configure_arch_runtime() -> None:
     """Enable the canonical unified runtime with conservative 8 GB defaults."""
     os.environ["ARCH_RUNTIME"] = "1"
-
-    # ARCH owns these loops. Generic JARVIS/server compatibility surfaces keep
-    # them off by default; the ARCH process explicitly turns them on.
     os.environ["AMAURA_JARVIS_PROACTIVE"] = "1"
     os.environ["AMAURA_JARVIS_MISSION_RUNNER"] = "1"
     os.environ["AMAURA_COMPANY_AUTOPILOT_RUNTIME"] = "1"
 
-    # The supported target is an 8 GB MacBook. Heavy local work stays
-    # serialized and the process must degrade under pressure instead of
-    # allowing an old config to fan out workers.
     os.environ.setdefault("AMAURA_RESOURCE_PROFILE", "macbook-8gb")
     _cap_int_env("AMAURA_COMPANY_AUTOPILOT_WORK_UNITS", default=1, maximum=1)
     _cap_int_env("AMAURA_AUTOPILOT_MAX_WORK_UNITS", default=1, maximum=1)
@@ -63,11 +59,21 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--working-dir", "-d", default="")
     parser.add_argument("--voice", "-v", action="store_true")
     parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="Run the one persistent ARCH runtime without an interactive terminal session.",
+    )
+    parser.add_argument(
         "--no-web",
         action="store_true",
         help="Do not open the browser HUD; ARCH still runs its internal local server and background loops.",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.headless and args.prompt:
+        parser.error("--headless cannot be combined with a one-shot prompt")
+    if args.headless and args.voice:
+        parser.error("--headless cannot enable local interactive voice mode")
+    return args
 
 
 def _load_runtime_environment(path: str) -> Path | None:
@@ -106,6 +112,25 @@ def _assert_arch_port_available() -> None:
         return
 
 
+def _run_headless_forever() -> None:
+    """Keep the canonical ARCH owner process alive until launchd/user shutdown."""
+    stop_event = threading.Event()
+
+    def request_stop(_signum, _frame) -> None:
+        stop_event.set()
+
+    previous_handlers: dict[int, object] = {}
+    for signum in (signal.SIGTERM, signal.SIGINT):
+        previous_handlers[signum] = signal.getsignal(signum)
+        signal.signal(signum, request_stop)
+    try:
+        while not stop_event.wait(1.0):
+            pass
+    finally:
+        for signum, handler in previous_handlers.items():
+            signal.signal(signum, handler)
+
+
 def main(argv: list[str] | None = None) -> None:
     """Start one authenticated ARCH process and all of its internal runtimes."""
     args = _parse_args(argv)
@@ -120,9 +145,6 @@ def main(argv: list[str] | None = None) -> None:
     from jarvis.tools.amaura import get_control_plane
     from jarvis.voice.engine import VoiceEngine
 
-    # Every founder-facing surface uses the same authenticated local authority,
-    # and company-related conversation is grounded in the authoritative live
-    # WorldModel rather than model priors.
     install_arch_gateway()
     install_arch_grounding()
     _assert_arch_port_available()
@@ -139,11 +161,9 @@ def main(argv: list[str] | None = None) -> None:
         else:
             ui.print_warning("Voice dependencies are not available; continuing with text input")
 
-    # ARCH always owns the local server because its lifespan owns mission
-    # advancement, proactive cognition and company autopilot. --no-web only
-    # suppresses opening the browser; it never disables the brain.
-    web_url = launch_background_web(open_browser_flag=not args.no_web)
-    if not args.no_web:
+    open_browser = not args.no_web and not args.headless
+    web_url = launch_background_web(open_browser_flag=open_browser)
+    if open_browser:
         ui.print_success(f"ARCH HUD live at {web_url}")
     else:
         ui.print_success(f"ARCH runtime live at {web_url} (browser HUD not opened)")
@@ -165,6 +185,11 @@ def main(argv: list[str] | None = None) -> None:
         message = str(result.get("message") or "").strip()
         if message:
             ui.console.print(message)
+        return
+
+    if args.headless:
+        ui.print_success("ARCH persistent runtime active")
+        _run_headless_forever()
         return
 
     if voice_engine.enabled:
