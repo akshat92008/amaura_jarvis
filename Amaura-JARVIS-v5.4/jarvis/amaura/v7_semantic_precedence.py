@@ -20,6 +20,10 @@ def _unwrap_classmethod(value: Any) -> Any:
     return getattr(value, "__func__", value)
 
 
+def _install_attr(obj: object, name: str, value: object) -> None:
+    setattr(obj, name, value)
+
+
 def capture_canonical_semantic_parser() -> None:
     """Capture the parser immediately after the canonical front-end installs."""
     global _CANONICAL_PARSE
@@ -308,7 +312,7 @@ def install_v7_semantic_precedence() -> None:
 
         return graph
 
-    core.SemanticParser.parse = classmethod(parse)
+    _install_attr(core.SemanticParser, "parse", classmethod(parse))
     _INSTALLED = True
 
 
