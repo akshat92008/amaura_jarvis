@@ -186,6 +186,11 @@ class SecureVerifierRunner:
         lines = [
             "(version 1)",
             "(deny default)",
+            # macOS 26 Seatbelt requires read access to the literal filesystem
+            # root during process/runtime startup. `literal "/"` does not grant
+            # recursive filesystem reads; descendant access remains controlled
+            # by the narrow subpath rules below.
+            '(allow file-read* (literal "/"))',
             "(allow process*)",
             "(allow signal (target self))",
             "(allow sysctl-read)",
@@ -193,6 +198,9 @@ class SecureVerifierRunner:
             "(allow ipc-posix-shm)",
             "(allow file-read-metadata)",
             "(deny network*)",
+            # Python/pytest and standard runtime logging legitimately open the
+            # null device for writing. Permit only this literal device, not /dev.
+            '(allow file-write* (literal "/dev/null"))',
             f'(allow file-write* (subpath "{q(workspace)}"))',
             f'(allow file-write* (subpath "{q(temp_home)}"))',
             '(allow file-write* (subpath "/private/tmp"))',

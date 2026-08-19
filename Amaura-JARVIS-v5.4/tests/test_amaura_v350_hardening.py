@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -64,11 +65,14 @@ class _Store:
         self.audits.append(args)
 
 
-def test_autopilot_poison_cycle_opens_circuit_without_crash_loop():
+def test_autopilot_poison_cycle_opens_circuit_without_killing_runtime():
+    """Persistent transient poison opens a visible circuit but keeps the daemon alive."""
     runtime = object.__new__(AutonomousCompanyRuntime)
     store = _Store()
     runtime.control = SimpleNamespace(store=store)
     runtime.supervisor = SimpleNamespace(worker_id="test-autopilot")
+    runtime._leader_owned = False
+    runtime._leader_lock = lambda: nullcontext(True)
     runtime.tick = Mock(side_effect=RuntimeError("poison event"))
     sleeps = []
     with patch.dict(
@@ -79,11 +83,12 @@ def test_autopilot_poison_cycle_opens_circuit_without_crash_loop():
             "AMAURA_AUTOPILOT_FAILURE_BACKOFF_MAX_SECONDS": "8",
         },
         clear=False,
-    ):
+    ), patch("jarvis.amaura.autopilot.random.uniform", return_value=0.0):
         runtime.run_forever(max_cycles=10, sleep_fn=sleeps.append)
-    assert runtime.tick.call_count == 3
-    assert sleeps == [1.0, 2.0]
-    assert store.controls["autopilot_enabled"] == "0"
+    assert runtime.tick.call_count == 10
+    assert sleeps == [1.0, 2.0, 4.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0]
+    assert runtime._leader_owned is False
+    assert "autopilot_enabled" not in store.controls
     assert store.controls["autopilot.crash_circuit"] == "open"
     assert any(event[0] == "company.autopilot.circuit_opened" for event in store.events)
 

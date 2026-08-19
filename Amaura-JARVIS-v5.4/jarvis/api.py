@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import re
+import ssl
 import time
 
 import certifi
@@ -176,7 +177,7 @@ class NvidiaClient:
                 base_url=NVIDIA_BASE_URL,
                 api_key=self.all_keys[0],
                 http_client=httpx.Client(
-                    verify=certifi.where(),
+                    verify=ssl.create_default_context(cafile=certifi.where()),
                     timeout=httpx.Timeout(nv_timeout, connect=nv_connect_timeout),
                 ),
             )
@@ -187,7 +188,7 @@ class NvidiaClient:
                 base_url="https://api.groq.com/openai/v1",
                 api_key=groq_key,
                 http_client=httpx.Client(
-                    verify=certifi.where(),
+                    verify=ssl.create_default_context(cafile=certifi.where()),
                     timeout=httpx.Timeout(60.0, connect=10.0),
                 ),
             )
@@ -244,7 +245,7 @@ class NvidiaClient:
             base_url=NVIDIA_BASE_URL,
             api_key=new_key,
             http_client=httpx.Client(
-                verify=certifi.where(),
+                verify=ssl.create_default_context(cafile=certifi.where()),
                 timeout=httpx.Timeout(nv_timeout, connect=nv_connect_timeout),
             ),
         )

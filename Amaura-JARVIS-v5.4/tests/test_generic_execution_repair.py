@@ -216,6 +216,8 @@ def test_browser_execution_randomized(test_env):
         assert res_meta.policy_decision == "refused"
     finally:
         server.shutdown()
+        server.server_close()
+        server_thread.join(timeout=2.0)
 
 
 # ── 4. Real Memory Retrieval Tests ───────────────────────────────────────────

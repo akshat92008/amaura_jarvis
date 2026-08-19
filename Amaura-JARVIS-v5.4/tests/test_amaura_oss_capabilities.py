@@ -342,3 +342,26 @@ def test_media_operations_have_operation_specific_permissions():
     )
     assert bootstrap.allowed, bootstrap.reasons
     assert mux.allowed, mux.reasons
+
+def test_playwright_availability_probe_is_passive(monkeypatch):
+    """Inventory must not start Playwright just to report package presence."""
+    import builtins
+
+    import jarvis.amaura.capability_runtime as runtime_module
+    from jarvis.amaura.capability_runtime import PlaywrightAdapter
+
+    monkeypatch.setattr(runtime_module, "_module_available", lambda name: name == "playwright")
+
+    real_import = builtins.__import__
+
+    def guarded_import(name, *args, **kwargs):
+        if name.startswith("playwright.sync_api"):
+            raise AssertionError("Playwright availability probe initialized the browser runtime")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+    available, reason = PlaywrightAdapter().available()
+
+    assert available is True
+    assert "checked at execution" in reason

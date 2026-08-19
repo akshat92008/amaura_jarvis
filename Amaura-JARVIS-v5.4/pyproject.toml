@@ -69,9 +69,11 @@ dev = [
 ]
 
 [project.scripts]
+arch = "jarvis.arch:main"
 jarvis = "jarvis.cli:main"
 nexus = "jarvis.cli:main"
 amaura-worker = "jarvis.amaura.supervisor:main"
+amaura-company = "jarvis.amaura.company_daemon:main"
 amaura = "jarvis.amaura.cli:main"
 
 

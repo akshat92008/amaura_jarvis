@@ -1,15 +1,17 @@
-"""Safe autonomous company loop for Amaura Labs.
+"""Canonical autonomous company runtime for Amaura Labs.
 
-Autopilot never broadens authority.  It creates only idempotent internal cadence
-programmes, advances one governed supervisor unit, and returns a founder briefing.
-External publication, messaging, deployment, spending and strategic commitments
-remain approval-gated by the existing control plane.
+The runtime never broadens authority. It advances only governed internal work,
+keeps external publication/messaging/deployment/spending behind the existing
+approval policies, and coordinates dynamic founder missions under one canonical
+company-level leadership lease.
 """
 
 from __future__ import annotations
 
 import os
+import random
 import sqlite3
+import threading
 import time
 import uuid
 from contextlib import closing, contextmanager
@@ -20,11 +22,29 @@ from typing import Any
 from jarvis.amaura.cognition import ProactiveCognition, WorldModel
 from jarvis.amaura.company_autonomy import CompanyAutonomyEngine
 from jarvis.amaura.control_plane import AmauraControlPlane
+from jarvis.amaura.founder_attention import FounderAttentionEngine
 from jarvis.amaura.mission_control import MissionControl
+from jarvis.amaura.mission_runner import MissionRunner
+from jarvis.amaura.runtime_lease import company_runtime_leader_lock
+from jarvis.amaura.signal_ingestion import SignalIngestionEngine
 from jarvis.amaura.supervisor import AmauraSupervisor
 
 
 class AutonomousCompanyRuntime:
+    """Single canonical long-running company scheduler."""
+
+    _FAIL_CLOSED_TERMS = (
+        "audit integrity failure",
+        "checkpoint is ahead",
+        "evidence integrity",
+        "tamper",
+        "approval signature",
+        "approval integrity",
+        "sandbox escape",
+        "outside workspace",
+        "security policy",
+    )
+
     def __init__(
         self,
         control: AmauraControlPlane,
@@ -39,33 +59,39 @@ class AutonomousCompanyRuntime:
             automatic_reviews=automatic_reviews,
         )
         self.mission = MissionControl(control)
+        self.mission_runner = MissionRunner(control)
         self.company = CompanyAutonomyEngine(control, worker_id=worker_id)
+        self.signal_ingestion = SignalIngestionEngine(control, company=self.company)
+        self.world = WorldModel(control)
+        self.proactive = ProactiveCognition(control, world=self.world)
+        self.attention = FounderAttentionEngine(control, world=self.world)
+        self._leader_owned = False
+        self._leader_thread_id: int | None = None
 
     @contextmanager
     def _leader_lock(self):
-        """Single-writer company-autopilot lease shared by desktop and daemon runtimes."""
-        if os.name != "posix":
-            yield True
-            return
-        import fcntl
-
-        lock_path = self.control.store.db_path.with_suffix(".company-autopilot.lock")
-        lock_path.parent.mkdir(parents=True, exist_ok=True)
-        with lock_path.open("a+", encoding="utf-8") as handle:
-            try:
-                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                yield False
-                return
-            try:
-                yield True
-            finally:
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        """Acquire the one authoritative company-runtime scheduling lease."""
+        with company_runtime_leader_lock(self.control) as leader:
+            yield leader
 
     @staticmethod
     def _week_key(now: datetime) -> str:
         year, week, _ = now.isocalendar()
         return f"{year}-W{week:02d}"
+
+    @staticmethod
+    def _proactive_enabled() -> bool:
+        return os.environ.get("AMAURA_V7_AUTO_INVESTIGATE", "0").strip().lower() not in {
+            "0",
+            "false",
+            "off",
+            "disabled",
+        }
+
+    @classmethod
+    def _must_fail_closed(cls, exc: BaseException) -> bool:
+        text = f"{type(exc).__name__}: {exc}".lower()
+        return any(term in text for term in cls._FAIL_CLOSED_TERMS)
 
     def ensure_operating_cadence(self, now: datetime | None = None) -> list[dict[str, Any]]:
         if self.control.store.get_control("autopilot_enabled", "1") != "1":
@@ -96,13 +122,7 @@ class AutonomousCompanyRuntime:
         return [created]
 
     def ensure_daily_backup(self, now: datetime | None = None) -> dict[str, Any]:
-        """Create and verify one durable backup per UTC day.
-
-        Backups are local, transactionally consistent and safe to run from the
-        continuous company loop. A fixed daily destination plus atomic replace
-        makes concurrent workers harmless: the final artefact is always a full
-        verified SQLite database rather than a partially written file.
-        """
+        """Create and verify one durable backup per UTC day."""
         now = now or datetime.now(UTC)
         if os.environ.get("AMAURA_AUTOMATIC_BACKUPS", "1") != "1":
             return {"status": "disabled"}
@@ -183,7 +203,9 @@ class AutonomousCompanyRuntime:
         max_work_units: int = 1,
         max_new_programmes: int | None = None,
         max_signals: int = 3,
+        max_dynamic_goals: int = 3,
     ) -> dict[str, Any]:
+        """Run one deterministic company cycle while leadership is already held."""
         now = now or datetime.now(UTC)
         run = self.control.store.start_autonomy_run(
             worker_id=str(getattr(self.supervisor, "worker_id", "amaura-autopilot")),
@@ -192,19 +214,24 @@ class AutonomousCompanyRuntime:
         backup = self.ensure_daily_backup(now)
         enabled = self.control.store.get_control("autopilot_enabled", "1") == "1"
         if not enabled:
+            world = self.world.refresh()
             result = {
                 "status": "paused",
                 "run_id": run["id"],
                 "backup": backup,
+                "external_signal_ingestion": {"status": "paused"},
                 "cadence_programmes_created": [],
                 "objective_programmes_created": [],
                 "signals_detected": [],
                 "signal_programmes_created": [],
                 "objective_progress_updates": [],
+                "dynamic_missions": {"status": "paused", "missions": []},
                 "publications_enqueued": [],
                 "circuit_breakers": [],
-                "proactive_insights": ProactiveCognition(self.control).scan(),
-                "world": WorldModel(self.control).refresh(),
+                "proactive_insights": self.proactive.scan(snapshot=world),
+                "proactive_investigations": [],
+                "world": world,
+                "founder_attention": self.attention.summary(snapshot=world),
                 "executions": [],
                 "execution": {"status": "paused"},
                 "company": self.company.status(),
@@ -217,10 +244,17 @@ class AutonomousCompanyRuntime:
 
         try:
             progress_updates = self.mission.sync_completed_programmes()
+            external_signal_ingestion = self.signal_ingestion.poll()
             signals_detected = self.company.detect_signals(now=now)
             signal_programmes = self.company.process_signals(now=now, max_signals=max_signals)
+            self.world.refresh()
+            proactive_cycle = self.proactive.tick(auto_investigate=self._proactive_enabled())
             created = self.ensure_operating_cadence(now)
             objective_programmes = self.mission.plan_due_work(now=now, max_new_programmes=max_new_programmes)
+            dynamic_missions = self.mission_runner.tick(
+                max_goals=max(1, min(int(max_dynamic_goals), 20)),
+                leader_owned=True,
+            )
             publications = self.control.distribution.dispatch_due(now=now, limit=5)
             units = max(1, min(int(max_work_units), 20))
             executions: list[dict[str, Any]] = []
@@ -232,8 +266,9 @@ class AutonomousCompanyRuntime:
             execution = executions[-1] if executions else {"status": "idle"}
             progress_updates.extend(self.mission.sync_completed_programmes())
             circuit_breakers = self.company.evaluate_circuit_breakers(now=now)
-            world = WorldModel(self.control).refresh()
-            proactive_insights = ProactiveCognition(self.control).scan()
+            world = self.world.refresh()
+            attention = self.attention.summary(snapshot=world)
+
             from jarvis.amaura.ventures_cashflow import CashflowEngine
 
             venture_cashflow = CashflowEngine(self.control).tick(
@@ -244,16 +279,20 @@ class AutonomousCompanyRuntime:
                 "status": "ok",
                 "run_id": run["id"],
                 "backup": backup,
+                "external_signal_ingestion": external_signal_ingestion,
                 "cadence_programmes_created": [item["programme"]["id"] for item in created],
                 "objective_programmes_created": [item["programme"]["id"] for item in objective_programmes],
                 "signals_detected": [item["id"] for item in signals_detected],
                 "signal_programmes_created": [item["programme"]["programme"]["id"] for item in signal_programmes],
                 "objective_progress_updates": progress_updates,
+                "dynamic_missions": dynamic_missions,
                 "publications_enqueued": [item["id"] for item in publications],
                 "circuit_breakers": [item["id"] for item in circuit_breakers],
-                "proactive_insights": proactive_insights,
+                "proactive_insights": proactive_cycle["insights"],
+                "proactive_investigations": proactive_cycle["investigations"],
                 "ventures_cashflow": venture_cashflow,
                 "world": world,
+                "founder_attention": attention,
                 "executions": executions,
                 "execution": execution,
                 "company": self.company.status(),
@@ -261,7 +300,9 @@ class AutonomousCompanyRuntime:
                 "briefing": self.control.daily_briefing(),
                 "supervisor": self.supervisor.status(),
             }
-            run_status = "partial" if execution.get("status") in {"failed", "review_deferred"} else "completed"
+            partial_states = {"failed", "review_deferred"}
+            mission_states = {str(item.get("state") or "") for item in dynamic_missions.get("missions", [])}
+            run_status = "partial" if execution.get("status") in partial_states or mission_states & partial_states else "completed"
             self.control.store.finish_autonomy_run(run["id"], status=run_status, result=result)
             return result
         except Exception as exc:
@@ -276,12 +317,21 @@ class AutonomousCompanyRuntime:
         max_work_units: int = 1,
         max_new_programmes: int | None = None,
         max_signals: int = 3,
+        max_dynamic_goals: int = 3,
     ) -> dict[str, Any]:
+        if self._leader_owned and self._leader_thread_id == threading.get_ident():
+            return self._tick_locked(
+                now=now,
+                max_work_units=max_work_units,
+                max_new_programmes=max_new_programmes,
+                max_signals=max_signals,
+                max_dynamic_goals=max_dynamic_goals,
+            )
         with self._leader_lock() as leader:
             if leader is False:
                 return {
                     "status": "standby",
-                    "reason": "another company-autopilot process holds the leader lease",
+                    "reason": "another company runtime process holds the leader lease",
                     "ventures_cashflow": {"status": "standby"},
                 }
             return self._tick_locked(
@@ -289,6 +339,7 @@ class AutonomousCompanyRuntime:
                 max_work_units=max_work_units,
                 max_new_programmes=max_new_programmes,
                 max_signals=max_signals,
+                max_dynamic_goals=max_dynamic_goals,
             )
 
     def run_forever(
@@ -298,78 +349,98 @@ class AutonomousCompanyRuntime:
         max_work_units: int = 1,
         max_new_programmes: int | None = None,
         max_signals: int = 3,
+        max_dynamic_goals: int = 3,
         max_cycles: int | None = None,
         sleep_fn=None,
     ) -> None:
-        """Run continuously without crash-looping on deterministic poison work.
-
-        Each failed cycle is already recorded by :meth:`tick`. This outer loop
-        adds bounded exponential backoff and a durable circuit breaker. A
-        successful cycle clears the failure counter. ``max_cycles`` and
-        ``sleep_fn`` exist for deterministic service probes and tests.
-        """
+        """Run under one process leadership lease for the entire service lifetime."""
         delay = max(5.0, min(float(poll_seconds), 3600.0))
         base_backoff = max(
             1.0,
-            min(
-                float(os.environ.get("AMAURA_AUTOPILOT_FAILURE_BACKOFF_BASE_SECONDS", "5")),
-                3600.0,
-            ),
+            min(float(os.environ.get("AMAURA_AUTOPILOT_FAILURE_BACKOFF_BASE_SECONDS", "5")), 3600.0),
         )
         max_backoff = max(
             base_backoff,
-            min(
-                float(os.environ.get("AMAURA_AUTOPILOT_FAILURE_BACKOFF_MAX_SECONDS", "300")),
-                86400.0,
-            ),
+            min(float(os.environ.get("AMAURA_AUTOPILOT_FAILURE_BACKOFF_MAX_SECONDS", "300")), 86400.0),
         )
         crash_threshold = max(1, min(int(os.environ.get("AMAURA_AUTOPILOT_CRASH_THRESHOLD", "5")), 100))
         sleeper = sleep_fn or time.sleep
         failures = 0
         cycles = 0
         actor = str(getattr(self.supervisor, "worker_id", "amaura-autopilot"))
-        while max_cycles is None or cycles < max_cycles:
-            cycles += 1
+        details: dict[str, Any]
+
+        with self._leader_lock() as leader:
+            if leader is False:
+                details = {"reason": "another company runtime process holds the lifetime leader lease"}
+                self.control.store.publish_event("company.autopilot.standby", "company", details)
+                self.control.store.audit(actor, "autopilot_leadership", "runtime", "company", "standby", details)
+                return
+            self._leader_owned = True
+            self._leader_thread_id = threading.get_ident()
             try:
-                self.tick(
-                    max_work_units=max_work_units,
-                    max_new_programmes=max_new_programmes,
-                    max_signals=max_signals,
-                )
-            except Exception as exc:
-                failures += 1
-                backoff = min(max_backoff, base_backoff * (2 ** (failures - 1)))
-                details = {
-                    "consecutive_failures": failures,
-                    "threshold": crash_threshold,
-                    "backoff_seconds": backoff,
-                    "error_type": type(exc).__name__,
-                    "error": str(exc)[:1000],
-                }
-                self.control.store.set_control("autopilot.consecutive_failures", str(failures), actor)
-                self.control.store.publish_event("company.autopilot.cycle_failed", str(failures), details)
-                self.control.store.audit(actor, "autopilot_cycle", "runtime", "company", "failed", details)
-                if failures >= crash_threshold:
-                    self.control.store.set_control("autopilot_enabled", "0", actor)
-                    self.control.store.set_control("autopilot.crash_circuit", "open", actor)
-                    self.control.store.publish_event("company.autopilot.circuit_opened", "company", details)
-                    self.control.store.audit(
-                        actor,
-                        "autopilot_crash_circuit",
-                        "runtime",
-                        "company",
-                        "blocked",
-                        details,
-                    )
-                    return
-                sleeper(backoff)
-                continue
-            if failures:
-                failures = 0
-                self.control.store.set_control("autopilot.consecutive_failures", "0", actor)
-                self.control.store.set_control("autopilot.crash_circuit", "closed", actor)
-            if max_cycles is None or cycles < max_cycles:
-                sleeper(delay)
+                while max_cycles is None or cycles < max_cycles:
+                    cycles += 1
+                    try:
+                        result = self.tick(
+                            max_work_units=max_work_units,
+                            max_new_programmes=max_new_programmes,
+                            max_signals=max_signals,
+                            max_dynamic_goals=max_dynamic_goals,
+                        )
+                    except Exception as exc:
+                        if self._must_fail_closed(exc):
+                            details = {
+                                "error_type": type(exc).__name__,
+                                "error": str(exc)[:1000],
+                                "fail_closed": True,
+                            }
+                            self.control.store.publish_event("company.autopilot.integrity_blocked", "company", details)
+                            self.control.store.audit(actor, "autopilot_cycle", "runtime", "company", "blocked", details)
+                            raise
+
+                        failures += 1
+                        raw_backoff = min(max_backoff, base_backoff * (2 ** (failures - 1)))
+                        jitter = random.uniform(0.0, min(base_backoff, raw_backoff * 0.25))
+                        backoff = min(max_backoff, raw_backoff + jitter)
+                        details = {
+                            "consecutive_failures": failures,
+                            "threshold": crash_threshold,
+                            "backoff_seconds": backoff,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc)[:1000],
+                        }
+                        self.control.store.set_control("autopilot.consecutive_failures", str(failures), actor)
+                        self.control.store.publish_event("company.autopilot.cycle_failed", str(failures), details)
+                        self.control.store.audit(actor, "autopilot_cycle", "runtime", "company", "failed", details)
+                        if failures == crash_threshold:
+                            self.control.store.set_control("autopilot.crash_circuit", "open", actor)
+                            self.control.store.publish_event("company.autopilot.circuit_opened", "company", details)
+                            self.control.store.audit(
+                                actor,
+                                "autopilot_crash_circuit",
+                                "runtime",
+                                "company",
+                                "degraded",
+                                details,
+                            )
+                        sleeper(backoff)
+                        continue
+
+                    if result.get("status") == "standby":
+                        if max_cycles is None or cycles < max_cycles:
+                            sleeper(delay)
+                        continue
+
+                    if failures:
+                        failures = 0
+                        self.control.store.set_control("autopilot.consecutive_failures", "0", actor)
+                        self.control.store.set_control("autopilot.crash_circuit", "closed", actor)
+                    if max_cycles is None or cycles < max_cycles:
+                        sleeper(delay)
+            finally:
+                self._leader_thread_id = None
+                self._leader_owned = False
 
 
 __all__ = ["AutonomousCompanyRuntime"]

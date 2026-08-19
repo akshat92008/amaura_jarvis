@@ -23,6 +23,7 @@ from typing import Any
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.mission_control import MissionControl
 from jarvis.amaura.models import GovernanceError
+from jarvis.amaura.trust import protect_signal_payload
 from jarvis.amaura.workflows import WORKFLOWS, get_workflow
 
 SIGNAL_SEVERITIES = {"low", "medium", "high", "critical"}
@@ -341,7 +342,9 @@ class CompanyAutonomyEngine:
             raise GovernanceError("Company signals require a source")
         if not payload:
             raise GovernanceError("Company signals require a non-empty payload")
-        stable = {"signal_type": signal_type, "source": source, "payload": payload}
+
+        protected_payload, trust = protect_signal_payload(payload, default_source=source.strip())
+        stable = {"signal_type": signal_type, "source": source, "payload": protected_payload}
         key = idempotency_key or f"signal:{_canonical_hash(stable)}"
         signal = self.control.store.create_company_signal(
             {
@@ -351,13 +354,18 @@ class CompanyAutonomyEngine:
                 "source": source.strip(),
                 "severity": severity,
                 "department": self._signal_department(signal_type),
-                "payload": payload,
+                "payload": protected_payload,
             }
         )
         self.control.store.publish_event(
             "company.signal.received",
             signal["id"],
-            {"signal_type": signal_type, "severity": severity, "source": source},
+            {
+                "signal_type": signal_type,
+                "severity": severity,
+                "source": source,
+                "trust_level": trust["level"],
+            },
         )
         self.control.store.audit(
             actor,
@@ -365,7 +373,12 @@ class CompanyAutonomyEngine:
             "company_signal",
             signal["id"],
             "allowed",
-            {"signal_type": signal_type, "severity": severity, "source": source},
+            {
+                "signal_type": signal_type,
+                "severity": severity,
+                "source": source,
+                "trust_level": trust["level"],
+            },
         )
         return signal
 
@@ -504,7 +517,10 @@ class CompanyAutonomyEngine:
         }[signal_type]
 
     def _signal_programme(self, signal: dict[str, Any], now: datetime) -> dict[str, Any] | None:
-        payload = dict(signal.get("payload") or {})
+        payload, trust = protect_signal_payload(
+            dict(signal.get("payload") or {}),
+            default_source=str(signal.get("source") or "internal"),
+        )
         signal_type = signal["signal_type"]
         repository = str(
             payload.get("repository_path")
@@ -611,7 +627,12 @@ class CompanyAutonomyEngine:
             workflow_key=workflow_key,
             title=f"Signal response: {signal_type} — {signal['id']}",
             priority=1 if signal["severity"] in {"critical", "high"} else 2,
-            inputs={**inputs, "signal_id": signal["id"], "signal_source": signal["source"]},
+            inputs={
+                **inputs,
+                "signal_id": signal["id"],
+                "signal_source": signal["source"],
+                "signal_trust": trust,
+            },
         )
 
     def _signal_budget_used_today(self, now: datetime) -> int:

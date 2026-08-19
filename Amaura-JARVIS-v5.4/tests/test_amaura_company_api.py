@@ -281,5 +281,12 @@ def test_cashflow_api_dashboard_tick_and_founder_stream(company_api):
     assert dashboard.json()["portfolio"]["totals_by_currency"]["INR"]["net_cashflow_cents"] == 19900
     runtime = client.get("/api/amaura/runtime/status", headers={"X-Amaura-Operator-Key": "operator-secret"})
     assert runtime.status_code == 200, runtime.text
-    assert runtime.json()["company_autopilot_state"] in {"stopped", "starting", "online", "standby", "degraded"}
+    assert runtime.json()["company_autopilot_state"] in {
+        "disabled",
+        "stopped",
+        "starting",
+        "online",
+        "standby",
+        "degraded",
+    }
     assert "company_autopilot_last_error" in runtime.json()
