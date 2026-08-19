@@ -1,0 +1,250 @@
+"""Bounded reviewer-model diversity for governed Amaura task review.
+
+Automatic review must never silently certify work with the same actual model
+that produced the worker evidence.  OmniRoute aliases can legitimately resolve
+to the same hosted model, so requested-model inequality is insufficient.  This
+module decorates the stable review runner with a small fail-closed routing loop:
+for automatic review only, try a bounded set of explicitly distinct hosted
+review candidates and retain the core runner's existing *actual model* and
+criterion-verification checks on every attempt.
+
+Explicit founder/operator review configuration is never overridden.  Local
+models are never introduced as a fallback by this decorator.
+"""
+
+from __future__ import annotations
+
+import os
+from contextlib import contextmanager
+from typing import Any, Iterator
+
+from jarvis.amaura import executor_core as _core
+from jarvis.amaura.models import GovernanceError, TaskState
+
+_BASE_REVIEW_RUNNER = _core.GovernedReviewRunner
+_INSTALLED = False
+
+_DEFAULT_OMNIROUTE_MODELS = (
+    "z-ai/glm-5.2",
+    "moonshotai/kimi-k2.6",
+    "deepseek-ai/deepseek-v4-pro",
+    "auto/best-reasoning",
+)
+_DEFAULT_CLOUD_MODELS = (
+    "z-ai/glm-5.2",
+    "moonshotai/kimi-k2.6",
+    "meta/llama-3.3-70b-instruct",
+)
+_RETRYABLE_REVIEW_MARKERS = (
+    "Actual reviewer model must differ from every worker model used for the task",
+    "Independent reviewer model must differ from every worker model used for the task",
+    "OmniRoute worker execution failed",
+    "OmniRoute returned no completion choices",
+    "OmniRoute returned an empty worker completion",
+    "Reviewer returned no JSON decision",
+    "Reviewer returned malformed JSON",
+    "Reviewer decision is missing approve/findings",
+    "The configured NVIDIA provider failed and provider fallback is disabled",
+)
+
+
+def _truthy(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _split_models(value: str | None) -> list[str]:
+    result: list[str] = []
+    for raw in str(value or "").replace("\n", ",").split(","):
+        model = raw.strip()
+        if model and model not in result:
+            result.append(model)
+    return result
+
+
+def _max_attempts() -> int:
+    raw = os.environ.get("AMAURA_REVIEW_DIVERSITY_MAX_ATTEMPTS", "4").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        value = 4
+    return max(1, min(value, 6))
+
+
+def _omniroute_configured() -> bool:
+    base = os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get(
+        "OMNIROUTE_BASE_URL", ""
+    ).strip()
+    key = os.environ.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or os.environ.get(
+        "OMNIROUTE_API_KEY", ""
+    ).strip()
+    return bool(base and key)
+
+
+def _nvidia_review_configured() -> bool:
+    return bool(
+        os.environ.get("NVIDIA_REVIEW_API_KEY", "").strip()
+        or os.environ.get("NVIDIA_API_KEY", "").strip()
+    )
+
+
+def _dedupe_distinct(models: list[str], worker_models: set[str]) -> list[str]:
+    result: list[str] = []
+    for model in models:
+        value = model.strip()
+        if not value or value in result or value in worker_models:
+            continue
+        result.append(value)
+    return result
+
+
+def _provider_candidates(provider: str, worker_models: set[str]) -> list[str]:
+    if provider == "omniroute":
+        configured = _split_models(os.environ.get("AMAURA_OMNIROUTE_REVIEW_MODEL_CANDIDATES"))
+        single = os.environ.get("AMAURA_OMNIROUTE_REVIEW_MODEL", "").strip()
+        models = ([single] if single else []) + configured + list(_DEFAULT_OMNIROUTE_MODELS)
+        return _dedupe_distinct(models, worker_models)
+    if provider == "cloud":
+        configured = _split_models(os.environ.get("AMAURA_CLOUD_REVIEW_MODEL_CANDIDATES"))
+        single = os.environ.get("AMAURA_CLOUD_REVIEW_MODEL", "").strip()
+        models = ([single] if single else []) + configured + list(_DEFAULT_CLOUD_MODELS)
+        return _dedupe_distinct(models, worker_models)
+    return []
+
+
+def _review_attempts(worker_models: set[str]) -> list[tuple[str, str]]:
+    """Build a bounded hosted-only automatic review route list.
+
+    Prefer the configured/current OmniRoute reviewer, then one explicit
+    OmniRoute model, then a provider-diverse NVIDIA reviewer when available.
+    Remaining configured candidates fill the bounded tail.  Actual-model
+    diversity is still enforced by the stable core after every response.
+    """
+
+    omni = _provider_candidates("omniroute", worker_models) if _omniroute_configured() else []
+    cloud = _provider_candidates("cloud", worker_models) if _nvidia_review_configured() else []
+    attempts: list[tuple[str, str]] = []
+
+    if omni:
+        attempts.append(("omniroute", omni.pop(0)))
+    if omni:
+        attempts.append(("omniroute", omni.pop(0)))
+    if cloud:
+        attempts.append(("cloud", cloud.pop(0)))
+
+    while omni or cloud:
+        if omni:
+            attempts.append(("omniroute", omni.pop(0)))
+        if cloud:
+            attempts.append(("cloud", cloud.pop(0)))
+
+    return attempts[: _max_attempts()]
+
+
+@contextmanager
+def _temporary_review_route(provider: str, model: str) -> Iterator[None]:
+    names = (
+        "AMAURA_REVIEW_MODE",
+        "AMAURA_OMNIROUTE_REVIEW_MODEL",
+        "AMAURA_CLOUD_REVIEW_MODEL",
+    )
+    previous = {name: os.environ.get(name) for name in names}
+    try:
+        if provider == "omniroute":
+            os.environ["AMAURA_REVIEW_MODE"] = "omniroute"
+            os.environ["AMAURA_OMNIROUTE_REVIEW_MODEL"] = model
+        elif provider == "cloud":
+            os.environ["AMAURA_REVIEW_MODE"] = "cloud"
+            os.environ["AMAURA_CLOUD_REVIEW_MODEL"] = model
+        else:
+            raise GovernanceError(f"Unsupported automatic review provider: {provider}")
+        yield
+    finally:
+        for name, value in previous.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+
+
+def _retryable_review_error(exc: Exception) -> bool:
+    text = str(exc)
+    return any(marker in text for marker in _RETRYABLE_REVIEW_MARKERS)
+
+
+def _failure_summary(failures: list[dict[str, str]]) -> str:
+    if not failures:
+        return "no eligible hosted reviewer route was available"
+    return "; ".join(
+        f"{item['provider']}:{item['model']}:{item['error_type']}" for item in failures
+    )
+
+
+class DiverseGovernedReviewRunner(_BASE_REVIEW_RUNNER):
+    """Stable reviewer plus bounded actual-model diversity recovery in auto mode."""
+
+    _arch_review_diversity_installed = True
+
+    def run(self, task_id: str) -> dict[str, Any]:
+        raw_mode = os.environ.get("AMAURA_REVIEW_MODE", "").strip().lower()
+        model_provider = os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower()
+
+        # Explicit operator choice is authoritative.  The decorator only repairs
+        # automatic routing and therefore cannot silently override a pinned
+        # provider/model policy.
+        if raw_mode not in {"", "auto"} or model_provider != "omniroute":
+            return super().run(task_id)
+
+        task = self.control.store.get_work_item(task_id)
+        worker_models = set(self._worker_models_from_evidence(task))
+        if not worker_models:
+            return super().run(task_id)
+
+        attempts = _review_attempts(worker_models)
+        if not attempts:
+            raise GovernanceError(
+                "Automatic independent review has worker model provenance but no distinct hosted reviewer route. "
+                "Configure OmniRoute or NVIDIA review credentials/models; local fallback is not permitted."
+            )
+
+        failures: list[dict[str, str]] = []
+        for provider, model in attempts:
+            with _temporary_review_route(provider, model):
+                try:
+                    return super().run(task_id)
+                except Exception as exc:  # noqa: BLE001 - only a narrow allowlist is retryable
+                    current = self.control.store.get_work_item(task_id)
+                    if current.get("state") != TaskState.AWAITING_REVIEW.value:
+                        raise
+                    if not _retryable_review_error(exc):
+                        raise
+                    failures.append(
+                        {
+                            "provider": provider,
+                            "model": model,
+                            "error_type": type(exc).__name__,
+                        }
+                    )
+
+        raise GovernanceError(
+            "Automatic independent review exhausted distinct hosted reviewer routes without weakening the "
+            f"worker/reviewer separation invariant: {_failure_summary(failures)}"
+        )
+
+
+def install_review_diversity() -> type[_BASE_REVIEW_RUNNER]:
+    """Install the reviewer decorator exactly once and return the active class."""
+
+    global _INSTALLED
+    current = _core.GovernedReviewRunner
+    if getattr(current, "_arch_review_diversity_installed", False):
+        _INSTALLED = True
+        return current
+    _core.GovernedReviewRunner = DiverseGovernedReviewRunner  # type: ignore[misc]
+    _INSTALLED = True
+    return DiverseGovernedReviewRunner
+
+
+__all__ = [
+    "DiverseGovernedReviewRunner",
+    "install_review_diversity",
+]
