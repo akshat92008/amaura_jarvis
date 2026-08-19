@@ -3,7 +3,6 @@ from __future__ import annotations
 from importlib import util
 from pathlib import Path
 
-
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "audit_arch_company_blockers.py"
 SPEC = util.spec_from_file_location("audit_arch_company_blockers", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
