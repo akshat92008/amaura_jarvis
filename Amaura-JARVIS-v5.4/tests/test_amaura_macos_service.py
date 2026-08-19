@@ -18,17 +18,20 @@ def _repo(root: Path) -> Path:
     return root
 
 
-def test_launch_agent_payload_uses_canonical_daemon_and_contains_no_credentials():
+def test_legacy_amaura_service_api_routes_only_to_canonical_arch():
     with TemporaryDirectory() as temp:
         root = _repo(Path(temp).resolve())
-        payload = launch_agent_payload(root)
+        payload = launch_agent_payload(root, poll_seconds=30)
         encoded = plistlib.dumps(payload)
         args = payload["ProgramArguments"]
-        assert payload["Label"] == "com.amaura.jarvis.company" == DEFAULT_LABEL
+
+        assert payload["Label"] == "com.amaura.arch" == DEFAULT_LABEL
         assert args[0] == str(root / ".venv" / "bin" / "python")
-        assert args[1:3] == ["-m", "jarvis.amaura.company_daemon"]
+        assert args[1:3] == ["-m", "jarvis.arch"]
+        assert "--headless" in args
+        assert "--no-web" in args
+        assert "jarvis.amaura.company_daemon" not in args
         assert str(root / ".env.amaura") in args
-        assert "Launch_Amaura.command" not in repr(args)
         assert payload["WorkingDirectory"] == str(root)
         assert payload["KeepAlive"] == {"SuccessfulExit": False}
         assert b"not-embedded-in-plist" not in encoded
@@ -37,20 +40,22 @@ def test_launch_agent_payload_uses_canonical_daemon_and_contains_no_credentials(
         assert b"PASSWORD" not in encoded
 
 
-def test_write_launch_agent_is_valid_private_canonical_plist():
+def test_legacy_write_launch_agent_writes_private_arch_plist():
     with TemporaryDirectory() as temp:
         root = _repo(Path(temp) / "repo")
         destination = Path(temp) / "agent.plist"
-        written = write_launch_agent(root, destination=destination)
+        written = write_launch_agent(root, destination=destination, poll_seconds=30)
         payload = plistlib.loads(written.read_bytes())
+
         assert payload["Label"] == DEFAULT_LABEL
-        assert "jarvis.amaura.company_daemon" in payload["ProgramArguments"]
+        assert "jarvis.arch" in payload["ProgramArguments"]
+        assert "jarvis.amaura.company_daemon" not in payload["ProgramArguments"]
         assert payload["RunAtLoad"] is True
         if os.name == "posix":
             assert written.stat().st_mode & 0o777 == 0o600
 
 
-def test_launch_agent_rejects_non_private_environment_file():
+def test_legacy_service_api_rejects_non_private_environment_file():
     with TemporaryDirectory() as temp:
         root = _repo(Path(temp).resolve())
         (root / ".env.amaura").chmod(0o644)
@@ -59,4 +64,4 @@ def test_launch_agent_rejects_non_private_environment_file():
         except PermissionError as exc:
             assert "chmod 600" in str(exc)
         else:  # pragma: no cover
-            raise AssertionError("canonical LaunchAgent must reject a non-private env file")
+            raise AssertionError("canonical ARCH LaunchAgent must reject a non-private env file")
