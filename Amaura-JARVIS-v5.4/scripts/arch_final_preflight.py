@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""Read-only final-target preflight for the single persistent ARCH runtime.
+
+This script never starts, stops, installs, or mutates ARCH. It verifies the
+exact checkout, private environment permissions, launchd ownership, health/PID
+agreement, absence of the legacy company daemon, idle RSS, and hosted cognition
+redundancy. Provider names are reported; credentials are never printed.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import stat
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+from typing import Any
+
+from jarvis.amaura.runtime import load_amaura_env
+
+
+def _run(command: list[str], *, cwd: Path | None = None, timeout: int = 15) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, cwd=cwd, capture_output=True, text=True, check=False, timeout=timeout)
+
+
+def _check(name: str, ok: bool, detail: Any) -> dict[str, Any]:
+    return {"name": name, "status": "PASS" if ok else "FAIL", "detail": detail}
+
+
+def _health(url: str) -> dict[str, Any]:
+    request = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:  # noqa: S310 - fixed loopback URL by default
+            return json.loads(response.read().decode("utf-8"))
+    except (OSError, urllib.error.URLError, ValueError, json.JSONDecodeError) as exc:
+        return {"_error": f"{type(exc).__name__}: {exc}"}
+
+
+def _launchd_state(label: str) -> dict[str, Any]:
+    if sys.platform != "darwin":
+        return {"available": False, "state": "unsupported", "pid": 0, "raw": "not macOS"}
+    service = f"gui/{os.getuid()}/{label}"
+    result = _run(["launchctl", "print", service])
+    if result.returncode != 0:
+        return {"available": True, "state": "missing", "pid": 0, "raw": result.stderr.strip()[:1000]}
+    state_match = re.search(r"^\s*state\s*=\s*(\S+)", result.stdout, re.MULTILINE)
+    pid_match = re.search(r"^\s*pid\s*=\s*(\d+)", result.stdout, re.MULTILINE)
+    return {
+        "available": True,
+        "state": state_match.group(1) if state_match else "unknown",
+        "pid": int(pid_match.group(1)) if pid_match else 0,
+        "raw": "",
+    }
+
+
+def _rss_kb(pid: int) -> int:
+    if pid <= 0:
+        return 0
+    result = _run(["ps", "-o", "rss=", "-p", str(pid)])
+    try:
+        return int(result.stdout.strip()) if result.returncode == 0 else 0
+    except ValueError:
+        return 0
+
+
+def _legacy_processes() -> list[str]:
+    result = _run(["ps", "-axo", "pid=,command="])
+    if result.returncode != 0:
+        return ["process inspection failed"]
+    markers = ("jarvis.amaura.company_daemon", "amaura-company")
+    return [line.strip() for line in result.stdout.splitlines() if any(marker in line for marker in markers)]
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Read-only final ARCH target preflight")
+    parser.add_argument("--env-file", default=".env.amaura")
+    parser.add_argument("--expected-sha", required=True)
+    parser.add_argument("--health-url", default="http://127.0.0.1:8000/api/health")
+    parser.add_argument("--service-label", default="com.amaura.arch")
+    parser.add_argument("--max-idle-rss-mb", type=int, default=2048)
+    parser.add_argument("--require-python-313", action="store_true")
+    args = parser.parse_args(argv)
+
+    repo_root = Path(__file__).resolve().parents[1]
+    env_file = Path(args.env_file).expanduser().resolve()
+    checks: list[dict[str, Any]] = []
+
+    sha_result = _run(["git", "rev-parse", "HEAD"], cwd=repo_root)
+    actual_sha = sha_result.stdout.strip() if sha_result.returncode == 0 else "unknown"
+    checks.append(_check("exact_sha", actual_sha == args.expected_sha, {"expected": args.expected_sha, "actual": actual_sha}))
+
+    dirty_result = _run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=repo_root)
+    dirty = dirty_result.returncode != 0 or bool(dirty_result.stdout.strip())
+    checks.append(_check("tracked_tree_clean", not dirty, dirty_result.stdout.strip()))
+
+    env_ok = env_file.is_file()
+    mode = stat.S_IMODE(env_file.stat().st_mode) if env_ok else 0
+    checks.append(_check("private_env_permissions", env_ok and mode == 0o600, {"path": str(env_file), "mode": oct(mode)}))
+    if env_ok:
+        load_amaura_env(env_file, override=True, require_private_permissions=True)
+
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    supported = (3, 11) <= sys.version_info[:2] < (3, 15)
+    if args.require_python_313:
+        supported = supported and sys.version_info[:2] == (3, 13)
+    checks.append(_check("target_python", supported, python_version))
+
+    launchd = _launchd_state(args.service_label)
+    service_ok = launchd.get("state") == "running" and int(launchd.get("pid") or 0) > 0
+    checks.append(_check("single_arch_launchd_service", service_ok, launchd))
+    service_pid = int(launchd.get("pid") or 0)
+
+    health = _health(args.health_url)
+    health_pid = int(health.get("pid") or 0) if isinstance(health, dict) else 0
+    health_ok = health.get("status") == "online" and health_pid > 0 and health_pid == service_pid
+    checks.append(
+        _check(
+            "health_pid_matches_launchd",
+            health_ok,
+            {
+                "status": health.get("status"),
+                "health_pid": health_pid,
+                "launchd_pid": service_pid,
+                "tools_total": (health.get("tools") or {}).get("total") if isinstance(health.get("tools"), dict) else None,
+                "version": health.get("version"),
+                "build_id": health.get("build_id"),
+            },
+        )
+    )
+
+    legacy = _legacy_processes()
+    checks.append(_check("no_legacy_company_daemon", not legacy, legacy))
+
+    rss_kb = _rss_kb(service_pid)
+    max_rss_kb = max(128, args.max_idle_rss_mb) * 1024
+    checks.append(
+        _check(
+            "idle_rss_budget",
+            rss_kb > 0 and rss_kb <= max_rss_kb,
+            {"rss_kb": rss_kb, "rss_mb": round(rss_kb / 1024, 2), "limit_mb": args.max_idle_rss_mb},
+        )
+    )
+
+    provider_names: list[str] = []
+    if env_ok:
+        from jarvis.arch_provider_resilience import _fallback_specs
+
+        provider_names = [provider for provider, *_ in _fallback_specs()]
+    checks.append(
+        _check(
+            "hosted_emergency_provider_redundancy",
+            len(provider_names) >= 2,
+            {"providers": provider_names, "count": len(provider_names), "credentials_printed": False},
+        )
+    )
+
+    passed = all(item["status"] == "PASS" for item in checks)
+    report = {
+        "qualification": "ARCH_FINAL_PREFLIGHT",
+        "status": "PASS" if passed else "FAIL",
+        "candidate_sha": actual_sha,
+        "checks": checks,
+    }
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0 if passed else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
