@@ -14,6 +14,7 @@ company-relevant conversational turns.
 from __future__ import annotations
 
 import re
+import time
 from typing import Any
 
 from jarvis.amaura import cognition as _cognition
@@ -67,6 +68,13 @@ _ACTION_PREFIX = re.compile(
     re.IGNORECASE,
 )
 
+_UNAVAILABLE_MARKERS = (
+    "interactive cognition service is temporarily unavailable",
+    "all ai model backend providers",
+    "arch_hosted_fallback_exhausted",
+    "no configured cognition model is available",
+)
+
 
 def needs_authoritative_world(text: str) -> bool:
     """Return True only for read-oriented questions about Amaura/company state."""
@@ -78,6 +86,104 @@ def needs_authoritative_world(text: str) -> bool:
     if any(signal in clean for signal in _STATE_SIGNALS):
         return True
     return clean.endswith("?") or clean.startswith(("what ", "how ", "where ", "which ", "why ", "is ", "are "))
+
+
+def _company_truth(control: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Combine live work state with the broader read-only executive dashboard."""
+    try:
+        dashboard = control.dashboard()
+    except Exception as exc:
+        dashboard = {"dashboard_error": f"{type(exc).__name__}: {str(exc)[:240]}"}
+    return {
+        "operational": {
+            "captured_at": snapshot.get("captured_at", ""),
+            "counts": dict(snapshot.get("counts") or {}),
+            "active_programmes": list(snapshot.get("active_programmes") or [])[:12],
+            "running_tasks": list(snapshot.get("running_tasks") or [])[:8],
+            "failed_tasks": list(snapshot.get("failed_tasks") or [])[:8],
+            "blocked_tasks": list(snapshot.get("blocked_tasks") or [])[:8],
+            "pending_approvals": list(snapshot.get("pending_approvals") or [])[:8],
+            "open_alerts": list(snapshot.get("open_alerts") or [])[:8],
+        },
+        "executive_dashboard": dashboard,
+        "truth_coverage": {
+            "operational_work": "authoritative",
+            "approvals_and_alerts": "authoritative",
+            "acquisition": "authoritative_if_present_in_dashboard",
+            "distribution": "authoritative_if_present_in_dashboard",
+            "recognized_cash_revenue": "unknown_unless_explicitly_present",
+            "cash_balance": "unknown_unless_explicitly_present",
+            "legal_or_incorporation_status": "unknown_unless_explicitly_present",
+        },
+    }
+
+
+def _cognition_unavailable(answer: str) -> bool:
+    clean = " ".join(str(answer or "").strip().lower().split())
+    if not clean:
+        return True
+    return any(marker in clean for marker in _UNAVAILABLE_MARKERS)
+
+
+def _deterministic_company_answer(snapshot: dict[str, Any], truth: dict[str, Any]) -> str:
+    """Produce a useful zero-model status answer from authoritative state only."""
+    counts = dict(snapshot.get("counts") or {})
+    active = int(counts.get("active_programmes", 0) or 0)
+    running = int(counts.get("running_tasks", 0) or 0)
+    failed = int(counts.get("failed_tasks", 0) or 0)
+    blocked = int(counts.get("blocked_tasks", 0) or 0)
+    approvals = int(counts.get("pending_approvals", 0) or 0)
+    alerts = int(counts.get("open_alerts", 0) or 0)
+
+    lines = [
+        "ARCH is using the live Amaura company store.",
+        (
+            f"Current operational state: {active} active programme(s), {running} running task(s), "
+            f"{failed} failed task(s), {blocked} blocked task(s), {approvals} pending approval(s), "
+            f"and {alerts} open alert(s)."
+        ),
+    ]
+
+    if failed or blocked or alerts:
+        lines.append(
+            "Immediate priority: resolve the root execution blockers and highest-severity alerts before creating more work."
+        )
+    elif approvals:
+        lines.append("Immediate priority: review the founder approvals that are preventing otherwise-ready work from advancing.")
+    elif running:
+        lines.append("Immediate priority: finish and verify the work already in progress before expanding the active queue.")
+    elif active:
+        lines.append("Immediate priority: identify the highest-priority dependency-ready task from the active programmes and execute it.")
+    else:
+        lines.append("There is no active programme work in the current store; choose the next founder objective before execution.")
+
+    failed_items = list(snapshot.get("failed_tasks") or [])[:3]
+    if failed_items:
+        lines.append("Top failed work: " + "; ".join(str(item.get("title") or item.get("id") or "unknown") for item in failed_items) + ".")
+    alert_items = list(snapshot.get("open_alerts") or [])[:3]
+    if alert_items:
+        lines.append(
+            "Top alerts: "
+            + "; ".join(
+                str(item.get("message") or item.get("code") or item.get("id") or "unknown")[:220]
+                for item in alert_items
+            )
+            + "."
+        )
+
+    dashboard = truth.get("executive_dashboard") if isinstance(truth, dict) else {}
+    if isinstance(dashboard, dict):
+        acquisition = dashboard.get("acquisition")
+        distribution = dashboard.get("distribution")
+        if acquisition:
+            lines.append("The live executive dashboard also contains acquisition state; I will use it for revenue/pipeline questions.")
+        if distribution:
+            lines.append("The live executive dashboard also contains distribution state; I will use it for channel/content questions.")
+
+    lines.append(
+        "I will not invent cash, recognized revenue, runway, or legal/incorporation facts unless those values are explicitly present in authoritative company data."
+    )
+    return "\n".join(lines)
 
 
 class ArchExecutiveKernel(_BaseExecutiveKernel):
@@ -94,14 +200,16 @@ class ArchExecutiveKernel(_BaseExecutiveKernel):
         # Company-state questions are comparatively rare and correctness matters
         # more than the ordinary chat fast path. Force exactly one fresh rebuild
         # from CompanyStore, then render context from that freshly cached snapshot.
-        # This prevents a persisted jarvis.world/current snapshot from being
-        # structurally "authoritative" while still describing an older company.
         snapshot: dict[str, Any] = self.world.get(refresh=True)
         world_context = self.world.context(request.text, refresh=False)
+        truth = _company_truth(self.control, snapshot)
+        truth_context = _cognition._safe_json(truth, 18_000)
         memory_context, memory_sources = self.memory.context(request.text, limit=10)
         combined_context = (
             "[ARCH AUTHORITATIVE CURRENT COMPANY STATE - trust=system]\n"
             + world_context
+            + "\n[ARCH AUTHORITATIVE EXECUTIVE DASHBOARD - trust=system]\n"
+            + truth_context
             + "\n[ARCH RULE] The company state above is authoritative for current facts. "
             "Do not contradict it with model priors or invent missing company facts; say unknown when absent.\n"
             + "[RELEVANT LONG-TERM MEMORY - trust labels are authoritative]\n"
@@ -110,11 +218,21 @@ class ArchExecutiveKernel(_BaseExecutiveKernel):
             + "[END ARCH GROUNDED CONTEXT]\n"
         )
         combined_context = self._history_context(request.session_id) + combined_context
-        answer = self._conversation(request.text, combined_context)
+
+        started = time.monotonic()
+        try:
+            answer = self._conversation(request.text, combined_context)
+        except Exception:
+            answer = ""
+        cognition_latency_ms = int((time.monotonic() - started) * 1000)
+        cognition_degraded = _cognition_unavailable(answer)
+        if cognition_degraded:
+            answer = _deterministic_company_answer(snapshot, truth)
+
         self.memory.record_episode(
             summary=f"Grounded company question: {request.text[:2500]}\nAssistant: {answer[:2500]}",
             session_id=request.session_id,
-            outcome="conversation_grounded_world",
+            outcome=("conversation_grounded_world_degraded" if cognition_degraded else "conversation_grounded_world"),
         )
         self._record_turn(request.session_id, request.text, answer)
         self._consolidate_async(user_text=request.text, assistant_text=answer, session_id=request.session_id)
@@ -126,8 +244,11 @@ class ArchExecutiveKernel(_BaseExecutiveKernel):
                 "grounding": "authoritative_world_model",
                 "world_counts": dict(snapshot.get("counts") or {}),
                 "captured_at": snapshot.get("captured_at", ""),
+                "cognition_degraded": cognition_degraded,
+                "cognition_latency_ms": cognition_latency_ms,
+                "truth_coverage": dict(truth.get("truth_coverage") or {}),
             },
-            context_sources=["world:current", *memory_sources],
+            context_sources=["world:current", "company:dashboard", *memory_sources],
         )
 
 
@@ -138,4 +259,9 @@ def install_arch_grounding() -> None:
     _cognition.ExecutiveKernel = ArchExecutiveKernel
 
 
-__all__ = ["ArchExecutiveKernel", "install_arch_grounding", "needs_authoritative_world"]
+__all__ = [
+    "ArchExecutiveKernel",
+    "install_arch_grounding",
+    "needs_authoritative_world",
+    "_deterministic_company_answer",
+]
