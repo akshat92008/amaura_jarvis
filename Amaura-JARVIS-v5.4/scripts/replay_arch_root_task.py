@@ -57,8 +57,9 @@ def _read_task(db_path: Path, task_id: str) -> dict[str, Any]:
             raise KeyError(f"Unknown task: {task_id}")
         task = dict(row)
         for key in ("acceptance_criteria", "dependencies", "evidence", "metadata"):
+            default = "{}" if key == "metadata" else "[]"
             try:
-                task[key] = json.loads(str(task.get(key) or "[]" if key != "metadata" else "{}"))
+                task[key] = json.loads(str(task.get(key) or default))
             except (TypeError, ValueError, json.JSONDecodeError):
                 task[key] = {} if key == "metadata" else []
         return task
@@ -256,6 +257,17 @@ def main(argv: list[str] | None = None) -> int:
         _configure_replay_environment(qualification_dir, copied_checkpoint)
 
         control = AmauraControlPlane(db_path=copied_db, audit_checkpoint_path=copied_checkpoint)
+        # Append a qualification-only audit record to the copy. Besides making
+        # the state reset explicit, this advances a legitimately lagging copied
+        # checkpoint to the copied DB's current audit head before integrity proof.
+        control.store.audit(
+            "arch-qualification",
+            "prepare_root_replay",
+            "task",
+            args.task_id,
+            "allowed",
+            {"source_mode": "sqlite_read_only_backup", "external_actions_kill_switch": "on"},
+        )
         integrity_before = control.store.integrity_check()
         if not integrity_before.get("ok"):
             raise RuntimeError(f"Copied CompanyStore failed integrity check before replay: {integrity_before}")
