@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "install_arch_launchd.py"
 SPEC = importlib.util.spec_from_file_location("install_arch_launchd", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
