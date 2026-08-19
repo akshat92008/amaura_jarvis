@@ -70,7 +70,7 @@ def test_audit_does_not_treat_failed_task_with_failed_upstream_as_separate_root(
 
     root_ids = [item["id"] for item in result["root_blockers"]]
     assert root_ids == ["upstream"]
-    assert result["root_blockers"][0]["blocked_descendants"] == 0
+    assert result["root_blockers"][0]["blocked_descendants"] == 1
 
 
 def test_audit_counts_alert_codes_and_redacts_secret_like_summary():
