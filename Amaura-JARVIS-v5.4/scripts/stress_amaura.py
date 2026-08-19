@@ -32,7 +32,11 @@ def main() -> int:
     os.environ["AMAURA_DISABLE_CLOUD"] = "1"
     started = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix="amaura-stress-") as directory:
-        control = AmauraControlPlane(Path(directory) / "amaura.db")
+        stress_root = Path(directory)
+        control = AmauraControlPlane(
+            stress_root / "amaura.db",
+            audit_checkpoint_path=stress_root / "audit-checkpoint.json",
+        )
         pipeline = control.acquisition
         for campaign_number in range(CAMPAIGNS):
             pipeline.create_campaign(
