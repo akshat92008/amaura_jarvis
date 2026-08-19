@@ -17,8 +17,8 @@ from jarvis.amaura.model_gateway import CognitiveModelGateway, CognitiveModelRes
 from jarvis.amaura.models import GovernanceError
 
 _INSTALLED = False
-_ORIGINAL_GENERATE = None
-_ORIGINAL_GENERATE_STREAM = None
+_ORIGINAL_GENERATE: Any = None
+_ORIGINAL_GENERATE_STREAM: Any = None
 
 
 def _enabled_for(purpose: str) -> bool:
@@ -216,8 +216,6 @@ def install_arch_provider_resilience() -> None:
                 max_tokens=max_tokens,
             )
         except Exception as exc:
-            # Once any token has reached the founder, never append a second
-            # provider's answer. The caller must surface the interrupted stream.
             if emitted or not _enabled_for(purpose):
                 raise
             result = _hosted_fallback(
@@ -232,8 +230,8 @@ def install_arch_provider_resilience() -> None:
                 on_token(result.text)
             return result
 
-    CognitiveModelGateway.generate = classmethod(resilient_generate)
-    CognitiveModelGateway.generate_stream = classmethod(resilient_generate_stream)
+    setattr(CognitiveModelGateway, "generate", classmethod(resilient_generate))
+    setattr(CognitiveModelGateway, "generate_stream", classmethod(resilient_generate_stream))
     setattr(CognitiveModelGateway, "_arch_provider_resilience_installed", True)
     _INSTALLED = True
 
