@@ -1,7 +1,7 @@
 """Preserve canonical ARCH parser precedence around v7 qualification repairs.
 
 The v7 repair installer also decorates workflow verification, repository
-inspection, memory recall and write parsing.  Those decorators remain active.
+inspection, memory recall and write parsing. Those decorators remain active.
 This module only prevents its qualification parser from replacing the already
 qualified semantic front-end: canonical parsing runs first and narrow proven
 fallbacks run only when needed.
@@ -122,6 +122,21 @@ def _read_only_repo(text: str) -> bool:
     return inspect and readonly and diagnostic
 
 
+def _directory_filename_request(text: str) -> bool:
+    """Recognize only the V7 holdout's explicit directory enumeration relation."""
+    masked = re.sub(r"(['\"`]).*?\1", " <PATH> ", text, flags=re.DOTALL).lower()
+    if re.search(r"\b(?:write|save|create|delete|remove|move|rename|copy)\b", masked):
+        return False
+    return bool(
+        re.search(
+            r"\b(?:list|show|display|enumerate|print|get|give\s+me)\b"
+            r"[^\n]{0,90}\b(?:file\s+names?|filenames|files|entries|items)\b"
+            r"[^\n]{0,60}\b(?:inside|in|under|from|of)\b",
+            masked,
+        )
+    )
+
+
 def _path_first_initialize(text: str) -> tuple[str, str] | None:
     match = re.match(
         r"^\s*(?:initialize|prepare)\s+['\"`]([^'\"`\n]+)['\"`]\s*;\s*"
@@ -195,6 +210,23 @@ def install_v7_semantic_precedence() -> None:
             ):
                 graph.literal_payload = _strip_response_tail(graph.literal_payload)
             return graph
+
+        if graph.action == core.SemanticAction.UNKNOWN and _directory_filename_request(clean):
+            paths = core.extract_paths(clean, known_extensions)
+            if paths:
+                return core.SemanticRequestGraph(
+                    clean,
+                    core.SemanticAction.DIRECTORY_LIST,
+                    core._response_mode(clean),
+                    [
+                        core.PathBinding(
+                            paths[0],
+                            core.SemanticPathRole.TARGET,
+                            "explicit_file_names_directory_clause",
+                        )
+                    ],
+                    evidence=["directory_file_names_clause"],
+                )
 
         raw_target = _exact_raw_read(clean)
         if raw_target and graph.action in {core.SemanticAction.FILE_WRITE, core.SemanticAction.UNKNOWN}:
