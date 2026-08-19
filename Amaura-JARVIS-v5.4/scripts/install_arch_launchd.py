@@ -15,11 +15,17 @@ import re
 import shutil
 import subprocess
 import sys
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
+from jarvis.amaura.runtime import load_amaura_env
 from jarvis.arch_macos_service import DEFAULT_LABEL, LEGACY_LABELS, launch_agent_payload
 
 _PID_PATTERN = re.compile(r"(?m)^\s*pid\s*=\s*(\d+)\s*$")
+_SERVICE_START_TIMEOUT_SECONDS = 45.0
+_SERVICE_POLL_INTERVAL_SECONDS = 0.25
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -60,6 +66,54 @@ def _require_success(result: subprocess.CompletedProcess[str], operation: str) -
         raise RuntimeError(f"launchctl {operation} failed: {detail}")
 
 
+def _health_url() -> str:
+    host = os.environ.get("JARVIS_HOST", "127.0.0.1").strip() or "127.0.0.1"
+    if host in {"0.0.0.0", "::"}:
+        host = "127.0.0.1"
+    try:
+        port = int(os.environ.get("JARVIS_PORT", "8000"))
+    except ValueError as exc:
+        raise RuntimeError("JARVIS_PORT must be an integer for ARCH service verification") from exc
+    return f"http://{host}:{port}/api/health"
+
+
+def _health_ok() -> bool:
+    request = urllib.request.Request(_health_url(), method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=2.0) as response:
+            return int(response.status) == 200
+    except (OSError, urllib.error.URLError, TimeoutError):
+        return False
+
+
+def _wait_for_service(*, domain: str, timeout: float = _SERVICE_START_TIMEOUT_SECONDS) -> int:
+    """Wait for launchd to own one live, healthy ARCH process after bootstrap.
+
+    The canonical plist is RunAtLoad, so ``launchctl bootstrap`` is the start
+    operation. Do not follow it with ``kickstart -k``: that can kill the fresh
+    process while it is still initializing and was observed to hang on the
+    target Mac. Verification is instead read-only polling of launchd + health.
+    """
+    deadline = time.monotonic() + max(0.1, timeout)
+    last_detail = "service not yet visible"
+    while time.monotonic() < deadline:
+        verify = _launchctl("print", f"{domain}/{DEFAULT_LABEL}")
+        if verify.returncode == 0:
+            output = "\n".join(part for part in (verify.stdout, verify.stderr) if part)
+            match = _PID_PATTERN.search(output)
+            if match is not None and int(match.group(1)) > 1:
+                pid = int(match.group(1))
+                if _health_ok():
+                    return pid
+                last_detail = f"launchd reports pid={pid}, but {_health_url()} is not healthy yet"
+            else:
+                last_detail = "launchd service is visible but has no live PID yet"
+        else:
+            last_detail = (verify.stderr or verify.stdout or "launchd service not visible yet").strip()
+        time.sleep(_SERVICE_POLL_INTERVAL_SECONDS)
+    raise RuntimeError(f"ARCH service did not become healthy within {timeout:.0f}s: {last_detail}")
+
+
 def _verify_installed_service(*, domain: str, canonical: Path, expected_payload: dict) -> int:
     try:
         installed_payload = plistlib.loads(canonical.read_bytes())
@@ -68,19 +122,12 @@ def _verify_installed_service(*, domain: str, canonical: Path, expected_payload:
     if installed_payload != expected_payload:
         raise RuntimeError("Installed LaunchAgent payload does not match the canonical ARCH contract")
 
-    verify = _launchctl("print", f"{domain}/{DEFAULT_LABEL}")
-    _require_success(verify, "print")
-    output = "\n".join(part for part in (verify.stdout, verify.stderr) if part)
-    if DEFAULT_LABEL not in output:
-        raise RuntimeError("launchctl verification did not identify the canonical ARCH service")
-    match = _PID_PATTERN.search(output)
-    if match is None or int(match.group(1)) <= 1:
-        raise RuntimeError("launchctl verification did not report a live ARCH PID")
+    pid = _wait_for_service(domain=domain)
 
     for label in LEGACY_LABELS:
         if _launchctl("print", f"{domain}/{label}").returncode == 0:
             raise RuntimeError(f"Legacy split runtime {label} is still loaded")
-    return int(match.group(1))
+    return pid
 
 
 def _restore_previous_services(
@@ -96,7 +143,6 @@ def _restore_previous_services(
         _write_private(canonical, previous_canonical)
         if _launchctl("bootstrap", domain, str(canonical)).returncode == 0:
             _launchctl("enable", f"{domain}/{DEFAULT_LABEL}")
-            _launchctl("kickstart", "-k", f"{domain}/{DEFAULT_LABEL}")
     else:
         canonical.unlink(missing_ok=True)
     for label, path in legacy.items():
@@ -116,6 +162,10 @@ def install(repo_root: Path, *, dry_run: bool) -> int:
         sys.stdout.buffer.write(rendered)
         return 0
 
+    # Verification must target the same host/port ARCH will load from its
+    # private environment. Secrets remain process-local and never enter plist.
+    load_amaura_env(repo_root / ".env.amaura", override=True, require_private_permissions=True)
+
     previous_canonical = canonical.read_bytes() if canonical.exists() else None
     legacy_existed = {label: path.exists() for label, path in legacy.items()}
     domain = f"gui/{os.getuid()}"
@@ -129,7 +179,6 @@ def install(repo_root: Path, *, dry_run: bool) -> int:
     try:
         _require_success(_launchctl("bootstrap", domain, str(canonical)), "bootstrap")
         _require_success(_launchctl("enable", f"{domain}/{DEFAULT_LABEL}"), "enable")
-        _require_success(_launchctl("kickstart", "-k", f"{domain}/{DEFAULT_LABEL}"), "kickstart")
         pid = _verify_installed_service(domain=domain, canonical=canonical, expected_payload=payload)
     except Exception:
         _restore_previous_services(
