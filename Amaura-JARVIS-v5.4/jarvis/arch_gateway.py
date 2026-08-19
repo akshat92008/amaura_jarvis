@@ -3,7 +3,7 @@
 The legacy HUD historically asked separately for JARVIS API auth and the Amaura
 operator key. ARCH runs as one local founder-facing product, so an already
 validated local JARVIS session is promoted to an *ephemeral* founder session.
-The long-lived AMAURA_OPERATOR_KEY never leaves the Python process.
+The long-lived AMAURA_OPERATOR_KEY never leaves the browser-facing interface.
 
 Founder-approval authority is intentionally NOT converged here. Consequences
 that require AMAURA_APPROVAL_KEY continue to stop at the existing approval
@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import base64
 import hmac
+import json
 import os
 import secrets
 from http.cookies import SimpleCookie
@@ -32,8 +33,8 @@ class ArchFounderGateway:
     2. this gateway issues a process-lifetime opaque HttpOnly cookie.
 
     Subsequent same-process requests may use that cookie. The gateway injects
-    the operator header internally so the rest of the already-qualified server
-    can keep its existing fail-closed authorization logic unchanged.
+    operator authority internally so the already-qualified server can keep its
+    existing fail-closed authorization logic unchanged.
     """
 
     COOKIE_NAME = "arch_founder_session"
@@ -103,16 +104,41 @@ class ArchFounderGateway:
         headers.append((encoded_name, value.encode("latin-1")))
         scope["headers"] = headers
 
-    def _inject_operator(self, scope: dict[str, Any]) -> bool:
+    def _inject_operator(self, scope: dict[str, Any]) -> str:
         if os.environ.get("ARCH_RUNTIME", "0") != "1":
-            return False
+            return ""
         if not self._founder_session_valid(scope):
-            return False
+            return ""
         operator_key = os.environ.get("AMAURA_OPERATOR_KEY", "")
         if not operator_key:
-            return False
+            return ""
         self._replace_header(scope, "x-amaura-operator-key", operator_key)
-        return True
+        return operator_key
+
+    @staticmethod
+    def _websocket_receive_with_operator(receive, operator_key: str):
+        async def wrapped_receive():
+            message = await receive()
+            if message.get("type") != "websocket.receive" or not operator_key:
+                return message
+            raw_text = message.get("text")
+            if not isinstance(raw_text, str) or not raw_text:
+                return message
+            try:
+                payload = json.loads(raw_text)
+            except json.JSONDecodeError:
+                return message
+            if not isinstance(payload, dict):
+                return message
+            if payload.get("type", "chat") not in {"chat", "voice"}:
+                return message
+            # The browser never receives the operator secret. It is attached only
+            # inside the Python process immediately before the legacy WebSocket
+            # endpoint consumes the message.
+            payload["operator_key"] = operator_key
+            return {**message, "text": json.dumps(payload, separators=(",", ":"))}
+
+        return wrapped_receive
 
     def _cookie_header(self) -> bytes:
         return (
@@ -131,9 +157,14 @@ class ArchFounderGateway:
         local_scope["headers"] = list(scope.get("headers") or [])
         had_cookie = self._cookie_valid(local_scope)
         authenticated = self._founder_session_valid(local_scope)
-        self._inject_operator(local_scope)
+        operator_key = self._inject_operator(local_scope)
 
-        if scope_type != "http" or not authenticated or had_cookie:
+        if scope_type == "websocket":
+            ws_receive = self._websocket_receive_with_operator(receive, operator_key) if authenticated else receive
+            await self.app(local_scope, ws_receive, send)
+            return
+
+        if not authenticated or had_cookie:
             await self.app(local_scope, receive, send)
             return
 
