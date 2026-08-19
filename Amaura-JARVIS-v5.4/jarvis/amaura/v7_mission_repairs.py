@@ -110,7 +110,11 @@ def install_v7_mission_repairs() -> None:
             )
         return current_direct_plan(self, request, workspace)
 
-    setattr(classify_with_repository_engineering_precedence, "_amaura_v7_repository_engineering_guard", True)
+    _install_attr(
+        classify_with_repository_engineering_precedence,
+        "_amaura_v7_repository_engineering_guard",
+        True,
+    )
     _install_attr(GoalCompiler, "classify", classify_with_repository_engineering_precedence)
     _install_attr(GoalCompiler, "_direct_action_plan", guarded_direct_action_plan)
     _INSTALLED = True
