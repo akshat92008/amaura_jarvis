@@ -104,19 +104,25 @@ def analyze(tasks: list[dict[str, Any]], alerts: list[dict[str, Any]]) -> dict[s
             reverse[dep].append(task_id)
 
     def blocked_descendants(root_id: str) -> set[str]:
-        found: set[str] = set()
+        blocked_found: set[str] = set()
+        visited = {root_id}
         stack = [root_id]
         while stack:
             parent = stack.pop()
             for child_id in reverse.get(parent, []):
-                if child_id in found:
+                if child_id in visited:
                     continue
+                visited.add(child_id)
                 child = by_id.get(child_id) or {}
-                if str(child.get("state") or "") != "blocked":
+                child_state = str(child.get("state") or "")
+                if child_state not in PROBLEM_STATES:
                     continue
-                found.add(child_id)
+                if child_state == "blocked":
+                    blocked_found.add(child_id)
+                # Failed descendants may themselves block a deeper chain, so
+                # keep traversing through both failed and blocked problem nodes.
                 stack.append(child_id)
-        return found
+        return blocked_found
 
     failed = [task for task in live if str(task.get("state") or "") == "failed"]
     blocked = [task for task in live if str(task.get("state") or "") == "blocked"]
