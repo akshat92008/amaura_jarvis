@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import socket
 from pathlib import Path
 
 from jarvis.amaura.runtime import load_amaura_env
@@ -61,7 +62,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--api-key", "-k")
     parser.add_argument("--working-dir", "-d", default="")
     parser.add_argument("--voice", "-v", action="store_true")
-    parser.add_argument("--no-web", action="store_true")
+    parser.add_argument(
+        "--no-web",
+        action="store_true",
+        help="Do not open the browser HUD; ARCH still runs its internal local server and background loops.",
+    )
     return parser.parse_args(argv)
 
 
@@ -82,6 +87,27 @@ def _authenticate_founder_session(agent) -> None:
     agent.set_amaura_session_token(operator_key)
 
 
+def _assert_arch_port_available() -> None:
+    """Refuse to silently attach ARCH to an unrelated/legacy server process."""
+    host = os.environ.get("JARVIS_HOST", "127.0.0.1").strip() or "127.0.0.1"
+    port = int(os.environ.get("JARVIS_PORT", "8000"))
+    probe_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
+    try:
+        with socket.create_connection((probe_host, port), timeout=0.25):
+            raise RuntimeError(
+                f"ARCH cannot start because {probe_host}:{port} is already in use. "
+                "Stop the old JARVIS/ARCH process instead of running split runtimes."
+            )
+    except ConnectionRefusedError:
+        return
+    except TimeoutError:
+        return
+    except OSError:
+        # No listener is the expected state. Bind/security validation still
+        # happens in the canonical server startup path.
+        return
+
+
 def main(argv: list[str] | None = None) -> None:
     """Start one authenticated ARCH process and all of its internal runtimes."""
     args = _parse_args(argv)
@@ -100,6 +126,7 @@ def main(argv: list[str] | None = None) -> None:
     # WorldModel rather than model priors.
     install_arch_gateway()
     install_arch_grounding()
+    _assert_arch_port_available()
 
     working_dir = str(Path(args.working_dir or os.getcwd()).resolve())
     agent = JarvisAgent(api_key=args.api_key, model_key=args.model, working_dir=working_dir)
@@ -113,9 +140,14 @@ def main(argv: list[str] | None = None) -> None:
         else:
             ui.print_warning("Voice dependencies are not available; continuing with text input")
 
+    # ARCH always owns the local server because its lifespan owns mission
+    # advancement, proactive cognition and company autopilot. --no-web only
+    # suppresses opening the browser; it never disables the brain.
+    web_url = launch_background_web(open_browser_flag=not args.no_web)
     if not args.no_web:
-        web_url = launch_background_web(open_browser_flag=True)
         ui.print_success(f"ARCH HUD live at {web_url}")
+    else:
+        ui.print_success(f"ARCH runtime live at {web_url} (browser HUD not opened)")
 
     if args.prompt:
         control = get_control_plane()
