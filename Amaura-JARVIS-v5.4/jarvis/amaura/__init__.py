@@ -8,15 +8,17 @@ from jarvis.amaura.semantic_core import install_semantic_core
 from jarvis.amaura.semantic_frontend import install_semantic_frontend
 from jarvis.amaura.supervisor import AmauraSupervisor
 from jarvis.amaura.telemetry import OperationalTelemetry
+from jarvis.amaura.v7_mission_repairs import install_v7_mission_repairs
 from jarvis.amaura.v7_semantic_repairs import install_v7_semantic_repairs
 
 # ARCH semantic execution boundary.
 # There is exactly one active language front-end above the typed request graph.
-# v7 qualification repairs decorate that canonical parser/workflow boundary;
-# they do not create a second parser or executor stack.
+# v7 qualification repairs decorate the canonical parser/planner/workflow boundaries;
+# they do not create a second parser, planner, or executor stack.
 install_semantic_core()
 install_semantic_frontend()
 install_v7_semantic_repairs()
+install_v7_mission_repairs()
 
 __all__ = [
     "AmauraControlPlane",
