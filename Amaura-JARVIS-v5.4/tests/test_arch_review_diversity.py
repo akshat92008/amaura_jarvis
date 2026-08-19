@@ -158,3 +158,55 @@ def test_auto_review_requires_hosted_distinct_route(monkeypatch: pytest.MonkeyPa
 
     with pytest.raises(GovernanceError, match="no distinct hosted reviewer route"):
         runner.run("task-1")
+
+
+def test_omniroute_diversity_attempt_is_bounded_and_restores_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AMAURA_REVIEW_MODE", "auto")
+    monkeypatch.setenv("AMAURA_OMNIROUTE_REVIEW_MODEL", "auto/best-reasoning")
+    monkeypatch.setenv("AMAURA_OMNIROUTE_FALLBACK_MODEL", "old-fallback")
+    monkeypatch.setenv("AMAURA_OMNIROUTE_WORKER_TIMEOUT_SECONDS", "180")
+
+    with review_diversity._temporary_review_route(
+        "omniroute",
+        "z-ai/glm-5.2",
+        timeout_seconds=17.0,
+    ):
+        assert os.environ["AMAURA_REVIEW_MODE"] == "omniroute"
+        assert os.environ["AMAURA_OMNIROUTE_REVIEW_MODEL"] == "z-ai/glm-5.2"
+        assert os.environ["AMAURA_OMNIROUTE_FALLBACK_MODEL"] == ""
+        assert os.environ["AMAURA_OMNIROUTE_WORKER_TIMEOUT_SECONDS"] == "17.0"
+
+    assert os.environ["AMAURA_REVIEW_MODE"] == "auto"
+    assert os.environ["AMAURA_OMNIROUTE_REVIEW_MODEL"] == "auto/best-reasoning"
+    assert os.environ["AMAURA_OMNIROUTE_FALLBACK_MODEL"] == "old-fallback"
+    assert os.environ["AMAURA_OMNIROUTE_WORKER_TIMEOUT_SECONDS"] == "180"
+
+
+def test_cloud_diversity_attempt_sets_bounded_nvidia_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AMAURA_REVIEW_MODE", "auto")
+    monkeypatch.delenv("AMAURA_NVIDIA_TIMEOUT", raising=False)
+    monkeypatch.delenv("AMAURA_NVIDIA_CONNECT_TIMEOUT", raising=False)
+
+    with review_diversity._temporary_review_route(
+        "cloud",
+        "z-ai/glm-5.2",
+        timeout_seconds=24.0,
+    ):
+        assert os.environ["AMAURA_REVIEW_MODE"] == "cloud"
+        assert os.environ["AMAURA_CLOUD_REVIEW_MODEL"] == "z-ai/glm-5.2"
+        assert os.environ["AMAURA_NVIDIA_TIMEOUT"] == "24.0"
+        assert os.environ["AMAURA_NVIDIA_CONNECT_TIMEOUT"] == "8.0"
+
+    assert os.environ["AMAURA_REVIEW_MODE"] == "auto"
+    assert "AMAURA_NVIDIA_TIMEOUT" not in os.environ
+    assert "AMAURA_NVIDIA_CONNECT_TIMEOUT" not in os.environ
+
+
+def test_reviewer_diversity_time_budgets_are_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AMAURA_REVIEW_DIVERSITY_ATTEMPT_TIMEOUT_SECONDS", "1")
+    monkeypatch.setenv("AMAURA_REVIEW_DIVERSITY_TOTAL_BUDGET_SECONDS", "999")
+
+    assert review_diversity._attempt_timeout_seconds() == 10.0
+    assert review_diversity._total_budget_seconds() == 240.0
