@@ -19,6 +19,7 @@ from jarvis.amaura.models import GovernanceError
 from jarvis.tools.result import parse_tool_result
 
 _BaseGovernedTaskRunner = _core.GovernedTaskRunner
+GovernedReviewRunner = _core.GovernedReviewRunner
 
 # Preserve the executor module's historical import surface, including private
 # helpers used by qualification tests. The proxy module installed below keeps
@@ -204,6 +205,5 @@ class _ExecutorProxyModule(ModuleType):
 
 # Make the guarded runner the public runner, while retaining the original core
 # module for stable function globals and compatibility with existing tests.
-_core.GovernedTaskRunner = GovernedTaskRunner
-_current_module = sys.modules[__name__]
-_current_module.__class__ = _ExecutorProxyModule
+setattr(_core, "GovernedTaskRunner", GovernedTaskRunner)
+setattr(sys.modules[__name__], "__class__", _ExecutorProxyModule)
