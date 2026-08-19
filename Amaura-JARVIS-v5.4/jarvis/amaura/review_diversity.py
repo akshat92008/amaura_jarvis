@@ -1,20 +1,21 @@
 """Bounded reviewer-model diversity for governed Amaura task review.
 
 Automatic review must never silently certify work with the same actual model
-that produced the worker evidence.  OmniRoute aliases can legitimately resolve
-to the same hosted model, so requested-model inequality is insufficient.  This
+that produced the worker evidence. OmniRoute aliases can legitimately resolve
+to the same hosted model, so requested-model inequality is insufficient. This
 module decorates the stable review runner with a small fail-closed routing loop:
 for automatic review only, try a bounded set of explicitly distinct hosted
 review candidates and retain the core runner's existing *actual model* and
 criterion-verification checks on every attempt.
 
-Explicit founder/operator review configuration is never overridden.  Local
+Explicit founder/operator review configuration is never overridden. Local
 models are never introduced as a fallback by this decorator.
 """
 
 from __future__ import annotations
 
 import os
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -47,6 +48,34 @@ _RETRYABLE_REVIEW_MARKERS = (
     "Reviewer decision is missing approve/findings",
     "The configured NVIDIA provider failed and provider fallback is disabled",
 )
+
+
+def _bounded_float(name: str, *, default: float, minimum: float, maximum: float) -> float:
+    try:
+        value = float(os.environ.get(name, str(default)))
+    except ValueError:
+        value = default
+    return max(minimum, min(value, maximum))
+
+
+def _attempt_timeout_seconds() -> float:
+    """Bound one hosted reviewer attempt without making cold providers unusable."""
+    return _bounded_float(
+        "AMAURA_REVIEW_DIVERSITY_ATTEMPT_TIMEOUT_SECONDS",
+        default=45.0,
+        minimum=10.0,
+        maximum=90.0,
+    )
+
+
+def _total_budget_seconds() -> float:
+    """Bound the complete automatic reviewer-diversity loop."""
+    return _bounded_float(
+        "AMAURA_REVIEW_DIVERSITY_TOTAL_BUDGET_SECONDS",
+        default=120.0,
+        minimum=30.0,
+        maximum=240.0,
+    )
 
 
 def _split_models(value: str | None) -> list[str]:
@@ -113,10 +142,9 @@ def _review_attempts(worker_models: set[str]) -> list[tuple[str, str]]:
 
     Prefer the configured/current OmniRoute reviewer, then one explicit
     OmniRoute model, then a provider-diverse NVIDIA reviewer when available.
-    Remaining configured candidates fill the bounded tail.  Actual-model
+    Remaining configured candidates fill the bounded tail. Actual-model
     diversity is still enforced by the stable core after every response.
     """
-
     omni = _provider_candidates("omniroute", worker_models) if _omniroute_configured() else []
     cloud = _provider_candidates("cloud", worker_models) if _nvidia_review_configured() else []
     attempts: list[tuple[str, str]] = []
@@ -138,20 +166,31 @@ def _review_attempts(worker_models: set[str]) -> list[tuple[str, str]]:
 
 
 @contextmanager
-def _temporary_review_route(provider: str, model: str) -> Iterator[None]:
+def _temporary_review_route(provider: str, model: str, *, timeout_seconds: float) -> Iterator[None]:
     names = (
         "AMAURA_REVIEW_MODE",
         "AMAURA_OMNIROUTE_REVIEW_MODEL",
         "AMAURA_CLOUD_REVIEW_MODEL",
+        "AMAURA_OMNIROUTE_FALLBACK_MODEL",
+        "AMAURA_OMNIROUTE_WORKER_TIMEOUT_SECONDS",
+        "AMAURA_NVIDIA_TIMEOUT",
+        "AMAURA_NVIDIA_CONNECT_TIMEOUT",
     )
     previous = {name: os.environ.get(name) for name in names}
     try:
         if provider == "omniroute":
             os.environ["AMAURA_REVIEW_MODE"] = "omniroute"
             os.environ["AMAURA_OMNIROUTE_REVIEW_MODEL"] = model
+            # Every diversity attempt must represent exactly one requested model.
+            # A hidden OmniRoute fallback could silently re-select the worker
+            # model and also multiply latency, so disable it inside this scope.
+            os.environ["AMAURA_OMNIROUTE_FALLBACK_MODEL"] = ""
+            os.environ["AMAURA_OMNIROUTE_WORKER_TIMEOUT_SECONDS"] = str(timeout_seconds)
         elif provider == "cloud":
             os.environ["AMAURA_REVIEW_MODE"] = "cloud"
             os.environ["AMAURA_CLOUD_REVIEW_MODEL"] = model
+            os.environ["AMAURA_NVIDIA_TIMEOUT"] = str(timeout_seconds)
+            os.environ["AMAURA_NVIDIA_CONNECT_TIMEOUT"] = str(min(10.0, max(3.0, timeout_seconds / 3.0)))
         else:
             raise GovernanceError(f"Unsupported automatic review provider: {provider}")
         yield
@@ -185,7 +224,7 @@ class DiverseGovernedReviewRunner(_BASE_REVIEW_RUNNER):
         raw_mode = os.environ.get("AMAURA_REVIEW_MODE", "").strip().lower()
         model_provider = os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower()
 
-        # Explicit operator choice is authoritative.  The decorator only repairs
+        # Explicit operator choice is authoritative. The decorator only repairs
         # automatic routing and therefore cannot silently override a pinned
         # provider/model policy.
         if raw_mode not in {"", "auto"} or model_provider != "omniroute":
@@ -204,8 +243,21 @@ class DiverseGovernedReviewRunner(_BASE_REVIEW_RUNNER):
             )
 
         failures: list[dict[str, str]] = []
+        started = time.monotonic()
+        total_budget = _total_budget_seconds()
         for provider, model in attempts:
-            with _temporary_review_route(provider, model):
+            remaining = total_budget - (time.monotonic() - started)
+            if remaining < 5.0:
+                failures.append(
+                    {
+                        "provider": provider,
+                        "model": model,
+                        "error_type": "ReviewDiversityBudgetExhausted",
+                    }
+                )
+                break
+            timeout_seconds = min(_attempt_timeout_seconds(), remaining)
+            with _temporary_review_route(provider, model, timeout_seconds=timeout_seconds):
                 try:
                     return super().run(task_id)
                 except Exception as exc:  # noqa: BLE001 - only a narrow allowlist is retryable
@@ -230,7 +282,6 @@ class DiverseGovernedReviewRunner(_BASE_REVIEW_RUNNER):
 
 def install_review_diversity() -> type[Any]:
     """Install the reviewer decorator exactly once and return the active class."""
-
     global _INSTALLED
     current = _core.GovernedReviewRunner
     if getattr(current, "_arch_review_diversity_installed", False):
