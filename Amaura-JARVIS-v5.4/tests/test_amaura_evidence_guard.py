@@ -46,6 +46,17 @@ def _tool_definition():
     }
 
 
+def _named_tool_definition(name: str):
+    return {
+        "type": "function",
+        "function": {
+            "name": name,
+            "description": "qualification tool",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    }
+
+
 def _web_search_definition():
     return {
         "type": "function",
@@ -62,6 +73,15 @@ def _web_search_definition():
             },
         },
     }
+
+
+def _packet_messages(objective: str):
+    return [
+        {
+            "role": "user",
+            "content": "JARVIS TASK PACKET:\n" + json.dumps({"objective": objective, "acceptance_criteria": ["verified"]}),
+        }
+    ]
 
 
 class _FakeClient:
@@ -173,16 +193,7 @@ def test_second_prose_only_research_response_bootstraps_authorized_web_search():
     )
     client = _EvidenceAwareClient(inner, evidence_required=True)
     objective = "Collect real Amaura product evidence, credible sources, audience questions, and content gaps."
-    packet = {
-        "objective": objective,
-        "acceptance_criteria": ["Source register complete"],
-    }
-    messages = [
-        {
-            "role": "user",
-            "content": "JARVIS TASK PACKET:\n" + json.dumps(packet),
-        }
-    ]
+    messages = _packet_messages(objective)
 
     result = client.chat_sync(
         model_id="fake-model",
@@ -199,6 +210,43 @@ def test_second_prose_only_research_response_bootstraps_authorized_web_search():
     assert result.usage.completion_tokens == 5
     assert client.last_execution_metadata["evidence_guard"] == "deterministic_read_only_bootstrap"
     assert client.last_execution_metadata["evidence_guard_bootstrap_tool"] == "web_search"
+
+
+def test_cashflow_objective_prefers_cashflow_dashboard_over_generic_company_status():
+    bootstrap = executor._deterministic_bootstrap(
+        _packet_messages("Reconcile active cash-flow streams and verify runway evidence."),
+        [
+            _named_tool_definition("amaura_company_status"),
+            _named_tool_definition("amaura_cashflow_dashboard"),
+        ],
+    )
+
+    assert bootstrap == ("amaura_cashflow_dashboard", {})
+
+
+def test_operating_objective_prefers_company_status_over_web_search():
+    bootstrap = executor._deterministic_bootstrap(
+        _packet_messages("Create an operating snapshot of company tasks and blockers."),
+        [
+            _web_search_definition(),
+            _named_tool_definition("amaura_company_status"),
+        ],
+    )
+
+    assert bootstrap == ("amaura_company_status", {})
+
+
+def test_repository_objective_prefers_read_only_project_structure_over_web_search():
+    bootstrap = executor._deterministic_bootstrap(
+        _packet_messages("Inspect repository health and source code structure."),
+        [
+            _web_search_definition(),
+            _named_tool_definition("get_project_structure"),
+            _named_tool_definition("git_status"),
+        ],
+    )
+
+    assert bootstrap == ("get_project_structure", {"max_depth": 3})
 
 
 def test_second_prose_only_response_fails_closed_after_one_corrective_reprompt():
