@@ -31,6 +31,13 @@ def _configure_omniroute(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
 
 
+def test_package_installation_reaches_executor_review_surface() -> None:
+    from jarvis.amaura import executor
+
+    assert executor.GovernedReviewRunner is review_diversity.DiverseGovernedReviewRunner
+    assert executor._core.GovernedReviewRunner is review_diversity.DiverseGovernedReviewRunner
+
+
 def test_auto_review_retries_actual_model_collision(monkeypatch: pytest.MonkeyPatch) -> None:
     _configure_omniroute(monkeypatch)
     monkeypatch.setenv("AMAURA_REVIEW_DIVERSITY_MAX_ATTEMPTS", "2")
