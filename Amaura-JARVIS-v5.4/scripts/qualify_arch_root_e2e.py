@@ -70,6 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--worker-timeout-seconds", type=int, default=900)
     args = parser.parse_args(argv)
 
+    repo_root = Path(__file__).resolve().parents[1]
     env_file = Path(args.env_file).expanduser().resolve()
     evidence_dir = Path(args.evidence_dir).expanduser().resolve()
     replay_script = Path(__file__).resolve().with_name("replay_arch_root_task.py")
@@ -93,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         worker = subprocess.run(
             worker_command,
+            cwd=repo_root,
             capture_output=True,
             text=True,
             check=False,
