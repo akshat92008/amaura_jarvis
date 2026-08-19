@@ -393,6 +393,7 @@ def _contract_comparison_findings(repo_path: Path, existing: list[dict[str, Any]
             doc = (ast.get_docstring(node) or "").lower()
             expected: str | None = None
             observed: str | None = None
+            predicate: type[ast.cmpop]
             if any(phrase in doc for phrase in ("no greater than", "no more than", "not greater than")):
                 expected, observed = "<=", "<"
                 predicate = ast.Lt
