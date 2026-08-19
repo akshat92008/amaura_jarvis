@@ -205,5 +205,5 @@ class _ExecutorProxyModule(ModuleType):
 
 # Make the guarded runner the public runner, while retaining the original core
 # module for stable function globals and compatibility with existing tests.
-setattr(_core, "GovernedTaskRunner", GovernedTaskRunner)
-setattr(sys.modules[__name__], "__class__", _ExecutorProxyModule)
+_core.GovernedTaskRunner = GovernedTaskRunner  # type: ignore[misc]
+sys.modules[__name__].__class__ = _ExecutorProxyModule
