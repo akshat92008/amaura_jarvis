@@ -15,8 +15,9 @@ models are never introduced as a fallback by this decorator.
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import Any
 
 from jarvis.amaura import executor_core as _core
 from jarvis.amaura.models import GovernanceError, TaskState
@@ -46,10 +47,6 @@ _RETRYABLE_REVIEW_MARKERS = (
     "Reviewer decision is missing approve/findings",
     "The configured NVIDIA provider failed and provider fallback is disabled",
 )
-
-
-def _truthy(value: str | None) -> bool:
-    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _split_models(value: str | None) -> list[str]:
@@ -231,7 +228,7 @@ class DiverseGovernedReviewRunner(_BASE_REVIEW_RUNNER):
         )
 
 
-def install_review_diversity() -> type[_BASE_REVIEW_RUNNER]:
+def install_review_diversity() -> type[Any]:
     """Install the reviewer decorator exactly once and return the active class."""
 
     global _INSTALLED
