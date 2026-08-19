@@ -39,6 +39,8 @@ def configure_arch_runtime() -> None:
     os.environ["AMAURA_COMPANY_AUTOPILOT_RUNTIME"] = "1"
 
     os.environ.setdefault("AMAURA_RESOURCE_PROFILE", "macbook-8gb")
+    os.environ.setdefault("AMAURA_ARCH_HOSTED_COGNITION_FAILOVER", "1")
+    os.environ.setdefault("AMAURA_ARCH_HOSTED_FALLBACK_TIMEOUT_SECONDS", "6")
     _cap_int_env("AMAURA_COMPANY_AUTOPILOT_WORK_UNITS", default=1, maximum=1)
     _cap_int_env("AMAURA_AUTOPILOT_MAX_WORK_UNITS", default=1, maximum=1)
     _cap_int_env("AMAURA_RAM_NORMAL_TARGET_MB", default=768, maximum=768)
@@ -140,6 +142,7 @@ def main(argv: list[str] | None = None) -> None:
     from jarvis.agent import JarvisAgent
     from jarvis.arch_gateway import install_arch_gateway
     from jarvis.arch_grounding import install_arch_grounding
+    from jarvis.arch_provider_resilience import install_arch_provider_resilience
     from jarvis.arch_telegram import start_arch_telegram
     from jarvis.cli import launch_background_web, run_interactive
     from jarvis.tools.amaura import get_control_plane
@@ -147,6 +150,7 @@ def main(argv: list[str] | None = None) -> None:
 
     install_arch_gateway()
     install_arch_grounding()
+    install_arch_provider_resilience()
     _assert_arch_port_available()
 
     working_dir = str(Path(args.working_dir or os.getcwd()).resolve())
