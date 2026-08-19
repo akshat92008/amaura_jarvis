@@ -230,9 +230,11 @@ def install_arch_provider_resilience() -> None:
                 on_token(result.text)
             return result
 
-    setattr(CognitiveModelGateway, "generate", classmethod(resilient_generate))
-    setattr(CognitiveModelGateway, "generate_stream", classmethod(resilient_generate_stream))
-    setattr(CognitiveModelGateway, "_arch_provider_resilience_installed", True)
+    # Intentional runtime monkey-patch: ARCH installs this wrapper only inside
+    # its own process, leaving generic Company OS model routing untouched.
+    type.__setattr__(CognitiveModelGateway, "generate", classmethod(resilient_generate))
+    type.__setattr__(CognitiveModelGateway, "generate_stream", classmethod(resilient_generate_stream))
+    type.__setattr__(CognitiveModelGateway, "_arch_provider_resilience_installed", True)
     _INSTALLED = True
 
 
