@@ -37,12 +37,37 @@ def _enabled_for(purpose: str) -> bool:
     return purpose.lower() in allowed
 
 
-def _timeout_seconds() -> float:
+def _bounded_float(name: str, *, default: float, minimum: float, maximum: float) -> float:
     try:
-        value = float(os.environ.get("AMAURA_ARCH_HOSTED_FALLBACK_TIMEOUT_SECONDS", "6"))
+        value = float(os.environ.get(name, str(default)))
     except ValueError:
-        value = 6.0
-    return max(2.0, min(value, 12.0))
+        value = default
+    return max(minimum, min(value, maximum))
+
+
+def _timeout_seconds() -> float:
+    """Per-provider hosted fallback timeout.
+
+    Six seconds proved too aggressive for a cold hosted 70B endpoint on the
+    target Mac qualification. Keep each attempt bounded, but allow enough time
+    for a real cloud provider to establish a connection and answer.
+    """
+    return _bounded_float(
+        "AMAURA_ARCH_HOSTED_FALLBACK_TIMEOUT_SECONDS",
+        default=12.0,
+        minimum=3.0,
+        maximum=20.0,
+    )
+
+
+def _total_budget_seconds() -> float:
+    """Maximum wall-clock time ARCH may spend across all emergency providers."""
+    return _bounded_float(
+        "AMAURA_ARCH_HOSTED_FALLBACK_BUDGET_SECONDS",
+        default=24.0,
+        minimum=6.0,
+        maximum=30.0,
+    )
 
 
 def _first_env(*names: str) -> str:
@@ -54,32 +79,48 @@ def _first_env(*names: str) -> str:
 
 
 def _fallback_specs() -> list[tuple[str, str, str, str]]:
-    """Return configured hosted fallbacks as (provider, base_url, key, model)."""
+    """Return configured hosted fallbacks as (provider, base_url, key, model).
+
+    ARCH-specific model overrides win, then the normal provider-specific model
+    already used by the executive gateway. Provider names are safe to expose in
+    diagnostics; credentials are never returned separately or logged.
+    """
     order = [
         item.strip().lower()
-        for item in os.environ.get("AMAURA_ARCH_HOSTED_FALLBACK_ORDER", "nvidia,groq").split(",")
+        for item in os.environ.get(
+            "AMAURA_ARCH_HOSTED_FALLBACK_ORDER",
+            "nvidia,groq,openrouter,openai",
+        ).split(",")
         if item.strip()
     ]
     specs: list[tuple[str, str, str, str]] = []
+    seen: set[str] = set()
     for provider in order:
+        if provider in seen:
+            continue
+        seen.add(provider)
         if provider == "nvidia":
             key = _first_env("NVIDIA_API_KEY", "NVIDIA_API_KEY_1", "NVIDIA_API_KEY_2", "NVIDIA_API_KEY_3")
-            model = os.environ.get("AMAURA_ARCH_NVIDIA_FALLBACK_MODEL", "meta/llama-3.3-70b-instruct").strip()
+            model = _first_env("AMAURA_ARCH_NVIDIA_FALLBACK_MODEL", "AMAURA_NVIDIA_MODEL") or (
+                "meta/llama-3.3-70b-instruct"
+            )
             if key and model:
                 specs.append((provider, "https://integrate.api.nvidia.com/v1", key, model))
         elif provider == "groq":
             key = os.environ.get("GROQ_API_KEY", "").strip()
-            model = os.environ.get("AMAURA_ARCH_GROQ_FALLBACK_MODEL", "llama-3.3-70b-versatile").strip()
+            model = _first_env("AMAURA_ARCH_GROQ_FALLBACK_MODEL", "AMAURA_GROQ_MODEL") or (
+                "llama-3.3-70b-versatile"
+            )
             if key and model:
                 specs.append((provider, "https://api.groq.com/openai/v1", key, model))
         elif provider == "openrouter":
             key = os.environ.get("OPENROUTER_API_KEY", "").strip()
-            model = os.environ.get("AMAURA_ARCH_OPENROUTER_FALLBACK_MODEL", "").strip()
+            model = _first_env("AMAURA_ARCH_OPENROUTER_FALLBACK_MODEL", "AMAURA_OPENROUTER_MODEL")
             if key and model:
                 specs.append((provider, "https://openrouter.ai/api/v1", key, model))
         elif provider == "openai":
             key = os.environ.get("OPENAI_API_KEY", "").strip()
-            model = os.environ.get("AMAURA_ARCH_OPENAI_FALLBACK_MODEL", "").strip()
+            model = _first_env("AMAURA_ARCH_OPENAI_FALLBACK_MODEL", "AMAURA_OPENAI_MODEL")
             if key and model:
                 specs.append((provider, "", key, model))
     return specs
@@ -104,12 +145,28 @@ def _hosted_fallback(
     except ImportError as exc:
         raise GovernanceError("ARCH hosted cognition fallback requires the openai package") from exc
 
+    specs = _fallback_specs()
     errors: list[str] = []
     primary_reason = _compact_reason(primary_error)
     started = time.monotonic()
-    for provider, base_url, key, model in _fallback_specs():
+    total_budget = _total_budget_seconds()
+
+    for provider, base_url, key, model in specs:
+        elapsed = time.monotonic() - started
+        remaining = total_budget - elapsed
+        if remaining < 2.0:
+            errors.append(f"{provider}=skipped: fallback wall-clock budget exhausted")
+            break
+
+        provider_timeout = min(_timeout_seconds(), remaining)
         try:
-            kwargs: dict[str, Any] = {"api_key": key, "timeout": _timeout_seconds()}
+            # Disable SDK retries. ARCH owns retry/failover policy so a hidden
+            # client retry cannot consume the entire founder-facing deadline.
+            kwargs: dict[str, Any] = {
+                "api_key": key,
+                "timeout": provider_timeout,
+                "max_retries": 0,
+            }
             if base_url:
                 kwargs["base_url"] = base_url
             client = OpenAI(**kwargs)
@@ -140,10 +197,11 @@ def _hosted_fallback(
             CognitiveModelGateway._record_provider_failure(provider)
             errors.append(f"{provider}={_compact_reason(exc)}")
 
+    configured = ",".join(provider for provider, *_rest in specs) or "none"
     detail = "; ".join(errors) if errors else "no configured hosted fallback provider"
     raise GovernanceError(
         CognitiveModelGateway._redact_secrets(
-            f"[ARCH_HOSTED_FALLBACK_EXHAUSTED] primary={primary_reason}; {detail}"
+            f"[ARCH_HOSTED_FALLBACK_EXHAUSTED] configured={configured}; primary={primary_reason}; {detail}"
         )
     ) from primary_error
 
@@ -216,6 +274,8 @@ def install_arch_provider_resilience() -> None:
                 max_tokens=max_tokens,
             )
         except Exception as exc:
+            # Never append a second provider after any primary token reached the
+            # founder; that would create a corrupted mixed-provider answer.
             if emitted or not _enabled_for(purpose):
                 raise
             result = _hosted_fallback(
@@ -238,4 +298,11 @@ def install_arch_provider_resilience() -> None:
     _INSTALLED = True
 
 
-__all__ = ["install_arch_provider_resilience"]
+__all__ = [
+    "_enabled_for",
+    "_fallback_specs",
+    "_hosted_fallback",
+    "_timeout_seconds",
+    "_total_budget_seconds",
+    "install_arch_provider_resilience",
+]
