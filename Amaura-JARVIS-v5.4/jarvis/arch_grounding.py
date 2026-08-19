@@ -89,12 +89,33 @@ def needs_authoritative_world(text: str) -> bool:
 
 
 def _company_truth(control: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
-    """Combine live work state with the broader read-only executive dashboard."""
+    """Combine live work state with broader read-only business dashboards."""
     try:
         dashboard = control.dashboard()
     except Exception as exc:
         dashboard = {"dashboard_error": f"{type(exc).__name__}: {str(exc)[:240]}"}
-    return {
+
+    venture: dict[str, Any] | None = None
+    venture_error = ""
+    try:
+        from jarvis.amaura.ventures import VentureStudio
+
+        value = VentureStudio(control).dashboard()
+        venture = value if isinstance(value, dict) else {"value": value}
+    except Exception as exc:
+        venture_error = f"{type(exc).__name__}: {str(exc)[:240]}"
+
+    cashflow: dict[str, Any] | None = None
+    cashflow_error = ""
+    try:
+        from jarvis.amaura.ventures_cashflow import CashflowEngine
+
+        value = CashflowEngine(control).dashboard()
+        cashflow = value if isinstance(value, dict) else {"value": value}
+    except Exception as exc:
+        cashflow_error = f"{type(exc).__name__}: {str(exc)[:240]}"
+
+    truth: dict[str, Any] = {
         "operational": {
             "captured_at": snapshot.get("captured_at", ""),
             "counts": dict(snapshot.get("counts") or {}),
@@ -111,11 +132,23 @@ def _company_truth(control: Any, snapshot: dict[str, Any]) -> dict[str, Any]:
             "approvals_and_alerts": "authoritative",
             "acquisition": "authoritative_if_present_in_dashboard",
             "distribution": "authoritative_if_present_in_dashboard",
-            "recognized_cash_revenue": "unknown_unless_explicitly_present",
+            "venture_portfolio": "authoritative_if_venture_dashboard_available",
+            "cashflow_streams": "authoritative_if_cashflow_dashboard_available",
+            "recognized_cash_revenue": "authoritative_if_cashflow_dashboard_explicitly_reports_it",
             "cash_balance": "unknown_unless_explicitly_present",
+            "product_release_readiness": "unknown_unless_explicitly_present",
             "legal_or_incorporation_status": "unknown_unless_explicitly_present",
         },
     }
+    if venture is not None:
+        truth["venture_dashboard"] = venture
+    elif venture_error:
+        truth["venture_dashboard_error"] = venture_error
+    if cashflow is not None:
+        truth["cashflow_dashboard"] = cashflow
+    elif cashflow_error:
+        truth["cashflow_dashboard_error"] = cashflow_error
+    return truth
 
 
 def _cognition_unavailable(answer: str) -> bool:
@@ -173,15 +206,17 @@ def _deterministic_company_answer(snapshot: dict[str, Any], truth: dict[str, Any
 
     dashboard = truth.get("executive_dashboard") if isinstance(truth, dict) else {}
     if isinstance(dashboard, dict):
-        acquisition = dashboard.get("acquisition")
-        distribution = dashboard.get("distribution")
-        if acquisition:
-            lines.append("The live executive dashboard also contains acquisition state; I will use it for revenue/pipeline questions.")
-        if distribution:
-            lines.append("The live executive dashboard also contains distribution state; I will use it for channel/content questions.")
+        if dashboard.get("acquisition"):
+            lines.append("The live executive dashboard contains acquisition state for pipeline/revenue questions.")
+        if dashboard.get("distribution"):
+            lines.append("The live executive dashboard contains distribution state for channel/content questions.")
+    if isinstance(truth, dict) and truth.get("venture_dashboard"):
+        lines.append("The live company truth also contains the current venture portfolio.")
+    if isinstance(truth, dict) and truth.get("cashflow_dashboard"):
+        lines.append("The live company truth also contains the current governed cash-flow portfolio.")
 
     lines.append(
-        "I will not invent cash, recognized revenue, runway, or legal/incorporation facts unless those values are explicitly present in authoritative company data."
+        "I will not invent cash balance, product release readiness, runway, or legal/incorporation facts unless those values are explicitly present in authoritative company data."
     )
     return "\n".join(lines)
 
@@ -197,18 +232,15 @@ class ArchExecutiveKernel(_BaseExecutiveKernel):
                 allow_memory_mutation=allow_memory_mutation,
             )
 
-        # Company-state questions are comparatively rare and correctness matters
-        # more than the ordinary chat fast path. Force exactly one fresh rebuild
-        # from CompanyStore, then render context from that freshly cached snapshot.
         snapshot: dict[str, Any] = self.world.get(refresh=True)
         world_context = self.world.context(request.text, refresh=False)
         truth = _company_truth(self.control, snapshot)
-        truth_context = _cognition._safe_json(truth, 18_000)
+        truth_context = _cognition._safe_json(truth, 20_000)
         memory_context, memory_sources = self.memory.context(request.text, limit=10)
         combined_context = (
             "[ARCH AUTHORITATIVE CURRENT COMPANY STATE - trust=system]\n"
             + world_context
-            + "\n[ARCH AUTHORITATIVE EXECUTIVE DASHBOARD - trust=system]\n"
+            + "\n[ARCH AUTHORITATIVE EXECUTIVE/BUSINESS DASHBOARDS - trust=system]\n"
             + truth_context
             + "\n[ARCH RULE] The company state above is authoritative for current facts. "
             "Do not contradict it with model priors or invent missing company facts; say unknown when absent.\n"
@@ -248,7 +280,7 @@ class ArchExecutiveKernel(_BaseExecutiveKernel):
                 "cognition_latency_ms": cognition_latency_ms,
                 "truth_coverage": dict(truth.get("truth_coverage") or {}),
             },
-            context_sources=["world:current", "company:dashboard", *memory_sources],
+            context_sources=["world:current", "company:dashboard", "company:ventures", "company:cashflow", *memory_sources],
         )
 
 
