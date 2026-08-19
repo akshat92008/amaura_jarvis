@@ -17,8 +17,9 @@ import hmac
 import json
 import os
 import secrets
+from collections.abc import Awaitable, Callable
 from http.cookies import SimpleCookie
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 from jarvis.network_security import MIN_API_KEY_LENGTH, api_key_matches
 
