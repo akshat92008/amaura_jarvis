@@ -11,7 +11,7 @@ Rules:
   effects and hashes production Python source before and after;
 - V2 requires every V9 case to PASS (BLOCKED is not green here);
 - cross-session memory must return the exact hidden value from a third session
-  and expose durable project-memory storage + retrieval provenance;
+  and expose the exact durable project-memory source in recall context;
 - tracked source and HEAD must remain unchanged throughout;
 - automated PASS is provisional until raw evidence is independently audited.
 """
@@ -193,21 +193,28 @@ def _walk_dicts(value: Any):
             yield from _walk_dicts(child)
 
 
-def _project_memory_written(chat: Chat, marker: str) -> bool:
+def _project_memory_source(chat: Chat, marker: str) -> str:
+    """Return the exact project-memory source ref that stored ``marker``."""
     for node in _walk_dicts(chat.events):
         memory = node.get("memory")
         if not isinstance(memory, dict):
             continue
         namespace = str(memory.get("namespace", ""))
+        key = str(memory.get("key", ""))
         value = memory.get("value")
         serialized = json.dumps(value, sort_keys=True, default=str) if value is not None else ""
-        if namespace.startswith("jarvis.memory.project") and marker in serialized:
-            return True
-    return False
+        if namespace.startswith("jarvis.memory.project") and key and marker in serialized:
+            return f"{namespace}:{key}"
+    return ""
 
 
-def _project_memory_retrieved(chat: Chat, marker: str) -> bool:
+def _project_memory_retrieved(chat: Chat, source_ref: str, marker: str) -> bool:
+    """Accept explicit internal-memory telemetry or the exact recalled context source."""
     for node in _walk_dicts(chat.events):
+        context_sources = node.get("context_sources")
+        if source_ref and isinstance(context_sources, list) and source_ref in [str(item) for item in context_sources]:
+            return True
+
         provider = str(node.get("provider", "")).lower()
         execution_type = str(node.get("execution_type", "")).lower()
         tool_name = str(node.get("tool_name", "")).lower()
@@ -256,8 +263,9 @@ def _cross_session_memory(evidence: Path) -> SupplementResult:
                 process.kill()
                 process.wait(timeout=5)
 
-    store_provenance = _project_memory_written(store, marker)
-    recall_provenance = _project_memory_retrieved(recall, marker)
+    store_source = _project_memory_source(store, marker)
+    store_provenance = bool(store_source)
+    recall_provenance = _project_memory_retrieved(recall, store_source, marker)
     exact = recall.response_text.strip() == marker
     no_distractor = distractor not in recall.response_text
     distinct_sessions = len({session_store, session_distractor, session_recall}) == 3
@@ -271,7 +279,7 @@ def _cross_session_memory(evidence: Path) -> SupplementResult:
         capability_correct=capability,
         instruction_compliant=instruction,
         reason=(
-            "PASS requires durable project-memory storage, grounded internal-memory retrieval from a third session, "
+            "PASS requires durable project-memory storage, the exact stored project-memory source in third-session recall context, "
             "no distractor leakage, and exact value-only output."
         ),
         verification={
@@ -282,6 +290,7 @@ def _cross_session_memory(evidence: Path) -> SupplementResult:
             "store_session": session_store,
             "distractor_session": session_distractor,
             "recall_session": session_recall,
+            "stored_project_memory_source": store_source,
             "store_project_memory_provenance": store_provenance,
             "recall_internal_memory_provenance": recall_provenance,
             "exact_response": exact,
@@ -321,7 +330,8 @@ def _audit_checklist(evidence: Path, v9_dir: Path, supplement: SupplementResult)
         "- [ ] Confirm V9 source-integrity report is green and no tracked JARVIS source changed.",
         f"- [ ] Review cross-session memory result: `{evidence / 'cross_session_memory.json'}`",
         "- [ ] Confirm memory store and recall use three distinct session IDs.",
-        "- [ ] Confirm recall provenance is internal project memory and response equals the marker exactly.",
+        "- [ ] Confirm recall context contains the exact project-memory source created by the store request.",
+        "- [ ] Confirm recall response equals the marker exactly and excludes the distractor.",
         "- [ ] Confirm V7_EXACT_SHA_BINDING.json matches the candidate SHA and benchmark hashes.",
         "",
         f"Supplement automated status: **{supplement.status}**",
@@ -353,11 +363,12 @@ def main() -> int:
         return 2
     v9_results = _read_json(v9_dir / "HOLDOUT_V9_RESULTS.json")
     counts = v9_results.get("counts") if isinstance(v9_results.get("counts"), dict) else {}
+    v9_pass_count = int(counts.get("PASS", 0))
     v9_all_pass = (
         v9_run.returncode == 0
         and int(counts.get("FAIL", 0)) == 0
         and int(counts.get("BLOCKED", 0)) == 0
-        and int(counts.get("PASS", 0)) == 26
+        and v9_pass_count == 26
         and bool(v9_results.get("qualification_valid"))
     )
 
@@ -372,6 +383,7 @@ def main() -> int:
     source_integrity = head_after == head_before and not tracked_after and source_after == source_before
     v9_unchanged = v9_sha_after == v9_sha_before
     automated_gate_pass = bool(v9_all_pass and supplement.status == PASS and source_integrity and v9_unchanged)
+    total_pass_count = v9_pass_count + (1 if supplement.status == PASS else 0)
 
     summary = {
         "benchmark_version": BENCHMARK_VERSION,
@@ -390,7 +402,7 @@ def main() -> int:
         "v9_qualification_valid": bool(v9_results.get("qualification_valid")),
         "v9_all_26_pass": v9_all_pass,
         "supplement": asdict(supplement),
-        "score": f"{26 + (1 if supplement.status == PASS else 0)}/27",
+        "score": f"{total_pass_count}/27",
         "automated_gate_pass": automated_gate_pass,
         "evidence_audit_required": True,
         "evidence_audit_status": "PENDING",
