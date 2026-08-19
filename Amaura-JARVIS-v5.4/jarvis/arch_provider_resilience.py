@@ -198,17 +198,27 @@ def install_arch_provider_resilience() -> None:
     ) -> CognitiveModelResult:
         selection = cls.select(purpose=purpose)
         requested_model = selection.model if selection is not None else ""
+        emitted = False
+
+        def tracking_token(token: str) -> None:
+            nonlocal emitted
+            if token:
+                emitted = True
+            on_token(token)
+
         try:
             return _ORIGINAL_GENERATE_STREAM(
                 cls,
                 messages=messages,
-                on_token=on_token,
+                on_token=tracking_token,
                 purpose=purpose,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
         except Exception as exc:
-            if not _enabled_for(purpose):
+            # Once any token has reached the founder, never append a second
+            # provider's answer. The caller must surface the interrupted stream.
+            if emitted or not _enabled_for(purpose):
                 raise
             result = _hosted_fallback(
                 messages=messages,
