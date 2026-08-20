@@ -12,6 +12,7 @@ import os
 import signal
 import socket
 import threading
+import time
 from pathlib import Path
 
 from jarvis.amaura.runtime import load_amaura_env
@@ -40,7 +41,7 @@ def configure_arch_runtime() -> None:
 
     os.environ.setdefault("AMAURA_RESOURCE_PROFILE", "macbook-8gb")
     os.environ.setdefault("AMAURA_ARCH_HOSTED_COGNITION_FAILOVER", "1")
-    os.environ.setdefault("AMAURA_ARCH_HOSTED_FALLBACK_TIMEOUT_SECONDS", "6")
+    os.environ.setdefault("AMAURA_ARCH_HOSTED_FALLBACK_TIMEOUT_SECONDS", "12")
     _cap_int_env("AMAURA_COMPANY_AUTOPILOT_WORK_UNITS", default=1, maximum=1)
     _cap_int_env("AMAURA_AUTOPILOT_MAX_WORK_UNITS", default=1, maximum=1)
     _cap_int_env("AMAURA_RAM_NORMAL_TARGET_MB", default=768, maximum=768)
@@ -95,15 +96,29 @@ def _authenticate_founder_session(agent) -> None:
     agent.set_amaura_session_token(operator_key)
 
 
-def _assert_arch_port_available() -> None:
-    """Refuse to silently attach ARCH to an unrelated/legacy server process."""
+def _backend_endpoint() -> tuple[str, int]:
     host = os.environ.get("JARVIS_HOST", "127.0.0.1").strip() or "127.0.0.1"
     port = int(os.environ.get("JARVIS_PORT", "8000"))
     probe_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
+    return probe_host, port
+
+
+def _backend_port_accepting() -> bool:
+    host, port = _backend_endpoint()
     try:
-        with socket.create_connection((probe_host, port), timeout=0.25):
+        with socket.create_connection((host, port), timeout=0.5):
+            return True
+    except OSError:
+        return False
+
+
+def _assert_arch_port_available() -> None:
+    """Refuse to silently attach ARCH to an unrelated/legacy server process."""
+    host, port = _backend_endpoint()
+    try:
+        with socket.create_connection((host, port), timeout=0.25):
             raise RuntimeError(
-                f"ARCH cannot start because {probe_host}:{port} is already in use. "
+                f"ARCH cannot start because {host}:{port} is already in use. "
                 "Stop the old JARVIS/ARCH process instead of running split runtimes."
             )
     except ConnectionRefusedError:
@@ -115,7 +130,15 @@ def _assert_arch_port_available() -> None:
 
 
 def _run_headless_forever() -> None:
-    """Keep the canonical ARCH owner process alive until launchd/user shutdown."""
+    """Supervise the embedded backend until launchd/user shutdown.
+
+    The local Uvicorn server runs in an internal thread. A headless ARCH process
+    must not stay alive if that critical thread dies, because launchd would then
+    see a healthy owner PID while the founder-facing API and all server lifespan
+    loops were gone. After a startup grace period this watchdog exits non-zero
+    after bounded consecutive backend failures, allowing launchd to restart the
+    single canonical ARCH process.
+    """
     stop_event = threading.Event()
 
     def request_stop(_signum, _frame) -> None:
@@ -125,9 +148,33 @@ def _run_headless_forever() -> None:
     for signum in (signal.SIGTERM, signal.SIGINT):
         previous_handlers[signum] = signal.getsignal(signum)
         signal.signal(signum, request_stop)
+
+    startup_timeout = max(5.0, min(float(os.environ.get("AMAURA_ARCH_BACKEND_STARTUP_TIMEOUT_SECONDS", "45")), 120.0))
+    poll_seconds = max(1.0, min(float(os.environ.get("AMAURA_ARCH_BACKEND_WATCHDOG_SECONDS", "5")), 30.0))
+    failure_threshold = max(2, min(_positive_int(os.environ.get("AMAURA_ARCH_BACKEND_FAILURE_THRESHOLD", "3"), 3), 12))
+    host, port = _backend_endpoint()
     try:
-        while not stop_event.wait(1.0):
-            pass
+        startup_deadline = time.monotonic() + startup_timeout
+        while not stop_event.is_set() and time.monotonic() < startup_deadline:
+            if _backend_port_accepting():
+                break
+            stop_event.wait(0.25)
+        else:
+            if stop_event.is_set():
+                return
+            raise RuntimeError(f"ARCH embedded backend failed to listen on {host}:{port} within {startup_timeout:.0f}s")
+
+        consecutive_failures = 0
+        while not stop_event.wait(poll_seconds):
+            if _backend_port_accepting():
+                consecutive_failures = 0
+                continue
+            consecutive_failures += 1
+            if consecutive_failures >= failure_threshold:
+                raise RuntimeError(
+                    f"ARCH embedded backend stopped responding on {host}:{port} for "
+                    f"{consecutive_failures} consecutive checks"
+                )
     finally:
         for signum, handler in previous_handlers.items():
             signal.signal(signum, handler)
