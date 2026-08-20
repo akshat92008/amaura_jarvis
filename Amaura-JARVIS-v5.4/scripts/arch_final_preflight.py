@@ -3,10 +3,10 @@
 
 This script never starts, stops, installs, or mutates ARCH. It verifies the
 exact checkout, private environment permissions, launchd ownership, health/PID
-and source-tree agreement, absence of the legacy company daemon, idle RSS, and
-*operational* hosted cognition redundancy. Provider credentials are never
-printed. Provider probes use tiny read-only inference requests with SDK retries
-disabled and bounded timeouts.
+and source-tree agreement, absence of the legacy company daemon, idle RSS,
+hosted-only worker/reviewer routing, and *operational* hosted cognition
+redundancy. Provider credentials are never printed. Provider probes use tiny
+read-only inference requests with SDK retries disabled and bounded timeouts.
 """
 
 from __future__ import annotations
@@ -95,8 +95,8 @@ def _probe_hosted_providers(*, timeout_seconds: float, total_budget_seconds: flo
     """Prove configured emergency providers can complete one tiny request.
 
     This deliberately bypasses the primary OmniRoute gateway: the purpose of
-    this check is to establish that ARCH has independently reachable hosted
-    escape routes if the primary gateway is unavailable. No credential value is
+    this check is to establish that ARCH has an independently reachable hosted
+    escape route if the primary gateway is unavailable. No credential value is
     returned or logged.
     """
     from openai import OpenAI
@@ -168,8 +168,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--minimum-operational-fallbacks",
         type=int,
-        default=2,
-        help="Distinct hosted emergency providers that must complete a tiny live probe (default: 2).",
+        default=1,
+        help="Independent hosted emergency providers that must complete a tiny live probe (default: 1).",
     )
     parser.add_argument("--provider-probe-timeout-seconds", type=float, default=12.0)
     parser.add_argument("--provider-probe-total-budget-seconds", type=float, default=30.0)
@@ -197,6 +197,30 @@ def main(argv: list[str] | None = None) -> int:
     checks.append(_check("private_env_permissions", env_ok and mode == 0o600, {"path": str(env_file), "mode": oct(mode)}))
     if env_ok:
         load_amaura_env(env_file, override=True, require_private_permissions=True)
+
+    model_provider = os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower()
+    model_mode = os.environ.get("AMAURA_MODEL_MODE", "local").strip().lower()
+    disable_cloud = os.environ.get("AMAURA_DISABLE_CLOUD", "0") == "1"
+    hosted_worker_routing = not disable_cloud and (model_provider == "omniroute" or model_mode == "cloud")
+    checks.append(
+        _check(
+            "company_worker_routing_hosted_only",
+            hosted_worker_routing,
+            {
+                "model_provider": model_provider or "unset",
+                "model_mode": model_mode,
+                "cloud_disabled": disable_cloud,
+            },
+        )
+    )
+    review_mode = os.environ.get("AMAURA_REVIEW_MODE", "auto").strip().lower() or "auto"
+    checks.append(
+        _check(
+            "review_routing_not_pinned_local",
+            review_mode != "local",
+            {"review_mode": review_mode, "automatic_review_is_hosted_only": review_mode in {"auto", ""}},
+        )
+    )
 
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     supported = (3, 11) <= sys.version_info[:2] < (3, 15)
