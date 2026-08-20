@@ -7,8 +7,12 @@ decorates the stable review runner with a small fail-closed routing loop for
 hosted automatic review while preserving deterministic and explicitly local
 review paths implemented by the stable core.
 
-Explicit founder/operator review configuration is never overridden. Local
-models are never introduced as a fallback by this decorator.
+Explicit founder/operator review configuration is never overridden. A concrete
+pinned reviewer model remains authoritative. The special OmniRoute automatic
+alias ``auto/best-reasoning`` is not a concrete model pin, however; when that
+alias collides with worker provenance, ARCH may try other distinct OmniRoute
+reviewer models while preserving the operator's chosen provider. Local models
+are never introduced as a fallback by this decorator.
 """
 
 from __future__ import annotations
@@ -36,6 +40,7 @@ _DEFAULT_CLOUD_MODELS = (
     "moonshotai/kimi-k2.6",
     "meta/llama-3.3-70b-instruct",
 )
+_AUTOMATIC_OMNIROUTE_ALIASES = {"", "auto", "auto/best-reasoning"}
 _RETRYABLE_REVIEW_MARKERS = (
     "Actual reviewer model must differ from every worker model used for the task",
     "Independent reviewer model must differ from every worker model used for the task",
@@ -144,10 +149,23 @@ def _provider_candidates(provider: str, worker_models: set[str]) -> list[str]:
     return []
 
 
-def _review_attempts(worker_models: set[str]) -> list[tuple[str, str]]:
-    """Build a bounded hosted-only automatic review route list."""
-    omni = _provider_candidates("omniroute", worker_models) if _omniroute_configured() else []
-    cloud = _provider_candidates("cloud", worker_models) if _nvidia_review_configured() else []
+def _review_attempts(worker_models: set[str], *, provider_scope: str = "auto") -> list[tuple[str, str]]:
+    """Build a bounded hosted-only automatic review route list.
+
+    ``provider_scope='omniroute'`` is used when the operator explicitly selected
+    OmniRoute but left its reviewer model on an automatic alias. In that case
+    ARCH may diversify models inside OmniRoute, but it may not cross providers.
+    """
+    omni = (
+        _provider_candidates("omniroute", worker_models)
+        if provider_scope in {"auto", "omniroute"} and _omniroute_configured()
+        else []
+    )
+    cloud = (
+        _provider_candidates("cloud", worker_models)
+        if provider_scope == "auto" and _nvidia_review_configured()
+        else []
+    )
     attempts: list[tuple[str, str]] = []
 
     if omni:
@@ -199,6 +217,23 @@ def _automatic_hosted_review_requested() -> bool:
     )
     mode = os.environ.get("AMAURA_MODEL_MODE", "local").strip().lower()
     return provider in _HOSTED_WORKER_PROVIDERS or mode in {"cloud", "omniroute"}
+
+
+def _review_scope(raw_mode: str) -> str | None:
+    """Resolve whether model diversity is automatic and its provider boundary.
+
+    Empty/``auto`` review mode may use any configured hosted reviewer provider.
+    Explicit ``omniroute`` remains provider-pinned, but an automatic model alias
+    is still eligible for *within-provider* diversity. Concrete model pins and
+    every other explicit mode are left completely untouched.
+    """
+    if raw_mode in {"", "auto"}:
+        return "auto"
+    if raw_mode == "omniroute":
+        model = os.environ.get("AMAURA_OMNIROUTE_REVIEW_MODEL", "").strip().lower()
+        if model in _AUTOMATIC_OMNIROUTE_ALIASES:
+            return "omniroute"
+    return None
 
 
 @contextmanager
@@ -253,10 +288,12 @@ class DiverseGovernedReviewRunner(_BASE_REVIEW_RUNNER):
 
     def run(self, task_id: str) -> dict[str, Any]:
         raw_mode = os.environ.get("AMAURA_REVIEW_MODE", "").strip().lower()
+        provider_scope = _review_scope(raw_mode)
 
-        # Explicit operator choice remains authoritative, including explicit
-        # deterministic/local review configuration supported by the stable core.
-        if raw_mode not in {"", "auto"}:
+        # Explicit concrete operator choices remain authoritative. The one
+        # exception is an explicit OmniRoute provider paired with its automatic
+        # model alias; that is provider-pinned, not actual-model-pinned.
+        if provider_scope is None:
             return super().run(task_id)
 
         task = self.control.store.get_work_item(task_id)
@@ -269,7 +306,7 @@ class DiverseGovernedReviewRunner(_BASE_REVIEW_RUNNER):
         if not worker_models:
             return super().run(task_id)
 
-        attempts = _review_attempts(worker_models)
+        attempts = _review_attempts(worker_models, provider_scope=provider_scope)
         if not attempts:
             raise GovernanceError(
                 "Automatic independent review has hosted worker model provenance but no distinct hosted reviewer route. "
