@@ -118,6 +118,41 @@ def test_auto_review_can_cross_to_distinct_hosted_provider(monkeypatch: pytest.M
     assert all(provider != "local" for provider, _ in attempts)
 
 
+def test_auto_review_for_non_omniroute_worker_still_uses_hosted_reviewer(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AMAURA_REVIEW_MODE", "auto")
+    monkeypatch.setenv("AMAURA_MODEL_PROVIDER", "nvidia")
+    monkeypatch.delenv("AMAURA_OMNIROUTE_BASE_URL", raising=False)
+    monkeypatch.delenv("OMNIROUTE_BASE_URL", raising=False)
+    monkeypatch.delenv("AMAURA_OMNIROUTE_API_KEY", raising=False)
+    monkeypatch.delenv("OMNIROUTE_API_KEY", raising=False)
+    monkeypatch.setenv("NVIDIA_API_KEY", "test-nvidia-key")
+    monkeypatch.setenv("AMAURA_CLOUD_REVIEW_MODEL", "z-ai/glm-5.2")
+    runner = review_diversity.DiverseGovernedReviewRunner(_Control())
+    monkeypatch.setattr(
+        runner,
+        "_worker_models_from_evidence",
+        lambda task: {"meta/llama-3.3-70b-instruct"},
+    )
+    calls: list[tuple[str, str]] = []
+
+    def fake_base_run(self, task_id: str):
+        calls.append(
+            (
+                os.environ.get("AMAURA_REVIEW_MODE", ""),
+                os.environ.get("AMAURA_CLOUD_REVIEW_MODEL", ""),
+            )
+        )
+        return {"task_id": task_id, "state": TaskState.COMPLETED.value}
+
+    monkeypatch.setattr(review_diversity._BASE_REVIEW_RUNNER, "run", fake_base_run)
+
+    result = runner.run("task-1")
+
+    assert result["state"] == TaskState.COMPLETED.value
+    assert calls == [("cloud", "z-ai/glm-5.2")]
+    assert os.environ["AMAURA_REVIEW_MODE"] == "auto"
+
+
 def test_auto_review_fails_closed_when_all_distinct_routes_collide(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
