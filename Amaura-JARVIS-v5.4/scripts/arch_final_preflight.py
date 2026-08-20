@@ -4,8 +4,9 @@
 This script never starts, stops, installs, or mutates ARCH. It verifies the
 exact checkout, private environment permissions, launchd ownership, health/PID
 and source-tree agreement, absence of the legacy company daemon, idle RSS, and
-hosted cognition redundancy. Provider names are reported; credentials are never
-printed.
+*operational* hosted cognition redundancy. Provider credentials are never
+printed. Provider probes use tiny read-only inference requests with SDK retries
+disabled and bounded timeouts.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import re
 import stat
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -82,6 +84,72 @@ def _legacy_processes() -> list[str]:
     return [line.strip() for line in result.stdout.splitlines() if any(marker in line for marker in markers)]
 
 
+def _probe_hosted_providers(*, timeout_seconds: float, total_budget_seconds: float) -> list[dict[str, Any]]:
+    """Prove configured emergency providers can complete one tiny request.
+
+    This deliberately bypasses the primary OmniRoute gateway: the purpose of
+    this check is to establish that ARCH has independently reachable hosted
+    escape routes if the primary gateway is unavailable. No credential value is
+    returned or logged.
+    """
+    from openai import OpenAI
+
+    from jarvis.arch_provider_resilience import _compact_reason, _fallback_specs
+
+    results: list[dict[str, Any]] = []
+    started = time.monotonic()
+    for provider, base_url, key, model in _fallback_specs():
+        remaining = total_budget_seconds - (time.monotonic() - started)
+        if remaining < 1.0:
+            results.append(
+                {
+                    "provider": provider,
+                    "model": model,
+                    "ok": False,
+                    "error": "provider probe total budget exhausted",
+                    "credentials_printed": False,
+                }
+            )
+            continue
+        timeout = min(timeout_seconds, remaining)
+        kwargs: dict[str, Any] = {"api_key": key, "timeout": timeout, "max_retries": 0}
+        if base_url:
+            kwargs["base_url"] = base_url
+        probe_started = time.monotonic()
+        try:
+            client = OpenAI(**kwargs)
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": "Reply with exactly OK."}],
+                temperature=0,
+                max_tokens=4,
+            )
+            text = str(response.choices[0].message.content or "").strip()
+            if not text:
+                raise RuntimeError("empty completion")
+            results.append(
+                {
+                    "provider": provider,
+                    "model": str(getattr(response, "model", "") or model),
+                    "ok": True,
+                    "latency_ms": int((time.monotonic() - probe_started) * 1000),
+                    "credentials_printed": False,
+                }
+            )
+        except Exception as exc:  # noqa: BLE001 - qualification records a redacted provider failure
+            results.append(
+                {
+                    "provider": provider,
+                    "model": model,
+                    "ok": False,
+                    "latency_ms": int((time.monotonic() - probe_started) * 1000),
+                    "error": _compact_reason(exc),
+                    "credentials_printed": False,
+                }
+            )
+    return results
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Read-only final ARCH target preflight")
     parser.add_argument("--env-file", default=".env.amaura")
@@ -90,6 +158,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--service-label", default="com.amaura.arch")
     parser.add_argument("--max-idle-rss-mb", type=int, default=2048)
     parser.add_argument("--require-python-313", action="store_true")
+    parser.add_argument(
+        "--minimum-operational-fallbacks",
+        type=int,
+        default=2,
+        help="Distinct hosted emergency providers that must complete a tiny live probe (default: 2).",
+    )
+    parser.add_argument("--provider-probe-timeout-seconds", type=float, default=12.0)
+    parser.add_argument("--provider-probe-total-budget-seconds", type=float, default=30.0)
+    parser.add_argument(
+        "--skip-provider-probe",
+        action="store_true",
+        help="Diagnostic only: list configured providers without proving reachability; cannot pass the final redundancy gate.",
+    )
     args = parser.parse_args(argv)
 
     repo_root = Path(__file__).resolve().parents[1]
@@ -139,8 +220,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
 
-    # Development health currently exposes the Git tree hash as build_id. Bind
-    # that value to the exact checked-out source tree so an old launchd process
+    # Development health exposes the Git tree hash as build_id. Bind that
+    # value to the exact checked-out source tree so an old launchd process
     # cannot accidentally qualify merely because it is healthy.
     health_build_id = str(health.get("build_id") or "").strip()
     provenance_ok = tree_sha != "unknown" and health_build_id == tree_sha
@@ -171,16 +252,32 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
 
-    provider_names: list[str] = []
+    provider_results: list[dict[str, Any]] = []
+    configured_provider_names: list[str] = []
     if env_ok:
         from jarvis.arch_provider_resilience import _fallback_specs
 
-        provider_names = [provider for provider, *_ in _fallback_specs()]
+        configured_provider_names = [provider for provider, *_ in _fallback_specs()]
+        if not args.skip_provider_probe:
+            provider_results = _probe_hosted_providers(
+                timeout_seconds=max(3.0, min(float(args.provider_probe_timeout_seconds), 30.0)),
+                total_budget_seconds=max(6.0, min(float(args.provider_probe_total_budget_seconds), 60.0)),
+            )
+    operational = sorted({str(item["provider"]) for item in provider_results if item.get("ok")})
+    minimum_fallbacks = max(1, min(int(args.minimum_operational_fallbacks), 4))
+    redundancy_ok = not args.skip_provider_probe and len(operational) >= minimum_fallbacks
     checks.append(
         _check(
             "hosted_emergency_provider_redundancy",
-            len(provider_names) >= 2,
-            {"providers": provider_names, "count": len(provider_names), "credentials_printed": False},
+            redundancy_ok,
+            {
+                "configured_providers": configured_provider_names,
+                "operational_providers": operational,
+                "required_operational_providers": minimum_fallbacks,
+                "probe_skipped": bool(args.skip_provider_probe),
+                "probes": provider_results,
+                "credentials_printed": False,
+            },
         )
     )
 
