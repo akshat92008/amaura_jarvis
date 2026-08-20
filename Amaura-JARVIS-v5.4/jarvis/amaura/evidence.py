@@ -387,19 +387,38 @@ def deterministic_evidence_review(
     task: dict[str, Any],
     vault: EvidenceVault,
 ) -> dict[str, Any]:
-    """Reject missing, failed, or tampered completion evidence before model review."""
+    """Reject missing or tampered completion evidence while preserving retry history.
+
+    Failed intermediate tool attempts remain immutable audit evidence. They are
+    non-fatal only when the same submission also contains successful non-receipt
+    evidence proving that execution recovered; failed completion/verification
+    artifacts remain fatal.
+    """
 
     evidence = task.get("evidence") or []
     findings: list[str] = []
     verified: list[dict[str, Any]] = []
+    failed_attempts: list[dict[str, Any]] = []
     strict = strict_evidence_enabled(task)
+    has_successful_completion_evidence = any(
+        item.get("success") is not False and item.get("type") != "model_execution_receipt" for item in evidence
+    )
     if not str(task.get("summary", "")).strip():
         findings.append("Submission has no completion summary")
     if not evidence:
         findings.append("Submission has no evidence")
     for index, item in enumerate(evidence):
         if item.get("success") is False:
-            findings.append(f"Evidence {index + 1} records a failed operation")
+            if item.get("type") == "tool_result" and has_successful_completion_evidence:
+                failed_attempts.append(
+                    {
+                        "evidence_index": index + 1,
+                        "tool": str(item.get("tool") or ""),
+                        "reference": str(item.get("reference") or ""),
+                    }
+                )
+            else:
+                findings.append(f"Evidence {index + 1} records a failed operation")
         reference = str(item.get("reference", ""))
         if reference.startswith("evidence://"):
             result = vault.verify(
@@ -459,6 +478,7 @@ def deterministic_evidence_review(
     return {
         "approve": not findings,
         "findings": findings,
+        "failed_attempts": failed_attempts,
         "verified_evidence": verified,
         "criteria_count": len(criteria),
         "evidence_count": len(evidence),
