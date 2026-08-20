@@ -312,7 +312,17 @@ def fetch_public_bytes(url: str, *, max_length: int = 100_000) -> tuple[bytes, d
 
 
 def fetch_public_text(url: str, *, max_length: int = 10_000) -> str:
-    raw, _metadata = fetch_public_bytes(url, max_length=max_length)
+    """Fetch public evidence text, returning a failure marker for blocked/failed fetches.
+
+    Network policy remains fail-closed inside ``fetch_public_bytes``: unsafe or
+    unreachable destinations are never fetched.  Research workers can treat the
+    resulting marker as failed evidence and continue to another source instead
+    of crashing the entire governed task.
+    """
+    try:
+        raw, _metadata = fetch_public_bytes(url, max_length=max_length)
+    except GovernanceError as exc:
+        return f"❌ {exc}"
     return raw.decode("utf-8", errors="replace")
 
 
