@@ -60,6 +60,29 @@ def _worker_models(reviewer: Any, task: dict[str, Any]) -> list[str]:
     return sorted(str(value) for value in values if str(value).strip())
 
 
+def _bounded_criteria(criteria: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Persist useful reviewer diagnostics without allowing unbounded provider text."""
+    output: list[dict[str, Any]] = []
+    for item in criteria[:20]:
+        if not isinstance(item, dict):
+            continue
+        bounded: dict[str, Any] = {}
+        for key in ("criterion", "acceptance_criterion", "passed", "reason", "evidence", "evidence_refs"):
+            if key not in item:
+                continue
+            value = item[key]
+            if isinstance(value, str):
+                bounded[key] = value[:2000]
+            elif isinstance(value, list):
+                bounded[key] = value[:20]
+            elif isinstance(value, (bool, int, float)) or value is None:
+                bounded[key] = value
+        if not bounded:
+            bounded = {"passed": bool(item.get("passed"))}
+        output.append(bounded)
+    return output
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Qualify one ARCH root worker→evidence→review→completion lifecycle")
     parser.add_argument("--env-file", default=".env.amaura.v7live")
@@ -197,8 +220,10 @@ def main(argv: list[str] | None = None) -> int:
             "requested_reviewer_model": str(review.get("requested_reviewer_model") or ""),
             "reviewer_distinct_from_worker": distinct,
             "review_approve": bool(review.get("approve")),
+            "review_summary": str(review.get("summary") or "")[:3000],
             "criterion_count": len(criteria),
             "criteria_all_passed": criteria_pass,
+            "criterion_results": _bounded_criteria(criteria),
             "final_state": str(final.get("state") or ""),
             "integrity_before": integrity_before,
             "integrity_after": integrity_after,
