@@ -41,7 +41,14 @@ def _check(name: str, ok: bool, detail: Any) -> dict[str, Any]:
 
 
 def _health(url: str) -> dict[str, Any]:
-    request = urllib.request.Request(url, method="GET")
+    headers: dict[str, str] = {}
+    api_key = os.environ.get("JARVIS_API_KEY", "").strip()
+    if api_key:
+        # The value is used only for the loopback request and is never included
+        # in the report. This also works when desktop bootstrap protection is
+        # enabled on the shared health endpoint.
+        headers["X-Jarvis-Key"] = api_key
+    request = urllib.request.Request(url, headers=headers, method="GET")
     try:
         with urllib.request.urlopen(request, timeout=5) as response:  # noqa: S310 - caller defaults to fixed loopback URL
             return json.loads(response.read().decode("utf-8"))
