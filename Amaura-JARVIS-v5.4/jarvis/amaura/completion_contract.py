@@ -119,10 +119,14 @@ def build_completion_packet(
     for item in evidence:
         reference = _clean_text(item.get("reference"))
         payload = ""
+        read_error = ""
+        item.pop("completion_evidence_read_error", None)
         if reference and remaining > 0:
             try:
                 payload = evidence_reader.get_text(reference)
-            except (OSError, ValueError):
+            except (OSError, ValueError) as exc:
+                read_error = f"{type(exc).__name__}: {exc}"[:1000]
+                item["completion_evidence_read_error"] = read_error
                 payload = ""
             payload = payload[: min(per_item, remaining)]
             remaining -= len(payload)
@@ -134,6 +138,7 @@ def build_completion_packet(
                 "success": item.get("success") is True,
                 "excerpt": _clean_text(item.get("excerpt"))[:1000],
                 "payload": payload,
+                "read_error": read_error,
             }
         )
 
@@ -221,6 +226,21 @@ def validate_completion_contract(
     summary = _clean_text(contract.get("summary"))
     if not summary:
         raise CompletionContractError("completion contract summary is required")
+
+    unreadable_refs = sorted(
+        {
+            _clean_text(item.get("reference"))
+            for item in evidence
+            if item.get("success") is True
+            and _clean_text(item.get("reference"))
+            and _clean_text(item.get("completion_evidence_read_error"))
+        }
+    )
+    if unreadable_refs:
+        raise CompletionContractError(
+            "successful evidence could not be read from the immutable vault: "
+            + ", ".join(unreadable_refs)
+        )
 
     submitted_refs = {
         _clean_text(item.get("reference"))
