@@ -7,7 +7,11 @@ from pathlib import Path
 import pytest
 
 from jarvis.amaura.models import GovernanceError, TaskState
-from jarvis.amaura.qualified_recovery import apply_qualified_recovery, build_recovery_plan, validate_qualification
+from jarvis.amaura.qualified_recovery import (
+    apply_qualified_recovery,
+    build_recovery_plan,
+    validate_qualification,
+)
 from jarvis.amaura.store import CompanyStore
 
 
