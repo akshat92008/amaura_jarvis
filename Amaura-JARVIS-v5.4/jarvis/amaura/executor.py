@@ -125,16 +125,15 @@ def _evidence_target(messages: list[dict[str, Any]], tools: list[dict[str, Any]]
 
     The reviewer remains the semantic authority. This target merely prevents a
     multi-criterion research task from stopping after one generic search result.
-    Criterion-addressable read-only research tools can gather at most four
-    distinct evidence items; non-query tools retain the historical one-item
-    threshold because a single status/report call may legitimately cover many
-    criteria.
+    Criterion-addressable public research tools can gather at most four distinct
+    evidence items; repository/status tools retain the historical one-item
+    threshold because one structured result may legitimately cover many criteria.
     """
     criteria = _task_acceptance_criteria(messages)
     if len(criteria) <= 1:
         return 1
     names = _tool_name_set(tools)
-    if names.intersection({"web_search", "deep_research", "search_code"}):
+    if names.intersection({"web_search", "deep_research"}):
         return min(len(criteria), _MAX_CRITERION_BOOTSTRAP_CALLS)
     return 1
 
