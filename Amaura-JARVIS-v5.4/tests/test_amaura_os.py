@@ -304,6 +304,43 @@ class TestAmauraCompanyOS(unittest.TestCase):
 
             def chat_sync(self, **kwargs):
                 self.calls += 1
+                messages = kwargs.get("messages") or []
+                marker = "JARVIS COMPLETION SYNTHESIS PACKET:\n"
+                last_content = str(messages[-1].get("content") or "") if messages else ""
+                if last_content.startswith(marker):
+                    import json
+
+                    packet = json.loads(last_content[len(marker) :])
+                    evidence_refs = [
+                        item["reference"]
+                        for item in packet["evidence"]
+                        if item.get("success") is True and item.get("reference")
+                    ]
+                    contract = {
+                        "version": 1,
+                        "summary": "Requirements, explicit exclusions, and measurable criteria are complete.",
+                        "criteria": [
+                            {
+                                "criterion_index": index,
+                                "criterion": criterion,
+                                "satisfied": True,
+                                "deliverable": f"{criterion} is explicitly addressed.",
+                                "evidence_refs": [evidence_refs[0]],
+                                "fact_inference_boundary": (
+                                    "Project-structure evidence is factual; requirements synthesis is worker inference."
+                                ),
+                            }
+                            for index, criterion in enumerate(packet["task"]["acceptance_criteria"], start=1)
+                        ],
+                        "source_register": [],
+                    }
+                    return SimpleNamespace(
+                        choices=[
+                            SimpleNamespace(
+                                message=SimpleNamespace(content=json.dumps(contract), tool_calls=[]),
+                            )
+                        ]
+                    )
                 return fake_response_1 if self.calls == 1 else fake_response_2
 
         execution = GovernedTaskRunner(
