@@ -2,12 +2,13 @@
 """Controlled live recovery for ARCH roots proven on isolated copies.
 
 Default mode is read-only planning. ``--apply`` is intentionally refused while
-the canonical ARCH LaunchAgent is running. Before any live mutation the script
-requires an exact clean source checkout, a PASS batch qualification for the same
-Git source tree, dependency-ready failed ``internal_work`` roots, no active
-execution lease, and a healthy audit chain. It creates a private SQLite backup
-and audit-checkpoint backup before re-queuing only those exact roots. Downstream
-blocked tasks are never changed by this maintenance command.
+the canonical ARCH LaunchAgent or local API is running. Before any live mutation
+the script requires an exact clean source checkout, a PASS batch qualification
+for the same Git source tree, dependency-ready failed ``internal_work`` roots,
+no active execution lease, and a healthy audit chain. It creates a private
+read-only SQLite backup and audit-checkpoint backup *before* opening a writable
+CompanyStore, then re-queues only those exact roots. Downstream blocked tasks are
+never changed by this maintenance command.
 """
 
 from __future__ import annotations
@@ -17,8 +18,11 @@ import json
 import os
 import re
 import shutil
+import socket
+import sqlite3
 import subprocess
 import sys
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -68,6 +72,21 @@ def _arch_launchd_pid() -> int:
     return int(match.group(1)) if match else 0
 
 
+def _api_port_accepting() -> bool:
+    host = os.environ.get("JARVIS_HOST", "127.0.0.1").strip() or "127.0.0.1"
+    if host in {"0.0.0.0", "::"}:
+        host = "127.0.0.1"
+    try:
+        port = int(os.environ.get("JARVIS_PORT", "8000"))
+    except ValueError:
+        return True
+    try:
+        with socket.create_connection((host, port), timeout=0.35):
+            return True
+    except OSError:
+        return False
+
+
 def _copy_private(source: Path, destination: Path) -> str:
     if not source.is_file():
         return ""
@@ -76,6 +95,18 @@ def _copy_private(source: Path, destination: Path) -> str:
     if os.name == "posix":
         destination.chmod(0o600)
     return str(destination)
+
+
+def _sqlite_read_only_backup(source: Path, destination: Path) -> Path:
+    """Capture the exact live DB before any writable CompanyStore is opened."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    source_uri = f"file:{source.resolve()}?mode=ro"
+    with closing(sqlite3.connect(source_uri, uri=True, timeout=10.0)) as source_connection:
+        with closing(sqlite3.connect(destination)) as backup_connection:
+            source_connection.backup(backup_connection)
+    if os.name == "posix":
+        destination.chmod(0o600)
+    return destination
 
 
 def _write_report(path: Path, report: dict[str, Any]) -> None:
@@ -159,6 +190,11 @@ def main(argv: list[str] | None = None) -> int:
             f"FAIL CLOSED: {_ARCH_LABEL} is running with pid={arch_pid}. "
             "Stop the canonical ARCH service before controlled live root recovery."
         )
+    if _api_port_accepting():
+        raise SystemExit(
+            "FAIL CLOSED: the configured ARCH API port is accepting connections. "
+            "Stop any interactive/legacy ARCH or JARVIS process before live recovery."
+        )
 
     before_states = work_state_snapshot(live_db)
     target_ids = {str(card["task_id"]) for card in plan}
@@ -170,17 +206,20 @@ def main(argv: list[str] | None = None) -> int:
     backup_db = backup_dir / "amaura.db"
     backup_checkpoint = ""
 
+    # Back up the live SQLite snapshot and external checkpoint before any code
+    # opens the source DB with write capability or runs schema migration hooks.
+    _sqlite_read_only_backup(live_db, backup_db)
+    checkpoint_value = os.environ.get("AMAURA_AUDIT_CHECKPOINT_PATH", "").strip()
+    if checkpoint_value:
+        checkpoint = Path(checkpoint_value).expanduser().resolve()
+        if checkpoint.is_file():
+            backup_checkpoint = _copy_private(checkpoint, backup_dir / "audit-head.json")
+
     store = CompanyStore(live_db)
     try:
         integrity_before = store.integrity_check()
         if not integrity_before.get("ok"):
-            raise GovernanceError("Live CompanyStore failed integrity before backup/recovery")
-        store.backup(backup_db)
-        checkpoint_value = os.environ.get("AMAURA_AUDIT_CHECKPOINT_PATH", "").strip()
-        if checkpoint_value:
-            checkpoint = Path(checkpoint_value).expanduser().resolve()
-            if checkpoint.is_file():
-                backup_checkpoint = _copy_private(checkpoint, backup_dir / "audit-head.json")
+            raise GovernanceError("Live CompanyStore failed integrity before qualified recovery")
         actor = os.environ.get("AMAURA_FOUNDER_ID", "founder").strip() or "founder"
         result = apply_qualified_recovery(
             store,
@@ -221,6 +260,7 @@ def main(argv: list[str] | None = None) -> int:
         "candidate_tree_sha": tree_sha,
         "qualification_summary": str(qualification_path),
         "source_backup": str(backup_db),
+        "backup_created_before_writable_open": True,
         "audit_checkpoint_backup": backup_checkpoint,
         "live_db": str(live_db),
         "recovered_root_count": len(target_ids),
