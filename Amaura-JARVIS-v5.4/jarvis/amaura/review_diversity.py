@@ -1,11 +1,11 @@
 """Bounded reviewer-model diversity for governed Amaura task review.
 
 Automatic review must never silently certify work with the same actual model
-that produced the worker evidence. OmniRoute aliases can legitimately resolve
-to the same hosted model, so requested-model inequality is insufficient. This
-module decorates the stable review runner with a small fail-closed routing loop:
-for automatic review only, try a bounded set of explicitly distinct hosted
-review candidates and retain the core runner's existing *actual model* and
+that produced the worker evidence. Hosted aliases can legitimately resolve to
+the same model, so requested-model inequality is insufficient. This module
+decorates the stable review runner with a small fail-closed routing loop: for
+automatic review only, try a bounded set of explicitly distinct hosted review
+candidates and retain the core runner's existing *actual model* and
 criterion-verification checks on every attempt.
 
 Explicit founder/operator review configuration is never overridden. Local
@@ -210,9 +210,7 @@ def _retryable_review_error(exc: Exception) -> bool:
 def _failure_summary(failures: list[dict[str, str]]) -> str:
     if not failures:
         return "no eligible hosted reviewer route was available"
-    return "; ".join(
-        f"{item['provider']}:{item['model']}:{item['error_type']}" for item in failures
-    )
+    return "; ".join(f"{item['provider']}:{item['model']}:{item['error_type']}" for item in failures)
 
 
 class DiverseGovernedReviewRunner(_BASE_REVIEW_RUNNER):
@@ -222,17 +220,21 @@ class DiverseGovernedReviewRunner(_BASE_REVIEW_RUNNER):
 
     def run(self, task_id: str) -> dict[str, Any]:
         raw_mode = os.environ.get("AMAURA_REVIEW_MODE", "").strip().lower()
-        model_provider = os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower()
 
-        # Explicit operator choice is authoritative. The decorator only repairs
-        # automatic routing and therefore cannot silently override a pinned
-        # provider/model policy.
-        if raw_mode not in {"", "auto"} or model_provider != "omniroute":
+        # Explicit operator choice is authoritative. Automatic review, however,
+        # is always hosted-only once worker-model provenance exists. This avoids
+        # the stable core's historical `auto -> local` default when the worker
+        # provider is not OmniRoute and preserves the product's no-local-review
+        # qualification policy across hosted worker providers.
+        if raw_mode not in {"", "auto"}:
             return super().run(task_id)
 
         task = self.control.store.get_work_item(task_id)
         worker_models = set(self._worker_models_from_evidence(task))
         if not worker_models:
+            # Deterministic direct-action paths and legacy evidence without model
+            # provenance retain the stable core behavior. Strict hosted review
+            # already rejects missing provenance where it is required.
             return super().run(task_id)
 
         attempts = _review_attempts(worker_models)
