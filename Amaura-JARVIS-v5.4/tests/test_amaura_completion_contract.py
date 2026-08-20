@@ -2,7 +2,6 @@ import pytest
 
 from jarvis.amaura import completion_contract as cc
 
-
 CRITERIA = [
     'Source register complete',
     'Amaura relevance explained',
