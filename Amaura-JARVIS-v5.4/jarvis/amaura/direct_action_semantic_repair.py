@@ -84,11 +84,17 @@ def install_direct_action_semantic_repair() -> None:
 
     from jarvis.amaura.direct_action import DirectActionRouter, RequestPreprocessor
 
+    # Read the raw class descriptor instead of the bound method. This preserves
+    # the original classmethod semantics and avoids assigning directly to a
+    # statically-declared method, which is rejected by strict mypy.
+    current_descriptor: Any = DirectActionRouter.__dict__.get("_parse_workflow_plan")
+    if current_descriptor is None:
+        raise RuntimeError("DirectActionRouter._parse_workflow_plan is unavailable")
     current = DirectActionRouter._parse_workflow_plan
     if getattr(current, "_arch_masked_workflow_guard", False):
         _INSTALLED = True
         return
-    original = current.__func__
+    original = current_descriptor.__func__
 
     def guarded_parse_workflow_plan(cls: type[Any], text: str, default_workspace: str = "") -> Any:
         plan = original(cls, text, default_workspace=default_workspace)
@@ -98,7 +104,7 @@ def install_direct_action_semantic_repair() -> None:
         return _repair_false_positive_arithmetic(plan, parsed.masked_classifier_view)
 
     guarded_parse_workflow_plan._arch_masked_workflow_guard = True  # type: ignore[attr-defined]
-    DirectActionRouter._parse_workflow_plan = classmethod(guarded_parse_workflow_plan)
+    setattr(DirectActionRouter, "_parse_workflow_plan", classmethod(guarded_parse_workflow_plan))
     _INSTALLED = True
 
 
