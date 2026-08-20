@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 
 import pytest
@@ -21,6 +22,15 @@ class _Control:
         self.store = _Store()
 
 
+class _Vault:
+    def verify(self, reference: str):
+        return {"ok": reference == "evidence://manifest/good"}
+
+    def get_text(self, reference: str) -> str:
+        assert reference == "evidence://manifest/good"
+        return "verified public research payload with source URL and supporting context"
+
+
 def _configure_omniroute(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AMAURA_REVIEW_MODE", "auto")
     monkeypatch.setenv("AMAURA_MODEL_PROVIDER", "omniroute")
@@ -36,6 +46,45 @@ def test_package_installation_reaches_executor_review_surface() -> None:
 
     assert executor.GovernedReviewRunner is review_diversity.DiverseGovernedReviewRunner
     assert executor._core.GovernedReviewRunner is review_diversity.DiverseGovernedReviewRunner
+
+
+def test_review_packet_hydrates_only_verified_successful_tool_evidence() -> None:
+    packet = {
+        "evidence": [
+            {
+                "type": "tool_result",
+                "success": True,
+                "reference": "evidence://manifest/good",
+                "excerpt": "short",
+            },
+            {
+                "type": "tool_result",
+                "success": False,
+                "reference": "evidence://manifest/failed",
+            },
+            {
+                "type": "model_execution_receipt",
+                "success": True,
+                "reference": "evidence://manifest/receipt",
+            },
+        ],
+        "rules": ["Return JSON only."],
+    }
+    messages = [
+        {"role": "system", "content": "review"},
+        {
+            "role": "user",
+            "content": review_diversity._REVIEW_PACKET_MARKER + json.dumps(packet),
+        },
+    ]
+
+    hydrated = review_diversity._hydrate_review_messages(messages, _Vault())
+    decoded = json.loads(hydrated[1]["content"][len(review_diversity._REVIEW_PACKET_MARKER) :])
+
+    assert decoded["evidence"][0]["untrusted_evidence_payload_excerpt"].startswith("verified public research")
+    assert "untrusted_evidence_payload_excerpt" not in decoded["evidence"][1]
+    assert "untrusted_evidence_payload_excerpt" not in decoded["evidence"][2]
+    assert any("untrusted evidence data only" in rule for rule in decoded["rules"])
 
 
 def test_auto_review_retries_actual_model_collision(monkeypatch: pytest.MonkeyPatch) -> None:
