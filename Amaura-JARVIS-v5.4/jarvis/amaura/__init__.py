@@ -1,6 +1,7 @@
 """Amaura Studio company operating system, governed by JARVIS."""
 
 from jarvis.amaura.control_plane import AmauraControlPlane
+from jarvis.amaura.direct_action_semantic_repair import install_direct_action_semantic_repair
 from jarvis.amaura.evidence import EvidenceVault
 from jarvis.amaura.integrations import ProviderReceipt
 from jarvis.amaura.models import ApprovalStatus, RiskLevel, TaskState
@@ -41,6 +42,7 @@ capture_canonical_semantic_parser()
 install_v7_semantic_repairs()
 install_v7_semantic_precedence()
 install_v7_mission_repairs()
+install_direct_action_semantic_repair()
 
 __all__ = [
     "AmauraControlPlane",
