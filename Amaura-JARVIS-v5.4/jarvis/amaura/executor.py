@@ -5,8 +5,8 @@ preserves its historical import surface while adding one narrow policy: when a
 task has acceptance criteria, a worker may not terminate on prose before it has
 produced successful governed tool evidence. The guard performs at most one
 corrective reprompt per model turn. If the model still refuses to call a tool,
-the guard may synthesize one bounded, read-only evidence bootstrap using an
-already-authorized tool and the canonical task objective. All execution still
+the guard may synthesize a bounded set of read-only evidence calls using only
+already-authorized tools and the canonical task packet. All execution still
 passes through the normal tool authorization and evidence pipeline.
 """
 
@@ -36,10 +36,12 @@ for _export_name in dir(_core):
 
 _EVIDENCE_REQUIRED: ContextVar[bool] = ContextVar("amaura_evidence_required", default=False)
 _BOOTSTRAP_CALL_PREFIX = "call_arch_evidence_bootstrap_"
+_MAX_CRITERION_BOOTSTRAP_CALLS = 4
 
 
-def _successful_tool_evidence(messages: list[dict[str, Any]]) -> bool:
-    """Return True only for a successful governed tool result already in context."""
+def _successful_tool_evidence_count(messages: list[dict[str, Any]]) -> int:
+    """Count successful governed tool results already present in model context."""
+    count = 0
     for message in messages:
         if message.get("role") != "tool":
             continue
@@ -48,8 +50,13 @@ def _successful_tool_evidence(messages: list[dict[str, Any]]) -> bool:
         except Exception:
             continue
         if parsed.ok:
-            return True
-    return False
+            count += 1
+    return count
+
+
+def _successful_tool_evidence(messages: list[dict[str, Any]]) -> bool:
+    """Return True only when at least one successful governed tool result exists."""
+    return _successful_tool_evidence_count(messages) > 0
 
 
 def _bootstrap_already_attempted(messages: list[dict[str, Any]]) -> bool:
@@ -63,8 +70,8 @@ def _bootstrap_already_attempted(messages: list[dict[str, Any]]) -> bool:
     return False
 
 
-def _task_objective(messages: list[dict[str, Any]]) -> str:
-    """Extract the canonical task objective without trusting arbitrary page/tool text."""
+def _task_packet(messages: list[dict[str, Any]]) -> dict[str, Any]:
+    """Extract only the canonical task packet, never arbitrary tool/page text."""
     marker = "JARVIS TASK PACKET:\n"
     for message in reversed(messages):
         if message.get("role") != "user":
@@ -77,10 +84,59 @@ def _task_objective(messages: list[dict[str, Any]]) -> str:
             packet = json.loads(payload)
         except (TypeError, ValueError, json.JSONDecodeError):
             continue
-        objective = " ".join(str(packet.get("objective") or "").split()).strip()
-        if objective:
-            return objective[:500]
-    return ""
+        if isinstance(packet, dict):
+            return packet
+    return {}
+
+
+def _task_objective(messages: list[dict[str, Any]]) -> str:
+    """Extract the canonical objective without trusting arbitrary page/tool text."""
+    packet = _task_packet(messages)
+    objective = " ".join(str(packet.get("objective") or "").split()).strip()
+    return objective[:500] if objective else ""
+
+
+def _task_acceptance_criteria(messages: list[dict[str, Any]]) -> list[str]:
+    """Extract bounded canonical acceptance criteria for evidence planning."""
+    packet = _task_packet(messages)
+    raw = packet.get("acceptance_criteria") or []
+    if not isinstance(raw, list):
+        return []
+    criteria: list[str] = []
+    for item in raw:
+        criterion = " ".join(str(item or "").split()).strip()
+        if criterion:
+            criteria.append(criterion[:300])
+        if len(criteria) >= 12:
+            break
+    return criteria
+
+
+def _tool_name_set(tools: list[dict[str, Any]] | None) -> set[str]:
+    return {
+        str((definition.get("function") or {}).get("name") or "").strip()
+        for definition in tools or []
+        if str((definition.get("function") or {}).get("name") or "").strip()
+    }
+
+
+def _evidence_target(messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None) -> int:
+    """Return a bounded structural evidence target before prose completion.
+
+    The reviewer remains the semantic authority. This target merely prevents a
+    multi-criterion research task from stopping after one generic search result.
+    Criterion-addressable read-only research tools can gather at most four
+    distinct evidence items; non-query tools retain the historical one-item
+    threshold because a single status/report call may legitimately cover many
+    criteria.
+    """
+    criteria = _task_acceptance_criteria(messages)
+    if len(criteria) <= 1:
+        return 1
+    names = _tool_name_set(tools)
+    if names.intersection({"web_search", "deep_research", "search_code"}):
+        return min(len(criteria), _MAX_CRITERION_BOOTSTRAP_CALLS)
+    return 1
 
 
 def _deterministic_bootstrap(
@@ -100,10 +156,7 @@ def _deterministic_bootstrap(
     if not objective:
         return None
     objective_lower = objective.lower()
-    names = {
-        str((definition.get("function") or {}).get("name") or "").strip()
-        for definition in tools or []
-    }
+    names = _tool_name_set(tools)
 
     if "amaura_cashflow_dashboard" in names and any(
         term in objective_lower for term in ("cash-flow", "cashflow", "cash flow", "runway", "financial stream")
@@ -146,6 +199,59 @@ def _deterministic_bootstrap(
     return None
 
 
+def _deterministic_bootstrap_calls(
+    messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None
+) -> list[tuple[str, dict[str, Any]]]:
+    """Build a bounded criterion-aware read-only bootstrap plan.
+
+    Query-shaped tools can gather one independently auditable result per
+    acceptance criterion (capped). Tools whose output is already a structured
+    snapshot are executed only once. No URL, path, mutation argument, or external
+    side effect is invented here.
+    """
+    base = _deterministic_bootstrap(messages, tools)
+    if base is None:
+        return []
+    tool_name, arguments = base
+    criteria = _task_acceptance_criteria(messages)
+    objective = _task_objective(messages)
+    if len(criteria) <= 1:
+        return [base]
+
+    selected = criteria[:_MAX_CRITERION_BOOTSTRAP_CALLS]
+    if tool_name == "web_search":
+        return [
+            (
+                "web_search",
+                {
+                    "query": f"{objective} Acceptance criterion: {criterion}"[:900],
+                    "max_results": 5,
+                },
+            )
+            for criterion in selected
+        ]
+    if tool_name == "deep_research":
+        return [
+            (
+                "deep_research",
+                {
+                    "topic": f"{objective} Acceptance criterion: {criterion}"[:900],
+                    "num_queries": 3,
+                },
+            )
+            for criterion in selected
+        ]
+    if tool_name == "search_code":
+        return [
+            (
+                "search_code",
+                {"query": f"{objective} {criterion}"[:500]},
+            )
+            for criterion in selected
+        ]
+    return [(tool_name, arguments)]
+
+
 def _token_counts(response: Any) -> tuple[int, int]:
     usage = getattr(response, "usage", None)
     return (
@@ -177,19 +283,29 @@ class _AggregatedResponse:
 
 
 class _SyntheticToolResponse:
-    """OpenAI-shaped response for one policy-owned read-only evidence bootstrap."""
+    """OpenAI-shaped response for policy-owned read-only evidence bootstrap calls."""
 
-    def __init__(self, *, model: str, tool_name: str, arguments: dict[str, Any], call_index: int):
-        call = SimpleNamespace(
-            id=f"{_BOOTSTRAP_CALL_PREFIX}{call_index}",
-            type="function",
-            function=SimpleNamespace(name=tool_name, arguments=json.dumps(arguments, sort_keys=True)),
-        )
+    def __init__(
+        self,
+        *,
+        model: str,
+        calls: list[tuple[str, dict[str, Any]]],
+        call_index: int,
+    ):
+        tool_calls = []
+        for offset, (tool_name, arguments) in enumerate(calls):
+            tool_calls.append(
+                SimpleNamespace(
+                    id=f"{_BOOTSTRAP_CALL_PREFIX}{call_index}_{offset}",
+                    type="function",
+                    function=SimpleNamespace(name=tool_name, arguments=json.dumps(arguments, sort_keys=True)),
+                )
+            )
         self.choices = [
             SimpleNamespace(
                 message=SimpleNamespace(
                     content=None,
-                    tool_calls=[call],
+                    tool_calls=tool_calls,
                 )
             )
         ]
@@ -198,7 +314,7 @@ class _SyntheticToolResponse:
 
 
 class _EvidenceAwareClient:
-    """Prevent prose-only completion when task acceptance requires evidence."""
+    """Prevent prose-only completion before bounded criterion evidence exists."""
 
     def __init__(self, inner: Any, *, evidence_required: bool):
         self._inner = inner
@@ -214,14 +330,24 @@ class _EvidenceAwareClient:
                 names.append(name)
         return names
 
-    def _sync_metadata(self, *, corrective_reprompts: int = 0, bootstrap_tool: str = "") -> None:
+    def _sync_metadata(
+        self,
+        *,
+        corrective_reprompts: int = 0,
+        bootstrap_calls: list[tuple[str, dict[str, Any]]] | None = None,
+        bootstrap_criteria_count: int = 0,
+    ) -> None:
         metadata = dict(getattr(self._inner, "last_execution_metadata", {}) or {})
         if corrective_reprompts:
             metadata["evidence_guard"] = "corrective_tool_use"
             metadata["evidence_guard_corrective_reprompts"] = corrective_reprompts
-        if bootstrap_tool:
+        if bootstrap_calls:
+            names = [name for name, _ in bootstrap_calls]
             metadata["evidence_guard"] = "deterministic_read_only_bootstrap"
-            metadata["evidence_guard_bootstrap_tool"] = bootstrap_tool
+            metadata["evidence_guard_bootstrap_tool"] = names[0]
+            metadata["evidence_guard_bootstrap_tools"] = names
+            metadata["evidence_guard_bootstrap_call_count"] = len(bootstrap_calls)
+            metadata["evidence_guard_bootstrap_criteria_count"] = bootstrap_criteria_count
         self.last_execution_metadata = metadata
 
     def chat_sync(
@@ -231,7 +357,9 @@ class _EvidenceAwareClient:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
     ) -> Any:
-        needs_evidence = self.evidence_required and not _successful_tool_evidence(messages)
+        evidence_count = _successful_tool_evidence_count(messages)
+        evidence_target = _evidence_target(messages, tools)
+        needs_evidence = self.evidence_required and evidence_count < evidence_target
         if needs_evidence and not tools:
             raise GovernanceError(
                 "Employee cannot satisfy acceptance criteria: no callable authorized tools are available "
@@ -249,17 +377,25 @@ class _EvidenceAwareClient:
 
         proposed_summary = str(getattr(message, "content", "") or "").strip()
         tool_names = self._tool_names(tools)
+        criteria = _task_acceptance_criteria(messages)
+        criteria_text = "\n".join(
+            f"- {index + 1}. {criterion}" for index, criterion in enumerate(criteria[:_MAX_CRITERION_BOOTSTRAP_CALLS])
+        )
+        if criteria_text:
+            criteria_text = f"\nAcceptance criteria requiring evidence:\n{criteria_text}"
         corrective_messages = [
             *messages,
-            {"role": "assistant", "content": proposed_summary or "I have not produced evidence yet."},
+            {"role": "assistant", "content": proposed_summary or "I have not produced enough evidence yet."},
             {
                 "role": "user",
                 "content": (
-                    "Your previous response cannot satisfy this task's acceptance criteria because it contains "
-                    "no successful governed tool evidence. Do not repeat a prose-only completion. Use one or more "
-                    "authorized tools now to inspect or execute the work and produce verifiable evidence tied to "
-                    "the acceptance criteria. After tool results are available, provide a concise summary. "
+                    "Your previous response cannot satisfy this task's acceptance criteria because the governed "
+                    f"evidence packet is incomplete ({evidence_count}/{evidence_target} bounded evidence target). "
+                    "Do not repeat a prose-only completion. Use one or more authorized tools now to gather "
+                    "verifiable evidence that addresses each listed acceptance criterion. After tool results are "
+                    "available, provide a concise summary. "
                     f"Authorized tools: {', '.join(tool_names)}"
+                    f"{criteria_text}"
                 ),
             },
         ]
@@ -273,16 +409,18 @@ class _EvidenceAwareClient:
         if getattr(corrected_message, "tool_calls", None) or []:
             return _AggregatedResponse([first, corrected])
 
-        bootstrap = _deterministic_bootstrap(messages, tools)
-        if bootstrap is not None:
-            tool_name, arguments = bootstrap
+        bootstrap_calls = _deterministic_bootstrap_calls(messages, tools)
+        if bootstrap_calls:
             synthetic = _SyntheticToolResponse(
                 model=str(getattr(corrected, "model", "") or getattr(first, "model", "") or model_id),
-                tool_name=tool_name,
-                arguments=arguments,
+                calls=bootstrap_calls,
                 call_index=len(messages),
             )
-            self._sync_metadata(corrective_reprompts=1, bootstrap_tool=tool_name)
+            self._sync_metadata(
+                corrective_reprompts=1,
+                bootstrap_calls=bootstrap_calls,
+                bootstrap_criteria_count=min(len(criteria), _MAX_CRITERION_BOOTSTRAP_CALLS),
+            )
             return _AggregatedResponse([first, corrected, synthetic])
 
         raise GovernanceError(
@@ -325,12 +463,19 @@ class _ExecutorProxyModule(ModuleType):
         "_EVIDENCE_REQUIRED",
         "_EvidenceAwareClient",
         "_ExecutorProxyModule",
+        "_MAX_CRITERION_BOOTSTRAP_CALLS",
         "_SyntheticToolResponse",
         "_bootstrap_already_attempted",
         "_deterministic_bootstrap",
+        "_deterministic_bootstrap_calls",
+        "_evidence_target",
         "_successful_tool_evidence",
+        "_successful_tool_evidence_count",
+        "_task_acceptance_criteria",
         "_task_objective",
+        "_task_packet",
         "_token_counts",
+        "_tool_name_set",
     }
 
     def __setattr__(self, name: str, value: Any) -> None:
