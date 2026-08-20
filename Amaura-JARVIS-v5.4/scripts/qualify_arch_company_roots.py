@@ -39,8 +39,8 @@ def _run(command: list[str], *, cwd: Path, timeout: int) -> subprocess.Completed
     )
 
 
-def _git_sha(repo_root: Path) -> str:
-    result = _run(["git", "rev-parse", "HEAD"], cwd=repo_root, timeout=10)
+def _git_value(repo_root: Path, expression: str) -> str:
+    result = _run(["git", "rev-parse", expression], cwd=repo_root, timeout=10)
     return result.stdout.strip() if result.returncode == 0 else "unknown"
 
 
@@ -94,9 +94,12 @@ def main(argv: list[str] | None = None) -> int:
     evidence_dir = Path(args.evidence_dir).expanduser().resolve()
     if _tracked_dirty(repo_root):
         raise SystemExit("Tracked checkout is dirty; refuse exact-build company root qualification")
-    actual_sha = _git_sha(repo_root)
+    actual_sha = _git_value(repo_root, "HEAD")
+    tree_sha = _git_value(repo_root, "HEAD^{tree}")
     if actual_sha != args.expected_sha:
         raise SystemExit(f"Exact-build mismatch: expected {args.expected_sha}, got {actual_sha}")
+    if tree_sha == "unknown":
+        raise SystemExit("Unable to resolve candidate source-tree SHA")
 
     load_amaura_env(env_file, override=True, require_private_permissions=True)
     data_dir = os.environ.get("AMAURA_DATA_DIR", "").strip()
@@ -164,6 +167,7 @@ def main(argv: list[str] | None = None) -> int:
         json.dumps(
             {
                 "candidate_sha": actual_sha,
+                "candidate_tree_sha": tree_sha,
                 "root_blockers": len(root_cards),
                 "safe_failed_internal_roots": len(safe_roots),
                 "run_requested": args.run,
@@ -258,6 +262,7 @@ def main(argv: list[str] | None = None) -> int:
         "qualification": "ARCH_COMPANY_ROOT_E2E",
         "status": "PASS" if overall_pass else "FAIL",
         "candidate_sha": actual_sha,
+        "candidate_tree_sha": tree_sha,
         "source_writable_connection_opened": False,
         "blocker_audit": str(audit_summary_path),
         "root_blocker_count": len(root_cards),
