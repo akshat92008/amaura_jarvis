@@ -1,11 +1,11 @@
 """Narrow semantic hardening for deterministic multi-step workflow routing.
 
 Filesystem paths, URLs and quoted payloads are data, not action vocabulary.
-The legacy workflow planner still performs a few substring checks over the raw
-request, so randomized file names such as ``device_add123.txt`` can accidentally
-turn a key/value-to-JSON extraction into arithmetic.  This decorator keeps the
-stable planner/path-role logic, then validates any operation-sensitive decision
-against the preprocessor's masked classifier view before execution.
+The legacy workflow planner still performs arithmetic substring checks over the
+raw request, so randomized file names such as ``device_add123.txt`` can
+accidentally turn a key/value-to-JSON extraction into arithmetic. This decorator
+keeps the stable planner/path-role logic, then validates only arithmetic
+operations against the preprocessor's masked classifier view before execution.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from typing import Any
 
 _INSTALLED = False
 
-_OPERATION_PATTERNS: dict[str, tuple[str, ...]] = {
+_ARITHMETIC_PATTERNS: dict[str, tuple[str, ...]] = {
     "add": (
         r"\bsum\b",
         r"\btotal\b",
@@ -44,19 +44,19 @@ _OPERATION_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bdivision\b",
         r"\bdivided\s+by\b",
     ),
-    "prefix": (r"\bprefix\b",),
-    "suffix": (r"\bsuffix\b",),
-    "replace": (r"\breplace\b", r"\bsubstitute\b"),
 }
 
 
-def _intent_requests_operation(masked_view: str, operation: str) -> bool:
-    return any(re.search(pattern, masked_view, re.IGNORECASE) for pattern in _OPERATION_PATTERNS.get(operation, ()))
+def _intent_requests_arithmetic(masked_view: str, operation: str) -> bool:
+    return any(
+        re.search(pattern, masked_view, re.IGNORECASE)
+        for pattern in _ARITHMETIC_PATTERNS.get(operation, ())
+    )
 
 
-def _repair_false_positive_operation(plan: Any, masked_view: str) -> Any:
+def _repair_false_positive_arithmetic(plan: Any, masked_view: str) -> Any:
     operation = str(getattr(plan, "operation", "") or "")
-    if operation not in _OPERATION_PATTERNS or _intent_requests_operation(masked_view, operation):
+    if operation not in _ARITHMETIC_PATTERNS or _intent_requests_arithmetic(masked_view, operation):
         return plan
 
     output_format = str(getattr(plan, "output_format", "") or "").lower()
@@ -77,7 +77,7 @@ def _repair_false_positive_operation(plan: Any, masked_view: str) -> Any:
 
 
 def install_direct_action_semantic_repair() -> None:
-    """Install the masked-intent guard once, after existing semantic decorators."""
+    """Install the masked arithmetic-intent guard once after semantic decorators."""
     global _INSTALLED
     if _INSTALLED:
         return
@@ -95,7 +95,7 @@ def install_direct_action_semantic_repair() -> None:
         if plan is None:
             return None
         parsed = RequestPreprocessor.process(text)
-        return _repair_false_positive_operation(plan, parsed.masked_classifier_view)
+        return _repair_false_positive_arithmetic(plan, parsed.masked_classifier_view)
 
     guarded_parse_workflow_plan._arch_masked_workflow_guard = True  # type: ignore[attr-defined]
     DirectActionRouter._parse_workflow_plan = classmethod(guarded_parse_workflow_plan)
