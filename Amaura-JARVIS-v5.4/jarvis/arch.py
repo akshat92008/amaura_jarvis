@@ -9,10 +9,7 @@ from __future__ import annotations
 
 import argparse
 import os
-import signal
 import socket
-import threading
-import time
 from pathlib import Path
 
 from jarvis.amaura.runtime import load_amaura_env
@@ -103,15 +100,6 @@ def _backend_endpoint() -> tuple[str, int]:
     return probe_host, port
 
 
-def _backend_port_accepting() -> bool:
-    host, port = _backend_endpoint()
-    try:
-        with socket.create_connection((host, port), timeout=0.5):
-            return True
-    except OSError:
-        return False
-
-
 def _assert_arch_port_available() -> None:
     """Refuse to silently attach ARCH to an unrelated/legacy server process."""
     host, port = _backend_endpoint()
@@ -129,55 +117,23 @@ def _assert_arch_port_available() -> None:
         return
 
 
-def _run_headless_forever() -> None:
-    """Supervise the embedded backend until launchd/user shutdown.
+def _run_headless_server() -> None:
+    """Run the embedded backend in the ARCH owner process, not a daemon thread.
 
-    The local Uvicorn server runs in an internal thread. A headless ARCH process
-    must not stay alive if that critical thread dies, because launchd would then
-    see a healthy owner PID while the founder-facing API and all server lifespan
-    loops were gone. After a startup grace period this watchdog exits non-zero
-    after bounded consecutive backend failures, allowing launchd to restart the
-    single canonical ARCH process.
+    Uvicorn therefore owns normal SIGTERM/SIGINT shutdown and executes FastAPI's
+    lifespan cleanup before the process exits. If the backend ever returns while
+    launchd still owns this process, exit non-zero so ``KeepAlive`` can restart
+    the one canonical ARCH service instead of leaving a live shell process with
+    a dead API/company runtime.
     """
-    stop_event = threading.Event()
+    from jarvis.cli import _run_web_server
+    from jarvis.network_security import validate_bind_security
 
-    def request_stop(_signum, _frame) -> None:
-        stop_event.set()
-
-    previous_handlers: dict[int, object] = {}
-    for signum in (signal.SIGTERM, signal.SIGINT):
-        previous_handlers[signum] = signal.getsignal(signum)
-        signal.signal(signum, request_stop)
-
-    startup_timeout = max(5.0, min(float(os.environ.get("AMAURA_ARCH_BACKEND_STARTUP_TIMEOUT_SECONDS", "45")), 120.0))
-    poll_seconds = max(1.0, min(float(os.environ.get("AMAURA_ARCH_BACKEND_WATCHDOG_SECONDS", "5")), 30.0))
-    failure_threshold = max(2, min(_positive_int(os.environ.get("AMAURA_ARCH_BACKEND_FAILURE_THRESHOLD", "3"), 3), 12))
-    host, port = _backend_endpoint()
-    try:
-        startup_deadline = time.monotonic() + startup_timeout
-        while not stop_event.is_set() and time.monotonic() < startup_deadline:
-            if _backend_port_accepting():
-                break
-            stop_event.wait(0.25)
-        else:
-            if stop_event.is_set():
-                return
-            raise RuntimeError(f"ARCH embedded backend failed to listen on {host}:{port} within {startup_timeout:.0f}s")
-
-        consecutive_failures = 0
-        while not stop_event.wait(poll_seconds):
-            if _backend_port_accepting():
-                consecutive_failures = 0
-                continue
-            consecutive_failures += 1
-            if consecutive_failures >= failure_threshold:
-                raise RuntimeError(
-                    f"ARCH embedded backend stopped responding on {host}:{port} for "
-                    f"{consecutive_failures} consecutive checks"
-                )
-    finally:
-        for signum, handler in previous_handlers.items():
-            signal.signal(signum, handler)
+    host = os.environ.get("JARVIS_HOST", "127.0.0.1").strip() or "127.0.0.1"
+    port = int(os.environ.get("JARVIS_PORT", "8000"))
+    validate_bind_security(host)
+    _run_web_server(host, port)
+    raise RuntimeError("ARCH embedded backend exited; service owner will terminate so launchd can recover it")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -212,16 +168,22 @@ def main(argv: list[str] | None = None) -> None:
         else:
             ui.print_warning("Voice dependencies are not available; continuing with text input")
 
-    open_browser = not args.no_web and not args.headless
+    telegram_thread = start_arch_telegram(agent)
+    if telegram_thread is not None:
+        ui.print_success("ARCH Telegram surface active")
+
+    if args.headless:
+        host, port = _backend_endpoint()
+        ui.print_success(f"ARCH persistent runtime starting on {host}:{port}")
+        _run_headless_server()
+        return
+
+    open_browser = not args.no_web
     web_url = launch_background_web(open_browser_flag=open_browser)
     if open_browser:
         ui.print_success(f"ARCH HUD live at {web_url}")
     else:
         ui.print_success(f"ARCH runtime live at {web_url} (browser HUD not opened)")
-
-    telegram_thread = start_arch_telegram(agent)
-    if telegram_thread is not None:
-        ui.print_success("ARCH Telegram surface active")
 
     if args.prompt:
         control = get_control_plane()
@@ -236,11 +198,6 @@ def main(argv: list[str] | None = None) -> None:
         message = str(result.get("message") or "").strip()
         if message:
             ui.console.print(message)
-        return
-
-    if args.headless:
-        ui.print_success("ARCH persistent runtime active")
-        _run_headless_forever()
         return
 
     if voice_engine.enabled:
