@@ -104,7 +104,7 @@ def install_direct_action_semantic_repair() -> None:
         return _repair_false_positive_arithmetic(plan, parsed.masked_classifier_view)
 
     guarded_parse_workflow_plan._arch_masked_workflow_guard = True  # type: ignore[attr-defined]
-    setattr(DirectActionRouter, "_parse_workflow_plan", classmethod(guarded_parse_workflow_plan))
+    DirectActionRouter._parse_workflow_plan = classmethod(guarded_parse_workflow_plan)  # type: ignore[method-assign,assignment]
     _INSTALLED = True
 
 
