@@ -9,9 +9,7 @@ from __future__ import annotations
 
 import argparse
 import os
-import signal
 import socket
-import threading
 from pathlib import Path
 
 from jarvis.amaura.runtime import load_amaura_env
@@ -40,7 +38,7 @@ def configure_arch_runtime() -> None:
 
     os.environ.setdefault("AMAURA_RESOURCE_PROFILE", "macbook-8gb")
     os.environ.setdefault("AMAURA_ARCH_HOSTED_COGNITION_FAILOVER", "1")
-    os.environ.setdefault("AMAURA_ARCH_HOSTED_FALLBACK_TIMEOUT_SECONDS", "6")
+    os.environ.setdefault("AMAURA_ARCH_HOSTED_FALLBACK_TIMEOUT_SECONDS", "12")
     _cap_int_env("AMAURA_COMPANY_AUTOPILOT_WORK_UNITS", default=1, maximum=1)
     _cap_int_env("AMAURA_AUTOPILOT_MAX_WORK_UNITS", default=1, maximum=1)
     _cap_int_env("AMAURA_RAM_NORMAL_TARGET_MB", default=768, maximum=768)
@@ -95,15 +93,20 @@ def _authenticate_founder_session(agent) -> None:
     agent.set_amaura_session_token(operator_key)
 
 
-def _assert_arch_port_available() -> None:
-    """Refuse to silently attach ARCH to an unrelated/legacy server process."""
+def _backend_endpoint() -> tuple[str, int]:
     host = os.environ.get("JARVIS_HOST", "127.0.0.1").strip() or "127.0.0.1"
     port = int(os.environ.get("JARVIS_PORT", "8000"))
     probe_host = "127.0.0.1" if host in {"0.0.0.0", "::"} else host
+    return probe_host, port
+
+
+def _assert_arch_port_available() -> None:
+    """Refuse to silently attach ARCH to an unrelated/legacy server process."""
+    host, port = _backend_endpoint()
     try:
-        with socket.create_connection((probe_host, port), timeout=0.25):
+        with socket.create_connection((host, port), timeout=0.25):
             raise RuntimeError(
-                f"ARCH cannot start because {probe_host}:{port} is already in use. "
+                f"ARCH cannot start because {host}:{port} is already in use. "
                 "Stop the old JARVIS/ARCH process instead of running split runtimes."
             )
     except ConnectionRefusedError:
@@ -114,23 +117,23 @@ def _assert_arch_port_available() -> None:
         return
 
 
-def _run_headless_forever() -> None:
-    """Keep the canonical ARCH owner process alive until launchd/user shutdown."""
-    stop_event = threading.Event()
+def _run_headless_server() -> None:
+    """Run the embedded backend in the ARCH owner process, not a daemon thread.
 
-    def request_stop(_signum, _frame) -> None:
-        stop_event.set()
+    Uvicorn therefore owns normal SIGTERM/SIGINT shutdown and executes FastAPI's
+    lifespan cleanup before the process exits. If the backend ever returns while
+    launchd still owns this process, exit non-zero so ``KeepAlive`` can restart
+    the one canonical ARCH service instead of leaving a live shell process with
+    a dead API/company runtime.
+    """
+    from jarvis.cli import _run_web_server
+    from jarvis.network_security import validate_bind_security
 
-    previous_handlers: dict[int, object] = {}
-    for signum in (signal.SIGTERM, signal.SIGINT):
-        previous_handlers[signum] = signal.getsignal(signum)
-        signal.signal(signum, request_stop)
-    try:
-        while not stop_event.wait(1.0):
-            pass
-    finally:
-        for signum, handler in previous_handlers.items():
-            signal.signal(signum, handler)
+    host = os.environ.get("JARVIS_HOST", "127.0.0.1").strip() or "127.0.0.1"
+    port = int(os.environ.get("JARVIS_PORT", "8000"))
+    validate_bind_security(host)
+    _run_web_server(host, port)
+    raise RuntimeError("ARCH embedded backend exited; service owner will terminate so launchd can recover it")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -165,16 +168,22 @@ def main(argv: list[str] | None = None) -> None:
         else:
             ui.print_warning("Voice dependencies are not available; continuing with text input")
 
-    open_browser = not args.no_web and not args.headless
+    telegram_thread = start_arch_telegram(agent)
+    if telegram_thread is not None:
+        ui.print_success("ARCH Telegram surface active")
+
+    if args.headless:
+        host, port = _backend_endpoint()
+        ui.print_success(f"ARCH persistent runtime starting on {host}:{port}")
+        _run_headless_server()
+        return
+
+    open_browser = not args.no_web
     web_url = launch_background_web(open_browser_flag=open_browser)
     if open_browser:
         ui.print_success(f"ARCH HUD live at {web_url}")
     else:
         ui.print_success(f"ARCH runtime live at {web_url} (browser HUD not opened)")
-
-    telegram_thread = start_arch_telegram(agent)
-    if telegram_thread is not None:
-        ui.print_success("ARCH Telegram surface active")
 
     if args.prompt:
         control = get_control_plane()
@@ -189,11 +198,6 @@ def main(argv: list[str] | None = None) -> None:
         message = str(result.get("message") or "").strip()
         if message:
             ui.console.print(message)
-        return
-
-    if args.headless:
-        ui.print_success("ARCH persistent runtime active")
-        _run_headless_forever()
         return
 
     if voice_engine.enabled:

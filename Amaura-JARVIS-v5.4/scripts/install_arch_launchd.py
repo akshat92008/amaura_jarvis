@@ -78,7 +78,13 @@ def _health_url() -> str:
 
 
 def _health_ok() -> bool:
-    request = urllib.request.Request(_health_url(), method="GET")
+    headers: dict[str, str] = {}
+    api_key = os.environ.get("JARVIS_API_KEY", "").strip()
+    if api_key:
+        # The key remains process-local; it is needed when the shared health
+        # endpoint also has desktop bootstrap protection enabled.
+        headers["X-Jarvis-Key"] = api_key
+    request = urllib.request.Request(_health_url(), headers=headers, method="GET")
     try:
         with urllib.request.urlopen(request, timeout=2.0) as response:
             return int(response.status) == 200
