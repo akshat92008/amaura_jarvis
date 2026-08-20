@@ -10,6 +10,13 @@ import time
 from pathlib import Path
 from typing import Any, ClassVar
 
+from jarvis.amaura.completion_contract import (
+    CompletionContractError,
+    build_completion_packet,
+    completion_system_prompt,
+    extract_completion_contract,
+    validate_completion_contract,
+)
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.evidence import (
     create_review_attestation,
@@ -868,7 +875,12 @@ class GovernedTaskRunner:
             {
                 "role": "system",
                 "content": employee.system_prompt
-                + "\n\nReturn a concise completion summary. Do not claim success unless tool results support it.",
+                + (
+                    "\n\nUse authorised tools until evidence is sufficient for every acceptance criterion. "
+                    "When you stop calling tools, return a concise draft summary. JARVIS will run a separate "
+                    "evidence-to-deliverable completion gate before independent review. Do not claim success "
+                    "unless tool results support it."
+                ),
             },
             {"role": "user", "content": "JARVIS TASK PACKET:\n" + json.dumps(clean_packet, indent=2)},
         ]
@@ -881,6 +893,7 @@ class GovernedTaskRunner:
         total_output_tokens = 0
         actual_models: list[str] = []
         provider_executions: list[dict[str, Any]] = []
+        completion_gate_attempts = 0
 
         sandbox = None
         sandbox_mode = os.environ.get("AMAURA_SANDBOX_MODE", "docker").strip().lower()
@@ -931,7 +944,124 @@ class GovernedTaskRunner:
                 content = choice.message.content or ""
                 tool_calls = choice.message.tool_calls or []
                 if not tool_calls:
-                    final_response = content.strip()
+                    draft_summary = content.strip()
+                    if not task.get("acceptance_criteria"):
+                        final_response = draft_summary
+                        break
+
+                    # Tool success is evidence collection, not semantic completion. A
+                    # dedicated no-tools synthesis pass must convert immutable evidence
+                    # into a criterion-specific deliverable before independent review.
+                    if not any(item.get("success") is True for item in evidence):
+                        messages.append({"role": "assistant", "content": draft_summary})
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": (
+                                    "JARVIS COMPLETION GATE REJECTED: no successful evidence exists for the "
+                                    "acceptance criteria. Continue working with authorised tools; do not submit yet."
+                                ),
+                            }
+                        )
+                        continue
+
+                    completion_gate_attempts += 1
+                    synthesis_packet = build_completion_packet(
+                        task_packet=clean_packet,
+                        draft_summary=draft_summary,
+                        evidence=evidence,
+                        evidence_reader=self.control.evidence,
+                    )
+                    synthesis_response = client.chat_sync(
+                        model_id=model_cfg["id"],
+                        messages=[
+                            {"role": "system", "content": completion_system_prompt()},
+                            {
+                                "role": "user",
+                                "content": "JARVIS COMPLETION SYNTHESIS PACKET:\n"
+                                + json.dumps(synthesis_packet, indent=2, ensure_ascii=False),
+                            },
+                        ],
+                        tools=None,
+                    )
+                    synthesis_usage = getattr(synthesis_response, "usage", None)
+                    total_input_tokens += int(getattr(synthesis_usage, "prompt_tokens", 0) or 0)
+                    total_output_tokens += int(getattr(synthesis_usage, "completion_tokens", 0) or 0)
+                    synthesis_metadata = dict(getattr(client, "last_execution_metadata", {}) or {})
+                    synthesis_model = str(
+                        synthesis_metadata.get("actual_model")
+                        or getattr(synthesis_response, "model", route["model_key"])
+                        or route["model_key"]
+                    )
+                    if synthesis_model not in actual_models:
+                        actual_models.append(synthesis_model)
+                    if synthesis_metadata and synthesis_metadata not in provider_executions:
+                        provider_executions.append(synthesis_metadata)
+                    if (
+                        os.environ.get("AMAURA_MODEL_MODE", "local").strip().lower() == "cloud"
+                        and route["provider"] == "nvidia"
+                        and str(synthesis_metadata.get("actual_provider") or "nvidia") != "nvidia"
+                    ):
+                        raise GovernanceError("Cloud-only completion synthesis may not fall back to another provider")
+
+                    synthesis_text = synthesis_response.choices[0].message.content or ""
+                    try:
+                        contract = extract_completion_contract(synthesis_text)
+                        contract = validate_completion_contract(
+                            contract,
+                            acceptance_criteria=list(task.get("acceptance_criteria") or []),
+                            evidence=evidence,
+                        )
+                    except CompletionContractError as exc:
+                        gate_meta = dict(self.control.store.get_work_item(task_id).get("metadata") or {})
+                        gate_meta.update(
+                            {
+                                "completion_gate_status": "rejected",
+                                "completion_gate_attempts": completion_gate_attempts,
+                                "completion_gate_last_error": str(exc)[:1200],
+                            }
+                        )
+                        self.control.store.update_work_item(task_id, metadata=gate_meta)
+                        messages.append({"role": "assistant", "content": draft_summary})
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": (
+                                    "JARVIS COMPLETION GATE REJECTED: "
+                                    + str(exc)
+                                    + ". Re-check every acceptance criterion. If evidence is insufficient, gather "
+                                    "more evidence with authorised tools; otherwise correct the deliverable and stop "
+                                    "tool use again for another synthesis pass."
+                                ),
+                            }
+                        )
+                        continue
+
+                    contract_record = self.control.evidence.put_json(
+                        contract,
+                        source=f"task:{task_id}:completion_contract",
+                    )
+                    evidence.append(
+                        {
+                            "type": "completion_contract",
+                            "reference": contract_record.reference,
+                            "sha256": contract_record.sha256,
+                            "byte_length": contract_record.byte_length,
+                            "success": True,
+                            "excerpt": str(contract.get("summary") or "")[:500],
+                        }
+                    )
+                    gate_meta = dict(self.control.store.get_work_item(task_id).get("metadata") or {})
+                    gate_meta.update(
+                        {
+                            "completion_gate_status": "passed",
+                            "completion_gate_attempts": completion_gate_attempts,
+                            "completion_gate_contract_ref": contract_record.reference,
+                        }
+                    )
+                    gate_meta.pop("completion_gate_last_error", None)
+                    self.control.store.update_work_item(task_id, metadata=gate_meta)
+                    final_response = json.dumps(contract, indent=2, ensure_ascii=False)
                     break
 
                 messages.append(
@@ -1084,6 +1214,7 @@ class GovernedTaskRunner:
             "output_tokens": total_output_tokens,
             "estimated_cost_cents": estimated_cost,
             "iterations": iterations,
+            "completion_gate_attempts": completion_gate_attempts,
         }
         receipt_record = self.control.evidence.put_json(
             model_execution_receipt,
