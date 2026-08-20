@@ -76,9 +76,10 @@ def test_auto_review_retries_actual_model_collision(monkeypatch: pytest.MonkeyPa
     assert os.environ["AMAURA_OMNIROUTE_REVIEW_MODEL"] == "auto/best-reasoning"
 
 
-def test_explicit_review_mode_is_never_overridden(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_explicit_concrete_review_model_is_never_overridden(monkeypatch: pytest.MonkeyPatch) -> None:
     _configure_omniroute(monkeypatch)
     monkeypatch.setenv("AMAURA_REVIEW_MODE", "omniroute")
+    monkeypatch.setenv("AMAURA_OMNIROUTE_REVIEW_MODEL", "z-ai/glm-5.2")
     runner = review_diversity.DiverseGovernedReviewRunner(_Control())
     monkeypatch.setattr(
         runner,
@@ -101,6 +102,48 @@ def test_explicit_review_mode_is_never_overridden(monkeypatch: pytest.MonkeyPatc
 
     assert calls == 1
     assert os.environ["AMAURA_REVIEW_MODE"] == "omniroute"
+    assert os.environ["AMAURA_OMNIROUTE_REVIEW_MODEL"] == "z-ai/glm-5.2"
+
+
+def test_explicit_omniroute_auto_alias_retries_within_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    _configure_omniroute(monkeypatch)
+    monkeypatch.setenv("AMAURA_REVIEW_MODE", "omniroute")
+    monkeypatch.setenv("AMAURA_OMNIROUTE_REVIEW_MODEL", "auto/best-reasoning")
+    monkeypatch.setenv("NVIDIA_API_KEY", "configured-but-must-not-be-used")
+    monkeypatch.setenv("AMAURA_REVIEW_DIVERSITY_MAX_ATTEMPTS", "3")
+    runner = review_diversity.DiverseGovernedReviewRunner(_Control())
+    monkeypatch.setattr(
+        runner,
+        "_worker_models_from_evidence",
+        lambda task: {"claude-opus-4-6-thinking", "mistral-large-latest"},
+    )
+
+    calls: list[tuple[str, str]] = []
+
+    def fake_base_run(self, task_id: str):
+        calls.append(
+            (
+                os.environ.get("AMAURA_REVIEW_MODE", ""),
+                os.environ.get("AMAURA_OMNIROUTE_REVIEW_MODEL", ""),
+            )
+        )
+        if len(calls) == 1:
+            raise GovernanceError(
+                "Actual reviewer model must differ from every worker model used for the task"
+            )
+        return {"task_id": task_id, "state": TaskState.COMPLETED.value}
+
+    monkeypatch.setattr(review_diversity._BASE_REVIEW_RUNNER, "run", fake_base_run)
+
+    result = runner.run("task-1")
+
+    assert result["state"] == TaskState.COMPLETED.value
+    assert calls == [
+        ("omniroute", "auto/best-reasoning"),
+        ("omniroute", "z-ai/glm-5.2"),
+    ]
+    assert os.environ["AMAURA_REVIEW_MODE"] == "omniroute"
+    assert os.environ["AMAURA_OMNIROUTE_REVIEW_MODEL"] == "auto/best-reasoning"
 
 
 def test_auto_review_can_cross_to_distinct_hosted_provider(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -116,6 +159,20 @@ def test_auto_review_can_cross_to_distinct_hosted_provider(monkeypatch: pytest.M
         ("cloud", "z-ai/glm-5.2"),
     ]
     assert all(provider != "local" for provider, _ in attempts)
+
+
+def test_provider_pinned_attempts_never_cross_to_cloud(monkeypatch: pytest.MonkeyPatch) -> None:
+    _configure_omniroute(monkeypatch)
+    monkeypatch.setenv("NVIDIA_API_KEY", "test-nvidia-key")
+    monkeypatch.setenv("AMAURA_REVIEW_DIVERSITY_MAX_ATTEMPTS", "4")
+
+    attempts = review_diversity._review_attempts(
+        {"claude-opus-4-6-thinking", "mistral-large-latest"},
+        provider_scope="omniroute",
+    )
+
+    assert attempts
+    assert all(provider == "omniroute" for provider, _ in attempts)
 
 
 def test_auto_review_for_non_omniroute_worker_still_uses_hosted_reviewer(monkeypatch: pytest.MonkeyPatch) -> None:
