@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Resumable live semantic root qualification for Amaura JARVIS.
 
-This harness intentionally persists its isolated database/evidence so a provider
-failure during independent review does not force the expensive worker research
-phase to run again. Re-running the script resumes an awaiting-review task.
+The expensive worker phase is bounded for interactive qualification. Once a
+worker reaches awaiting_review, the isolated state/evidence is persisted so a
+reviewer/provider failure can be retried without repeating research.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ import argparse
 import json
 import os
 import shutil
+import signal
 import sys
 import threading
 from pathlib import Path
@@ -27,9 +28,21 @@ STATE_ROOT = ROOT / ".qualification" / "semantic-root-live"
 STATE_FILE = STATE_ROOT / "state.json"
 
 
+class WorkerDeadlineExceeded(RuntimeError):
+    """Raised when the interactive worker qualification exceeds its wall clock."""
+
+
 def _load_environment() -> None:
     load_dotenv(ROOT / ".env.amaura", override=False)
     load_dotenv(ROOT.parent / ".env.amaura", override=False)
+
+
+def _apply_fast_worker_profile() -> None:
+    """Keep the live root interactive without changing persistent product config."""
+    os.environ["AMAURA_NVIDIA_TIMEOUT"] = "15"
+    os.environ["AMAURA_NVIDIA_CONNECT_TIMEOUT"] = "5"
+    os.environ["AMAURA_NVIDIA_TOTAL_TIMEOUT"] = "20"
+    os.environ["AMAURA_NVIDIA_MAX_KEY_ATTEMPTS"] = "1"
 
 
 def _write_state(task_id: str) -> None:
@@ -57,7 +70,9 @@ def _print_evidence(evidence: list[dict[str, Any]]) -> None:
         )
 
 
-def _contract_checks(execution: dict[str, Any], reviewed: dict[str, Any], stored: dict[str, Any]) -> dict[str, bool]:
+def _contract_checks(
+    execution: dict[str, Any], reviewed: dict[str, Any], stored: dict[str, Any]
+) -> dict[str, bool]:
     contract = json.loads(stored["summary"])
     source_register = contract.get("source_register") or []
     criteria_rows = contract.get("criteria") or []
@@ -71,43 +86,95 @@ def _contract_checks(execution: dict[str, Any], reviewed: dict[str, Any], stored
             str(item.get("tool") or "").startswith("web_")
             or str(item.get("tool") or "").startswith("browser_")
             or str(item.get("tool") or "")
-            in {"search_web", "search_web_fast", "search_web_slow", "deep_research", "summarize_url"}
+            in {
+                "search_web",
+                "search_web_fast",
+                "search_web_slow",
+                "deep_research",
+                "summarize_url",
+            }
         )
     ]
-    public_refs = {str(item["reference"]) for item in successful_public_evidence if item.get("reference")}
-    registered_refs = {str(item["evidence_ref"]) for item in source_register if item.get("evidence_ref")}
+    public_refs = {
+        str(item["reference"])
+        for item in successful_public_evidence
+        if item.get("reference")
+    }
+    registered_refs = {
+        str(item["evidence_ref"])
+        for item in source_register
+        if item.get("evidence_ref")
+    }
 
     receipt = execution.get("model_execution_receipt") or {}
-    gate_ok = int(receipt.get("completion_gate_attempts") or 0) >= 1
-    evidence_ok = bool(successful_public_evidence)
-    source_register_ok = bool(public_refs) and public_refs.issubset(registered_refs)
-    amaura_ok = len(criteria_rows) >= 2 and bool(criteria_rows[1].get("amaura_relevance"))
-    originality = criteria_rows[2].get("originality_rationale") or {} if len(criteria_rows) >= 3 else {}
-    originality_ok = all(
-        bool(originality.get(field))
-        for field in ("observed_patterns", "category_level_ideas", "amaura_differentiation", "copying_avoidance")
+    review_rows = reviewed.get("criteria") or []
+    deterministic = reviewed.get("deterministic_review") or {}
+    originality = (
+        criteria_rows[2].get("originality_rationale") or {}
+        if len(criteria_rows) >= 3
+        else {}
     )
     worker_models = set(receipt.get("models_used") or [])
-    reviewer_independent = bool(reviewed.get("reviewer_model")) and reviewed["reviewer_model"] not in worker_models
-    review_rows = reviewed.get("criteria") or []
-    criteria_ok = (
-        reviewed.get("approve") is True
-        and len(review_rows) == 3
-        and all(row.get("passed") is True for row in review_rows)
-    )
-    deterministic = reviewed.get("deterministic_review") or {}
-    deterministic_ok = deterministic.get("approve") is True and not (deterministic.get("findings") or [])
 
     return {
-        "completion_gate": gate_ok,
-        "public_evidence": evidence_ok,
-        "source_register": source_register_ok,
-        "amaura_relevance": amaura_ok,
-        "originality": originality_ok,
-        "reviewer_independent": reviewer_independent,
-        "deterministic_review": deterministic_ok,
-        "independent_review": criteria_ok,
+        "completion_gate": int(receipt.get("completion_gate_attempts") or 0) >= 1,
+        "public_evidence": bool(successful_public_evidence),
+        "source_register": bool(public_refs) and public_refs.issubset(registered_refs),
+        "amaura_relevance": len(criteria_rows) >= 2
+        and bool(criteria_rows[1].get("amaura_relevance")),
+        "originality": all(
+            bool(originality.get(field))
+            for field in (
+                "observed_patterns",
+                "category_level_ideas",
+                "amaura_differentiation",
+                "copying_avoidance",
+            )
+        ),
+        "reviewer_independent": bool(reviewed.get("reviewer_model"))
+        and reviewed["reviewer_model"] not in worker_models,
+        "deterministic_review": deterministic.get("approve") is True
+        and not (deterministic.get("findings") or []),
+        "independent_review": reviewed.get("approve") is True
+        and len(review_rows) == 3
+        and all(row.get("passed") is True for row in review_rows),
     }
+
+
+def _run_worker_bounded(runner, task_id: str, *, max_iterations: int, deadline_seconds: int):
+    done = threading.Event()
+
+    def heartbeat() -> None:
+        elapsed = 0
+        while not done.wait(30):
+            elapsed += 30
+            print(
+                f"[heartbeat] worker still running: {elapsed}s / {deadline_seconds}s max",
+                flush=True,
+            )
+
+    thread = threading.Thread(target=heartbeat, daemon=True)
+    thread.start()
+
+    previous_handler = None
+    timer_enabled = hasattr(signal, "SIGALRM") and hasattr(signal, "setitimer")
+
+    def deadline_handler(_signum, _frame) -> None:
+        raise WorkerDeadlineExceeded(
+            f"Live worker exceeded the {deadline_seconds}s wall-clock qualification budget"
+        )
+
+    try:
+        if timer_enabled:
+            previous_handler = signal.signal(signal.SIGALRM, deadline_handler)
+            signal.setitimer(signal.ITIMER_REAL, float(deadline_seconds))
+        return runner.run(task_id, max_iterations=max_iterations)
+    finally:
+        if timer_enabled:
+            signal.setitimer(signal.ITIMER_REAL, 0.0)
+            if previous_handler is not None:
+                signal.signal(signal.SIGALRM, previous_handler)
+        done.set()
 
 
 def main() -> int:
@@ -121,18 +188,27 @@ def main() -> int:
     parser.add_argument(
         "--max-iterations",
         type=int,
-        default=20,
-        help="bounded worker model/tool iterations for this qualification run (1-30; default: 20)",
+        default=12,
+        help="bounded worker model/tool iterations (1-20; default: 12)",
+    )
+    parser.add_argument(
+        "--worker-deadline-seconds",
+        type=int,
+        default=300,
+        help="worker wall-clock budget in seconds (60-600; default: 300)",
     )
     args = parser.parse_args()
-    if not 1 <= args.max_iterations <= 30:
-        parser.error("--max-iterations must be between 1 and 30")
+    if not 1 <= args.max_iterations <= 20:
+        parser.error("--max-iterations must be between 1 and 20")
+    if not 60 <= args.worker_deadline_seconds <= 600:
+        parser.error("--worker-deadline-seconds must be between 60 and 600")
 
     if args.reset and STATE_ROOT.exists():
         shutil.rmtree(STATE_ROOT)
 
     STATE_ROOT.mkdir(parents=True, exist_ok=True)
     _load_environment()
+    _apply_fast_worker_profile()
     os.environ["AMAURA_EVIDENCE_DIR"] = str(STATE_ROOT / "evidence")
 
     from jarvis.amaura.control_plane import AmauraControlPlane
@@ -145,6 +221,8 @@ def main() -> int:
     print("\n========== LIVE SEMANTIC ROOT QUALIFICATION ==========")
     print("STATE DIR:", STATE_ROOT)
     print("WORKER ITERATION BUDGET:", args.max_iterations)
+    print("WORKER WALL-CLOCK BUDGET:", f"{args.worker_deadline_seconds}s")
+    print("NVIDIA TURN PROFILE: 15s request / 20s total / 1 credential")
 
     control = AmauraControlPlane(
         STATE_ROOT / "root.db",
@@ -167,7 +245,8 @@ def main() -> int:
                     "Amaura founder-facing content brief. Use multiple credible current public sources. Produce "
                     "evidence sufficient for a complete source register, explain the specific relevance to Amaura, "
                     "and explicitly separate category-level lessons from competitor-specific wording, branding, "
-                    "proprietary flows, or other expression we must not copy."
+                    "proprietary flows, or other expression we must not copy. Stop researching once 6-8 distinct "
+                    "successful public sources are enough to support all three acceptance criteria; then synthesize."
                 ),
                 success_metric=(
                     "The content_factory research task passes all three independent-review criteria with immutable "
@@ -201,41 +280,34 @@ def main() -> int:
                 if item.get("type") != "model_execution_receipt" or not item.get("reference"):
                     continue
                 try:
-                    execution["model_execution_receipt"] = json.loads(control.evidence.get_text(item["reference"]))
+                    execution["model_execution_receipt"] = json.loads(
+                        control.evidence.get_text(item["reference"])
+                    )
                 except Exception:
                     pass
         elif task["state"] in {"assigned", "blocked", "in_progress"}:
             if task["state"] == "in_progress":
                 print(
                     "\nPrevious worker run ended before submission. The task record is reusable, "
-                    "but the worker conversation/evidence was not checkpointed; restarting worker context efficiently."
+                    "but the unfinished worker conversation is not checkpointed; restarting with a fast plan."
                 )
                 metadata = dict(task.get("metadata") or {})
                 metadata["replan_instruction"] = (
-                    "A previous qualification worker run exhausted its iteration budget before submission. "
-                    "This retry starts with a fresh worker conversation. Be efficient: gather only the minimum "
-                    "credible public evidence required for all acceptance criteria (target roughly 6-10 successful "
-                    "public sources), avoid redundant searches or repeated fetches, and as soon as the source "
-                    "register, Amaura relevance, and originality/non-copying claims are supportable, stop tool use "
+                    "A previous qualification worker run ended before submission. This retry starts with a fresh "
+                    "worker conversation. Do not over-research. Target 6-8 distinct successful public sources, "
+                    "avoid redundant searches and repeated fetches, and once those sources support the source "
+                    "register, Amaura relevance, and originality/non-copying criteria, stop tool use immediately "
                     "and return the draft summary so JARVIS can run completion synthesis."
                 )
                 task = control.store.update_work_item(task_id, metadata=metadata)
 
             print("\n========== WORKER ==========")
-            done = threading.Event()
-
-            def heartbeat() -> None:
-                elapsed = 0
-                while not done.wait(30):
-                    elapsed += 30
-                    print(f"[heartbeat] worker still running: {elapsed}s", flush=True)
-
-            thread = threading.Thread(target=heartbeat, daemon=True)
-            thread.start()
-            try:
-                execution = GovernedTaskRunner(control).run(task_id, max_iterations=args.max_iterations)
-            finally:
-                done.set()
+            execution = _run_worker_bounded(
+                GovernedTaskRunner(control),
+                task_id,
+                max_iterations=args.max_iterations,
+                deadline_seconds=args.worker_deadline_seconds,
+            )
             print("WORKER STATUS:", execution["status"])
             print("ITERATIONS:", execution.get("iterations"))
             receipt = execution.get("model_execution_receipt") or {}
@@ -252,17 +324,12 @@ def main() -> int:
             print("Worker did not reach awaiting_review; task record preserved for inspection.")
             return 1
 
-        # The live reviewer used in this qualification is an OmniRoute model.
-        # cloud review is deliberately NVIDIA-only in the product, so do not
-        # misroute z-ai/glm-5.2 through AMAURA_REVIEW_MODE=cloud.
         os.environ["AMAURA_REVIEW_MODE"] = "omniroute"
         os.environ.setdefault("AMAURA_OMNIROUTE_REVIEW_MODEL", "z-ai/glm-5.2")
-        # Reviewer independence is fail-closed: do not allow a fallback model
-        # that might overlap with a worker model already recorded in evidence.
         os.environ["AMAURA_OMNIROUTE_FALLBACK_MODEL"] = ""
 
         print("\n========== INDEPENDENT REVIEW ==========")
-        print("REQUESTED REVIEWER: ", os.environ["AMAURA_OMNIROUTE_REVIEW_MODEL"])
+        print("REQUESTED REVIEWER:", os.environ["AMAURA_OMNIROUTE_REVIEW_MODEL"])
         reviewed = GovernedReviewRunner(control).run(task_id)
         print("REVIEW APPROVE:", reviewed["approve"])
         print("REVIEW STATE:", reviewed["state"])
@@ -281,9 +348,9 @@ def main() -> int:
         print("\n========== FINAL VERDICT ==========")
         print("ROOT_QUALIFICATION:", "PASS" if passed else "FAIL")
         if passed:
-            print("The persistent qualification state may now be removed with --reset before a future fresh run.")
+            print("The persistent qualification state may be removed with --reset before a future fresh run.")
             return 0
-        print("State preserved. Re-run this same command to resume without repeating completed phases.")
+        print("State preserved. Re-run this same command to resume completed phases.")
         return 1
     except BaseException as exc:
         print("\n========== ROOT QUALIFICATION ERROR ==========")
@@ -299,7 +366,7 @@ def main() -> int:
         else:
             print(
                 "Task record is preserved, but an unfinished worker conversation is not checkpointed. "
-                "Re-run this same command after the blocker is fixed; the harness will apply an efficient retry plan."
+                "The next run will restart worker context under the same bounded fast profile."
             )
         return 2
     finally:
