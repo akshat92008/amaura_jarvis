@@ -20,6 +20,9 @@ from typing import Any
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 STATE_ROOT = ROOT / ".qualification" / "semantic-root-live"
 STATE_FILE = STATE_ROOT / "state.json"
 
@@ -110,6 +113,11 @@ def _contract_checks(execution: dict[str, Any], reviewed: dict[str, Any], stored
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reset", action="store_true", help="discard prior isolated qualification state")
+    parser.add_argument(
+        "--check-imports",
+        action="store_true",
+        help="verify standalone script imports without starting a qualification run",
+    )
     args = parser.parse_args()
 
     if args.reset and STATE_ROOT.exists():
@@ -121,6 +129,10 @@ def main() -> int:
 
     from jarvis.amaura.control_plane import AmauraControlPlane
     from jarvis.amaura.executor import GovernedReviewRunner, GovernedTaskRunner
+
+    if args.check_imports:
+        print("JARVIS IMPORT: OK")
+        return 0
 
     print("\n========== LIVE SEMANTIC ROOT QUALIFICATION ==========")
     print("STATE DIR:", STATE_ROOT)
