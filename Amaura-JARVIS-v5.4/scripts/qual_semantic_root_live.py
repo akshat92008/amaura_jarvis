@@ -118,7 +118,15 @@ def main() -> int:
         action="store_true",
         help="verify standalone script imports without starting a qualification run",
     )
+    parser.add_argument(
+        "--max-iterations",
+        type=int,
+        default=20,
+        help="bounded worker model/tool iterations for this qualification run (1-30; default: 20)",
+    )
     args = parser.parse_args()
+    if not 1 <= args.max_iterations <= 30:
+        parser.error("--max-iterations must be between 1 and 30")
 
     if args.reset and STATE_ROOT.exists():
         shutil.rmtree(STATE_ROOT)
@@ -136,6 +144,7 @@ def main() -> int:
 
     print("\n========== LIVE SEMANTIC ROOT QUALIFICATION ==========")
     print("STATE DIR:", STATE_ROOT)
+    print("WORKER ITERATION BUDGET:", args.max_iterations)
 
     control = AmauraControlPlane(
         STATE_ROOT / "root.db",
@@ -196,6 +205,22 @@ def main() -> int:
                 except Exception:
                     pass
         elif task["state"] in {"assigned", "blocked", "in_progress"}:
+            if task["state"] == "in_progress":
+                print(
+                    "\nPrevious worker run ended before submission. The task record is reusable, "
+                    "but the worker conversation/evidence was not checkpointed; restarting worker context efficiently."
+                )
+                metadata = dict(task.get("metadata") or {})
+                metadata["replan_instruction"] = (
+                    "A previous qualification worker run exhausted its iteration budget before submission. "
+                    "This retry starts with a fresh worker conversation. Be efficient: gather only the minimum "
+                    "credible public evidence required for all acceptance criteria (target roughly 6-10 successful "
+                    "public sources), avoid redundant searches or repeated fetches, and as soon as the source "
+                    "register, Amaura relevance, and originality/non-copying claims are supportable, stop tool use "
+                    "and return the draft summary so JARVIS can run completion synthesis."
+                )
+                task = control.store.update_work_item(task_id, metadata=metadata)
+
             print("\n========== WORKER ==========")
             done = threading.Event()
 
@@ -208,7 +233,7 @@ def main() -> int:
             thread = threading.Thread(target=heartbeat, daemon=True)
             thread.start()
             try:
-                execution = GovernedTaskRunner(control).run(task_id, max_iterations=8)
+                execution = GovernedTaskRunner(control).run(task_id, max_iterations=args.max_iterations)
             finally:
                 done.set()
             print("WORKER STATUS:", execution["status"])
@@ -224,7 +249,7 @@ def main() -> int:
         stored = control.store.get_work_item(task_id)
         if stored["state"] != "awaiting_review":
             print("ROOT_QUALIFICATION: FAIL")
-            print("Worker did not reach awaiting_review; state preserved for inspection.")
+            print("Worker did not reach awaiting_review; task record preserved for inspection.")
             return 1
 
         # The live reviewer used in this qualification is an OmniRoute model.
@@ -264,7 +289,18 @@ def main() -> int:
         print("\n========== ROOT QUALIFICATION ERROR ==========")
         print("ERROR TYPE:", type(exc).__name__)
         print("ERROR:", str(exc))
-        print("State preserved. Re-run this same command after the blocker is fixed; completed phases will be reused.")
+        current = None
+        try:
+            current = control.store.get_work_item(_read_state()) if _read_state() else None
+        except Exception:
+            current = None
+        if current and current.get("state") == "awaiting_review":
+            print("Worker phase is complete and preserved. Re-run this same command to retry review only.")
+        else:
+            print(
+                "Task record is preserved, but an unfinished worker conversation is not checkpointed. "
+                "Re-run this same command after the blocker is fixed; the harness will apply an efficient retry plan."
+            )
         return 2
     finally:
         control.close()

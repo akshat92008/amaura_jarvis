@@ -23,3 +23,27 @@ def test_live_semantic_qualifier_bootstraps_project_root_for_standalone_executio
         assert hasattr(module, "AmauraControlPlane")
     finally:
         sys.path[:] = original_path
+
+
+def test_live_semantic_qualifier_uses_extended_bounded_worker_budget():
+    root = Path(__file__).resolve().parents[1]
+    script = root / "scripts" / "qual_semantic_root_live.py"
+    source = script.read_text(encoding="utf-8")
+
+    assert '"--max-iterations"' in source
+    assert "default=20" in source
+    assert "1 <= args.max_iterations <= 30" in source
+    assert "max_iterations=args.max_iterations" in source
+    assert "max_iterations=8" not in source
+
+
+def test_live_semantic_qualifier_replans_unfinished_worker_retry():
+    root = Path(__file__).resolve().parents[1]
+    script = root / "scripts" / "qual_semantic_root_live.py"
+    source = script.read_text(encoding="utf-8")
+
+    assert 'task["state"] == "in_progress"' in source
+    assert 'metadata["replan_instruction"]' in source
+    assert "target roughly 6-10 successful" in source
+    assert "public sources" in source
+    assert "unfinished worker conversation is not checkpointed" in source
