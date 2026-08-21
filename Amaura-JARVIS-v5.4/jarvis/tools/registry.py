@@ -56,6 +56,7 @@ from jarvis.tools.communication import COMMUNICATION_DISPATCH, COMMUNICATION_TOO
 from jarvis.tools.desktop import DESKTOP_DISPATCH, DESKTOP_TOOL_DEFINITIONS
 from jarvis.tools.documents import DOCUMENT_DISPATCH, DOCUMENT_TOOL_DEFINITIONS
 from jarvis.tools.research import RESEARCH_DISPATCH, RESEARCH_TOOL_DEFINITIONS
+from jarvis.tools.resilient_research import RESILIENT_RESEARCH_DISPATCH
 from jarvis.tools.tdd_loop import TDD_DISPATCH, TDD_TOOL_DEFINITIONS
 from jarvis.tools.vector_memory import VECTOR_MEMORY_DISPATCH, VECTOR_MEMORY_TOOL_DEFINITIONS
 from jarvis.tools.vision import VISION_DISPATCH, VISION_TOOL_DEFINITIONS
@@ -119,6 +120,9 @@ ALL_DISPATCH.update(
         **HUD_DISPATCH,
         **VOICE_DISPATCH,
         **AMAURA_DISPATCH,
+        # Same public schemas; these last-provider handlers add a hard timeout
+        # boundary around network search so third-party hangs cannot freeze JARVIS.
+        **RESILIENT_RESEARCH_DISPATCH,
     }
 )
 
