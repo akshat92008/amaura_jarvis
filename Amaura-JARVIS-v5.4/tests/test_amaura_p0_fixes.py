@@ -400,7 +400,7 @@ class TestProgrammeAtomicity:
     def test_sqlite_busy_timeout_set(self, tmp_path):
         store = _store(tmp_path)
         timeout = store._connection.execute("PRAGMA busy_timeout").fetchone()[0]
-        assert timeout == 5000, f"Expected busy_timeout=5000, got {timeout}"
+        assert timeout == 30000, f"Expected busy_timeout=30000, got {timeout}"
 
 
 class TestLaunchRuntimeRouting:
