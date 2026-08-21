@@ -1,7 +1,7 @@
 """Bounded public research handlers for the central tool registry.
 
 The legacy DuckDuckGo client can occasionally block below Python's normal
-exception boundary.  These handlers isolate each search in a short-lived child
+exception boundary. These handlers isolate each search in a short-lived child
 process with a parent-enforced timeout, so a stalled provider becomes failed
 tool evidence instead of freezing the governed worker loop.
 """
@@ -15,9 +15,6 @@ import subprocess
 import sys
 from datetime import datetime
 from typing import Any
-
-from jarvis.amaura.models import GovernanceError
-from jarvis.amaura.network import fetch_public_text
 
 _SEARCH_TIMEOUT_SECONDS = 12
 _SEARCH_CLIENT_TIMEOUT_SECONDS = 8
@@ -110,10 +107,21 @@ def tool_web_search(query: str, max_results: int = 5) -> str:
 
 
 def _fetch_url_text(url: str, max_length: int = 8_000) -> str:
-    """Fetch one already-discovered public URL through Amaura's SSRF-safe layer."""
+    """Fetch one already-discovered public URL through Amaura's SSRF-safe layer.
+
+    The import is intentionally lazy. ``resilient_research`` is imported while
+    the central tool registry is bootstrapping, and importing ``jarvis.amaura``
+    at module import time would recursively reinstall the semantic frontend and
+    re-import the registry.
+    """
     try:
+        from jarvis.amaura.network import fetch_public_text
+
         raw = fetch_public_text(url, max_length=max(1, min(int(max_length) * 3, 100_000)))
-    except (GovernanceError, ValueError) as exc:
+    except Exception as exc:
+        # Page retrieval is best-effort research evidence. Network governance,
+        # DNS, response-size, and transport failures become recoverable source
+        # failures rather than aborting the larger research operation.
         return f"(failed to fetch: {exc})"
     text = re.sub(r"<script[^>]*>.*?</script>", "", raw, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
