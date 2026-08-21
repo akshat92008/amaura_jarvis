@@ -139,11 +139,21 @@ class CompanyStore:
             Path(audit_checkpoint_path).expanduser().resolve() if audit_checkpoint_path is not None else None
         )
         self._lock = threading.RLock()
-        self._connection = sqlite3.connect(self.db_path, check_same_thread=False)
+        try:
+            busy_timeout_ms = int(os.environ.get("AMAURA_SQLITE_BUSY_TIMEOUT_MS", "30000"))
+        except ValueError:
+            busy_timeout_ms = 30000
+        busy_timeout_ms = max(1_000, min(busy_timeout_ms, 120_000))
+        self._sqlite_busy_timeout_ms = busy_timeout_ms
+        self._connection = sqlite3.connect(
+            self.db_path,
+            check_same_thread=False,
+            timeout=busy_timeout_ms / 1000.0,
+        )
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA foreign_keys = ON")
         self._connection.execute("PRAGMA journal_mode = WAL")
-        self._connection.execute("PRAGMA busy_timeout = 5000")
+        self._connection.execute(f"PRAGMA busy_timeout = {busy_timeout_ms}")
         self._autocommit = True  # set False inside atomic_block to batch commits
         self._savepoints = 0
         self._closed = False
