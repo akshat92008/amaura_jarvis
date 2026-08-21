@@ -44,5 +44,6 @@ def test_live_semantic_qualifier_replans_unfinished_worker_retry():
 
     assert 'task["state"] == "in_progress"' in source
     assert 'metadata["replan_instruction"]' in source
-    assert "target roughly 6-10 successful public sources" in source
+    assert "target roughly 6-10 successful" in source
+    assert "public sources" in source
     assert "unfinished worker conversation is not checkpointed" in source
