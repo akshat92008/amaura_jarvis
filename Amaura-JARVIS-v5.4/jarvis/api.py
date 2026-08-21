@@ -170,15 +170,33 @@ class NvidiaClient:
 
         self.current_key_idx = 0
         self.client = None
-        nv_timeout = float(os.getenv("AMAURA_NVIDIA_TIMEOUT", os.getenv("NVIDIA_TIMEOUT", "60.0")))
-        nv_connect_timeout = float(os.getenv("AMAURA_NVIDIA_CONNECT_TIMEOUT", "10.0"))
+        self.nv_timeout = max(
+            5.0,
+            min(
+                float(os.getenv("AMAURA_NVIDIA_TIMEOUT", os.getenv("NVIDIA_TIMEOUT", "25.0"))),
+                120.0,
+            ),
+        )
+        self.nv_connect_timeout = max(
+            2.0,
+            min(float(os.getenv("AMAURA_NVIDIA_CONNECT_TIMEOUT", "8.0")), self.nv_timeout),
+        )
+        self.nv_total_timeout = max(
+            self.nv_timeout,
+            min(float(os.getenv("AMAURA_NVIDIA_TOTAL_TIMEOUT", "45.0")), 180.0),
+        )
+        configured_attempts = max(
+            1,
+            min(int(os.getenv("AMAURA_NVIDIA_MAX_KEY_ATTEMPTS", "2")), 8),
+        )
+        self.nv_max_key_attempts = min(configured_attempts, max(1, len(self.all_keys)))
         if self.all_keys and OpenAI is not None:
             self.client = OpenAI(
                 base_url=NVIDIA_BASE_URL,
                 api_key=self.all_keys[0],
                 http_client=httpx.Client(
                     verify=ssl.create_default_context(cafile=certifi.where()),
-                    timeout=httpx.Timeout(nv_timeout, connect=nv_connect_timeout),
+                    timeout=httpx.Timeout(self.nv_timeout, connect=self.nv_connect_timeout),
                 ),
             )
 
@@ -239,14 +257,12 @@ class NvidiaClient:
         new_key = self.all_keys[self.current_key_idx]
         if OpenAI is None:
             return False
-        nv_timeout = float(os.getenv("AMAURA_NVIDIA_TIMEOUT", os.getenv("NVIDIA_TIMEOUT", "60.0")))
-        nv_connect_timeout = float(os.getenv("AMAURA_NVIDIA_CONNECT_TIMEOUT", "10.0"))
         self.client = OpenAI(
             base_url=NVIDIA_BASE_URL,
             api_key=new_key,
             http_client=httpx.Client(
                 verify=ssl.create_default_context(cafile=certifi.where()),
-                timeout=httpx.Timeout(nv_timeout, connect=nv_connect_timeout),
+                timeout=httpx.Timeout(self.nv_timeout, connect=self.nv_connect_timeout),
             ),
         )
         return True
@@ -288,18 +304,30 @@ class NvidiaClient:
                 # Filter tools for NVIDIA NIM to avoid parameter size overload error
                 nv_kwargs["tools"] = _filter_essential_tools(tools, messages) if len(tools) > 10 else tools
 
-            for attempt in range(len(self.all_keys)):
+            attempt_limit = min(len(self.all_keys), self.nv_max_key_attempts)
+            deadline = time.monotonic() + self.nv_total_timeout
+            for attempt in range(attempt_limit):
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                request_timeout = max(1.0, min(self.nv_timeout, remaining))
                 try:
-                    response = self.client.chat.completions.create(**nv_kwargs)
-                    return self._record_response(
+                    response = self.client.chat.completions.create(
+                        **nv_kwargs,
+                        timeout=request_timeout,
+                    )
+                    recorded = self._record_response(
                         response,
                         provider="nvidia",
                         requested_model=model_id,
                         actual_model=target_nvidia_model,
                         fallback_reason="" if attempt == 0 else "primary NVIDIA credential failed",
                     )
+                    self.last_execution_metadata["credential_attempts"] = attempt + 1
+                    self.last_execution_metadata["request_budget_seconds"] = self.nv_total_timeout
+                    return recorded
                 except Exception:
-                    if attempt + 1 < len(self.all_keys):
+                    if attempt + 1 < attempt_limit and (deadline - time.monotonic()) > 0:
                         self.switch_to_fallback()
             NvidiaClient._nvidia_disabled_until = time.time() + 120.0
 

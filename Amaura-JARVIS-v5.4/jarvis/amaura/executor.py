@@ -35,6 +35,7 @@ from jarvis.amaura.policy import PATH_ARGUMENTS
 from jarvis.amaura.registry import get_agent
 from jarvis.amaura.sandbox import StatefulDockerSandbox, run_governed_command
 from jarvis.amaura.security import redact_sensitive_text
+from jarvis.amaura.tool_authorization import authorization_denial_result
 from jarvis.models import resolve_model
 from jarvis.tools.result import parse_tool_result
 from jarvis.tools.security import tool_workspace
@@ -1087,14 +1088,23 @@ class GovernedTaskRunner:
                         args["cwd"] = workspace
                     self._ensure_task_active(task_id)
                     scoped_args = self._scope_tool_args(call.function.name, args, workspace)
-                    self.control.authorize_tool(task_id, employee.agent_id, call.function.name, scoped_args)
-                    result = self._execute_tool(
-                        call.function.name,
-                        scoped_args,
-                        execute_tool,
-                        sandbox=sandbox,
-                        workspace=workspace,
+                    denied_result = authorization_denial_result(
+                        self.control,
+                        task_id=task_id,
+                        agent_id=employee.agent_id,
+                        tool_name=call.function.name,
+                        args=scoped_args,
                     )
+                    if denied_result is not None:
+                        result = denied_result
+                    else:
+                        result = self._execute_tool(
+                            call.function.name,
+                            scoped_args,
+                            execute_tool,
+                            sandbox=sandbox,
+                            workspace=workspace,
+                        )
                     result = redact_sensitive_text(result)
                     record = self.control.evidence.put_text(
                         result,
