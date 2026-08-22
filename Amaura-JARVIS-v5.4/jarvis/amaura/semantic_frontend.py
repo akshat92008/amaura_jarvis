@@ -238,6 +238,51 @@ def _parse_exact_literal(text: str, paths: list[str]) -> str | None:
     clean = text.strip()
     if not clean or _execution_dependency(clean, paths):
         return None
+    has_quotes = bool(re.search(r"['\"`«]([^'\"`»\n]*)['\"`»]", clean))
+    has_colon_or_equals = bool(re.search(r"[:=]|->", clean))
+    has_exclusivity = bool(
+        re.search(
+            r"\b(?:only|solely|exactly|strictly|verbatim|precisely|alone|"
+            r"nothing\s+(?:else|more)|no\s+(?:other\s+)?(?:text|words|characters|commentary|explanation)|"
+            r"without\s+(?:any\s+)?(?:commentary|explanation)|exclude\s+commentary|do\s+not\s+explain|"
+            r"add\s+nothing|stop\s+immediately|with\s+no\s+prefix|no\s+prefix|no\s+suffix)\b",
+            clean,
+            re.IGNORECASE,
+        )
+    ) or bool(
+        re.search(
+            r"^\s*(?:(?:please|kindly)\s+)?just\s+(?:say|return|echo|output|give|reply|respond|print|send|type|produce|this|the)\b"
+            r"|\b(?:with\s+just|is\s+just|be\s+just|provide\s+just|contain\s+just|consist\s+of\s+just)\b",
+            clean,
+            re.IGNORECASE,
+        )
+    )
+    has_declarative = bool(
+        re.search(
+            r"\b(?:response|reply|output|answer|message|payload|word|token|value|text|string)\s+(?:must|should|shall|needs\s+to|has\s+to|is\s+to|will)\s+(?:be|contain|consist|equal)",
+            clean,
+            re.IGNORECASE,
+        )
+    ) or bool(
+        re.search(
+            r"\b(?:make|set)\s+(?:the\s+)?(?:response|reply|output|answer)\s+(?:equal\s+to|equals?|to|be)\b",
+            clean,
+            re.IGNORECASE,
+        )
+    )
+    has_introducer = bool(
+        re.search(
+            r"\b(?:this\s+value|the\s+value|the\s+token|this\s+token|following\s+token|send\s+back|write\s+back|give\s+back|"
+            r"with\s+(?:response|reply|output|answer|token|value|string|payload|word|text)|"
+            r"(?:say|type|reply|respond|return|print|output|send|give\s+me)\s+(?:as|is))\b",
+            clean,
+            re.IGNORECASE,
+        )
+    )
+    is_echo_command = bool(re.match(r"^\s*(?:(?:please|kindly)\s+)?(?:echo|repeat)\b", clean, re.IGNORECASE))
+
+    if not (has_quotes or has_colon_or_equals or has_exclusivity or has_declarative or has_introducer or is_echo_command):
+        return None
     masked = _mask_literals(clean)
     # Once execution dependencies are excluded, a leading response verb is a
     # deterministic response contract.  Keep multiword verbs atomic so

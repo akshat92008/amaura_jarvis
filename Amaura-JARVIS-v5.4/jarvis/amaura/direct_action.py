@@ -2206,6 +2206,52 @@ class ExactResponseParser:
         if all_paths:
             return None
         clean_lower = clean.lower()
+        has_quotes = bool(re.search(r"['\"`«]([^'\"`»\n]*)['\"`»]", clean))
+        has_colon_or_equals = bool(re.search(r"[:=]|->", clean))
+        has_exclusivity = bool(
+            re.search(
+                r"\b(?:only|solely|exactly|strictly|verbatim|precisely|alone|"
+                r"nothing\s+(?:else|more)|no\s+(?:other\s+)?(?:text|words|characters|commentary|explanation)|"
+                r"without\s+(?:any\s+)?(?:commentary|explanation)|exclude\s+commentary|do\s+not\s+explain|"
+                r"add\s+nothing|stop\s+immediately|with\s+no\s+prefix|no\s+prefix|no\s+suffix)\b",
+                clean,
+                re.IGNORECASE,
+            )
+        ) or bool(
+            re.search(
+                r"^\s*(?:(?:please|kindly)\s+)?just\s+(?:say|return|echo|output|give|reply|respond|print|send|type|produce|this|the)\b"
+                r"|\b(?:with\s+just|is\s+just|be\s+just|provide\s+just|contain\s+just|consist\s+of\s+just)\b",
+                clean,
+                re.IGNORECASE,
+            )
+        )
+        has_declarative = bool(
+            re.search(
+                r"\b(?:response|reply|output|answer|message|payload|word|token|value|text|string)\s+(?:must|should|shall|needs\s+to|has\s+to|is\s+to|will)\s+(?:be|contain|consist|equal)",
+                clean,
+                re.IGNORECASE,
+            )
+        ) or bool(
+            re.search(
+                r"\b(?:make|set)\s+(?:the\s+)?(?:response|reply|output|answer)\s+(?:equal\s+to|equals?|to|be)\b",
+                clean,
+                re.IGNORECASE,
+            )
+        )
+        has_introducer = bool(
+            re.search(
+                r"\b(?:this\s+value|the\s+value|the\s+token|this\s+token|following\s+token|send\s+back|write\s+back|give\s+back|"
+                r"with\s+(?:response|reply|output|answer|token|value|string|payload|word|text)|"
+                r"(?:say|type|reply|respond|return|print|output|send|give\s+me)\s+(?:as|is))\b",
+                clean,
+                re.IGNORECASE,
+            )
+        )
+        is_echo_command = bool(re.match(r"^\s*(?:(?:please|kindly)\s+)?(?:echo|repeat)\b", clean, re.IGNORECASE))
+
+        if not (has_quotes or has_colon_or_equals or has_exclusivity or has_declarative or has_introducer or is_echo_command):
+            return None
+
         if any(w in clean_lower for w in (" to ", " into ", " in ", " at ")) and any(
             w in clean_lower for w in ("write", "save", "put", "store", "create", "output", "dump")
         ):
@@ -4983,7 +5029,13 @@ class DirectActionRouter:
             # to recall after restart.  Keep it in the deterministic candidate
             # set; only conversational transcripts and the secondary vector index
             # remain non-authoritative fallback sources.
-            factual_hits = [h for h in hits if h.source not in ("conversation_memory", "vector_memory")]
+            factual_hits = [
+                h
+                for h in hits
+                if not str(h.source).startswith(
+                    ("conversation_memory", "vector_memory", "jarvis.memory.episodic", "episodic")
+                )
+            ]
             if not factual_hits:
                 return None
             generic_entities = {
@@ -5023,7 +5075,14 @@ class DirectActionRouter:
                 )
                 return float(hit.score) + exact_entity_bonus + project_bonus + founder_personal_bonus
 
-            selected_hits = sorted(factual_hits, key=grounded_score, reverse=True)
+            selected_hits = sorted(
+                factual_hits,
+                key=lambda h: (
+                    grounded_score(h),
+                    str(getattr(h, "updated_at", "") or getattr(h, "key", "")),
+                ),
+                reverse=True,
+            )
 
             if selected_hits and grounded_score(selected_hits[0]) >= 0.10:
                 top_hit = selected_hits[0]

@@ -519,6 +519,10 @@ def main():
         ui.print_models(models)
         return
 
+    from jarvis.amaura.runtime import load_amaura_env
+
+    load_amaura_env()
+
     # Resolve model
     model_key = args.model
     model_cfg = resolve_model(model_key)
@@ -530,8 +534,22 @@ def main():
     # Set working directory
     working_dir = args.working_dir or os.getcwd()
 
+    # Query effective interactive cognition route
+    import jarvis
+    from jarvis.amaura.model_gateway import CognitiveModelGateway
+
+    gw_status = CognitiveModelGateway.status(purpose="general")
+    effective_provider = str(gw_status.get("provider") or gw_status.get("gateway") or "OmniRoute")
+    effective_model = str(gw_status.get("model") or gw_status.get("requested_model") or model_cfg["name"])
+    jarvis_version = getattr(jarvis, "__version__", "5.5.0")
+
     # Print boot banner IMMEDIATELY for instant terminal feedback
-    ui.print_boot_sequence(model_cfg["name"], working_dir)
+    ui.print_boot_sequence(
+        model_name=effective_model,
+        working_dir=working_dir,
+        provider_name=effective_provider,
+        version=jarvis_version,
+    )
 
     # Create the general assistant only after Amaura and listing routes exit.
     from jarvis.agent import JarvisAgent

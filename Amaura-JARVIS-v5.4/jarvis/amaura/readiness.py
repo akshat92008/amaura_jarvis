@@ -199,6 +199,13 @@ def _probe_omniroute() -> dict[str, Any]:
         }
 
 
+def _probe_interactive_cognition() -> dict[str, Any]:
+    """Live completion probe for production interactive cognition."""
+    from jarvis.amaura.model_gateway import CognitiveModelGateway
+
+    return CognitiveModelGateway.probe_interactive_cognition(timeout_seconds=8.0)
+
+
 def _probe_docker(image: str) -> dict[str, Any]:
     binary = shutil.which("docker")
     if not binary:
@@ -646,7 +653,9 @@ def production_readiness(
                 "error": "missing_configuration",
             }
         )
+        interactive_cognition = _probe_interactive_cognition()
         live_checks = {
+            "interactive_cognition_ready": bool(interactive_cognition.get("ready", False)),
             "ollama_reachable": ollama["reachable"]
             if model_mode in {"local", "balanced"} and not omniroute_configured
             else True,
@@ -680,7 +689,12 @@ def production_readiness(
             if (sandbox_mode == "docker" or verifier_mode == "docker")
             else True,
         }
-        live_details = {"ollama": ollama, "docker": docker, "omniroute": omniroute}
+        live_details = {
+            "interactive_cognition": interactive_cognition,
+            "ollama": ollama,
+            "docker": docker,
+            "omniroute": omniroute,
+        }
     else:
         live_checks = {}
         live_details = {"skipped": True}
