@@ -43,6 +43,25 @@ from jarvis.tools.result import parse_tool_result
 from jarvis.tools.security import tool_workspace
 
 
+def _completion_text(content: Any) -> str:
+    """Normalize OpenAI-compatible string or structured message content."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, dict):
+                value = item.get("text") or item.get("content") or ""
+            else:
+                value = getattr(item, "text", "") or getattr(item, "content", "") or ""
+            if isinstance(value, dict):
+                value = value.get("value") or value.get("text") or ""
+            if value:
+                parts.append(str(value))
+        return "\n".join(parts)
+    return str(content or "")
+
+
 class _LocalOllamaClient:
     """Device-only OpenAI-compatible client with no cloud fallback."""
 
@@ -1004,7 +1023,7 @@ class GovernedTaskRunner:
                 ):
                     raise GovernanceError("Cloud-only worker execution may not fall back to another provider")
                 choice = response.choices[0]
-                content = choice.message.content or ""
+                content = _completion_text(choice.message.content)
                 tool_calls = choice.message.tool_calls or []
                 if not tool_calls:
                     draft_summary = content.strip()
@@ -1069,7 +1088,7 @@ class GovernedTaskRunner:
                     ):
                         raise GovernanceError("Cloud-only completion synthesis may not fall back to another provider")
 
-                    synthesis_text = synthesis_response.choices[0].message.content or ""
+                    synthesis_text = _completion_text(synthesis_response.choices[0].message.content)
                     try:
                         contract = extract_completion_contract(synthesis_text)
                         contract = validate_completion_contract(
@@ -1548,7 +1567,7 @@ class GovernedReviewRunner:
             worker_models = self._worker_models_from_evidence(task)
             if actual_model in worker_models:
                 raise GovernanceError("Actual reviewer model must differ from every worker model used for the task")
-        content = response.choices[0].message.content or ""
+        content = _completion_text(response.choices[0].message.content)
         decision = _extract_json_object(content)
         approve_value = decision.get("approve")
         findings_value = decision.get("findings")

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from jarvis.amaura.brain import GoalCompiler, GoalRequest
+from jarvis.amaura.executor import _completion_text
 from jarvis.amaura.models import GovernanceError
 
 _REPAIR_OBJECTIVE = (
@@ -63,6 +64,10 @@ def test_explicit_research_with_cli_workspace_is_not_misrouted_to_repository_wor
     assert plan.domain == "research"
     assert plan.planner == "deterministic-research"
     assert all(task.action_type != "repository_write" for task in plan.tasks)
+
+
+def test_structured_provider_completion_content_is_normalized() -> None:
+    assert _completion_text([{"type": "text", "text": "first"}, {"text": {"value": "second"}}]) == "first\nsecond"
 
 
 def test_non_engineering_direct_action_routing_is_preserved(tmp_path):
