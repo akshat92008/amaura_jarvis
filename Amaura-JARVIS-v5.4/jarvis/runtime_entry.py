@@ -18,6 +18,13 @@ def main() -> Any:
 
     install_session_control_guard()
 
+    # The final outer guard reconstructs the current mission from durable
+    # CompanyStore metadata before every founder turn.  In-memory bindings are
+    # caches only and may never be allowed to drift into unrelated history.
+    from jarvis.durable_session import install_durable_session_guard
+
+    install_durable_session_guard()
+
     from jarvis.cli import main as legacy_main
 
     return legacy_main()
