@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,14 @@ from jarvis.amaura.models import GovernanceError
 def test_real_goal_result_query_is_forced_to_durable_status() -> None:
     assert reliable._forced_intent("goal_b75d3d75ecfb give me results of this goal") == "status"
     assert reliable._forced_intent("show progress for task_705167d6038b") == "status"
+
+
+def test_real_vague_followup_from_terminal_session_is_recognized() -> None:
+    assert reliable._is_vague_work_item_result_query("what are the results of task i gave you") is True
+    assert reliable._is_vague_work_item_result_query("show status of that mission") is True
+    assert reliable._is_vague_work_item_result_query("progress on my project") is True
+    assert reliable._is_vague_work_item_result_query("what are the results of goal_abc123") is False
+    assert reliable._is_vague_work_item_result_query("what is the status of global markets?") is False
 
 
 def test_real_repository_audit_phrase_is_forced_to_governed_mission() -> None:
@@ -33,6 +42,83 @@ def test_ordinary_conversation_and_app_control_are_not_stolen() -> None:
     assert reliable._forced_intent("how are you doing today?") is None
     assert reliable._forced_intent("open calculator") is None
     assert reliable._forced_intent("quit safari") is None
+
+
+def test_session_goal_binding_is_isolated_per_cli_session() -> None:
+    class Agent:
+        pass
+
+    agent = Agent()
+    reliable._remember_session_goal(agent, "session-a", {"goal_id": "goal_streetfighter"})
+    reliable._remember_session_goal(agent, "session-b", {"goal_id": "goal_other"})
+
+    assert reliable._session_bindings(agent)["session-a"] == "goal_streetfighter"
+    assert reliable._session_bindings(agent)["session-b"] == "goal_other"
+
+
+def test_vague_followup_reads_same_session_mission_not_global_history(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Agent:
+        pass
+
+    class Brain:
+        @staticmethod
+        def status(goal_id: str):
+            assert goal_id == "goal_streetfighter"
+            return {
+                "goal": {"id": goal_id, "title": "Street Fighter Game", "state": "assigned"},
+                "state": "queued",
+                "states": {"assigned": 1},
+                "tasks": [
+                    {
+                        "id": "task_game",
+                        "title": "Build Street Fighter Game",
+                        "state": "assigned",
+                        "summary": "",
+                    }
+                ],
+                "active_tasks": [],
+                "pending_approvals": [],
+            }
+
+    class Kernel:
+        brain = Brain()
+
+    def should_not_fall_back(*args, **kwargs):
+        raise AssertionError("vague same-session follow-up must not enter global/model resolver")
+
+    agent = Agent()
+    reliable._session_bindings(agent)["cli-1"] = "goal_streetfighter"
+    monkeypatch.setattr(reliable, "_kernel_for", lambda agent, control: Kernel())
+    monkeypatch.setattr(reliable, "_ORIGINAL_RUN_EXECUTIVE", should_not_fall_back)
+
+    result = reliable.reliable_run_executive(
+        agent,
+        "what are the results of task i gave you",
+        control=object(),
+        session_id="cli-1",
+    )
+
+    assert result["goal_id"] == "goal_streetfighter"
+    assert result["state"] == "queued"
+    assert result["result"]["session_bound"] is True
+    assert result["frontdoor"]["session_bound_status"] is True
+    assert "Street Fighter Game" in result["message"]
+    assert "No completed task result has been recorded yet" in result["message"]
+    assert "developer-tool" not in result["message"]
+
+
+def test_forced_and_normal_paths_reuse_same_executive_kernel() -> None:
+    class Agent:
+        pass
+
+    agent = Agent()
+    control = object()
+    existing_kernel = object()
+    agent._executive_lock = threading.Lock()
+    agent._executive_kernel = existing_kernel
+    agent._executive_control = control
+
+    assert reliable._kernel_for(agent, control) is existing_kernel
 
 
 def test_transient_cognition_unavailable_gets_one_bounded_retry(monkeypatch: pytest.MonkeyPatch) -> None:
