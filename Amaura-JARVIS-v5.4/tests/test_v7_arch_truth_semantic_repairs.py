@@ -34,6 +34,59 @@ def test_arch_truth_t03_file_names_inside_routes_to_directory_list(tmp_path: Pat
         assert name in result.output
 
 
+def test_continuous_soak_deterministic_requests_do_not_need_a_provider(tmp_path: Path) -> None:
+    (tmp_path / "hidden_runtime_token.txt").write_text("fixture", encoding="utf-8")
+    arithmetic = DirectActionRouter.execute("What is 347 * 29? Reply only with the number.", workspace=str(tmp_path))
+    assert arithmetic is not None and arithmetic.success and arithmetic.output == "10063"
+    listing = DirectActionRouter.execute("List the files in the current working directory.", workspace=str(tmp_path))
+    assert listing is not None and listing.success and listing.tool_name == "list_directory"
+    assert "hidden_runtime_token.txt" in listing.output
+
+
+def test_continuous_soak_words_payload_is_written(tmp_path: Path) -> None:
+    result = DirectActionRouter.execute(
+        "Create composite.txt with the words continuous composite, read it back, and report completion.",
+        workspace=str(tmp_path),
+    )
+    assert result is not None and result.success
+    assert (tmp_path / "composite.txt").read_text(encoding="utf-8") == "continuous composite"
+
+
+def test_verified_overwrite_reports_the_verified_payload(tmp_path: Path) -> None:
+    (tmp_path / "soak_note.txt").write_text("old", encoding="utf-8")
+    result = DirectActionRouter.execute(
+        "Overwrite soak_note.txt with exactly: controlled soak revised", workspace=str(tmp_path)
+    )
+    assert result is not None and result.success
+    assert "controlled soak revised" in result.output
+
+
+def test_continuous_soak_command_and_recovery_are_structured(tmp_path: Path) -> None:
+    command = DirectActionRouter.execute("Run the safe command pwd and report the result.", workspace=str(tmp_path))
+    assert command is not None and command.success
+    assert command.telemetry["cwd"] == str(tmp_path)
+    recovered = DirectActionRouter.execute(
+        "Run a controlled nonexistent safe command, then recover by running pwd.", workspace=str(tmp_path)
+    )
+    assert recovered is not None and recovered.success
+    assert recovered.telemetry["status"] == "recovered"
+    assert recovered.telemetry["attempts"][0]["ok"] is False
+
+
+def test_browser_recovery_preserves_failure_and_keeps_private_url_denied(tmp_path: Path) -> None:
+    recovered = DirectActionRouter.execute(
+        "Try fetching https://example.invalid then recover by fetching https://example.com; report recovery.",
+        workspace=str(tmp_path),
+    )
+    assert recovered is not None and recovered.success
+    assert recovered.telemetry["attempts"][0]["ok"] is False
+    denied = DirectActionRouter.execute(
+        "Try fetching http://127.0.0.1 then recover by fetching https://example.com; report recovery.",
+        workspace=str(tmp_path),
+    )
+    assert denied is not None and denied.policy_decision == "refused"
+
+
 def test_arch_truth_t09_numeric_constraint_normalizes_unit_bearing_value(tmp_path: Path) -> None:
     source = tmp_path / "09_source.md"
     output = tmp_path / "09_output.json"

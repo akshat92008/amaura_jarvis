@@ -355,8 +355,8 @@ def _write_payload_candidates(text: str, target: str) -> list[str]:
 
     candidates: list[str] = []
     patterns = (
-        r"\b(?:containing|contains?|with\s+(?:the\s+)?(?:content|text|payload|body)|content\s*(?:is|=|:)|payload\s*(?:is|=|:)|text\s*(?:is|=|:))\s*['\"`]([^'\"`\n]*)['\"`]",
-        r"\b(?:containing|contains?|with\s+(?:the\s+)?(?:content|text|payload|body)|content\s*(?:is|=|:)|payload\s*(?:is|=|:))\s*:\s*([^\n]+)",
+        r"\b(?:containing|contains?|with\s+(?:the\s+)?(?:content|text|payload|body|words)|content\s*(?:is|=|:)|payload\s*(?:is|=|:)|text\s*(?:is|=|:))\s*['\"`]([^'\"`\n]*)['\"`]",
+        r"\b(?:containing|contains?|with\s+(?:the\s+)?(?:content|text|payload|body|words)|content\s*(?:is|=|:)|payload\s*(?:is|=|:))\s*:\s*([^\n]+)",
     )
     for pattern in patterns:
         for match in re.finditer(pattern, text, re.IGNORECASE):

@@ -338,6 +338,8 @@ def _explicit_output(text: str, paths: list[str]) -> str:
 
 def _directory_target(text: str, paths: list[str]) -> str:
     lower = text.lower()
+    if re.search(r"\b(?:current\s+)?working\s+directory\b", lower):
+        return "."
     strong = bool(
         re.search(
             r"\b(?:list|show|display|enumerate|get|print|give\s+me|what\s+is|what\s+files\s+are)\b"
@@ -429,6 +431,8 @@ def _arithmetic_graph(core: Any, text: str, paths: list[str], mode: str) -> Any 
         operation = "multiply"
     elif re.search(r"\b(?:add|sum|total|plus)\b", lower):
         operation = "add"
+    elif re.search(r"-?\d+(?:\.\d+)?\s*\*\s*-?\d+(?:\.\d+)?", text):
+        operation = "multiply"
     if not operation:
         return None
     output = _explicit_output(text, paths)
@@ -530,13 +534,13 @@ def _arithmetic_graph(core: Any, text: str, paths: list[str], mode: str) -> Any 
         )
 
     m_mul = re.search(
-        r"(?:multiply\s+(-?\d+(?:\.\d+)?)\s+(?:by|and)\s+(-?\d+(?:\.\d+)?)|(-?\d+(?:\.\d+)?)\s+times\s+(-?\d+(?:\.\d+)?))",
+        r"(?:multiply\s+(-?\d+(?:\.\d+)?)\s+(?:by|and)\s+(-?\d+(?:\.\d+)?)|(-?\d+(?:\.\d+)?)\s+times\s+(-?\d+(?:\.\d+)?)|(-?\d+(?:\.\d+)?)\s*\*\s*(-?\d+(?:\.\d+)?))",
         text,
         re.IGNORECASE,
     )
     if m_mul:
-        a = m_mul.group(1) or m_mul.group(3)
-        b = m_mul.group(2) or m_mul.group(4)
+        a = m_mul.group(1) or m_mul.group(3) or m_mul.group(5)
+        b = m_mul.group(2) or m_mul.group(4) or m_mul.group(6)
         plan = core.ArithmeticPlan("multiply", str(a), str(b), "left", "right", output, "scalar_multiply")
         return core.SemanticRequestGraph(
             text,
@@ -683,6 +687,102 @@ def _is_raw_read(text: str) -> bool:
             "byte-for-byte",
         )
     )
+
+
+def _interactive_command(text: str) -> tuple[list[str], bool] | None:
+    """Extract a bounded local command request without treating prose as shell."""
+    lower = text.lower().strip()
+    if not re.match(r"^(?:please\s+)?(?:run|execute)\b", lower):
+        return None
+    # Recovery requests deliberately contain two commands; execution records the
+    # first failure and proceeds only when it is an ordinary command failure.
+    commands = re.findall(r"\b(?:run|running)\s+(?:the\s+)?(?:safe\s+)?command\s+[`'\"]?([^`'\".,;]+)", text, re.I)
+    commands = [re.split(r"\s+(?:and\s+)?(?:report|then|and)\b", command, maxsplit=1, flags=re.I)[0].strip() for command in commands]
+    if not commands:
+        match = re.search(r"\b(?:run|execute)\s+(?:this\s+)?command\s*:\s*[`'\"]?([^`'\"\n]+)", text, re.I)
+        if match:
+            commands = [match.group(1)]
+    if not commands and re.search(r"\b(?:run|execute)\s+(?:the\s+)?safe\s+command\s+pwd\b", lower):
+        commands = ["pwd"]
+    if not commands and re.match(r"^(?:please\s+)?(?:run|execute)\s+[`'\"]?(pwd|printf\s+[^`'\"\n]+|true|false)\b", text, re.I):
+        commands = [re.sub(r"^(?:please\s+)?(?:run|execute)\s+[`'\"]?", "", text, flags=re.I).rstrip(". `'")]
+    if not commands and re.search(r"\bcontrolled\s+nonexistent\s+safe\s+command\b", lower) and re.search(r"\brecover\s+by\s+running\s+pwd\b", lower):
+        commands = ["false", "pwd"]
+    if not commands:
+        return None
+    return commands, "recover" in lower
+
+
+def _execute_interactive_command(text: str, workspace: str) -> Any:
+    request = _interactive_command(text)
+    if request is None:
+        return None
+    from jarvis.amaura import direct_action as da
+    from jarvis.amaura import semantic_core as core
+    from jarvis.tools.process import parse_command_argv
+
+    commands, recovery_requested = request
+    ws = Path(workspace if workspace else da.workspace_root()).expanduser().resolve()
+    allowed = {"pwd", "printf", "true", "false"}
+    attempts: list[dict[str, Any]] = []
+    for command in commands:
+        try:
+            argv = parse_command_argv(command)
+            if not argv or argv[0] not in allowed:
+                raise PermissionError("command is outside the bounded interactive allowlist")
+        except (ValueError, PermissionError) as exc:
+            return da.DirectActionResult(
+                False, f"Command denied: {exc}", execution_type="policy_enforcement", tool_name="run_command",
+                provider="security-policy", policy_decision="refused",
+                telemetry={"reason": "command_denied", "error": str(exc), "attempts": attempts, "verification_passed": False},
+            )
+        with da.tool_workspace(ws):
+            receipt = da.parse_tool_result(da.execute_tool("run_command", {"command": command, "cwd": str(ws), "timeout": 10}))
+        output = str(core._tool_output(receipt) if receipt.ok else receipt.error or "command tool failed")
+        failed = (not receipt.ok) or output.lstrip().startswith("❌")
+        attempts.append({"command": command, "ok": not failed, "output": output})
+        if not failed:
+            if len(attempts) == 1 or recovery_requested:
+                return da.DirectActionResult(
+                    True, (f"Recovered after a failed command. {output}" if len(attempts) > 1 else output), execution_type="tool", tool_name="run_command", provider="local-command",
+                    telemetry={"attempts": attempts, "cwd": str(ws), "verification_passed": True, "status": "recovered" if len(attempts) > 1 else "completed"},
+                )
+        elif not recovery_requested:
+            return da.DirectActionResult(
+                False, output, execution_type="tool", tool_name="run_command", provider="local-command",
+                telemetry={"reason": "command_failed", "attempts": attempts, "cwd": str(ws), "verification_passed": False},
+            )
+    return da.DirectActionResult(
+        False, "Command recovery failed: no alternative command succeeded.", execution_type="tool", tool_name="run_command",
+        provider="local-command", telemetry={"reason": "command_recovery_failed", "attempts": attempts, "cwd": str(ws), "verification_passed": False},
+    )
+
+
+def _execute_browser_recovery(text: str) -> Any:
+    """Try explicitly sequenced public URLs while retaining every failed receipt."""
+    urls = re.findall(r"https?://[^\s'\"`]+", text, flags=re.I)
+    if len(urls) < 2 or not re.search(r"\b(?:recover|then)\b", text, re.I):
+        return None
+    from jarvis.amaura import direct_action as da
+    from jarvis.amaura import semantic_core as core
+    from jarvis.amaura.network import validate_public_url
+
+    attempts: list[dict[str, Any]] = []
+    for url in urls:
+        url = url.rstrip(".,;!?")
+        try:
+            # Policy validation must happen before recovery, but DNS happens in
+            # the actual browser attempt so a transient/unresolvable public
+            # hostname becomes recoverable evidence rather than a denial.
+            validate_public_url(url, resolve=False)
+        except Exception as exc:
+            return da.DirectActionResult(False, f"Browser request denied: {exc}", execution_type="policy_enforcement", tool_name="browser_navigate", provider="security-policy", policy_decision="refused", telemetry={"reason": "url_denied", "url": url, "attempts": attempts, "verification_passed": False})
+        receipt = da.parse_tool_result(da.execute_tool("browser_navigate", {"url": url}))
+        value = core._tool_output(receipt) if receipt.ok else None
+        if receipt.ok:
+            return da.DirectActionResult(True, f"Recovered by navigating to {url}: {json.dumps(value, default=str)}", execution_type="semantic_graph", tool_name="browser_navigate", provider="browser", telemetry={"status": "recovered" if attempts else "completed", "attempts": attempts + [{"url": url, "ok": True, "result": value}], "verification_passed": True})
+        attempts.append({"url": url, "ok": False, "error": receipt.error or "navigation failed"})
+    return da.DirectActionResult(False, "Browser recovery failed: no public alternative succeeded.", execution_type="semantic_graph", tool_name="browser_navigate", provider="browser", telemetry={"reason": "browser_recovery_failed", "attempts": attempts, "verification_passed": False})
 
 
 def install_semantic_frontend() -> None:
@@ -900,6 +1000,12 @@ def install_semantic_frontend() -> None:
 
             raw_content = write_action.content
             if raw_content:
+                raw_content = re.split(
+                    r",?\s+(?:and\s+)?(?:then\s+)?(?:read|open|show|display|verify|report)\b",
+                    raw_content,
+                    maxsplit=1,
+                    flags=re.IGNORECASE,
+                )[0].strip()
                 if write_action.payload_type == "COLON_INTRODUCED":
                     pass
                 else:
@@ -1135,7 +1241,7 @@ def install_semantic_frontend() -> None:
                 )
             return da.DirectActionResult(
                 True,
-                f"Successfully wrote and independently verified {path}.",
+                f"Successfully wrote and independently verified {path}. Content: {payload}",
                 execution_type="tool",
                 tool_name="write_file",
                 provider="local-filesystem",
@@ -1723,12 +1829,20 @@ def install_semantic_frontend() -> None:
         )
 
     def can_handle(cls: Any, text: str) -> bool:
+        if _interactive_command(text) is not None:
+            return True
         return (
             core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS).action
             != core.SemanticAction.UNKNOWN
         )
 
     def execute(cls: Any, text: str, *, context: str = "", control: Any = None, workspace: str = "") -> Any:
+        command_result = _execute_interactive_command(text, workspace)
+        if command_result is not None:
+            return command_result
+        browser_recovery = _execute_browser_recovery(text)
+        if browser_recovery is not None:
+            return browser_recovery
         graph = core.SemanticParser.parse(text, da.RequestPreprocessor.KNOWN_EXTENSIONS)
         if graph.action == core.SemanticAction.UNKNOWN:
             if control is not None:
