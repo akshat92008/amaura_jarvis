@@ -50,6 +50,21 @@ def test_repository_repair_fails_closed_if_direct_plan_is_forced(tmp_path):
         compiler._direct_action_plan(request, str(tmp_path))
 
 
+def test_explicit_research_with_cli_workspace_is_not_misrouted_to_repository_work(tmp_path):
+    compiler = GoalCompiler()
+    request = GoalRequest(
+        objective="Research one current AI developer-tool trend and produce an internal recommendation.",
+        workspace=str(tmp_path),
+        coding_backend="antigravity",
+    )
+
+    plan = compiler.compile(request)
+
+    assert plan.domain == "research"
+    assert plan.planner == "deterministic-research"
+    assert all(task.action_type != "repository_write" for task in plan.tasks)
+
+
 def test_non_engineering_direct_action_routing_is_preserved(tmp_path):
     compiler = GoalCompiler()
     request = GoalRequest(
