@@ -40,6 +40,9 @@ def main(argv: list[str] | None = None) -> int:
     signal.signal(signal.SIGINT, _shutdown)
 
     load_amaura_env(args.env_file, require_private_permissions=True)
+    from jarvis.amaura.runtime_guards import install_runtime_guards
+
+    install_runtime_guards()
 
     max_work_units = max(1, min(int(args.max_work_units), 2))
     poll_seconds = max(5.0, min(float(args.poll_seconds), 3600.0))
