@@ -25,6 +25,25 @@ class _Control:
 
 
 def _goal(goal_id: str, session_id: str, when: str) -> dict:
+    """Match JarvisBrain._materialize's real persisted programme shape."""
+    return {
+        "id": goal_id,
+        "item_type": "programme",
+        "title": goal_id,
+        "state": "assigned",
+        "created_at": when,
+        "updated_at": when,
+        "metadata": {
+            "dynamic_goal": True,
+            "goal_request": {
+                "objective": "build a game like street fighter with sounds",
+                "metadata": {"executive_session_id": session_id},
+            },
+        },
+    }
+
+
+def _legacy_top_level_goal(goal_id: str, session_id: str, when: str) -> dict:
     return {
         "id": goal_id,
         "item_type": "programme",
@@ -36,7 +55,7 @@ def _goal(goal_id: str, session_id: str, when: str) -> dict:
     }
 
 
-def test_latest_session_goal_uses_durable_executive_session_metadata() -> None:
+def test_latest_session_goal_uses_canonical_nested_goal_request_metadata() -> None:
     control = _Control(
         [
             _goal("goal_old_other", "other-session", "2026-08-23T00:00:00+05:30"),
@@ -47,6 +66,11 @@ def test_latest_session_goal_uses_durable_executive_session_metadata() -> None:
 
     assert durable.latest_session_goal(control, "cli-1") == "goal_streetfighter_new"
     assert durable.latest_session_goal(control, "missing") == ""
+
+
+def test_latest_session_goal_accepts_legacy_top_level_session_metadata() -> None:
+    control = _Control([_legacy_top_level_goal("goal_legacy", "cli-legacy", "2026-08-23T00:03:00+05:30")])
+    assert durable.latest_session_goal(control, "cli-legacy") == "goal_legacy"
 
 
 def test_durable_guard_recovers_missing_in_memory_binding_before_next_turn(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -73,12 +97,12 @@ def test_durable_guard_recovers_missing_in_memory_binding_before_next_turn(monke
 
 def test_exact_real_vague_results_query_never_enters_global_history(monkeypatch: pytest.MonkeyPatch) -> None:
     agent = _Agent()
-    control = _Control([_goal("goal_ee6a57e2ad05", "cli-live", "2026-08-23T00:00:34+05:30")])
+    control = _Control([_goal("goal_db41040b0ebe", "cli-live", "2026-08-23T00:14:49+05:30")])
 
     class Brain:
         @staticmethod
         def status(goal_id: str):
-            assert goal_id == "goal_ee6a57e2ad05"
+            assert goal_id == "goal_db41040b0ebe"
             return {
                 "goal": {"id": goal_id, "title": "Street Fighter-like game", "state": "assigned"},
                 "state": "queued",
@@ -105,7 +129,7 @@ def test_exact_real_vague_results_query_never_enters_global_history(monkeypatch:
         session_id="cli-live",
     )
 
-    assert result["goal_id"] == "goal_ee6a57e2ad05"
+    assert result["goal_id"] == "goal_db41040b0ebe"
     assert result["state"] == "queued"
     assert result["frontdoor"]["durable_session_bound_status"] is True
     assert "Street Fighter-like game" in result["message"]
