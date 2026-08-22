@@ -238,26 +238,6 @@ def _parse_exact_literal(text: str, paths: list[str]) -> str | None:
     clean = text.strip()
     if not clean or _execution_dependency(clean, paths):
         return None
-    clean_lower = clean.lower()
-    if any(
-        w in clean_lower
-        for w in (
-            "summary",
-            "summarize",
-            "overview",
-            "recap",
-            "explanation",
-            "explain",
-            "reasons",
-            "ideas",
-            "advice",
-            "analysis",
-            "review",
-            "thoughts",
-            "opinion",
-        )
-    ) and not any(k in clean_lower for k in ("exactly", "verbatim", "strictly", "quoted", "literal")):
-        return None
     masked = _mask_literals(clean)
     # Once execution dependencies are excluded, a leading response verb is a
     # deterministic response contract.  Keep multiword verbs atomic so

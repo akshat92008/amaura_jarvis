@@ -2206,25 +2206,6 @@ class ExactResponseParser:
         if all_paths:
             return None
         clean_lower = clean.lower()
-        if any(
-            w in clean_lower
-            for w in (
-                "summary",
-                "summarize",
-                "overview",
-                "recap",
-                "explanation",
-                "explain",
-                "reasons",
-                "ideas",
-                "advice",
-                "analysis",
-                "review",
-                "thoughts",
-                "opinion",
-            )
-        ) and not any(k in clean_lower for k in ("exactly", "verbatim", "strictly", "quoted", "literal")):
-            return None
         if any(w in clean_lower for w in (" to ", " into ", " in ", " at ")) and any(
             w in clean_lower for w in ("write", "save", "put", "store", "create", "output", "dump")
         ):
