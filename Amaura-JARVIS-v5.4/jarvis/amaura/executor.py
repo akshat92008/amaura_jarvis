@@ -35,6 +35,7 @@ from jarvis.amaura.models import GovernanceError, TaskState
 from jarvis.amaura.network import fetch_public_text
 from jarvis.amaura.policy import PATH_ARGUMENTS
 from jarvis.amaura.registry import get_agent
+from jarvis.amaura.review_routing import effective_review_mode, omniroute_review_route
 from jarvis.amaura.sandbox import StatefulDockerSandbox, run_governed_command
 from jarvis.amaura.security import redact_sensitive_text
 from jarvis.amaura.tool_authorization import authorization_denial_result
@@ -96,7 +97,7 @@ class _LocalOllamaClient:
 class _OmniRouteClient:
     """OpenAI-compatible governed worker client routed through local OmniRoute."""
 
-    def __init__(self):
+    def __init__(self, *, fallback_model: str = ""):
         from openai import OpenAI
 
         raw_base = (
@@ -115,13 +116,13 @@ class _OmniRouteClient:
             raw_base += "/v1"
         timeout = max(5.0, min(float(os.environ.get("AMAURA_OMNIROUTE_WORKER_TIMEOUT_SECONDS", "180")), 600.0))
         self._client = OpenAI(base_url=raw_base, api_key=api_key, timeout=timeout)
+        self._fallback_model = fallback_model.strip()
         self.last_execution_metadata: dict[str, Any] = {}
 
     def chat_sync(self, *, model_id: str, messages: list[dict], tools: list[dict] | None = None):
-        fallback_model = os.environ.get("AMAURA_OMNIROUTE_FALLBACK_MODEL", "").strip()
         models = [model_id]
-        if fallback_model and fallback_model != model_id:
-            models.append(fallback_model)
+        if self._fallback_model and self._fallback_model != model_id:
+            models.append(self._fallback_model)
         last_error: Exception | None = None
         for index, model in enumerate(models):
             kwargs: dict[str, Any] = {
@@ -185,7 +186,12 @@ class GovernedTaskRunner:
         if route["provider"] == "local":
             return _LocalOllamaClient()
         if route["provider"] == "omniroute":
-            return _OmniRouteClient()
+            fallback_model = str(
+                route.get("fallback_model")
+                or route.get("fallback_model_key")
+                or os.environ.get("AMAURA_OMNIROUTE_FALLBACK_MODEL", "")
+            )
+            return _OmniRouteClient(fallback_model=fallback_model)
         if os.environ.get("AMAURA_DISABLE_CLOUD") == "1":
             raise GovernanceError("Cloud model access is disabled for this execution")
         from jarvis.api import NvidiaClient
@@ -1380,8 +1386,8 @@ class GovernedReviewRunner:
         self.control = control_plane
         self.client_factory = client_factory
 
-    def _client(self, reviewer, *, provider: str, model_key: str):
-        route = {"provider": provider, "model_key": model_key}
+    def _client(self, reviewer, *, provider: str, model_key: str, fallback_model: str = ""):
+        route = {"provider": provider, "model_key": model_key, "fallback_model": fallback_model}
         if self.client_factory is not None:
             return self.client_factory(route, reviewer)
         if provider == "omniroute":
@@ -1479,16 +1485,13 @@ class GovernedReviewRunner:
             self.control.store.record_review_attestation(attestation)
             return updated
 
-        review_mode = os.environ.get("AMAURA_REVIEW_MODE", "auto").strip().lower()
-        if review_mode == "auto":
-            review_mode = (
-                "omniroute" if os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower() == "omniroute" else "local"
-            )
+        review_mode = effective_review_mode()
         if review_mode not in {"local", "cloud", "omniroute"}:
             raise GovernanceError("AMAURA_REVIEW_MODE must be auto, local, cloud, or omniroute")
         worker_model = os.environ.get("AMAURA_LOCAL_MODEL", "nova:3b").strip()
         if review_mode == "omniroute":
-            model_id = os.environ.get("AMAURA_OMNIROUTE_REVIEW_MODEL", "").strip() or "auto/best-reasoning"
+            route_safety = omniroute_review_route()
+            model_id = str(route_safety["model"])
             if not (
                 os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip()
                 or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
@@ -1498,7 +1501,8 @@ class GovernedReviewRunner:
             ):
                 raise GovernanceError("OmniRoute review requires its base URL and API key")
             worker_models = self._worker_models_from_evidence(task)
-            if model_id in worker_models:
+            reviewer_fallback = str(route_safety["fallback_model"])
+            if model_id in worker_models or reviewer_fallback in worker_models:
                 raise GovernanceError(
                     "Independent reviewer model must differ from every worker model used for the task"
                 )
@@ -1555,7 +1559,12 @@ class GovernedReviewRunner:
             },
             {"role": "user", "content": "INDEPENDENT REVIEW PACKET:\n" + json.dumps(review_packet, indent=2)},
         ]
-        review_client = self._client(reviewer, provider=review_provider, model_key=model_id)
+        review_client = self._client(
+            reviewer,
+            provider=review_provider,
+            model_key=model_id,
+            fallback_model=reviewer_fallback if review_mode == "omniroute" else "",
+        )
         response = review_client.chat_sync(model_id=model_id, messages=messages, tools=None)
         route_metadata = dict(getattr(review_client, "last_execution_metadata", {}) or {})
         actual_provider = str(route_metadata.get("actual_provider") or review_provider).strip()
