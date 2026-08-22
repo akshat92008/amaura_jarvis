@@ -57,7 +57,6 @@ _CONTROL_REFERENCES = {
     "goal",
     "project",
     "work",
-    "build",
     "one",
     "first",
     "same",
