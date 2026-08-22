@@ -4977,14 +4977,29 @@ class DirectActionRouter:
                 return None
 
             entities = memory_service._extract_entities(text)
-            factual_hits = [
-                h for h in hits if h.source not in ("conversation_memory", "legacy_user_memory", "vector_memory")
-            ]
-            if not factual_hits:
-                factual_hits = [h for h in hits if h.source not in ("conversation_memory", "legacy_user_memory")]
+            # CLI ``remember`` stores founder facts in the legacy personal-memory
+            # store.  It is still an authoritative source, so excluding it when
+            # any Company OS memory exists makes a fresh personal fact impossible
+            # to recall after restart.  Keep it in the deterministic candidate
+            # set; only conversational transcripts and the secondary vector index
+            # remain non-authoritative fallback sources.
+            factual_hits = [h for h in hits if h.source not in ("conversation_memory", "vector_memory")]
             if not factual_hits:
                 return None
-            generic_entities = {"give", "only", "reply", "return", "remember", "recall", "retrieve"}
+            generic_entities = {
+                "give",
+                "only",
+                "reply",
+                "return",
+                "remember",
+                "recall",
+                "retrieve",
+                "what",
+                "who",
+                "where",
+                "which",
+                "how",
+            }
             meaningful_entities = [
                 str(entity).strip()
                 for entity in entities
@@ -4999,7 +5014,14 @@ class DirectActionRouter:
                 haystack = f"{hit.key} {body}".lower()
                 exact_entity_bonus = sum(1.25 for entity in meaningful_entities if entity.lower() in haystack)
                 project_bonus = 0.15 if meaningful_entities and str(hit.source).endswith(".project") else 0.0
-                return float(hit.score) + exact_entity_bonus + project_bonus
+                # A highly relevant fact saved through the normal CLI belongs to
+                # the founder and must not lose to an episodic transcript that
+                # merely repeats the question.  The threshold keeps unrelated
+                # personal facts from receiving this source preference.
+                founder_personal_bonus = (
+                    0.50 if hit.source == "legacy_user_memory" and float(hit.score) >= 0.55 else 0.0
+                )
+                return float(hit.score) + exact_entity_bonus + project_bonus + founder_personal_bonus
 
             selected_hits = sorted(factual_hits, key=grounded_score, reverse=True)
 
