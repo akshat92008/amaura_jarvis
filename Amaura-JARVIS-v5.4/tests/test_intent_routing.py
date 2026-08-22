@@ -21,6 +21,7 @@ from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.direct_action import DirectActionRouter
 from jarvis.amaura.store import CompanyStore
 from jarvis.tools.security import tool_workspace
+from jarvis.user_memory import UserMemory
 
 
 @pytest.fixture
@@ -221,6 +222,38 @@ def test_memory_recall_paraphrases(routing_env, store_tpl, query_tpl):
     assert unique_val in recall_res.output
     assert "candidate_scores" in recall_res.telemetry
     assert "memory_query" in recall_res.telemetry
+
+
+def test_memory_recall_includes_founder_cli_personal_facts(routing_env, monkeypatch, tmp_path):
+    """A fresh CLI ``remember`` fact must win over unrelated operational memory."""
+    import jarvis.user_memory as user_memory_module
+
+    monkeypatch.setattr(user_memory_module, "PREFS_FILE", tmp_path / "personal.json")
+    codename = f"final-verify-{uuid.uuid4().hex}"
+    UserMemory().add_fact(f"my final verification codename is {codename}")
+
+    # This reproduces the prior failure mode: an unrelated, newer operational
+    # transcript repeats the recall question and would otherwise outrank the
+    # founder fact through lexical overlap alone.
+    ExecutiveKernel(routing_env["control"]).memory.remember(
+        key="unrelated_operational_record",
+        value=(
+            "User: What is my final verification codename? "
+            "Assistant: unrelated historical task summary."
+        ),
+        scope="episodic",
+        actor="jarvis",
+    )
+
+    result = DirectActionRouter.execute(
+        "What is my final verification codename?", control=routing_env["control"]
+    )
+
+    assert result is not None
+    assert result.success is True
+    assert result.execution_type == "memory_retrieval"
+    assert codename in result.output
+    assert any("legacy_user_memory" in item for item in result.telemetry["candidate_ids"])
 
 
 # ── 5. Repository Inspection Paraphrases (>20 variations) ──────────────────────
