@@ -31,7 +31,7 @@ def _install_attr(obj: object, name: str, value: object) -> None:
 
 _SCOPE_NOUNS = r"(?:response|answer|reply|output|string|token|value|text|word|payload)"
 _EXCLUSIVE = r"(?:only|solely|just|exactly|strictly|verbatim|precisely)"
-_COMMAND = r"(?:write\s+back|send\s+back|give\s+back|respond\s+with|reply\s+with|give\s+me|reply|respond|return|say|echo|repeat|print|output|produce|send|type)"
+_COMMAND = r"(?:write\s+back|send\s+back|give\s+back|respond\s+with|reply\s+with|give\s+me\s+(?:back|only|exactly|verbatim|just)|reply|respond|return|say|echo|repeat|print|output|produce|send|type)"
 _TRAILING_EXACT = re.compile(
     r"\s*(?:(?:and\s+nothing\s+(?:else|more)|with\s+nothing\s+(?:else|more)|"
     r"and\s+no\s+other\s+text|without\s+(?:any\s+)?(?:explanation|commentary)|"
@@ -237,6 +237,26 @@ def _parse_exact_literal(text: str, paths: list[str]) -> str | None:
     """Parse deterministic response contracts by payload span, not templates."""
     clean = text.strip()
     if not clean or _execution_dependency(clean, paths):
+        return None
+    clean_lower = clean.lower()
+    if any(
+        w in clean_lower
+        for w in (
+            "summary",
+            "summarize",
+            "overview",
+            "recap",
+            "explanation",
+            "explain",
+            "reasons",
+            "ideas",
+            "advice",
+            "analysis",
+            "review",
+            "thoughts",
+            "opinion",
+        )
+    ) and not any(k in clean_lower for k in ("exactly", "verbatim", "strictly", "quoted", "literal")):
         return None
     masked = _mask_literals(clean)
     # Once execution dependencies are excluded, a leading response verb is a

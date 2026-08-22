@@ -228,7 +228,7 @@ class CognitiveModelGateway:
     def _interactive_budget(purpose: str) -> tuple[float | None, int | None]:
         if purpose not in {"general", "intent", "reference", "memory"}:
             return None, None
-        seconds = max(3.0, min(float(os.environ.get("AMAURA_JARVIS_INTERACTIVE_DEADLINE_SECONDS", "12")), 30.0))
+        seconds = max(5.0, min(float(os.environ.get("AMAURA_JARVIS_INTERACTIVE_DEADLINE_SECONDS", "45")), 90.0))
         retries = max(0, min(int(os.environ.get("AMAURA_JARVIS_INTERACTIVE_MAX_RETRIES", "0")), 1))
         return _time.monotonic() + seconds, retries
 
@@ -290,9 +290,14 @@ class CognitiveModelGateway:
             # the Company OS, not the legacy global DEFAULT_MODEL (which may be a
             # 70B cloud identifier and impossible on an 8 GB Mac).
             return os.environ.get("AMAURA_LOCAL_MODEL", "nova:3b").strip()
-        # Cloud providers require an explicit model. Silent provider/model
-        # mismatches are worse than a visible deterministic fallback.
-        return ""
+        defaults = {
+            "nvidia": "meta/llama-3.3-70b-instruct",
+            "openai": "gpt-4o-mini",
+            "anthropic": "claude-3-5-sonnet-20241022",
+            "groq": "llama-3.3-70b-versatile",
+            "openrouter": "meta-llama/llama-3.3-70b-instruct",
+        }
+        return defaults.get(provider, "")
 
     @classmethod
     def _provider_available(cls, provider: str, *, purpose: str = "general") -> bool:
@@ -591,6 +596,11 @@ class CognitiveModelGateway:
                 if not text.strip():
                     last_error_class = "MODEL_RESPONSE_EMPTY"
                     if fallback_model and target_model != fallback_model:
+                        fallback_deadline = (
+                            max(deadline_monotonic, _time.monotonic() + timeout_sec)
+                            if deadline_monotonic is not None
+                            else None
+                        )
                         return cls._omniroute(
                             model=fallback_model,
                             messages=messages,
@@ -598,7 +608,7 @@ class CognitiveModelGateway:
                             max_tokens=max_tokens,
                             requested_model=original_model,
                             fallback_reason="empty_response",
-                            deadline_monotonic=deadline_monotonic,
+                            deadline_monotonic=fallback_deadline,
                             max_retries_override=max_retries_override,
                         )
                     cls._record_provider_failure("omniroute")
@@ -666,6 +676,11 @@ class CognitiveModelGateway:
                 if last_error_class == "PROVIDER_UNAVAILABLE"
                 else ("empty_response" if last_error_class == "MODEL_RESPONSE_EMPTY" else last_error_class.lower())
             )
+            fallback_deadline = (
+                max(deadline_monotonic, _time.monotonic() + timeout_sec)
+                if deadline_monotonic is not None
+                else None
+            )
             return cls._omniroute(
                 model=fallback_model,
                 messages=messages,
@@ -673,7 +688,7 @@ class CognitiveModelGateway:
                 max_tokens=max_tokens,
                 requested_model=original_model,
                 fallback_reason=reason_str,
-                deadline_monotonic=deadline_monotonic,
+                deadline_monotonic=fallback_deadline,
                 max_retries_override=max_retries_override,
             )
 
@@ -959,3 +974,55 @@ class CognitiveModelGateway:
         if not isinstance(value, dict):
             raise GovernanceError("[MODEL_RESPONSE_INVALID] Cognition model JSON must be an object")
         return value, result
+
+    @classmethod
+    def probe_interactive_cognition(cls, *, timeout_seconds: float = 6.0) -> dict[str, _Any]:
+        """Bounded live completion probe for production interactive cognition."""
+        st = cls.status(purpose="general")
+        if not st.get("available"):
+            return {
+                "ready": False,
+                "provider": str(st.get("provider") or "none"),
+                "requested_model": str(st.get("requested_model") or ""),
+                "actual_model": "",
+                "latency_ms": 0,
+                "error": str(st.get("reason") or "no_provider_available"),
+            }
+        t0 = _time.monotonic()
+        try:
+            res = cls.generate(
+                messages=[{"role": "user", "content": "Respond with exactly the word ONLINE."}],
+                purpose="general",
+                temperature=0.0,
+                max_tokens=10,
+            )
+            latency_ms = int((_time.monotonic() - t0) * 1000)
+            text = res.text.strip()
+            if not text:
+                return {
+                    "ready": False,
+                    "provider": res.provider or str(st.get("provider") or ""),
+                    "requested_model": res.requested_model or str(st.get("requested_model") or ""),
+                    "actual_model": res.model or "",
+                    "latency_ms": latency_ms,
+                    "error": "empty_completion",
+                }
+            return {
+                "ready": True,
+                "provider": res.provider,
+                "requested_model": res.requested_model,
+                "actual_model": res.model,
+                "latency_ms": latency_ms,
+                "error": "",
+            }
+        except Exception as exc:
+            latency_ms = int((_time.monotonic() - t0) * 1000)
+            err_msg = cls._redact_secrets(str(exc))
+            return {
+                "ready": False,
+                "provider": str(st.get("provider") or "unavailable"),
+                "requested_model": str(st.get("requested_model") or ""),
+                "actual_model": "",
+                "latency_ms": latency_ms,
+                "error": err_msg,
+            }

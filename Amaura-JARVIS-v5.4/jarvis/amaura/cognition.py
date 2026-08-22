@@ -238,20 +238,13 @@ class UnifiedMemoryService:
             trust=resolved_trust,
             actor=actor,
         )
-        # Write into the existing deterministic vector brain as a retrieval index.
-        # Failure is non-fatal because CompanyStore is canonical.
-        try:
-            from jarvis.tools.vector_memory import remember_fact
+        if scope == "personal":
+            try:
+                from jarvis.user_memory import UserMemory
 
-            remember_fact(
-                f"{clean_key}: {raw_text}",
-                category=scope,
-                importance=8.0 if scope == "personal" else 7.0,
-                source=f"amaura:{source}",
-                tags=",".join(entity_names[:8]),
-            )
-        except Exception:
-            pass
+                UserMemory().add_fact(str(raw_text))
+            except Exception:
+                pass
         self.control.store.audit(
             actor,
             "unified_memory_write",
@@ -587,10 +580,22 @@ class UnifiedMemoryService:
                 value = getattr(prefs, key, None)
                 if value:
                     rows.append((key, value))
-            rows.extend((f"fact_{i}", value) for i, value in enumerate(prefs.facts[-200:]))
-            rows.extend((f"convention_{i}", value) for i, value in enumerate(prefs.work_conventions[-50:]))
-            rows.extend((f"correction_{i}", value) for i, value in enumerate(prefs.corrections[-100:]))
-            rows.extend((f"avoid_{i}", value) for i, value in enumerate(prefs.disliked_patterns[-100:]))
+            rows.extend(
+                (f"fact_{len(prefs.facts) - 1 - i}", value)
+                for i, value in enumerate(reversed(prefs.facts[-200:]))
+            )
+            rows.extend(
+                (f"convention_{len(prefs.work_conventions) - 1 - i}", value)
+                for i, value in enumerate(reversed(prefs.work_conventions[-50:]))
+            )
+            rows.extend(
+                (f"correction_{len(prefs.corrections) - 1 - i}", value)
+                for i, value in enumerate(reversed(prefs.corrections[-100:]))
+            )
+            rows.extend(
+                (f"avoid_{len(prefs.disliked_patterns) - 1 - i}", value)
+                for i, value in enumerate(reversed(prefs.disliked_patterns[-100:]))
+            )
             for key, value in rows:
                 text = _safe_json(value).lower()
                 overlap = len(query_terms & _tokens(text)) / max(1, len(query_terms))
@@ -1183,7 +1188,28 @@ class IntentEngine:
         # because they mention code or deployment.
         if clean.endswith("?") or clean.startswith(self.QUESTION_PREFIXES):
             return "conversation"
-        if clean in {"hi", "hello", "hey", "hello there", "good morning", "good evening", "thanks", "thank you"}:
+        if clean in {
+            "hi",
+            "hello",
+            "hey",
+            "hello there",
+            "good morning",
+            "good evening",
+            "thanks",
+            "thank you",
+            "show me your tools",
+            "show your tools",
+            "show tools",
+            "list tools",
+            "what tools do you have",
+            "what are your tools",
+            "tell me what tools you have",
+            "what can you do",
+            "what all can you do",
+            "tell me what you can do",
+            "hey tell me what all you can do",
+            "give me a short summary of what we just tested",
+        }:
             return "conversation"
         words = _tokens(clean)
 

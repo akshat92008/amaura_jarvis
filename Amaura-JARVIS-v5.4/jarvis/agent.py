@@ -18,7 +18,7 @@ from jarvis import ui
 from jarvis.api import NvidiaClient
 from jarvis.history import init_history
 from jarvis.memory import ConversationMemory, compact_messages
-from jarvis.models import DEFAULT_MODEL, MODELS, resolve_model
+from jarvis.models import DEFAULT_MODEL, resolve_model
 from jarvis.safety import SafetyLayer
 from jarvis.tools.registry import ALL_TOOL_DEFINITIONS, execute_tool
 from jarvis.user_memory import UserMemory
@@ -233,10 +233,21 @@ class JarvisAgent:
         # Never mutate process-global cwd from a multi-session server agent.
         # Governed tools and execution adapters receive explicit workspaces.
 
-        # API Client
+        # API Client & Cognition Configuration
+        from jarvis.amaura.model_gateway import CognitiveModelGateway
+
+        status = CognitiveModelGateway.status(purpose="general")
+        self.provider = str(status.get("provider") or status.get("gateway") or "OmniRoute")
+        effective_model_key = str(status.get("model") or status.get("requested_model") or model_key)
+        self.model_key = model_key if model_key != DEFAULT_MODEL else effective_model_key
+        self.model_cfg = resolve_model(model_key) or {
+            "id": effective_model_key,
+            "name": effective_model_key,
+            "category": "general",
+            "context": 131072,
+            "supports_tools": True,
+        }
         self.client = NvidiaClient(api_key=api_key)
-        self.model_key = model_key
-        self.model_cfg = resolve_model(model_key) or MODELS[DEFAULT_MODEL]
 
         # State
         self.messages: list[dict] = []

@@ -1975,7 +1975,7 @@ class ExactResponseParser:
         r"|just\s+say|just\s+return|just\s+echo|just\s+output"
         r"|only\s+reply|solely\s+return|exactly\s+output|strictly\s+return|verbatim\s+return"
         r"|return\s+exactly|output\s+only|respond\s+with\s+only|reply\s+with\s+only"
-        r"|give\s+me|reply|respond|return|say|echo|repeat|print|output|send|type|produce)\b",
+        r"|give\s+me\s+(?:exactly|only|verbatim|just|back)|reply|respond|return|say|echo|repeat|print|output|send|type|produce)\b",
         re.IGNORECASE,
     )
     REPLY_MUST_BE_RE = re.compile(
@@ -2206,6 +2206,25 @@ class ExactResponseParser:
         if all_paths:
             return None
         clean_lower = clean.lower()
+        if any(
+            w in clean_lower
+            for w in (
+                "summary",
+                "summarize",
+                "overview",
+                "recap",
+                "explanation",
+                "explain",
+                "reasons",
+                "ideas",
+                "advice",
+                "analysis",
+                "review",
+                "thoughts",
+                "opinion",
+            )
+        ) and not any(k in clean_lower for k in ("exactly", "verbatim", "strictly", "quoted", "literal")):
+            return None
         if any(w in clean_lower for w in (" to ", " into ", " in ", " at ")) and any(
             w in clean_lower for w in ("write", "save", "put", "store", "create", "output", "dump")
         ):
@@ -4983,7 +5002,13 @@ class DirectActionRouter:
             # to recall after restart.  Keep it in the deterministic candidate
             # set; only conversational transcripts and the secondary vector index
             # remain non-authoritative fallback sources.
-            factual_hits = [h for h in hits if h.source not in ("conversation_memory", "vector_memory")]
+            factual_hits = [
+                h
+                for h in hits
+                if not str(h.source).startswith(
+                    ("conversation_memory", "vector_memory", "jarvis.memory.episodic", "episodic")
+                )
+            ]
             if not factual_hits:
                 return None
             generic_entities = {
@@ -5023,7 +5048,14 @@ class DirectActionRouter:
                 )
                 return float(hit.score) + exact_entity_bonus + project_bonus + founder_personal_bonus
 
-            selected_hits = sorted(factual_hits, key=grounded_score, reverse=True)
+            selected_hits = sorted(
+                factual_hits,
+                key=lambda h: (
+                    grounded_score(h),
+                    str(getattr(h, "updated_at", "") or getattr(h, "key", "")),
+                ),
+                reverse=True,
+            )
 
             if selected_hits and grounded_score(selected_hits[0]) >= 0.10:
                 top_hit = selected_hits[0]

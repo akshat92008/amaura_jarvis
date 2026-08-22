@@ -56,8 +56,13 @@ JARVIS_BANNER = """[bold #ffd700]
 # ── Boot Sequence ────────────────────────────────────────────────────────────
 
 
-def print_boot_sequence(model_name: str = "", working_dir: str = ""):
-    """Display the Iron Man-style boot sequence."""
+def print_boot_sequence(
+    model_name: str = "",
+    working_dir: str = "",
+    provider_name: str = "",
+    version: str = "",
+):
+    """Display the Iron Man-style boot sequence with truthful version, provider, and model."""
     if console.is_terminal:
         console.clear()
 
@@ -67,13 +72,22 @@ def print_boot_sequence(model_name: str = "", working_dir: str = ""):
     # Banner
     console.print(JARVIS_BANNER, justify="center")
 
-    # Tagline
+    # Version & Tagline
+    if not version:
+        try:
+            import jarvis
+
+            version = getattr(jarvis, "__version__", "5.5.0")
+        except Exception:
+            version = "5.5.0"
+
     console.print(
         "[bold #4fc3f7]Just A Rather Very Intelligent System[/]",
         justify="center",
     )
+    provider_label = provider_name.strip() or "OmniRoute"
     console.print(
-        f"[{DIM}]Powered by NVIDIA • v1.0.0[/]",
+        f"[{DIM}]JARVIS VERSION: {version} • Interactive Provider: {provider_label}[/]",
         justify="center",
     )
     console.print()
@@ -83,7 +97,7 @@ def print_boot_sequence(model_name: str = "", working_dir: str = ""):
         "Initializing neural pathways",
         "Loading language models",
         "Calibrating safety protocols",
-        "Connecting to NVIDIA API",
+        f"Connecting to {provider_label} cognition gateway",
         "Activating tool subsystems",
         "Loading personal memory",
         "Systems online",
@@ -95,9 +109,12 @@ def print_boot_sequence(model_name: str = "", working_dir: str = ""):
     console.print()
 
     # System info panel
-    info_items = []
+    info_items = [
+        f"[{GOLD}]JARVIS VERSION:[/] [{WHITE}]{version}[/]",
+        f"[{GOLD}]INTERACTIVE PROVIDER:[/] [{WHITE}]{provider_label}[/]",
+    ]
     if model_name:
-        info_items.append(f"[{GOLD}]Model:[/] [{WHITE}]{model_name}[/]")
+        info_items.append(f"[{GOLD}]INTERACTIVE MODEL:[/] [{WHITE}]{model_name}[/]")
     if working_dir:
         info_items.append(f"[{GOLD}]Directory:[/] [{WHITE}]{working_dir}[/]")
     info_items.append(f"[{GOLD}]Platform:[/] [{WHITE}]{platform.system()} {platform.machine()}[/]")
