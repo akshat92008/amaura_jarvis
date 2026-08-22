@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "scope": "remaining final release certification only; semantic-root live acceptance is frozen separately",
+  "rows": [
+    {"capability":"normal JARVIS startup","test":"fresh canonical startup and user request","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"simple chat/intent","test":"fresh user request","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"filesystem","test":"create/read/list/overwrite and containment attacks","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"memory and restart","test":"secret token recall after restart and isolation","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"web and browser","test":"live public network, invalid inputs, SSRF controls","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"screenshots","test":"fresh valid PNG","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"macOS app control","test":"safe Calculator/TextEdit/Finder lifecycle","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"command execution","test":"isolated command success/failure/timeout/injection","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"coding","test":"unseen disposable repository defect","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"Antigravity","test":"controlled production coding delivery","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"Noryx","test":"supported coding delivery or support removal","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"Company OS and employees","test":"every production employee plus lifecycle","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"approvals","test":"no side effect/reject/approve audit sequence","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"audit and tamper","test":"checkpoint/reopen/tamper/rollback/concurrent writes","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"providers and recovery","test":"routing, independent review, bounded failure and fallback","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"security adversarial","test":"prompt, evidence, authorization, path, SSRF and metadata attacks","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"concurrency","test":"trust stress and real multiprocess read/write workload","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"Python versions","test":"3.11, 3.12 and 3.13 support decision","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"DDGS","test":"live search without legacy warning","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"clean installation and wheel","test":"fresh environment wheel install and entrypoints","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"desktop","test":"secure build and startup","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"soak and performance","test":"25+ request session and measured latency","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"final automated gate","test":"tests, typing, lint, compile and static/security checks","mode":"synthetic","result":"pending","evidence":null,"latency_ms":null,"blocker":null},
+    {"capability":"PR, CI, merge and post-merge smoke","test":"green CI and fresh main smoke","mode":"real","result":"pending","evidence":null,"latency_ms":null,"blocker":null}
+  ]
+}

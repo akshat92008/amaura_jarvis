@@ -13,6 +13,7 @@ import signal
 import socket
 import threading
 from pathlib import Path
+from typing import cast
 
 from jarvis.amaura.runtime import load_amaura_env
 from jarvis.models import DEFAULT_MODEL
@@ -121,9 +122,10 @@ def _run_headless_forever() -> None:
     def request_stop(_signum, _frame) -> None:
         stop_event.set()
 
-    previous_handlers: dict[int, object] = {}
-    for signum in (signal.SIGTERM, signal.SIGINT):
-        previous_handlers[signum] = signal.getsignal(signum)
+    previous_handlers: dict[signal.Signals, signal.Handlers | int | None] = {}
+    handled_signals: tuple[signal.Signals, signal.Signals] = (signal.SIGTERM, signal.SIGINT)
+    for signum in handled_signals:
+        previous_handlers[signum] = cast(signal.Handlers | int | None, signal.getsignal(signum))
         signal.signal(signum, request_stop)
     try:
         while not stop_event.wait(1.0):

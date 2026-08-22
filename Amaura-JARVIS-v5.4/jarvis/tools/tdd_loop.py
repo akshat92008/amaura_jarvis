@@ -134,7 +134,7 @@ def test_and_auto_fix(runner: str = "pytest", target: str = ".", max_retries: in
 
 
 # Prevent pytest from collecting this public tool when a test module imports it.
-test_and_auto_fix.__test__ = False
+test_and_auto_fix.__dict__["__test__"] = False
 
 
 TDD_DISPATCH = {"test_and_auto_fix": test_and_auto_fix}

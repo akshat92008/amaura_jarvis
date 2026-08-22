@@ -27,7 +27,7 @@ import sys
 import warnings
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 query = sys.argv[1]
 max_results = int(sys.argv[2])

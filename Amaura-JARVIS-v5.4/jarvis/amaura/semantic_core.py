@@ -1419,8 +1419,8 @@ def install_semantic_core() -> None:
         da.RepositoryDiagnosticEngine.diagnose, "__func__", da.RepositoryDiagnosticEngine.diagnose
     )
 
-    def guarded_execute_tool(name: str, arguments: dict[str, Any] | None = None, *args: Any, **kwargs: Any) -> Any:
-        arguments = dict(arguments or {})
+    def guarded_execute_tool(name: str, args: dict[Any, Any]) -> str:
+        arguments = dict(args)
         if name in _MUTATING_TOOLS and name not in _EFFECT_SCOPE.get():
             raise GovernanceError(
                 f"semantic effect firewall blocked {name}: action was not authorized by request graph"
@@ -1437,7 +1437,7 @@ def install_semantic_core() -> None:
                     raise GovernanceError(
                         f"semantic effect firewall blocked write_file target {requested!r}: not an authorized output role"
                     )
-        return original_execute_tool(name, arguments, *args, **kwargs)
+        return original_execute_tool(name, arguments)
 
     da.execute_tool = guarded_execute_tool
 

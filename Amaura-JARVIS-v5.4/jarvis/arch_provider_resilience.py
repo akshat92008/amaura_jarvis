@@ -212,8 +212,10 @@ def install_arch_provider_resilience() -> None:
     if _INSTALLED:
         return
 
-    _ORIGINAL_GENERATE = CognitiveModelGateway.generate.__func__
-    _ORIGINAL_GENERATE_STREAM = CognitiveModelGateway.generate_stream.__func__
+    _ORIGINAL_GENERATE = getattr(CognitiveModelGateway.generate, "__func__", CognitiveModelGateway.generate)
+    _ORIGINAL_GENERATE_STREAM = getattr(
+        CognitiveModelGateway.generate_stream, "__func__", CognitiveModelGateway.generate_stream
+    )
 
     def resilient_generate(
         cls,

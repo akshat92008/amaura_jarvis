@@ -65,7 +65,8 @@ def load_config() -> dict:
             print(f"[Fable Engine Warning] Failed to read config.json: {e}")
 
     # Gather all NVIDIA keys into nvidia_api_keys list
-    all_keys = list(config.get("nvidia_api_keys", []))
+    configured_keys = config.get("nvidia_api_keys", [])
+    all_keys = list(configured_keys) if isinstance(configured_keys, list) else []
     primary_key = config.get("nvidia_api_key", "") or os.getenv("NVIDIA_API_KEY", "")
     if primary_key and primary_key not in all_keys:
         all_keys.insert(0, primary_key)

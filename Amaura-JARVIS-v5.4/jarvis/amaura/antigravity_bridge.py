@@ -348,7 +348,16 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         def visit(value: Any) -> dict[str, Any] | None:
             if isinstance(value, dict):
                 if value.get("schema") == "amaura.antigravity-result.v1" and value.get("success") is True:
-                    return value
+                    # Recent agy stream-json envelopes can append progress
+                    # fields (for example ``toolAction``) to the final schema
+                    # object. Preserve only the audited contract surface so a
+                    # benign executor envelope change cannot reject otherwise
+                    # verifiable delivery evidence.
+                    allowed = set(AntigravityResultContract.model_fields)
+                    allowed.update(
+                        field.alias for field in AntigravityResultContract.model_fields.values() if field.alias
+                    )
+                    return {key: item for key, item in value.items() if key in allowed}
                 _cf = value.get("changed_files")
                 _vc = value.get("verification_commands")
                 _sm = value.get("summary") or value.get("result") or value.get("message")

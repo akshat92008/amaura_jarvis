@@ -288,7 +288,9 @@ def install_arch_grounding() -> None:
     """Install the ARCH kernel adapter exactly once."""
     if _cognition.ExecutiveKernel is ArchExecutiveKernel:
         return
-    _cognition.ExecutiveKernel = ArchExecutiveKernel
+    # This is an intentional runtime adapter; updating the module dictionary
+    # keeps the public import path stable without changing the base class.
+    _cognition.__dict__["ExecutiveKernel"] = ArchExecutiveKernel
 
 
 __all__ = [

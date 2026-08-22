@@ -314,7 +314,9 @@ class TestModelExecutionReceipt:
 
         from jarvis.amaura import executor
 
-        src = inspect.getsource(executor.GovernedTaskRunner.run)
+        # ``run`` is now the terminal-state safety wrapper; model execution
+        # remains in the private execution implementation it delegates to.
+        src = inspect.getsource(executor.GovernedTaskRunner._run)
         for field in ("requested_route", "actual_model", "provider", "input_tokens", "output_tokens"):
             assert field in src, f"model_execution_receipt missing field '{field}'"
 

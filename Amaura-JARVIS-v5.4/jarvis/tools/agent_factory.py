@@ -13,7 +13,7 @@ import re
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from jarvis.paths import get_data_dir
 
@@ -32,8 +32,8 @@ class AgentDefinition:
         agent_id: str = "",
         system_prompt: str = "",
         personality: str = "",
-        tools: list = None,
-        custom_tools: list = None,
+        tools: list[str] | None = None,
+        custom_tools: list[dict[str, Any]] | None = None,
         model: str = "",
         description: str = "",
         created_at: str = "",
@@ -310,7 +310,7 @@ def tool_create_agent(
     description: str,
     system_prompt: str,
     personality: str = "",
-    tools: list = None,
+    tools: list[str] | None = None,
     model: str = "",
     workspace: str = "",
 ) -> str:
@@ -426,7 +426,7 @@ def tool_run_agent(agent_id: str, task: str, max_iterations: int = 20) -> str:
             return f"❌ Model '{agent.model}' not found."
 
         # Build messages
-        messages = [
+        messages: list[dict[str, Any]] = [
             {"role": "system", "content": agent.system_prompt},
             {"role": "user", "content": task},
         ]
@@ -446,7 +446,7 @@ def tool_run_agent(agent_id: str, task: str, max_iterations: int = 20) -> str:
 
             try:
                 response = client.chat_sync(
-                    model_id=model_cfg["id"],
+                    model_id=str(model_cfg["id"]),
                     messages=messages,
                     tools=tools if model_cfg.get("supports_tools") else None,
                 )
@@ -580,7 +580,7 @@ def tool_create_agent_tool(
     tool_type: str,
     command_template: str = "",
     python_code: str = "",
-    parameters: list = None,
+    parameters: list[dict[str, Any]] | None = None,
 ) -> str:
     """Add a custom tool to an agent."""
     agent = _find_agent(agent_id)

@@ -1,4 +1,5 @@
 import json
+import ssl
 
 from jarvis.amaura import network
 from jarvis.amaura.executor import GovernedTaskRunner
@@ -36,3 +37,18 @@ def test_governed_web_fetch_returns_structured_failure_instead_of_escaping(monke
     assert decoded["retryable"] is False
     assert parsed.ok is False
     assert "hallucinated.example" in (parsed.error or "")
+
+
+def test_pinned_https_connection_uses_certifi_bundle(monkeypatch):
+    captured: dict[str, str] = {}
+
+    def context(*, cafile: str):
+        captured["cafile"] = cafile
+        return ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+    monkeypatch.setattr(network.ssl, "create_default_context", context)
+    monkeypatch.setattr(network.certifi, "where", lambda: "/trusted/cacert.pem")
+
+    network._PinnedHTTPSConnection("example.com", "93.184.216.34", 443, timeout=1)
+
+    assert captured["cafile"] == "/trusted/cacert.pem"
