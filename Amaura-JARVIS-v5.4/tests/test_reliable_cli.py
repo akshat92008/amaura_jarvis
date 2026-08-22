@@ -85,7 +85,7 @@ def test_governance_rejection_is_safe_and_does_not_escape(monkeypatch: pytest.Mo
     assert "JARVIS remains online" in result["message"]
 
 
-def test_packaged_jarvis_entrypoint_uses_reliability_boundary() -> None:
+def test_packaged_jarvis_entrypoint_installs_all_runtime_guards() -> None:
     pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
     text = pyproject.read_text(encoding="utf-8")
-    assert 'jarvis = "jarvis.reliable_cli:main"' in text
+    assert 'jarvis = "jarvis.runtime_entry:main"' in text
