@@ -10,6 +10,7 @@ import sqlite3
 import time
 
 import numpy as np
+from numpy.typing import NDArray
 
 from jarvis.paths import get_data_dir
 
@@ -154,7 +155,7 @@ class VectorEmbeddingEngine:
 
         features = [f"u:{token}" for token in tokens]
         features.extend(f"b:{left}_{right}" for left, right in zip(tokens, tokens[1:], strict=False))
-        vec = np.zeros(cls.DIMENSION, dtype=np.float32)
+        vec: NDArray[np.float32] = np.zeros(cls.DIMENSION, dtype=np.float32)
         for feature in features:
             digest = hashlib.blake2b(feature.encode("utf-8"), digest_size=8).digest()
             index = int.from_bytes(digest, "big") % cls.DIMENSION

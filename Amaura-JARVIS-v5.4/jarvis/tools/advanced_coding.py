@@ -16,6 +16,7 @@ import subprocess
 import sys
 from pathlib import Path
 from textwrap import dedent
+from typing import Any
 
 from jarvis.tools.process import ensure_safe_tokens, repo_relative_path
 
@@ -538,7 +539,7 @@ def tool_analyze_code(path: str, language: str = "", include_metrics: bool = Tru
 
 def _analyze_directory(p: Path) -> str:
     """Analyze a full directory/project."""
-    stats = {"files": 0, "lines": 0, "languages": {}}
+    stats: dict[str, Any] = {"files": 0, "lines": 0, "languages": {}}
     for root, dirs, files in os.walk(p):
         dirs[:] = [
             d
@@ -624,8 +625,8 @@ def _analyze_python(content: str, path: Path) -> list[str]:
         return [f"\n❌ **Syntax Error** at line {e.lineno}: {e.msg}"]
 
     imports = []
-    classes = []
-    functions = []
+    classes: list[dict[str, Any]] = []
+    functions: list[dict[str, Any]] = []
     global_vars = []
 
     for node in ast.walk(tree):
@@ -921,7 +922,7 @@ def _add_type_hints(p: Path) -> str:
 
 
 def tool_generate_project(
-    template: str, name: str, path: str = ".", description: str = "", features: list = None
+    template: str, name: str, path: str = ".", description: str = "", features: list[str] | None = None
 ) -> str:
     """Scaffold a complete project from a template."""
     features = features or []
@@ -1858,7 +1859,9 @@ def tool_debug_error(error: str, context_path: str = "", language: str = "") -> 
     return "\n".join(report)
 
 
-def tool_explain_code(path: str, start_line: int = None, end_line: int = None, detail_level: str = "normal") -> str:
+def tool_explain_code(
+    path: str, start_line: int | None = None, end_line: int | None = None, detail_level: str = "normal"
+) -> str:
     """Generate code explanation."""
     p = Path(path).expanduser().resolve()
     if not p.exists():
@@ -2174,7 +2177,7 @@ def tool_manage_env(
 
 
 def tool_port_check(
-    ports: list = None, find_available: bool = False, range_start: int = 3000, range_end: int = 9999
+    ports: list[int] | None = None, find_available: bool = False, range_start: int = 3000, range_end: int = 9999
 ) -> str:
     """Check port availability."""
     results = []
@@ -2206,7 +2209,7 @@ def tool_port_check(
     return "Port Status:\n" + "\n".join(results) if results else "No ports specified."
 
 
-def tool_docker_compose(project_path: str = ".", services: list = None, output_path: str = "") -> str:
+def tool_docker_compose(project_path: str = ".", services: list[str] | None = None, output_path: str = "") -> str:
     """Generate Docker configuration."""
     p = Path(project_path).expanduser().resolve()
     services = services or []
@@ -2235,12 +2238,12 @@ def tool_docker_compose(project_path: str = ".", services: list = None, output_p
     (out / "Dockerfile").write_text(dockerfile + "\n", encoding="utf-8")
 
     # Generate docker-compose.yml
-    compose = {
+    compose: dict[str, Any] = {
         "version": "3.8",
         "services": {"app": {"build": ".", "ports": ["8000:8000"], "environment": [], "volumes": [".:/app"]}},
     }
 
-    service_configs = {
+    service_configs: dict[str, dict[str, Any]] = {
         "postgres": {
             "image": "postgres:16-alpine",
             "ports": ["5432:5432"],
@@ -2258,7 +2261,7 @@ def tool_docker_compose(project_path: str = ".", services: list = None, output_p
         "rabbitmq": {"image": "rabbitmq:3-management-alpine", "ports": ["5672:5672", "15672:15672"]},
     }
 
-    volumes = {}
+    volumes: dict[str, None] = {}
     for svc in services:
         svc_lower = svc.lower()
         if svc_lower in service_configs:
@@ -2280,7 +2283,7 @@ def tool_docker_compose(project_path: str = ".", services: list = None, output_p
     return f"✅ Docker configuration created at {out}:\n  - Dockerfile ({lang or 'generic'})\n  - docker-compose.yml (app{extra_svcs})\n\nRun: `docker-compose up --build`"
 
 
-def _dict_to_yaml(d: dict, indent: int = 0) -> str:
+def _dict_to_yaml(d: dict[str, Any], indent: int = 0) -> str:
     """Simple dict-to-YAML serializer."""
     lines = []
     prefix = "  " * indent
@@ -2304,22 +2307,26 @@ def _dict_to_yaml(d: dict, indent: int = 0) -> str:
 
 
 def tool_api_scaffold(
-    framework: str, name: str, models: list = None, features: list = None, output_path: str = ""
+    framework: str,
+    name: str,
+    models: list[str] | None = None,
+    features: list[str] | None = None,
+    output_path: str = "",
 ) -> str:
     """Generate API boilerplate."""
     models = models or []
     features = features or []
 
     if framework.lower() in ("fastapi", "fast-api"):
-        return tool_generate_project("python-api", name, f"{name} REST API", features)
+        return tool_generate_project("python-api", name, description=f"{name} REST API", features=features)
     elif framework.lower() in ("flask",):
-        return tool_generate_project("python-flask", name, f"{name} Flask API", features)
+        return tool_generate_project("python-flask", name, description=f"{name} Flask API", features=features)
     elif framework.lower() in ("express", "node-express"):
-        return tool_generate_project("node-express", name, f"{name} Express API", features)
+        return tool_generate_project("node-express", name, description=f"{name} Express API", features=features)
     elif framework.lower() in ("django-rest", "django"):
-        return tool_generate_project("django-app", name, f"{name} Django REST API", features)
+        return tool_generate_project("django-app", name, description=f"{name} Django REST API", features=features)
     elif framework.lower() in ("gin", "go-gin", "go"):
-        return tool_generate_project("go-api", name, f"{name} Go API", features)
+        return tool_generate_project("go-api", name, description=f"{name} Go API", features=features)
     else:
         return f"❌ Unknown API framework: {framework}. Supported: fastapi, flask, express, django-rest, gin."
 

@@ -9,8 +9,6 @@ import re
 import subprocess
 from pathlib import Path
 
-from jarvis.amaura.models import GovernanceError
-from jarvis.amaura.network import fetch_public_text
 from jarvis.history import get_history
 from jarvis.tools.process import parse_command_argv, repo_relative_path, validate_git_revision
 
@@ -281,7 +279,12 @@ def tool_read_file(path: str, start_line: int | None = None, end_line: int | Non
 
 def tool_write_file(path: str, content: str) -> str:
     """Write content to a file (create or overwrite)."""
-    p = Path(path).expanduser().resolve()
+    from jarvis.tools.security import resolve_workspace_path
+
+    try:
+        p = resolve_workspace_path(path, must_exist=False)
+    except PermissionError as exc:
+        return f"❌ {exc}"
 
     history = get_history()
     snapshot = history.snapshot_before_write(str(p))
@@ -299,7 +302,12 @@ def tool_write_file(path: str, content: str) -> str:
 
 def tool_edit_file(path: str, old_text: str, new_text: str) -> str:
     """Find and replace text in a file."""
-    p = Path(path).expanduser().resolve()
+    from jarvis.tools.security import resolve_workspace_path
+
+    try:
+        p = resolve_workspace_path(path, must_exist=False)
+    except PermissionError as exc:
+        return f"❌ {exc}"
     if not p.exists():
         return f"❌ File not found: {path}"
 
@@ -327,7 +335,12 @@ def tool_edit_file(path: str, old_text: str, new_text: str) -> str:
 
 def tool_list_directory(path: str = ".", recursive: bool = False, max_depth: int = 3) -> str:
     """List directory contents."""
-    p = Path(path).expanduser().resolve()
+    from jarvis.tools.security import resolve_workspace_path
+
+    try:
+        p = resolve_workspace_path(path, must_exist=False)
+    except PermissionError as exc:
+        return f"❌ {exc}"
     if not p.exists():
         return f"❌ Directory not found: {path}"
     if not p.is_dir():
@@ -465,7 +478,12 @@ def _build_tree(directory: Path, lines: list, prefix: str, max_depth: int, depth
 
 def tool_run_command(command: str, cwd: str | None = None, timeout: int = 120) -> str:
     """Execute one shell-free command in the approved workspace."""
-    work_dir = cwd or os.getcwd()
+    from jarvis.tools.security import resolve_workspace_path
+
+    try:
+        work_dir = str(resolve_workspace_path(cwd or ".", must_exist=True))
+    except (FileNotFoundError, PermissionError) as exc:
+        return f"❌ {exc}"
     try:
         argv = parse_command_argv(command)
         result = subprocess.run(
@@ -618,6 +636,12 @@ def tool_git_log(count: int = 10, oneline: bool = True, cwd: str | None = None) 
 
 def tool_web_fetch(url: str, max_length: int = 10000) -> str:
     """Fetch public HTTP(S) content through the governed SSRF-safe transport."""
+    # Import lazily: Amaura's semantic bootstrap imports the central registry,
+    # which imports this tool module. Eagerly importing Amaura here creates a
+    # circular import for direct coding-tool callers.
+    from jarvis.amaura.models import GovernanceError
+    from jarvis.amaura.network import fetch_public_text
+
     try:
         return fetch_public_text(url, max_length=max(1, min(int(max_length), 100_000)))
     except (GovernanceError, ValueError) as exc:
@@ -627,7 +651,7 @@ def tool_web_fetch(url: str, max_length: int = 10000) -> str:
 def tool_web_search(query: str, max_results: int = 5) -> str:
     """Search the web using DuckDuckGo."""
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
 
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=max_results))
@@ -641,7 +665,7 @@ def tool_web_search(query: str, max_results: int = 5) -> str:
             lines.append("")
         return "\n".join(lines)
     except ImportError:
-        return "❌ duckduckgo_search not installed. Run: pip install duckduckgo_search"
+        return "❌ ddgs not installed. Run: pip install ddgs"
     except Exception as e:
         return f"❌ Search error: {e}"
 

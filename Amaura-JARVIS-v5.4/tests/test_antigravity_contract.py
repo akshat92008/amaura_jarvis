@@ -81,6 +81,12 @@ class TestExtractContractAccept(unittest.TestCase):
         result = self._extract(noise + json.dumps(_make_valid()) + "\n")
         self.assertEqual(result["schema"], "amaura.antigravity-result.v1")
 
+    def test_stream_envelope_fields_are_not_treated_as_contract_fields(self):
+        payload = _make_valid() | {"toolAction": "Finishing task", "toolSummary": "Complete task"}
+        result = self._extract(json.dumps(payload))
+        self.assertNotIn("toolAction", result)
+        AntigravityResultContract.model_validate(result)
+
     def test_schema_omission_with_result_as_summary_fallback(self):
         d = _make_valid()
         del d["schema"]

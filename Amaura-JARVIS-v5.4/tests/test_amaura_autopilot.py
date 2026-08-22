@@ -16,6 +16,9 @@ from jarvis.amaura.runtime_lease import company_runtime_leader_lock
 def _control(monkeypatch, temp: str) -> AmauraControlPlane:
     monkeypatch.setenv("AMAURA_DATA_DIR", temp)
     monkeypatch.setenv("AMAURA_EVIDENCE_DIR", str(Path(temp) / "evidence"))
+    # The production lock is intentionally user-global.  Tests must not
+    # contend with an already-running founder runtime on the same machine.
+    monkeypatch.setenv("AMAURA_COMPANY_RUNTIME_LOCK_PATH", str(Path(temp) / "company-runtime.lock"))
     return AmauraControlPlane()
 
 

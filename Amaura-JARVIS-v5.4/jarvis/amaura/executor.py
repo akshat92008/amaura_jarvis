@@ -7,6 +7,8 @@ import os
 import re
 import shlex
 import time
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -191,6 +193,34 @@ class GovernedTaskRunner:
         return scoped
 
     def _execute_tool(
+        self,
+        tool_name: str,
+        args: dict[str, Any],
+        execute_tool,
+        sandbox: StatefulDockerSandbox | None = None,
+        workspace: str | None = None,
+    ) -> str:
+        """Bound every tool invocation so a stalled adapter cannot strand a task."""
+        timeout = max(1, min(int(args.get("timeout", os.environ.get("AMAURA_TOOL_TIMEOUT_SECONDS", "45"))), 300))
+        pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="amaura-tool")
+        future = pool.submit(self._execute_tool_unbounded, tool_name, args, execute_tool, sandbox, workspace)
+        try:
+            return future.result(timeout=timeout)
+        except FutureTimeoutError:
+            future.cancel()
+            return json.dumps(
+                {
+                    "ok": False,
+                    "data": {},
+                    "error": f"Tool {tool_name} timed out after {timeout}s",
+                    "external_id": "",
+                    "retryable": True,
+                }
+            )
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)
+
+    def _execute_tool_unbounded(
         self,
         tool_name: str,
         args: dict[str, Any],
@@ -412,7 +442,9 @@ class GovernedTaskRunner:
             phase_callback=phase_callback,
         )
         self._ensure_task_active(task_id)
-        evidence: list[dict[str, Any]] = []
+        # Evidence is checkpointed after every tool call so a recoverable
+        # provider/tool failure never discards already verified research.
+        evidence: list[dict[str, Any]] = list(task.get("evidence") or [])
         execution_record = self.control.evidence.put_json(
             result.to_dict(), source=f"task:{task_id}:antigravity_execution"
         )
@@ -564,7 +596,8 @@ class GovernedTaskRunner:
             timeout_seconds=int((task.get("metadata") or {}).get("noryx_timeout_seconds", 1800)),
         )
         self._ensure_task_active(task_id)
-        evidence: list[dict[str, Any]] = []
+        # Resume from immutable evidence checkpointed by a prior recoverable run.
+        evidence: list[dict[str, Any]] = list(task.get("evidence") or [])
         execution_record = self.control.evidence.put_json(
             result.to_dict(),
             source=f"task:{task_id}:noryx_execution",
@@ -731,6 +764,33 @@ class GovernedTaskRunner:
         }
 
     def run(self, task_id: str, max_iterations: int = 12) -> dict[str, Any]:
+        """Run a task and always leave a recoverable terminal execution state.
+
+        Provider and tool failures must not strand a mission in ``in_progress``:
+        evidence recorded before the failure is retained and the task can be
+        explicitly retried from ``blocked``.
+        """
+        try:
+            return self._run(task_id, max_iterations=max_iterations)
+        except Exception as exc:
+            task = self.control.store.get_work_item(task_id)
+            if task.get("state") == TaskState.IN_PROGRESS.value:
+                metadata = dict(task.get("metadata") or {})
+                metadata.update(
+                    {
+                        "block_reason": str(exc)[:1200],
+                        "retryable": True,
+                        "last_iteration": max_iterations,
+                        "timeout_reason": "execution_error" if not isinstance(exc, TimeoutError) else "deadline_exhausted",
+                    }
+                )
+                self.control.store.update_work_item(task_id, state=TaskState.BLOCKED.value, metadata=metadata)
+                self.control.store.publish_event("task.blocked", task_id, {"reason": metadata["block_reason"]})
+                self.control.store.audit("jarvis", "execute", "task", task_id, "blocked", metadata)
+                return {"status": "blocked", "task_id": task_id, "reason": metadata["block_reason"], "retryable": True}
+            raise
+
+    def _run(self, task_id: str, max_iterations: int = 12) -> dict[str, Any]:
         # repository_write tasks use the same isolated Git path as engineering delivery.
         max_iterations = max(1, min(max_iterations, 30))
         task = self.control.store.get_work_item(task_id)
@@ -886,7 +946,8 @@ class GovernedTaskRunner:
             {"role": "user", "content": "JARVIS TASK PACKET:\n" + json.dumps(clean_packet, indent=2)},
         ]
         client = self._client(route, employee)
-        evidence: list[dict[str, Any]] = []
+        # Resume from immutable evidence checkpointed by a prior recoverable run.
+        evidence: list[dict[str, Any]] = list(task.get("evidence") or [])
         final_response = ""
         iterations = 0
         response = None  # holds the latest response for the final execution receipt
@@ -895,6 +956,7 @@ class GovernedTaskRunner:
         actual_models: list[str] = []
         provider_executions: list[dict[str, Any]] = []
         completion_gate_attempts = 0
+        completion_repair_feedback = ""
 
         sandbox = None
         sandbox_mode = os.environ.get("AMAURA_SANDBOX_MODE", "docker").strip().lower()
@@ -973,6 +1035,8 @@ class GovernedTaskRunner:
                         evidence=evidence,
                         evidence_reader=self.control.evidence,
                     )
+                    if completion_repair_feedback:
+                        synthesis_packet["repair_feedback"] = completion_repair_feedback
                     synthesis_response = client.chat_sync(
                         model_id=model_cfg["id"],
                         messages=[
@@ -1014,6 +1078,7 @@ class GovernedTaskRunner:
                             evidence=evidence,
                         )
                     except CompletionContractError as exc:
+                        completion_repair_feedback = str(exc)
                         gate_meta = dict(self.control.store.get_work_item(task_id).get("metadata") or {})
                         gate_meta.update(
                             {
@@ -1023,6 +1088,12 @@ class GovernedTaskRunner:
                             }
                         )
                         self.control.store.update_work_item(task_id, metadata=gate_meta)
+                        # Contract/schema deficiencies are synthesis failures,
+                        # not evidence failures.  Preserve research and force
+                        # the next worker turn to repair the draft without
+                        # reopening the full tool surface.
+                        if "successful public-research evidence refs" in completion_repair_feedback:
+                            tools = []
                         messages.append({"role": "assistant", "content": draft_summary})
                         messages.append(
                             {
@@ -1113,6 +1184,14 @@ class GovernedTaskRunner:
                     parsed_result = parse_tool_result(result)
                     success = parsed_result.ok
                     excerpt_str = str(parsed_result.data.get("output", result))
+                    # A syntactically successful search with no hits is not
+                    # usable research evidence. Preserve it as a failed,
+                    # retryable observation so the worker can replan instead
+                    # of mistaking empty searches for criterion coverage.
+                    if call.function.name in {"web_search", "search_web", "search_web_fast", "search_web_slow"} and (
+                        "no results found" in excerpt_str.lower()
+                    ):
+                        success = False
                     if parsed_result.error:
                         excerpt_str += "\nError: " + parsed_result.error
 
@@ -1127,6 +1206,7 @@ class GovernedTaskRunner:
                             "excerpt": excerpt_str[:500],
                         }
                     )
+                    self.control.store.update_work_item(task_id, evidence=evidence)
                     messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
             else:
                 raise GovernanceError(f"Employee exceeded the {max_iterations}-iteration execution limit")

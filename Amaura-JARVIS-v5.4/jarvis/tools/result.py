@@ -62,9 +62,10 @@ def parse_tool_result(value: Any) -> ToolResult:
     if isinstance(payload, dict):
         if "ok" in payload:
             evidence = payload.get("evidence_ids") or ()
-            data_dict = (
-                payload.get("data")
-                if isinstance(payload.get("data"), dict)
+            raw_data = payload.get("data")
+            data_dict: dict[str, Any] = (
+                dict(raw_data)
+                if isinstance(raw_data, dict)
                 else {
                     k: v
                     for k, v in payload.items()

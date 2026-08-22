@@ -143,9 +143,9 @@ class DuckDuckGoSearchProvider:
         if self.backend_factory is not None:
             return self.backend_factory()
         try:
-            from duckduckgo_search import DDGS
+            from ddgs import DDGS
         except ImportError as exc:  # pragma: no cover - dependency is part of release
-            raise GovernanceError("duckduckgo-search is not installed") from exc
+            raise GovernanceError("ddgs is not installed") from exc
         return DDGS()
 
     def search(self, query: str, *, max_results: int = 20) -> list[SearchHit]:

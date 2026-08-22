@@ -64,7 +64,7 @@ class GCPModelClient:
         if health.get("provider") == "gcp_vertex" and self.api_key:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-thinking-exp-01-21:generateContent?key={self.api_key}"
-                payload = {
+                vertex_payload: dict[str, Any] = {
                     "contents": [
                         {
                             "role": "user",
@@ -76,7 +76,7 @@ class GCPModelClient:
                         }
                     ]
                 }
-                resp = httpx.post(url, json=payload, timeout=45.0)
+                resp = httpx.post(url, json=vertex_payload, timeout=45.0)
                 if resp.status_code == 200:
                     res = resp.json()
                     text = res["candidates"][0]["content"]["parts"][0]["text"]
@@ -91,7 +91,7 @@ class GCPModelClient:
         # Custom vLLM / OpenAI Compatible Endpoint Path
         try:
             url = f"{self.endpoint_url}/chat/completions"
-            payload = {
+            payload: dict[str, Any] = {
                 "model": "jarvis-coder-32b",
                 "messages": [
                     {

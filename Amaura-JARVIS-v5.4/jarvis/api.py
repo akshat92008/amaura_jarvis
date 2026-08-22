@@ -12,15 +12,7 @@ import time
 
 import certifi
 import httpx
-
-try:
-    from openai import BadRequestError, OpenAI
-except ImportError:  # Optional until a cloud/local OpenAI-compatible provider is used.
-    OpenAI = None  # type: ignore[assignment]
-
-    class BadRequestError(Exception):
-        pass
-
+from openai import BadRequestError, OpenAI
 
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
@@ -74,10 +66,10 @@ def _load_env_file():
     load_amaura_env()
 
 
-def _filter_essential_tools(tools: list[dict] | None, messages: list[dict] | None = None) -> list[dict] | None:
+def _filter_essential_tools(tools: list[dict] | None, messages: list[dict] | None = None) -> list[dict]:
     """Select a compact intent-aware tool profile for providers with schema limits."""
     if not tools:
-        return None
+        return []
     latest_user = ""
     for message in reversed(messages or []):
         if message.get("role") == "user":
@@ -384,7 +376,9 @@ class NvidiaClient:
             ollama_kwargs = dict(kwargs)
             ollama_kwargs["model"] = "qwen2.5-coder:1.5b"
             if tools:
-                ollama_kwargs["tools"] = _filter_essential_tools(tools, messages)[:16]
+                ollama_kwargs["tools"] = _filter_essential_tools(tools or [], messages)[:16]
+            if self.ollama_client is None:
+                raise RuntimeError("Ollama fallback is not configured")
             response = self.ollama_client.chat.completions.create(**ollama_kwargs)
             return self._record_response(
                 response,
@@ -396,6 +390,8 @@ class NvidiaClient:
         except Exception:
             try:
                 ollama_kwargs.pop("tools", None)
+                if self.ollama_client is None:
+                    raise RuntimeError("Ollama fallback is not configured")
                 response = self.ollama_client.chat.completions.create(**ollama_kwargs)
                 return self._record_response(
                     response,

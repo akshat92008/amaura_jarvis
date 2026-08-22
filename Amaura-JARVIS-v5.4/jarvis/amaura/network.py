@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
+import certifi
+
 from jarvis.amaura.models import GovernanceError
 
 _BLOCKED_HOSTS = {"metadata.google.internal", "metadata.aws.internal", "instance-data"}
@@ -105,7 +107,10 @@ class _PinnedHTTPConnection(http.client.HTTPConnection):
 
 class _PinnedHTTPSConnection(http.client.HTTPSConnection):
     def __init__(self, hostname: str, address: str, port: int, *, timeout: float):
-        super().__init__(hostname, port=port, timeout=timeout, context=ssl.create_default_context())
+        # macOS framework Python may not be linked to Keychain roots.  Use the
+        # audited certifi bundle so public pinned requests remain verified
+        # instead of failing open or failing every legitimate HTTPS fetch.
+        super().__init__(hostname, port=port, timeout=timeout, context=ssl.create_default_context(cafile=certifi.where()))
         self._validated_address = address
 
     def connect(self) -> None:

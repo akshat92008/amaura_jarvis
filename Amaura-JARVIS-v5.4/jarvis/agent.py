@@ -803,7 +803,7 @@ class JarvisAgent:
             try:
                 ui.print_streaming_start()
                 stream = self.client.chat(
-                    model_id=self.model_cfg["id"],
+                    model_id=str(self.model_cfg["id"]),
                     messages=self._build_messages(),
                     tools=self._get_tools(),
                     stream=True,
@@ -962,7 +962,7 @@ class JarvisAgent:
             if not tool_calls_raw:
                 try:
                     response = self.client.chat_sync(
-                        model_id=self.model_cfg["id"],
+                        model_id=str(self.model_cfg["id"]),
                         messages=self._build_messages(),
                         tools=self._get_tools(),
                     )
@@ -1284,8 +1284,8 @@ class JarvisAgent:
             try:
                 self.memory.auto_save(
                     self.messages,
-                    self.model_cfg["name"],
-                    self.model_cfg["id"],
+                    str(self.model_cfg["name"]),
+                    str(self.model_cfg["id"]),
                     self.working_dir,
                     self.conversation_id,
                 )

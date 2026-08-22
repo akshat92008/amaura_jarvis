@@ -12,7 +12,7 @@ requires-python = ">=3.11,<3.15"
 license = "MIT"
 dependencies = [
     "beautifulsoup4>=4.12.0",
-    "duckduckgo-search>=6.0.0",
+    "ddgs>=9.0.0",
     "fastapi>=0.109.0",
     "httpx[socks]>=0.27.0",
     "langchain-core>=0.2.0",
@@ -88,6 +88,21 @@ include = ["jarvis*"]
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+# These directories are executable evidence, generated builds, or retired
+# prototypes rather than maintained application source.  Keeping them out of
+# the default lint target makes `ruff check .` match the release surface.
+extend-exclude = [
+    "aimodel",
+    "audit_package",
+    "audit_script.py",
+    "build",
+    "desktop-app",
+    "fixture",
+    "qualification_evidence",
+    "qualification_runs",
+    "SuperMario.py",
+    "test_master_script.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
@@ -105,3 +120,10 @@ ignore_missing_imports = true
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+# Qualification artefacts intentionally contain disposable repositories and
+# tests.  The maintained product suite lives exclusively under ``tests``;
+# without this boundary a normal ``pytest`` invocation can collect stale,
+# duplicate fixture modules and produce false release failures.
+testpaths = ["tests"]

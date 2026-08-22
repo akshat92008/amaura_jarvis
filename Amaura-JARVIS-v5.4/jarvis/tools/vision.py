@@ -244,7 +244,10 @@ def detect_faces(image_path: str | None = None) -> str:
             img = cv2.imread(image_path)
             if img is not None:
                 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+                cv2_data = getattr(cv2, "data", None)
+                if cv2_data is None:
+                    return "❌ OpenCV face-detection data is unavailable."
+                cascade_path = str(cv2_data.haarcascades) + "haarcascade_frontalface_default.xml"
                 face_cascade = cv2.CascadeClassifier(cascade_path)
                 faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
                 if len(faces) > 0:

@@ -220,8 +220,8 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
     elif command == "/agents":
         from jarvis.tools.agent_factory import tool_list_agents
 
-        result = tool_list_agents()
-        ui.console.print(result)
+        agents_result = tool_list_agents()
+        ui.console.print(agents_result)
         return True
 
     elif command == "/spawn":

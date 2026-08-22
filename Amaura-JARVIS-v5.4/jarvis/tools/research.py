@@ -104,9 +104,9 @@ def _fetch_url_text(url: str, max_length: int = 8000) -> str:
 def tool_deep_research(topic: str, num_queries: int = 3) -> str:
     """Perform deep web research by running multiple searches and compiling results."""
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
     except ImportError:
-        return "❌ duckduckgo_search not installed. Run: pip install duckduckgo_search"
+        return "❌ ddgs not installed. Run: pip install ddgs"
 
     # Generate search variations
     queries = [topic]

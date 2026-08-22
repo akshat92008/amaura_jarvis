@@ -11,14 +11,16 @@ from __future__ import annotations
 import math
 import re
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, TypeAlias
 
 
 class ToolArgumentValidationError(ValueError):
     """Raised when a tool call violates its published argument contract."""
 
 
-_TYPE_NAMES = {
+JsonRuntimeType: TypeAlias = type[Any] | tuple[type[Any], ...]
+
+_TYPE_NAMES: dict[str, JsonRuntimeType] = {
     "object": dict,
     "array": list,
     "string": str,
@@ -41,6 +43,7 @@ def _type_matches(value: Any, expected: str) -> bool:
     python_type = _TYPE_NAMES.get(expected)
     if python_type is None:
         _fail("schema", f"unsupported JSON schema type {expected!r}")
+    assert python_type is not None
     return isinstance(value, python_type)
 
 

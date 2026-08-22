@@ -43,6 +43,13 @@ def _apply_fast_worker_profile() -> None:
     os.environ["AMAURA_NVIDIA_CONNECT_TIMEOUT"] = "5"
     os.environ["AMAURA_NVIDIA_TOTAL_TIMEOUT"] = "20"
     os.environ["AMAURA_NVIDIA_MAX_KEY_ATTEMPTS"] = "1"
+    # GovernedTaskRunner uses the worker-specific OmniRoute client rather than
+    # the interactive gateway. Keep that independent call inside the same
+    # qualification budget; otherwise a single stalled request can exceed the
+    # outer live-run deadline before the runner can replan.
+    os.environ["AMAURA_OMNIROUTE_WORKER_TIMEOUT_SECONDS"] = "45"
+    os.environ["AMAURA_OMNIROUTE_TIMEOUT_SECONDS"] = "20"
+    os.environ["AMAURA_OMNIROUTE_MAX_RETRIES"] = "0"
 
 
 def _write_state(task_id: str) -> None:
@@ -178,8 +185,15 @@ def _run_worker_bounded(runner, task_id: str, *, max_iterations: int, deadline_s
 
 
 def main() -> int:
+    global STATE_ROOT, STATE_FILE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reset", action="store_true", help="discard prior isolated qualification state")
+    parser.add_argument(
+        "--state-root",
+        type=Path,
+        default=STATE_ROOT,
+        help="isolated qualification state directory (default: %(default)s)",
+    )
     parser.add_argument(
         "--check-imports",
         action="store_true",
@@ -203,6 +217,9 @@ def main() -> int:
     if not 60 <= args.worker_deadline_seconds <= 600:
         parser.error("--worker-deadline-seconds must be between 60 and 600")
 
+    STATE_ROOT = args.state_root.expanduser().resolve()
+    STATE_FILE = STATE_ROOT / "state.json"
+
     if args.reset and STATE_ROOT.exists():
         shutil.rmtree(STATE_ROOT)
 
@@ -210,6 +227,12 @@ def main() -> int:
     _load_environment()
     _apply_fast_worker_profile()
     os.environ["AMAURA_EVIDENCE_DIR"] = str(STATE_ROOT / "evidence")
+
+    review_mode = os.environ.setdefault("AMAURA_REVIEW_MODE", "omniroute").strip().lower()
+    if review_mode == "cloud":
+        review_model = os.environ.get("AMAURA_CLOUD_REVIEW_MODEL", "").strip()
+    else:
+        review_model = os.environ.setdefault("AMAURA_OMNIROUTE_REVIEW_MODEL", "auto/best-reasoning").strip()
 
     from jarvis.amaura.control_plane import AmauraControlPlane
     from jarvis.amaura.executor import GovernedReviewRunner, GovernedTaskRunner
@@ -223,6 +246,8 @@ def main() -> int:
     print("WORKER ITERATION BUDGET:", args.max_iterations)
     print("WORKER WALL-CLOCK BUDGET:", f"{args.worker_deadline_seconds}s")
     print("NVIDIA TURN PROFILE: 15s request / 20s total / 1 credential")
+    print("REVIEW MODE:", review_mode)
+    print("REQUESTED REVIEWER:", review_model or "provider default")
 
     control = AmauraControlPlane(
         STATE_ROOT / "root.db",
@@ -324,12 +349,10 @@ def main() -> int:
             print("Worker did not reach awaiting_review; task record preserved for inspection.")
             return 1
 
-        os.environ["AMAURA_REVIEW_MODE"] = "omniroute"
-        os.environ.setdefault("AMAURA_OMNIROUTE_REVIEW_MODEL", "z-ai/glm-5.2")
         os.environ["AMAURA_OMNIROUTE_FALLBACK_MODEL"] = ""
 
         print("\n========== INDEPENDENT REVIEW ==========")
-        print("REQUESTED REVIEWER:", os.environ["AMAURA_OMNIROUTE_REVIEW_MODEL"])
+        print("REQUESTED REVIEWER:", review_model or "provider default")
         reviewed = GovernedReviewRunner(control).run(task_id)
         print("REVIEW APPROVE:", reviewed["approve"])
         print("REVIEW STATE:", reviewed["state"])
