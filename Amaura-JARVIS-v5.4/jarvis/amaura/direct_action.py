@@ -563,6 +563,7 @@ class RequestPreprocessor:
 
     WRITE_VERBS = {
         "write",
+        "overwrite",
         "save",
         "create",
         "make",
@@ -1741,7 +1742,7 @@ class WriteActionParser:
                     after_idx += 1
                 after_tgt = clean[after_idx:].strip()
                 cand_after = re.sub(
-                    r"^(?:[\s,:;\.\-]+|\b(?:and\s+)?(?:then\s+)?(?:store|write|put|save|set\s+content\s+to|set\s+its\s+content\s+to|set\s+body\s+to|contents?\s+(?:must|should|needs?\s+to)?\s+be|body\s+(?:must|should|needs?\s+to)?\s+be|its\s+body\s+(?:must|should|needs?\s+to)?\s+be|its\s+(?:complete\s+|exact\s+|entire\s+|whole\s+|full\s+|verbatim\s+|strictly\s+|exactly\s+)?(?:content|text|payload|body|data)\s+(?:must|should|needs?\s+to|is|will)?\s*(?:be)?|content\s+is|body\s+is|should\s+contain|must\s+contain|should\s+have\s+content|must\s+hold|containing\s+(?:exactly\s+)?(?:this\s+)?(?:text|content|payload|body|data)|containing|contain|with\s+(?:the\s+)?(?:content|text|body|payload))\b[\s:=->]*)+",
+                    r"^(?:[\s,:;\.\-]+|\b(?:and\s+)?(?:then\s+)?(?:store|write|put|save|set\s+content\s+to|set\s+its\s+content\s+to|set\s+body\s+to|contents?\s+(?:must|should|needs?\s+to)?\s+be|body\s+(?:must|should|needs?\s+to)?\s+be|its\s+body\s+(?:must|should|needs?\s+to)?\s+be|its\s+(?:complete\s+|exact\s+|entire\s+|whole\s+|full\s+|verbatim\s+|strictly\s+|exactly\s+)?(?:content|text|payload|body|data)\s+(?:must|should|needs?\s+to|is|will)?\s*(?:be)?|content\s+is|body\s+is|should\s+contain|must\s+contain|should\s+have\s+content|must\s+hold|containing\s+(?:exactly\s+)?(?:this\s+)?(?:text|content|payload|body|data)|containing|contain|with\s+(?:the\s+)?(?:content|text|body|payload|words))\b[\s:=->]*)+",
                     "",
                     after_tgt,
                     flags=re.IGNORECASE,
@@ -1837,12 +1838,20 @@ class WriteActionParser:
         # 8. Unquoted inline fallback
         if parsed_content is None and not is_ambiguous:
             m_after_path = re.search(
-                r"\b(?:with\s+content|with\s+text|with\s+payload|with\s+body|contents?\s+must\s+be|contents?\s+should\s+be|contents?\s+is|containing)\s+(.*)$",
+                r"\b(?:with\s+content|with\s+text|with\s+payload|with\s+body|with\s+the\s+words|contents?\s+must\s+be|contents?\s+should\s+be|contents?\s+is|containing)\s+(.*)$",
                 clean,
                 re.IGNORECASE | re.DOTALL,
             )
             if m_after_path:
                 raw_cand = m_after_path.group(1).strip()
+                # A payload introduced by "with the words" ends before a
+                # subsequent workflow clause (", read it back, ...").
+                raw_cand = re.split(
+                    r",?\s+(?:and\s+)?(?:then\s+)?(?:read|open|show|display|verify|report)\b",
+                    raw_cand,
+                    maxsplit=1,
+                    flags=re.IGNORECASE,
+                )[0].strip()
                 clean_cand = cls.INTRODUCER_STRIP_RE.sub("", raw_cand).strip()
                 clean_cand = cls.TRAILING_DIRECTIVE_RE.sub("", clean_cand).strip()
                 if (

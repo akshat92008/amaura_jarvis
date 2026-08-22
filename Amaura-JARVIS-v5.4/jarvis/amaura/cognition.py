@@ -1263,6 +1263,7 @@ class IntentEngine:
                 if app_target:
                     if app_target.startswith("the "):
                         app_target = app_target[4:].strip()
+                    app_target = app_target.rstrip(".?!;: ")
                     if app_target in KNOWN_MACOS_APPS:
                         return "macos_app"
 

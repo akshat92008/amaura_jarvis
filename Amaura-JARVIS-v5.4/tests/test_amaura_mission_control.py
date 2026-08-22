@@ -9,9 +9,15 @@ from unittest.mock import MagicMock
 import pytest
 
 from jarvis.amaura.autopilot import AutonomousCompanyRuntime
+from jarvis.amaura.cognition import IntentEngine
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.mission_control import MissionControl
 from jarvis.amaura.models import GovernanceError
+
+
+def test_punctuated_known_macos_app_is_not_misrouted_as_a_mission() -> None:
+    assert IntentEngine().classify("Open Calculator.") == "macos_app"
+    assert IntentEngine().classify("Quit Calculator.") == "macos_app"
 
 
 def _control(monkeypatch, temp: str) -> AmauraControlPlane:
