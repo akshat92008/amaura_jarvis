@@ -1,11 +1,12 @@
 """Durable current-session goal recovery for the founder CLI.
 
-The in-process binding in :mod:`jarvis.reliable_cli` is a fast cache only.  The
-canonical source of truth is CompanyStore: every dynamic goal created by the
-ExecutiveKernel records ``executive_session_id`` in its metadata.  This guard
-reconstructs the latest goal for the active CLI session before status/control
-routing, preventing vague follow-ups from drifting into unrelated historical
-work when an in-memory binding is missing.
+The in-process binding in :mod:`jarvis.reliable_cli` is a fast cache only. The
+canonical source of truth is CompanyStore: dynamic goals preserve the founder
+request in ``programme.metadata['goal_request']`` and the executive session id
+lives inside that request's metadata. This guard reconstructs the latest goal
+for the active CLI session before status/control routing, preventing vague
+follow-ups from drifting into unrelated historical work when an in-memory
+binding is missing.
 """
 
 from __future__ import annotations
@@ -22,6 +23,30 @@ def _item_time(item: dict[str, Any]) -> str:
     return str(item.get("updated_at") or item.get("created_at") or "")
 
 
+def _executive_session_id(item: dict[str, Any]) -> str:
+    """Read the CLI session id from the canonical persisted goal shape.
+
+    Current goals store the original GoalRequest under ``metadata.goal_request``;
+    its user metadata contains ``executive_session_id``. A top-level value is
+    also accepted for compatibility with older fixtures/future migrations.
+    """
+    metadata = item.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        return ""
+
+    direct = str(metadata.get("executive_session_id") or "").strip()
+    if direct:
+        return direct
+
+    goal_request = metadata.get("goal_request") or {}
+    if not isinstance(goal_request, dict):
+        return ""
+    request_metadata = goal_request.get("metadata") or {}
+    if not isinstance(request_metadata, dict):
+        return ""
+    return str(request_metadata.get("executive_session_id") or "").strip()
+
+
 def latest_session_goal(control: Any, session_id: str) -> str:
     """Return the newest dynamic programme created by this exact session."""
     try:
@@ -35,7 +60,7 @@ def latest_session_goal(control: Any, session_id: str) -> str:
             continue
         if not metadata.get("dynamic_goal"):
             continue
-        if str(metadata.get("executive_session_id") or "") != session_id:
+        if _executive_session_id(item) != session_id:
             continue
         goal_id = str(item.get("id") or "")
         if goal_id.startswith("goal_"):
@@ -60,7 +85,7 @@ def _status_for_goal(agent: JarvisAgent, control: Any, session_id: str, goal_id:
         mission = _kernel_for(agent, control).brain.status(goal_id)
     except Exception as exc:
         # Never fall back to fuzzy/global history once this session has an
-        # authoritative goal.  Preserve the exact reference and fail closed.
+        # authoritative goal. Preserve the exact reference and fail closed.
         return {
             "intent": "status",
             "message": (
