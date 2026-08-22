@@ -168,6 +168,38 @@ def _response(
     }
 
 
+def _control_error_response(*, session_id: str, goal_id: str, error: Exception) -> dict[str, Any]:
+    return {
+        "intent": "mission_control",
+        "message": (
+            f"I could not safely apply that command to current-session mission {goal_id}. "
+            "I changed nothing and did not create a new mission."
+        ),
+        "session_id": session_id,
+        "goal_id": goal_id,
+        "state": "failed",
+        "result": {
+            "session_bound": True,
+            "action": "control_error",
+            "changed": False,
+            "error_type": type(error).__name__,
+        },
+        "context_sources": [f"session-mission:{goal_id}"],
+        "frontdoor": {
+            "session_bound_control": True,
+            "bound_goal_id": goal_id,
+            "action": "control_error",
+            "changed": False,
+        },
+        "model_provenance": {
+            "provider": "company-store",
+            "model": "",
+            "fallback_used": False,
+            "fallback_reason": "control_error",
+        },
+    }
+
+
 def _bound_control_response(
     agent: JarvisAgent,
     text: str,
@@ -334,15 +366,17 @@ def session_bound_run_executive(
     on_token: Any = None,
 ) -> dict[str, Any]:
     if allow_missions:
+        bound_goal_id = _session_bindings(self).get(session_id, "")
+        recognized_bound_control = bool(bound_goal_id) and _explicit_bound_control_language(user_input)
         try:
             bound = _bound_control_response(self, user_input, control=control, session_id=session_id)
             if bound is not None:
                 return bound
-        except Exception:
-            # The reliability boundary underneath this guard will contain normal
-            # execution/governance failures.  If the control guard itself cannot
-            # establish safe semantics, fall through rather than invent success.
-            pass
+        except Exception as exc:
+            if recognized_bound_control:
+                return _control_error_response(session_id=session_id, goal_id=bound_goal_id, error=exc)
+            # If the text was not explicit bound-control language, preserve the
+            # existing reliable router instead of guessing a state-changing action.
 
     return _PREVIOUS_RUN_EXECUTIVE(
         self,
