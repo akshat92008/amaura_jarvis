@@ -18,6 +18,7 @@ from jarvis.amaura.capabilities import EXECUTABLE_EMPLOYEE_TOOLS
 from jarvis.amaura.prompts import load_prompt_catalogue
 from jarvis.amaura.registry import ALL_AGENTS
 from jarvis.amaura.resources import CapabilityRouter
+from jarvis.amaura.review_routing import effective_review_mode, omniroute_review_route
 from jarvis.amaura.workflows import WORKFLOWS
 from jarvis.network_security import MIN_API_KEY_LENGTH, is_loopback_host
 
@@ -311,7 +312,7 @@ def production_readiness(
         os.environ.get("NVIDIA_WORKER_API_KEY", "").strip() or os.environ.get("NVIDIA_API_KEY", "").strip()
     )
     reviewer_model = os.environ.get("AMAURA_LOCAL_REVIEW_MODEL", "").strip()
-    review_mode = os.environ.get("AMAURA_REVIEW_MODE", "local").strip().lower()
+    review_mode = effective_review_mode()
     cloud_review_model = os.environ.get("AMAURA_CLOUD_REVIEW_MODEL", "").strip()
     cloud_review_key = (
         os.environ.get("NVIDIA_REVIEW_API_KEY", "").strip() or os.environ.get("NVIDIA_API_KEY", "").strip()
@@ -462,13 +463,17 @@ def production_readiness(
         for name in ("AMAURA_GMAIL_CLIENT_ID", "AMAURA_GMAIL_CLIENT_SECRET", "AMAURA_GMAIL_REFRESH_TOKEN")
     )
     n8n_enabled = os.environ.get("AMAURA_ENABLE_N8N", os.environ.get("USE_N8N", "0")) == "1"
+    omniroute_review = omniroute_review_route()
+    omniroute_review_independent = bool(omniroute_review["independent"]) and os.environ.get(
+        "AMAURA_STRICT_REVIEW", "0"
+    ) == "1"
 
     configuration_checks = {
         "model_routing_valid": model_routing_valid,
         "review_mode_valid": review_mode in {"local", "cloud", "omniroute"},
         "distinct_reviewer_model": (
-            True
-            if omniroute_key_present
+            omniroute_review_independent
+            if review_mode == "omniroute"
             else (
                 bool(reviewer_model) and reviewer_model != worker_model
                 if review_mode == "local"
@@ -478,6 +483,11 @@ def production_readiness(
                     and cloud_review_model not in {cloud_worker_model, worker_model}
                 )
             )
+        ),
+        "reviewer_route_independence": (
+            omniroute_review_independent
+            if review_mode == "omniroute"
+            else True
         ),
         "operator_key": _configured_secret("AMAURA_OPERATOR_KEY", minimum=24),
         "approval_key": _configured_secret("AMAURA_APPROVAL_KEY", minimum=24),
@@ -718,6 +728,7 @@ def production_readiness(
             "antigravity_governed_backend": antigravity_status,
             "invalid_permission_agents": invalid_permission_agents,
             "private_evaluation_pack": private_eval_status,
+            "reviewer_route": omniroute_review if review_mode == "omniroute" else {"mode": review_mode},
         },
         "optional_integrations": [_integration_status(item) for item in OPTIONAL_INTEGRATIONS],
         "note": (
