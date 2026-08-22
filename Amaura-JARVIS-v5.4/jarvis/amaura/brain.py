@@ -394,9 +394,16 @@ class GoalCompiler:
         if any(term in text for term in self._VENTURE_TERMS):
             return "ventures"
         # An explicit research verb describes the requested operation even
-        # when its subject contains a software word such as "release" or
-        # "API". An explicit workspace still makes repository context primary.
-        if not request.workspace and tokens & self._RESEARCH_TERMS:
+        # when the interactive CLI supplies its normal working directory. Only
+        # an actual repository-engineering request may turn research into a
+        # repository-write plan; otherwise harmless internal research must not
+        # be blocked by unrelated untracked user artifacts in that directory.
+        repository_engineering_terms = {
+            "build", "code", "coding", "bug", "fix", "debug", "refactor", "implement",
+            "feature", "frontend", "backend", "test", "tests", "deploy", "package", "migration",
+        }
+        explicit_repository_target = any(term in text for term in ("repo", "repository", "codebase"))
+        if tokens & self._RESEARCH_TERMS and not (tokens & repository_engineering_terms or explicit_repository_target):
             return "research"
         if (
             request.workspace
