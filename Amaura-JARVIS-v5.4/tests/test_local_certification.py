@@ -1,6 +1,5 @@
 from jarvis.amaura import local_certification
 
-
 PASS_PTY = {
     "overall": "PASS",
     "single_mission_continuity": "PASS",
