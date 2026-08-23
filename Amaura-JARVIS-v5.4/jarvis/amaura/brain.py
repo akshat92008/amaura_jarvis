@@ -900,6 +900,16 @@ class GoalCompiler:
         return self._validate_model_plan(plan.model_dump(mode="json"), request, domain, workspace)
 
     def compile(self, request: GoalRequest, *, memory_context: str = "") -> GoalPlan:
+        # HARD INVARIANT: Referential control language without explicit substantive content must NEVER compile into a new goal
+        from jarvis.amaura.session_context import SessionMissionContext
+
+        if SessionMissionContext.is_referential_control_language(
+            request.objective
+        ) or SessionMissionContext.is_pure_deictic_reference(request.objective):
+            raise GovernanceError(
+                f"Cannot compile a new governed mission from referential control language '{request.objective}' without an active resolved mission."
+            )
+
         workspace = self._normalise_workspace(request.workspace)
         if not workspace:
             from jarvis.amaura.direct_action import PathExtractor
@@ -1390,6 +1400,7 @@ class JarvisBrain:
             "mission_execution": "background",
             "mission_generation": 1,
             "antigravity_handoff": handoff_mode,
+            **request.metadata,
         }
         task_ids = {task.key: _id("task") for task in plan.tasks}
         created_tasks: list[dict[str, Any]] = []
