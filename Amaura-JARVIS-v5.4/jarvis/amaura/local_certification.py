@@ -90,9 +90,7 @@ def _assert_authoritative_result_response(control: Any, goal_id: str, response: 
     for task in tasks:
         summary = str(task.get("summary") or "").strip()
         if summary:
-            allowed_bullets.append(
-                _normalize_text(f"{task.get('title') or task.get('id')}: {summary[:1000]}")
-            )
+            allowed_bullets.append(_normalize_text(f"{task.get('title') or task.get('id')}: {summary[:1000]}"))
 
     rendered_bullets = _rendered_result_bullets(response)
     if "Recorded task results:" in response:
@@ -137,14 +135,24 @@ def certify_local_runtime(repository_root: str | Path) -> dict[str, Any]:
     """Return a fail-closed daily-use verdict for the exact local checkout."""
 
     root = Path(repository_root).expanduser().resolve()
-    if not (root / ".git").exists():
+    try:
+        git_toplevel = Path(_git(root, "rev-parse", "--show-toplevel")).resolve()
+    except Exception:
         return {
             "ready": False,
             "error": "source_checkout_required",
             "repository_root": str(root),
         }
+    if root != git_toplevel and git_toplevel not in root.parents:
+        return {
+            "ready": False,
+            "error": "source_checkout_required",
+            "repository_root": str(root),
+            "git_toplevel": str(git_toplevel),
+        }
 
     provenance: dict[str, Any] = {
+        "git_toplevel": str(git_toplevel),
         "head": "",
         "origin_main": "",
         "head_matches_origin_main": False,
