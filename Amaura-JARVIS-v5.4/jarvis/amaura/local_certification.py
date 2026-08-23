@@ -48,6 +48,56 @@ def _resolve_git_checkout_root(root: Path) -> Path:
     return checkout_root
 
 
+def _porcelain_paths(entry: str) -> tuple[str, ...]:
+    """Return paths represented by a git status --porcelain entry."""
+
+    payload = entry[3:].strip() if len(entry) >= 4 else entry.strip()
+    if " -> " in payload:
+        before, after = payload.split(" -> ", 1)
+        return before.strip('"'), after.strip('"')
+    return (payload.strip('"'),)
+
+
+def runtime_worktree_status(repository_root: str | Path) -> dict[str, Any]:
+    """Report dirtiness that can actually affect the certified runtime tree.
+
+    The installable product may live below the Git checkout root. Untracked or
+    modified sibling files outside that package cannot affect imports or the
+    local runtime and therefore remain advisory rather than blocking startup.
+    Any change inside the certified runtime package still fails closed.
+    """
+
+    root = Path(repository_root).expanduser().resolve()
+    checkout_root = _resolve_git_checkout_root(root)
+    try:
+        relative_root = root.relative_to(checkout_root)
+    except ValueError as exc:
+        raise RuntimeError(f"Runtime root {root} is outside Git checkout {checkout_root}") from exc
+
+    raw_status = _git(checkout_root, "status", "--porcelain")
+    checkout_entries = [line for line in raw_status.splitlines() if line.strip()]
+    prefix = "" if relative_root == Path(".") else relative_root.as_posix().rstrip("/")
+
+    if not prefix:
+        runtime_entries = list(checkout_entries)
+    else:
+        runtime_entries = []
+        for entry in checkout_entries:
+            paths = _porcelain_paths(entry)
+            if any(path == prefix or path.startswith(prefix + "/") for path in paths):
+                runtime_entries.append(entry)
+
+    return {
+        "checkout_root": str(checkout_root),
+        "runtime_root": str(root),
+        "runtime_relative_path": prefix or ".",
+        "worktree_clean": not runtime_entries,
+        "runtime_dirty_entries": runtime_entries,
+        "checkout_dirty_entries": checkout_entries,
+        "outside_runtime_dirty_entries": [entry for entry in checkout_entries if entry not in runtime_entries],
+    }
+
+
 def _rendered_result_bullets(response: str) -> list[str]:
     marker = "Recorded task results:"
     if marker not in response:
@@ -146,7 +196,8 @@ def certify_local_runtime(repository_root: str | Path) -> dict[str, Any]:
 
     root = Path(repository_root).expanduser().resolve()
     try:
-        checkout_root = _resolve_git_checkout_root(root)
+        worktree = runtime_worktree_status(root)
+        checkout_root = Path(str(worktree["checkout_root"]))
     except Exception as exc:
         return {
             "ready": False,
@@ -156,11 +207,10 @@ def certify_local_runtime(repository_root: str | Path) -> dict[str, Any]:
         }
 
     provenance: dict[str, Any] = {
-        "checkout_root": str(checkout_root),
+        **worktree,
         "head": "",
         "origin_main": "",
         "head_matches_origin_main": False,
-        "worktree_clean": False,
         "fetch_ok": False,
     }
     try:
@@ -169,7 +219,6 @@ def certify_local_runtime(repository_root: str | Path) -> dict[str, Any]:
         provenance["head"] = _git(checkout_root, "rev-parse", "HEAD")
         provenance["origin_main"] = _git(checkout_root, "rev-parse", "origin/main")
         provenance["head_matches_origin_main"] = provenance["head"] == provenance["origin_main"]
-        provenance["worktree_clean"] = not bool(_git(checkout_root, "status", "--porcelain"))
     except Exception as exc:
         provenance["error"] = f"{type(exc).__name__}: {exc}"
 
