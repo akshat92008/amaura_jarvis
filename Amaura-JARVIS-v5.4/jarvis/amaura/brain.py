@@ -29,7 +29,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.handoffs import create_antigravity_packet
-from jarvis.amaura.models import GovernanceError, RiskLevel, TaskState
+from jarvis.amaura.models import RISK_ORDER, GovernanceError, RiskLevel, TaskState
+from jarvis.amaura.policy import PolicyEngine
 from jarvis.amaura.registry import AGENTS_BY_ID, ALL_AGENTS
 from jarvis.amaura.supervisor import AmauraSupervisor
 
@@ -254,23 +255,77 @@ class GoalCompiler:
         "noryx",
         "antigravity",
     }
-    _NEW_PROJECT_VERBS = {"build", "create", "develop", "make", "generate", "start", "scaffold"}
-    _NEW_PROJECT_NOUNS = {
-        "app",
-        "application",
-        "website",
-        "webapp",
-        "web-app",
-        "software",
-        "game",
-        "games",
-        "platformer",
-        "api",
-        "cli",
-        "tool",
-        "plugin",
-        "extension",
-    }
+    _NEW_PROJECT_VERBS = frozenset(
+        {
+            "build",
+            "create",
+            "develop",
+            "make",
+            "generate",
+            "start",
+            "scaffold",
+            "provision",
+            "bootstrap",
+            "init",
+            "initialize",
+            "new",
+            "write",
+        }
+    )
+    _NEW_PROJECT_NOUNS = frozenset(
+        {
+            "app",
+            "application",
+            "website",
+            "webapp",
+            "web-app",
+            "site",
+            "software",
+            "game",
+            "games",
+            "platformer",
+            "supermario",
+            "mario",
+            "api",
+            "cli",
+            "tool",
+            "project",
+            "repo",
+            "repository",
+            "microservice",
+            "service",
+            "prototype",
+            "bot",
+            "agent",
+            "extension",
+            "plugin",
+            "dashboard",
+        }
+    )
+    _EXISTING_REPO_INDICATORS = frozenset(
+        {
+            "this repo",
+            "this repository",
+            "this codebase",
+            "this project",
+            "current repo",
+            "current repository",
+            "current codebase",
+            "current project",
+            "existing repo",
+            "existing repository",
+            "existing project",
+            "in this repo",
+            "in this repository",
+            "in this codebase",
+            "in this project",
+            "fix this repository",
+            "fix this repo",
+            "fix the repository",
+            "modify this repository",
+            "modify current project",
+        }
+    )
     _VENTURE_TERMS = {
         "venture",
         "ventures",
@@ -425,7 +480,10 @@ class GoalCompiler:
 
     @classmethod
     def is_new_software_project(cls, request: GoalRequest) -> bool:
-        tokens = set(re.findall(r"[a-z0-9_+-]+", request.objective.lower()))
+        text = request.objective.lower()
+        if any(indicator in text for indicator in cls._EXISTING_REPO_INDICATORS):
+            return False
+        tokens = set(re.findall(r"[a-z0-9_+-]+", text))
         return bool(tokens & cls._NEW_PROJECT_VERBS and tokens & cls._NEW_PROJECT_NOUNS)
 
     @staticmethod
@@ -795,12 +853,51 @@ class GoalCompiler:
                 raise GovernanceError(f"Planner proposed disallowed dynamic action_type: {action_type}")
             # Dynamic planning cannot escalate risk above medium. High-risk operations
             # must use the pre-existing explicit workflows and approval adapters.
-            if str(task.get("risk", "low")) not in {"low", "medium"}:
+            risk_str = str(task.get("risk", "low")).lower()
+            if risk_str not in {"low", "medium"}:
                 raise GovernanceError("Dynamic planner may only create low/medium-risk internal work")
+
+            owner_id = str(task.get("owner_id", "")).strip()
+            if not owner_id or owner_id not in AGENTS_BY_ID:
+                raise GovernanceError(f"Planner proposed unknown or unregistered owner: '{owner_id}'")
+            reviewer_id = str(task.get("reviewer_id", "")).strip()
+            if not reviewer_id or (reviewer_id != "founder" and reviewer_id not in AGENTS_BY_ID):
+                raise GovernanceError(f"Planner proposed unknown or unregistered reviewer: '{reviewer_id}'")
+            if owner_id == reviewer_id:
+                raise GovernanceError("No agent may review its own work")
+
+            owner = AGENTS_BY_ID[owner_id]
+            task_risk = RiskLevel(risk_str)
+            if RISK_ORDER[task_risk] > RISK_ORDER[owner.max_risk]:
+                raise GovernanceError(f"{owner.name} may not own {task_risk.value}-risk work")
+
+            budget_cents = int(task.get("budget_cents", 0) or 0)
+            if budget_cents > owner.cost_limit_cents:
+                raise GovernanceError(
+                    f"Task budget {budget_cents}c exceeds {owner.name}'s {owner.cost_limit_cents}c limit"
+                )
+
+            decision = PolicyEngine.validate_assignment(
+                {
+                    "owner_id": owner_id,
+                    "reviewer_id": reviewer_id,
+                    "risk": task_risk.value,
+                    "budget_cents": budget_cents,
+                    "action_type": action_type,
+                }
+            )
+            if not decision.allowed:
+                raise GovernanceError("; ".join(decision.reasons))
+
         try:
             return GoalPlan.model_validate(raw)
         except Exception as exc:
             raise GovernanceError(f"Planner result failed schema validation: {exc}") from exc
+
+    def _validate_goal_plan(
+        self, plan: GoalPlan, request: GoalRequest, domain: GoalDomain, workspace: str
+    ) -> GoalPlan:
+        return self._validate_model_plan(plan.model_dump(mode="json"), request, domain, workspace)
 
     def compile(self, request: GoalRequest, *, memory_context: str = "") -> GoalPlan:
         workspace = self._normalise_workspace(request.workspace)
@@ -839,7 +936,7 @@ class GoalCompiler:
                 else:
                     raw = self._call_default_llm(request, prompt)
                 if isinstance(raw, GoalPlan):
-                    plan = raw
+                    plan = self._validate_goal_plan(raw, request, domain, workspace)
                 else:
                     plan = self._validate_model_plan(raw, request, domain, workspace)
                 return plan
@@ -1079,6 +1176,118 @@ class JarvisMemory:
         return text
 
 
+def extract_new_project_spec(objective: str) -> tuple[str, str | None]:
+    """Extract (project_name, destination_folder) from a natural language request.
+
+    Supports phrases like:
+    - save it as "sexy" / save as "sexy" / save it as sexy
+    - call it "sexy" / called "sexy" / called sexy
+    - name it "sexy" / named "sexy" / named sexy
+    - create it as "sexy" / create as "sexy"
+    - on desktop / in desktop / on my desktop / in ~/Desktop / in /path/to/dir
+    """
+    text = objective.strip()
+    clean = text.lower()
+
+    # 1. Project name extraction
+    name = ""
+    patterns_quoted = [
+        r'(?:save|call|name|create|make)\s+(?:it\s+)?(?:as|called|named|with\s+name)\s+["\']([^"\']+)["\']',
+        r'(?:named|called|titled|under\s+name)\s+["\']([^"\']+)["\']',
+        r'["\']([^"\']+)["\']\s+(?:on|in)\s+(?:my\s+)?desktop',
+    ]
+    for pattern in patterns_quoted:
+        m = re.search(pattern, text, re.IGNORECASE)
+        if m:
+            name = m.group(1).strip()
+            break
+
+    if not name:
+        patterns_unquoted = [
+            r'(?:save|call|name|create|make)\s+(?:it\s+)?(?:as|called|named)\s+([a-zA-Z0-9_-]+)',
+            r'(?:named|called|titled)\s+([a-zA-Z0-9_-]+)',
+        ]
+        for pattern in patterns_unquoted:
+            m = re.search(pattern, text, re.IGNORECASE)
+            if m:
+                cand = m.group(1).strip().lower()
+                if cand not in {
+                    "a",
+                    "an",
+                    "the",
+                    "in",
+                    "on",
+                    "desktop",
+                    "project",
+                    "folder",
+                    "directory",
+                    "repo",
+                    "repository",
+                    "game",
+                    "app",
+                }:
+                    name = m.group(1).strip()
+                    break
+
+    if not name:
+        words = [
+            word
+            for word in re.findall(r"[a-z0-9]+", clean)
+            if word
+            not in {
+                "ok",
+                "please",
+                "can",
+                "you",
+                "hey",
+                "jarvis",
+                "and",
+                "it",
+                "as",
+                "a",
+                "an",
+                "the",
+                "create",
+                "build",
+                "make",
+                "develop",
+                "generate",
+                "start",
+                "scaffold",
+                "save",
+                "call",
+                "name",
+                "in",
+                "on",
+                "for",
+                "to",
+                "under",
+                "my",
+                "desktop",
+                "folder",
+                "directory",
+                "project",
+            }
+        ]
+        name = "-".join(words[:6]).strip("-")[:56] or "amaura-project"
+
+    name = re.sub(r'[/\\?%*:|"<>]', "-", name).strip(" .-") or "amaura-project"
+
+    # 2. Destination directory extraction
+    destination = None
+    path_match = re.search(r'(?:in|on|to|under|at)\s+([~/][a-zA-Z0-9_\-./]+)', text)
+    if path_match:
+        destination = path_match.group(1).strip()
+    elif re.search(r'\b(?:in|on|to|under|at)\s+(?:my\s+)?desktop\b', clean) or "desktop" in clean:
+        destination = "desktop"
+    elif re.search(r'\b(?:in|on|to|under|at)\s+(?:my\s+)?documents\b', clean):
+        destination = "documents"
+    elif re.search(r'\b(?:in|on|to|under|at)\s+(?:my\s+)?downloads\b', clean):
+        destination = "downloads"
+
+    return name, destination
+
+
 class JarvisBrain:
     """Founder-facing high-level execution API for Amaura."""
 
@@ -1097,25 +1306,29 @@ class JarvisBrain:
     @staticmethod
     def _provision_project_workspace(request: GoalRequest, plan: GoalPlan) -> str:
         """Create a clean, isolated Git repository for an explicitly new project."""
-        root = (
-            Path(os.environ.get("AMAURA_PROJECTS_ROOT", "").strip() or (Path.home() / "Desktop" / "Amaura Projects"))
-            .expanduser()
-            .resolve()
-        )
-        root.mkdir(parents=True, exist_ok=True)
-        words = [
-            word
-            for word in re.findall(r"[a-z0-9]+", request.objective.lower())
-            if word
-            not in {"a", "an", "the", "create", "build", "make", "develop", "generate", "in", "on", "for", "desktop"}
-        ]
-        slug = "-".join(words[:6]).strip("-")[:56] or "amaura-project"
-        workspace = root / slug
+        name, destination = extract_new_project_spec(request.objective)
+
+        env_root = os.environ.get("AMAURA_PROJECTS_ROOT", "").strip()
+        if env_root:
+            base_dir = Path(env_root).expanduser().resolve()
+        elif destination == "desktop":
+            base_dir = (Path.home() / "Desktop").resolve()
+        elif destination == "documents":
+            base_dir = (Path.home() / "Documents").resolve()
+        elif destination == "downloads":
+            base_dir = (Path.home() / "Downloads").resolve()
+        elif destination and (destination.startswith("/") or destination.startswith("~")):
+            base_dir = Path(destination).expanduser().resolve()
+        else:
+            base_dir = (Path.home() / "Desktop" / "Amaura Projects").resolve()
+
+        base_dir.mkdir(parents=True, exist_ok=True)
+        workspace = base_dir / name
         if workspace.exists():
-            workspace = root / f"{slug}-{plan.plan_id.rsplit('_', 1)[-1][:8]}"
+            workspace = base_dir / f"{name}-{plan.plan_id.rsplit('_', 1)[-1][:8]}"
         workspace.mkdir(mode=0o700)
         (workspace / "README.md").write_text(
-            f"# {request.title.strip() or slug.replace('-', ' ').title()}\n\nManaged by Amaura JARVIS.\n",
+            f"# {request.title.strip() or name.replace('-', ' ').title()}\n\nManaged by Amaura JARVIS.\n",
             encoding="utf-8",
         )
         (workspace / ".gitignore").write_text(
@@ -1295,37 +1508,40 @@ class JarvisBrain:
         }
 
     def submit(self, request: GoalRequest, *, external_context: str = "") -> dict[str, Any]:
+        if self.compiler.is_new_software_project(request):
+            request = request.model_copy(update={"workspace": ""})
         memory_context = self.memory.context(request.objective)
         combined_context = "\n".join(part for part in (memory_context, external_context) if part.strip())
         plan = self.compiler.compile(request, memory_context=combined_context)
-        if plan.domain == "software" and not plan.workspace:
-            if request.workspace:
-                plan = plan.model_copy(update={"workspace": request.workspace})
-            else:
-                from jarvis.amaura.direct_action import PathExtractor
+        if plan.domain == "software":
+            if self.compiler.is_new_software_project(request):
+                workspace = self._provision_project_workspace(request, plan)
+                request = request.model_copy(update={"workspace": workspace})
+                plan = plan.model_copy(update={"workspace": workspace})
+            elif not plan.workspace:
+                if request.workspace:
+                    plan = plan.model_copy(update={"workspace": request.workspace})
+                else:
+                    from jarvis.amaura.direct_action import PathExtractor
 
-                args = PathExtractor.extract_structured_arguments(request.objective)
-                repo_cand = args.get("repo_path") or args.get("directory") or args.get("input_path")
-                if not repo_cand:
-                    all_cands = PathExtractor.extract_all_paths(request.objective)
-                    if all_cands:
-                        repo_cand = all_cands[0]
-                if repo_cand:
-                    try:
-                        p = Path(repo_cand).expanduser().resolve()
-                        if p.exists() and p.is_dir():
-                            plan = plan.model_copy(update={"workspace": str(p)})
-                            request = request.model_copy(update={"workspace": str(p)})
-                    except Exception:
-                        pass
-        if plan.domain == "software" and not plan.workspace:
-            if not self.compiler.is_new_software_project(request):
-                raise GovernanceError(
-                    "Existing-project software work requires a workspace. Select the repository before submitting the mission."
-                )
-            workspace = self._provision_project_workspace(request, plan)
-            request = request.model_copy(update={"workspace": workspace})
-            plan = plan.model_copy(update={"workspace": workspace})
+                    args = PathExtractor.extract_structured_arguments(request.objective)
+                    repo_cand = args.get("repo_path") or args.get("directory") or args.get("input_path")
+                    if not repo_cand:
+                        all_cands = PathExtractor.extract_all_paths(request.objective)
+                        if all_cands:
+                            repo_cand = all_cands[0]
+                    if repo_cand:
+                        try:
+                            p = Path(repo_cand).expanduser().resolve()
+                            if p.exists() and p.is_dir():
+                                plan = plan.model_copy(update={"workspace": str(p)})
+                                request = request.model_copy(update={"workspace": str(p)})
+                        except Exception:
+                            pass
+                if not plan.workspace:
+                    raise GovernanceError(
+                        "Existing-project software work requires a workspace. Select the repository before submitting the mission."
+                    )
         result = self._materialize(request, plan)
         if (
             request.coding_backend == "antigravity"

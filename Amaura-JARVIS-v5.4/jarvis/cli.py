@@ -231,18 +231,20 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
             return True
         from jarvis.tools.amaura import get_control_plane
 
-        control = get_control_plane()
-        result = agent.run_executive(
-            f"Create a temporary AI agent to handle this task, then run it: {arg}",
-            control=control,
-            session_id=f"cli-{agent.conversation_id}",
-            workspace=str(Path(agent.working_dir or os.getcwd()).resolve()),
-            autonomy="execute_until_approval",
-            coding_backend="antigravity",
-        )
-        msg = str(result.get("message") or "").strip()
-        if msg:
-            ui.console.print(msg)
+        try:
+            result = agent.run_executive(
+                f"Create a temporary AI agent to handle this task, then run it: {arg}",
+                control=control,
+                session_id=f"cli-{agent.conversation_id}",
+                workspace=str(Path(agent.working_dir or os.getcwd()).resolve()),
+                autonomy="execute_until_approval",
+                coding_backend="antigravity",
+            )
+            msg = str(result.get("message") or "").strip()
+            if msg:
+                ui.console.print(msg)
+        except Exception as exc:
+            ui.console.print(f"[bold yellow]⚠ Governance / execution rejection:[/] {exc}")
         return True
 
     elif command == "/tools":
@@ -272,17 +274,20 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
         from jarvis.tools.amaura import get_control_plane
 
         control = get_control_plane()
-        result = agent.run_executive(
-            f"Generate a project using the generate_project tool: {arg}",
-            control=control,
-            session_id=f"cli-{agent.conversation_id}",
-            workspace=str(Path(agent.working_dir or os.getcwd()).resolve()),
-            autonomy="execute_until_approval",
-            coding_backend="antigravity",
-        )
-        msg = str(result.get("message") or "").strip()
-        if msg:
-            ui.console.print(msg)
+        try:
+            result = agent.run_executive(
+                f"Generate a project using the generate_project tool: {arg}",
+                control=control,
+                session_id=f"cli-{agent.conversation_id}",
+                workspace=str(Path(agent.working_dir or os.getcwd()).resolve()),
+                autonomy="execute_until_approval",
+                coding_backend="antigravity",
+            )
+            msg = str(result.get("message") or "").strip()
+            if msg:
+                ui.console.print(msg)
+        except Exception as exc:
+            ui.console.print(f"[bold yellow]⚠ Governance / execution rejection:[/] {exc}")
         return True
 
     return False
@@ -404,21 +409,35 @@ def run_interactive(agent: JarvisAgent, voice_engine: VoiceEngine, working_dir: 
                 continue
 
             # Run through executive kernel
-            result = agent.run_executive(
-                user_input,
-                control=control,
-                session_id=session_id,
-                workspace=resolved_workspace,
-                autonomy="execute_until_approval",
-                coding_backend="antigravity",
-            )
-            response = str(result.get("message") or "").strip()
-            if response:
-                ui.console.print(response)
+            try:
+                result = agent.run_executive(
+                    user_input,
+                    control=control,
+                    session_id=session_id,
+                    workspace=resolved_workspace,
+                    autonomy="execute_until_approval",
+                    coding_backend="antigravity",
+                )
+                response = str(result.get("message") or "").strip()
+                if response:
+                    ui.console.print(response)
 
-            # Voice output
-            if voice_engine.enabled and response:
-                voice_engine.speak(response)
+                # Voice output
+                if voice_engine.enabled and response:
+                    voice_engine.speak(response)
+            except Exception as exc:
+                from jarvis.amaura.models import GovernanceError
+
+                if isinstance(exc, GovernanceError):
+                    ui.console.print(
+                        f"\n[bold yellow]⚠ Mission planning was rejected by governance:[/] {exc}\n"
+                        f"[dim]JARVIS recovered and remains online.[/]\n"
+                    )
+                else:
+                    ui.console.print(
+                        f"\n[bold red]⚠ An error occurred during processing:[/] {exc}\n"
+                        f"[dim]JARVIS recovered and remains online.[/]\n"
+                    )
 
         except KeyboardInterrupt:
             ui.console.print()

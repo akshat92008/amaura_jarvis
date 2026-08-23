@@ -34,7 +34,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from jarvis.amaura.brain import GoalRequest, JarvisBrain
+from jarvis.amaura.brain import GoalCompiler, GoalRequest, JarvisBrain
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.models import GovernanceError, TaskState
 
@@ -2277,14 +2277,26 @@ class ExecutiveKernel:
                             result={"authorization_required": True},
                             context_sources=memory_sources,
                         )
+                    is_new_proj = GoalCompiler.is_new_software_project(GoalRequest(objective=request.text))
                     goal_request = GoalRequest(
                         objective=request.text,
-                        workspace=request.workspace or workspace_cand,
+                        workspace="" if is_new_proj else (request.workspace or workspace_cand),
                         autonomy=request.autonomy,
                         coding_backend=request.coding_backend,
                         metadata={**request.metadata, "executive_session_id": request.session_id},
                     )
-                    result = self.brain.submit(goal_request, external_context=combined_context)
+                    try:
+                        result = self.brain.submit(goal_request, external_context=combined_context)
+                    except GovernanceError as exc:
+                        message = f"⚠ Mission planning was rejected by governance: {exc}"
+                        return ExecutiveResponse(
+                            intent="mission",
+                            message=message,
+                            session_id=request.session_id,
+                            state="rejected",
+                            result={"error": str(exc), "governance_rejected": True},
+                            context_sources=memory_sources,
+                        )
                     goal_id = str((result.get("goal") or {}).get("id") or "")
                     message = self._mission_message(result)
                     self.memory.record_episode(
@@ -2364,8 +2376,9 @@ class ExecutiveKernel:
                     context_sources=memory_sources,
                 )
 
-            workspace_cand = request.workspace
-            if not workspace_cand:
+            is_new_proj = GoalCompiler.is_new_software_project(GoalRequest(objective=request.text))
+            workspace_cand = "" if is_new_proj else request.workspace
+            if not workspace_cand and not is_new_proj:
                 from jarvis.amaura.direct_action import PathExtractor
 
                 args = PathExtractor.extract_structured_arguments(request.text)
@@ -2389,7 +2402,18 @@ class ExecutiveKernel:
                 coding_backend=request.coding_backend,
                 metadata={**request.metadata, "executive_session_id": request.session_id},
             )
-            result = self.brain.submit(goal_request, external_context=combined_context)
+            try:
+                result = self.brain.submit(goal_request, external_context=combined_context)
+            except GovernanceError as exc:
+                message = f"⚠ Mission planning was rejected by governance: {exc}"
+                return ExecutiveResponse(
+                    intent=intent,
+                    message=message,
+                    session_id=request.session_id,
+                    state="rejected",
+                    result={"error": str(exc), "governance_rejected": True},
+                    context_sources=memory_sources,
+                )
             goal_id = str((result.get("goal") or {}).get("id") or "")
             message = self._mission_message(result)
             self.memory.record_episode(
