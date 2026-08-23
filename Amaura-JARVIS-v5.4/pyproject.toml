@@ -71,6 +71,7 @@ dev = [
 [project.scripts]
 arch = "jarvis.arch:main"
 jarvis = "jarvis.runtime_entry:main"
+jarvis-ready = "jarvis.amaura.ready_cli:main"
 nexus = "jarvis.cli:main"
 amaura-worker = "jarvis.amaura.supervisor:main"
 amaura-company = "jarvis.amaura.company_daemon:main"
