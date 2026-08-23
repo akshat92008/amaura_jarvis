@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-from pathlib import Path
-
 from jarvis.amaura import local_certification
 
 
@@ -14,13 +10,13 @@ PASS_PTY = {
 }
 
 
-def _make_checkout(tmp_path: Path) -> Path:
+def _make_checkout(tmp_path):
     (tmp_path / ".git").mkdir()
     return tmp_path
 
 
 def _git_factory(*, head: str = "abc", origin: str = "abc", status: str = ""):
-    def fake_git(root: Path, *args: str) -> str:
+    def fake_git(root, *args: str) -> str:
         if args[:3] == ("fetch", "--quiet", "origin"):
             return ""
         if args == ("rev-parse", "HEAD"):
