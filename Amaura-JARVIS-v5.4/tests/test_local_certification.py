@@ -73,6 +73,40 @@ def test_local_certification_accepts_package_nested_below_git_root(tmp_path, mon
     assert report["provenance"]["checkout_root"] == str(checkout_root.resolve())
 
 
+def test_local_certification_ignores_dirty_sibling_outside_runtime_package(tmp_path, monkeypatch):
+    checkout_root, package_root = _make_nested_checkout(tmp_path)
+    monkeypatch.setattr(
+        local_certification,
+        "_git",
+        _git_factory(checkout_root=checkout_root, status="?? unrelated-scratch.txt"),
+    )
+    _install_passing_runtime(monkeypatch)
+
+    report = local_certification.certify_local_runtime(package_root)
+
+    assert report["ready"] is True
+    assert report["provenance"]["worktree_clean"] is True
+    assert report["provenance"]["runtime_dirty_entries"] == []
+    assert report["provenance"]["outside_runtime_dirty_entries"] == ["?? unrelated-scratch.txt"]
+
+
+def test_local_certification_blocks_dirty_runtime_package(tmp_path, monkeypatch):
+    checkout_root, package_root = _make_nested_checkout(tmp_path)
+    dirty = " M Amaura-JARVIS-v5.4/jarvis/cli.py"
+    monkeypatch.setattr(
+        local_certification,
+        "_git",
+        _git_factory(checkout_root=checkout_root, status=dirty),
+    )
+    _install_passing_runtime(monkeypatch)
+
+    report = local_certification.certify_local_runtime(package_root)
+
+    assert report["ready"] is False
+    assert report["provenance"]["worktree_clean"] is False
+    assert report["provenance"]["runtime_dirty_entries"] == [dirty]
+
+
 def test_local_certification_fails_when_head_is_not_origin_main(tmp_path, monkeypatch):
     root = _make_checkout(tmp_path)
     monkeypatch.setattr(local_certification, "_git", _git_factory(head="local", origin="remote"))
