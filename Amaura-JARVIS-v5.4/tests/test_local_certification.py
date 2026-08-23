@@ -14,8 +14,19 @@ def _make_checkout(tmp_path):
     return tmp_path
 
 
-def _git_factory(*, head: str = "abc", origin: str = "abc", status: str = ""):
+def _make_nested_checkout(tmp_path):
+    checkout_root = tmp_path / "amaura_jarivs"
+    checkout_root.mkdir()
+    (checkout_root / ".git").mkdir()
+    package_root = checkout_root / "Amaura-JARVIS-v5.4"
+    package_root.mkdir()
+    return checkout_root, package_root
+
+
+def _git_factory(*, checkout_root=None, head: str = "abc", origin: str = "abc", status: str = ""):
     def fake_git(root, *args: str) -> str:
+        if args == ("rev-parse", "--show-toplevel"):
+            return str(checkout_root or root)
         if args[:3] == ("fetch", "--quiet", "origin"):
             return ""
         if args == ("rev-parse", "HEAD"):
@@ -29,14 +40,18 @@ def _git_factory(*, head: str = "abc", origin: str = "abc", status: str = ""):
     return fake_git
 
 
-def test_local_certification_requires_all_authoritative_gates(tmp_path, monkeypatch):
-    root = _make_checkout(tmp_path)
-    monkeypatch.setattr(local_certification, "_git", _git_factory())
+def _install_passing_runtime(monkeypatch):
     monkeypatch.setattr(local_certification, "_load_pty_qualifier", lambda _root: lambda: dict(PASS_PTY))
     monkeypatch.setattr(
         "jarvis.amaura.doctor.certify_release",
         lambda **_kwargs: {"ready": True, "source_certified": True, "production_ready": True},
     )
+
+
+def test_local_certification_requires_all_authoritative_gates(tmp_path, monkeypatch):
+    root = _make_checkout(tmp_path)
+    monkeypatch.setattr(local_certification, "_git", _git_factory())
+    _install_passing_runtime(monkeypatch)
 
     report = local_certification.certify_local_runtime(root)
 
@@ -46,14 +61,22 @@ def test_local_certification_requires_all_authoritative_gates(tmp_path, monkeypa
     assert report["provenance"]["worktree_clean"] is True
 
 
+def test_local_certification_accepts_package_nested_below_git_root(tmp_path, monkeypatch):
+    checkout_root, package_root = _make_nested_checkout(tmp_path)
+    monkeypatch.setattr(local_certification, "_git", _git_factory(checkout_root=checkout_root))
+    _install_passing_runtime(monkeypatch)
+
+    report = local_certification.certify_local_runtime(package_root)
+
+    assert report["ready"] is True
+    assert report["repository_root"] == str(package_root.resolve())
+    assert report["provenance"]["checkout_root"] == str(checkout_root.resolve())
+
+
 def test_local_certification_fails_when_head_is_not_origin_main(tmp_path, monkeypatch):
     root = _make_checkout(tmp_path)
     monkeypatch.setattr(local_certification, "_git", _git_factory(head="local", origin="remote"))
-    monkeypatch.setattr(local_certification, "_load_pty_qualifier", lambda _root: lambda: dict(PASS_PTY))
-    monkeypatch.setattr(
-        "jarvis.amaura.doctor.certify_release",
-        lambda **_kwargs: {"ready": True, "source_certified": True, "production_ready": True},
-    )
+    _install_passing_runtime(monkeypatch)
 
     report = local_certification.certify_local_runtime(root)
 
