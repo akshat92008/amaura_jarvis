@@ -542,6 +542,18 @@ def main():
 
     load_amaura_env()
 
+    from jarvis.amaura.runtime_guards import install_runtime_guards
+    from jarvis.reliable_cli import install_reliability_boundary
+    from jarvis.session_control import install_session_control_guard
+    from jarvis.durable_session import install_durable_session_guard
+    from jarvis.exact_reference import install_exact_reference_guard
+
+    install_runtime_guards()
+    install_reliability_boundary()
+    install_session_control_guard()
+    install_durable_session_guard()
+    install_exact_reference_guard()
+
     # Resolve model
     model_key = args.model
     model_cfg = resolve_model(model_key)

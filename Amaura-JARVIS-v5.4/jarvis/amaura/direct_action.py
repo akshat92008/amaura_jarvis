@@ -577,6 +577,11 @@ class RequestPreprocessor:
         "contains",
         "hold",
         "holds",
+        "change",
+        "update",
+        "replace",
+        "modify",
+        "edit",
     }
     READ_VERBS = {"read", "cat", "open", "show", "display", "view", "inspect", "fetch", "load", "get", "print"}
     LIST_VERBS = {"list", "enumerate", "inventory", "show", "display"}
@@ -1539,50 +1544,85 @@ class WriteActionParser:
 
         # 1. Identify Target Path
         target_path = ""
-        to_match = re.search(
-            r"\b(?:to|into|at|in|in\s+file|file|destination|target|location)(?:\s+(?:destination|target|location|file|path|out|output))*\s+['\"`]?([~/a-zA-Z0-9_.\-]+)['\"`]?",
+        m_change = re.search(
+            r"\b(?:change|update|replace|modify|edit)\s+(?:the\s+)?(?:contents?|text|body|payload|data)?\s*(?:of|in)?\s*['\"`]?([~/a-zA-Z0-9_.\-]+)['\"`]?",
             clean,
             re.IGNORECASE,
         )
-        if to_match:
-            cand = to_match.group(1).strip().strip("'\"`")
+        if m_change:
+            cand = m_change.group(1).strip().strip("'\"`")
             while cand and cand[-1] in (".", ",", ":", ";", "!", "?", ")", "]", "}"):
                 cand = cand[:-1].strip()
-            # An explicit write destination introduced by to/into/at/in is a
-            # path role even when it is extensionless.  Reject only obvious
-            # grammar stop words; do not require a suffix to prove a path.
-            if (
-                cand in all_paths
-                or any(cand.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS)
-                or "/" in cand
-                or (
-                    cand.lower()
-                    not in {
-                        "the",
-                        "a",
-                        "an",
-                        "this",
-                        "that",
-                        "it",
-                        "content",
-                        "text",
-                        "payload",
-                        "to",
-                        "into",
-                        "at",
-                        "in",
-                        "file",
-                        "path",
-                        "location",
-                        "destination",
-                        "target",
-                        "out",
-                        "output",
-                    }
-                    and bool(re.fullmatch(r"[~/A-Za-z0-9_.-]+", cand))
-                )
-            ):
+            if cand and cand.lower() not in {"the", "a", "an", "this", "that", "it", "to"}:
                 target_path = cand
+
+        if not target_path:
+            m_named = re.search(
+                r"\b(?:called|named)\s+['\"`]?([~/a-zA-Z0-9_.\-]+)['\"`]?",
+                clean,
+                re.IGNORECASE,
+            )
+            if m_named:
+                cand = m_named.group(1).strip().strip("'\"`")
+                while cand and cand[-1] in (".", ",", ":", ";", "!", "?", ")", "]", "}"):
+                    cand = cand[:-1].strip()
+                if cand:
+                    if re.search(r"\b(?:on\s+(?:my\s+)?desktop|at\s+(?:my\s+)?desktop|in\s+(?:my\s+)?desktop)\b", clean, re.IGNORECASE):
+                        target_path = f"~/Desktop/{cand}"
+                    else:
+                        target_path = cand
+
+        if not target_path:
+            to_match = re.search(
+                r"\b(?:to|into|at|in|in\s+file|file|destination|target|location)(?:\s+(?:destination|target|location|file|path|out|output))*\s+['\"`]?([~/a-zA-Z0-9_.\-]+)['\"`]?",
+                clean,
+                re.IGNORECASE,
+            )
+            if to_match:
+                cand = to_match.group(1).strip().strip("'\"`")
+                while cand and cand[-1] in (".", ",", ":", ";", "!", "?", ")", "]", "}"):
+                    cand = cand[:-1].strip()
+                # An explicit write destination introduced by to/into/at/in is a
+                # path role even when it is extensionless.  Reject only obvious
+                # grammar stop words; do not require a suffix to prove a path.
+                if (
+                    cand in all_paths
+                    or any(cand.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS)
+                    or "/" in cand
+                    or (
+                        cand.lower()
+                        not in {
+                            "the",
+                            "a",
+                            "an",
+                            "this",
+                            "that",
+                            "it",
+                            "on",
+                            "my",
+                            "your",
+                            "our",
+                            "called",
+                            "named",
+                            "content",
+                            "text",
+                            "payload",
+                            "to",
+                            "into",
+                            "at",
+                            "in",
+                            "file",
+                            "path",
+                            "location",
+                            "destination",
+                            "target",
+                            "out",
+                            "output",
+                        }
+                        and bool(re.fullmatch(r"[~/A-Za-z0-9_.-]+", cand))
+                    )
+                ):
+                    target_path = cand
 
         if not target_path and args.get("output_path"):
             target_path = args["output_path"]
@@ -5033,7 +5073,15 @@ class DirectActionRouter:
                 h
                 for h in hits
                 if not str(h.source).startswith(
-                    ("conversation_memory", "vector_memory", "jarvis.memory.episodic", "episodic")
+                    (
+                        "conversation_memory",
+                        "vector_memory",
+                        "jarvis.memory.episodic",
+                        "episodic",
+                        "company_work",
+                        "jarvis.memory.entity",
+                        "jarvis.memory.relation",
+                    )
                 )
             ]
             if not factual_hits:
