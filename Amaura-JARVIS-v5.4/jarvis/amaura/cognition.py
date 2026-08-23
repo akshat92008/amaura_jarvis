@@ -30,7 +30,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -2214,7 +2214,7 @@ class ExecutiveKernel:
         world_context = (
             self.world.context(request.text, refresh=False) if needs_world else "(not needed for this conversation)"
         )
-        if self._needs_memory_context(request.text, intent):
+        if self._needs_memory_context(request.text, cast(ExecutiveIntent, intent)):
             memory_context, memory_sources = self.memory.context(request.text)
         else:
             memory_context, memory_sources = "", []
@@ -2248,7 +2248,9 @@ class ExecutiveKernel:
                     pending_apprs = []
                 if len(pending_apprs) == 1:
                     appr_id = str(pending_apprs[0]["id"])
-                    self.brain.approve(appr_id, actor="founder")
+                    self.control.decide_approval(
+                        appr_id, "founder", "approved", "Approved by founder via confirmation"
+                    )
                     self.session_context.set_active_goal(request.session_id, goal_id, reason="approved")
                     return ExecutiveResponse(
                         intent="mission_control",
