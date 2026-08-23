@@ -53,7 +53,7 @@ def _git(*args: str) -> str:
 def _runtime_fingerprint() -> str:
     distributions: list[str] = []
     for dist in importlib.metadata.distributions():
-        name = str(dist.metadata.get("Name") or "").strip().lower()
+        name = str(dist.metadata["Name"] or "").strip().lower()
         if name:
             distributions.append(f"{name}=={dist.version}")
     payload = {
