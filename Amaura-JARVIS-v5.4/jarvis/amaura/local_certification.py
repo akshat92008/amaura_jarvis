@@ -121,7 +121,7 @@ def _load_pty_qualifier(root: Path) -> Any:
         raise RuntimeError(f"Could not load PTY qualification harness: {path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    module._assert_result_response_consistent = _assert_authoritative_result_response
+    setattr(module, "_assert_result_response_consistent", _assert_authoritative_result_response)
     qualifier = getattr(module, "run_full_pty_qualification", None)
     if not callable(qualifier):
         raise RuntimeError("PTY qualification harness does not expose run_full_pty_qualification()")
