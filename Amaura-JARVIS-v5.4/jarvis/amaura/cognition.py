@@ -34,7 +34,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from jarvis.amaura.brain import GoalRequest, JarvisBrain
+from jarvis.amaura.brain import GoalCompiler, GoalRequest, JarvisBrain
 from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.models import GovernanceError, TaskState
 
@@ -1171,16 +1171,29 @@ class IntentEngine:
             return "status"
         if any(
             phrase in clean
-            for phrase in ("what's happening with", "whats happening with", "status of", "where are we with")
+            for phrase in (
+                "what's happening with",
+                "whats happening with",
+                "status of",
+                "where are we with",
+                "what's its status",
+                "whats its status",
+                "what is its status",
+                "what are the results",
+                "what is the result",
+                "what were the results",
+                "what happened with",
+            )
         ):
             return "status"
-        control_words = {"pause", "resume", "activate", "cancel", "stop"}
+        control_words = {"pause", "resume", "activate", "cancel", "stop", "focus", "execute", "run", "continue"}
         if (_tokens(clean) & control_words) and any(
-            token in clean for token in ("mission", "task", "project", "goal", "that", "this", "it")
+            token in clean for token in ("mission", "task", "project", "goal", "that", "this", "it", "first")
         ):
             return "mission_control"
         if re.match(
-            r"^(?:please\s+)?(?:continue|resume)\s+(?:that|this|it|the\s+(?:mission|task|project|goal))\b", clean
+            r"^(?:please\s+)?(?:continue|resume|focus\s+on|execute|run)\s+(?:that|this|it|first|the\s+(?:mission|task|project|goal))\b",
+            clean,
         ):
             return "mission_control"
 
@@ -1377,7 +1390,43 @@ class ReferenceResolver:
         ranked.sort(key=lambda pair: pair[0], reverse=True)
         return ranked[:12]
 
-    def resolve(self, text: str) -> ReferenceResolution:
+    def resolve(self, text: str, *, active_goal_id: str | None = None) -> ReferenceResolution:
+        if active_goal_id:
+            raw_terms = _tokens(text)
+            if (raw_terms & self.VAGUE) or any(
+                phrase in text.lower()
+                for phrase in (
+                    "the task",
+                    "that task",
+                    "the mission",
+                    "that mission",
+                    "task i gave you",
+                    "the project",
+                    "that thing",
+                    "its status",
+                    "it's status",
+                    "continue it",
+                    "focus on that",
+                    "execute it",
+                )
+            ):
+                try:
+                    item = self.control.store.get_work_item(active_goal_id)
+                    if item:
+                        card = self._candidate_card(item)
+                        return ReferenceResolution(
+                            resolved=True,
+                            target_id=active_goal_id,
+                            target_type=str(item.get("item_type") or "programme"),
+                            title=str(item.get("title") or ""),
+                            state=str(item.get("state") or ""),
+                            confidence=0.98,
+                            method="session_active_anchor",
+                            context=card,
+                        )
+                except Exception:
+                    pass
+
         ranked = self._rank(text)
         if not ranked:
             return ReferenceResolution()
@@ -1651,6 +1700,7 @@ class ExecutiveKernel:
         self.consolidator = MemoryConsolidator(self.memory)
         self.conversation_handler = conversation_handler
         self._session_history: dict[str, list[tuple[str, str]]] = {}
+        self._active_session_goals: dict[str, str] = {}
         self._history_lock = threading.Lock()
         self._consolidation_queue: queue.Queue[tuple[str, str, str]] = queue.Queue(maxsize=32)
         self._consolidation_worker: threading.Thread | None = None
@@ -1845,7 +1895,7 @@ class ExecutiveKernel:
             return "cancel"
         if re.search(r"\bpause\b", clean):
             return "pause"
-        if re.search(r"\b(activate|resume|continue)\b", clean):
+        if re.search(r"\b(activate|resume|continue|focus|execute|run)\b", clean):
             return "activate"
         return ""
 
@@ -1982,7 +2032,14 @@ class ExecutiveKernel:
         # model call (the answer) instead of intent + answer + consolidation.
         intent = request.force_intent or self.intents.classify(request.text)
         needs_reference = self._needs_reference_resolution(request.text, intent)
-        resolution = self.references.resolve(request.text) if needs_reference else ReferenceResolution()
+        active_goal = self._active_session_goals.get(request.session_id)
+        resolution = (
+            self.references.resolve(request.text, active_goal_id=active_goal)
+            if needs_reference
+            else ReferenceResolution()
+        )
+        if resolution.resolved and resolution.target_id:
+            self._active_session_goals[request.session_id] = resolution.target_id
         needs_world = intent in {"mission", "mission_control", "status"} or resolution.resolved
         world_context = (
             self.world.context(request.text, refresh=False) if needs_world else "(not needed for this conversation)"
@@ -2277,15 +2334,29 @@ class ExecutiveKernel:
                             result={"authorization_required": True},
                             context_sources=memory_sources,
                         )
+                    is_new_proj = GoalCompiler.is_new_software_project(GoalRequest(objective=request.text))
                     goal_request = GoalRequest(
                         objective=request.text,
-                        workspace=request.workspace or workspace_cand,
+                        workspace="" if is_new_proj else (request.workspace or workspace_cand),
                         autonomy=request.autonomy,
                         coding_backend=request.coding_backend,
                         metadata={**request.metadata, "executive_session_id": request.session_id},
                     )
-                    result = self.brain.submit(goal_request, external_context=combined_context)
+                    try:
+                        result = self.brain.submit(goal_request, external_context=combined_context)
+                    except GovernanceError as exc:
+                        message = f"⚠ Mission planning was rejected by governance: {exc}"
+                        return ExecutiveResponse(
+                            intent="mission",
+                            message=message,
+                            session_id=request.session_id,
+                            state="rejected",
+                            result={"error": str(exc), "governance_rejected": True},
+                            context_sources=memory_sources,
+                        )
                     goal_id = str((result.get("goal") or {}).get("id") or "")
+                    if goal_id:
+                        self._active_session_goals[request.session_id] = goal_id
                     message = self._mission_message(result)
                     self.memory.record_episode(
                         summary=f"Founder mission: {request.text}\nOutcome: {message}",
@@ -2364,8 +2435,9 @@ class ExecutiveKernel:
                     context_sources=memory_sources,
                 )
 
-            workspace_cand = request.workspace
-            if not workspace_cand:
+            is_new_proj = GoalCompiler.is_new_software_project(GoalRequest(objective=request.text))
+            workspace_cand = "" if is_new_proj else request.workspace
+            if not workspace_cand and not is_new_proj:
                 from jarvis.amaura.direct_action import PathExtractor
 
                 args = PathExtractor.extract_structured_arguments(request.text)
@@ -2389,7 +2461,18 @@ class ExecutiveKernel:
                 coding_backend=request.coding_backend,
                 metadata={**request.metadata, "executive_session_id": request.session_id},
             )
-            result = self.brain.submit(goal_request, external_context=combined_context)
+            try:
+                result = self.brain.submit(goal_request, external_context=combined_context)
+            except GovernanceError as exc:
+                message = f"⚠ Mission planning was rejected by governance: {exc}"
+                return ExecutiveResponse(
+                    intent=intent,
+                    message=message,
+                    session_id=request.session_id,
+                    state="rejected",
+                    result={"error": str(exc), "governance_rejected": True},
+                    context_sources=memory_sources,
+                )
             goal_id = str((result.get("goal") or {}).get("id") or "")
             message = self._mission_message(result)
             self.memory.record_episode(

@@ -127,3 +127,5 @@ warn_unused_ignores = true
 # without this boundary a normal ``pytest`` invocation can collect stale,
 # duplicate fixture modules and produce false release failures.
 testpaths = ["tests"]
+# Make the repo root importable so tests can import from ``scripts/``.
+pythonpath = ["."]

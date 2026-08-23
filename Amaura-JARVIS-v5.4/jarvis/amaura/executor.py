@@ -31,7 +31,7 @@ from jarvis.amaura.gitops import (
     is_software_task,
     prepare_task_worktree,
 )
-from jarvis.amaura.models import GovernanceError, TaskState
+from jarvis.amaura.models import GovernanceError, IndependentVerificationError, TaskState
 from jarvis.amaura.network import fetch_public_text
 from jarvis.amaura.policy import PATH_ARGUMENTS
 from jarvis.amaura.registry import get_agent
@@ -561,7 +561,7 @@ class GovernedTaskRunner:
             )
             observed, committed = set(result.verification.get("changed_files") or []), set(commit.changed_files)
             if observed != committed:
-                raise GovernanceError(
+                raise IndependentVerificationError(
                     f"Antigravity verification delta does not match finalized commit: verified={sorted(observed)!r} committed={sorted(committed)!r}"
                 )
             verification_commands = list(result.verification.get("verification_commands") or [])
@@ -801,18 +801,28 @@ class GovernedTaskRunner:
             task = self.control.store.get_work_item(task_id)
             if task.get("state") == TaskState.IN_PROGRESS.value:
                 metadata = dict(task.get("metadata") or {})
+                # Independent verification failures (test failures, manifest errors,
+                # diff mutation checks) are post-implementation delivery rejections — the
+                # coding worker already finished, and retrying identical execution
+                # causes wasteful rebuild loops. Mark these non-retryable so the task
+                # fails closed and requires explicit intervention/replan.
+                is_verification_failure = isinstance(exc, IndependentVerificationError)
+                retryable = not is_verification_failure
                 metadata.update(
                     {
                         "block_reason": str(exc)[:1200],
-                        "retryable": True,
+                        "retryable": retryable,
                         "last_iteration": max_iterations,
-                        "timeout_reason": "execution_error" if not isinstance(exc, TimeoutError) else "deadline_exhausted",
+                        "timeout_reason": "verification_failure"
+                        if is_verification_failure
+                        else ("execution_error" if not isinstance(exc, TimeoutError) else "deadline_exhausted"),
                     }
                 )
-                self.control.store.update_work_item(task_id, state=TaskState.BLOCKED.value, metadata=metadata)
+                new_state = TaskState.BLOCKED.value if retryable else TaskState.FAILED.value
+                self.control.store.update_work_item(task_id, state=new_state, metadata=metadata)
                 self.control.store.publish_event("task.blocked", task_id, {"reason": metadata["block_reason"]})
                 self.control.store.audit("jarvis", "execute", "task", task_id, "blocked", metadata)
-                return {"status": "blocked", "task_id": task_id, "reason": metadata["block_reason"], "retryable": True}
+                return {"status": new_state, "task_id": task_id, "reason": metadata["block_reason"], "retryable": retryable}
             raise
 
     def _run(self, task_id: str, max_iterations: int = 12) -> dict[str, Any]:
@@ -1534,6 +1544,9 @@ class GovernedReviewRunner:
             "task_id": task["id"],
             "title": task["title"],
             "objective": task["description"],
+            "workspace": task.get("metadata", {}).get("workspace")
+            or task.get("metadata", {}).get("git_repository_root")
+            or "",
             "acceptance_criteria": task["acceptance_criteria"],
             "submission_summary": task["summary"],
             "evidence": task["evidence"],

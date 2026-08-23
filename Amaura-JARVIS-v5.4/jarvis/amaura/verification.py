@@ -20,7 +20,7 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from jarvis.amaura.models import GovernanceError
+from jarvis.amaura.models import GovernanceError, IndependentVerificationError
 from jarvis.amaura.security import redact_sensitive_text
 
 _DEFAULT_EXECUTABLES = frozenset(
@@ -29,10 +29,15 @@ _DEFAULT_EXECUTABLES = frozenset(
         "python3",
         "pytest",
         "uv",
+        "node",
+        "npx",
+        "deno",
         "npm",
         "pnpm",
         "yarn",
         "bun",
+        "vitest",
+        "jest",
         "cargo",
         "go",
         "mvn",
@@ -351,5 +356,7 @@ class SecureVerifierRunner:
             evidence.append(payload)
             if not result.passed:
                 detail = result.stderr_tail or result.stdout_tail or f"exit code {result.exit_code}"
-                raise GovernanceError(f"Command failed independent verification: {command!r}: {detail[-1200:]}")
+                raise IndependentVerificationError(
+                    f"Command failed independent verification: {command!r}: {detail[-1200:]}"
+                )
         return evidence

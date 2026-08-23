@@ -105,6 +105,20 @@ class GovernanceError(ValueError):
     """Raised when an action violates the Amaura operating doctrine."""
 
 
+class IndependentVerificationError(GovernanceError):
+    """Raised when an engineering delivery fails independent post-implementation verification.
+
+    Failures occurring in independent verification (e.g. failing unit tests, changed-file
+    manifest discrepancies, repository mutations during verification, or deterministic
+    review rejections) indicate an invalid or failing implementation result from the
+    coding worker. They are non-retryable at the executor loop level to prevent expensive,
+    redundant worker rebuild loops.
+    """
+
+
+VerificationRejectedError = IndependentVerificationError
+
+
 class AmauraFatalIntegrityError(BaseException):
     """Integrity failure intentionally outside the normal retry hierarchy.
 
