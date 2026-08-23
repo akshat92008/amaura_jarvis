@@ -8,10 +8,11 @@ as a real interactive pseudo-terminal (PTY) session.
 Verifies:
 1. Boot & Entrypoint guards installation via runtime behavior.
 2. Single-mission continuity sequence (6 turns targeting exact expected goal).
-3. Independent CompanyStore verification on every single turn (zero junk goals, zero historical poisoning).
-4. Multi-mission separation and named reference switching in the same PTY.
-5. Clean process termination with /exit.
-6. Restart session semantics in a brand new PTY process (fail-closed pronoun, explicit ID lookup, normal chat).
+3. Independent CompanyStore verification on every turn (zero junk goals, zero historical poisoning).
+4. Result/status text is grounded in the exact target mission's CompanyStore rows.
+5. Multi-mission separation and named reference switching in the same PTY.
+6. Clean process termination with /exit.
+7. Restart semantics use a distinct new session anchor, not a stale prior-session anchor.
 """
 
 from __future__ import annotations
@@ -32,6 +33,75 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 JARVIS_BIN = REPO_ROOT / ".venv" / "bin" / "jarvis"
 
 PROMPT_PATTERN = re.compile(r"◈ JARVIS ›\s*", re.MULTILINE)
+SESSION_NAMESPACE = "jarvis.session_context"
+HISTORICAL_POISON_TOKENS = (
+    "HISTORICAL_FAKE_RESULT_A7C91",
+    "HISTORICAL_FAKE_RESULT_B13F2",
+)
+
+
+def _session_anchor_map(control: Any) -> dict[str, dict[str, Any]]:
+    """Return persisted session anchors keyed by their exact session id."""
+    rows = control.store.list_knowledge(namespace=SESSION_NAMESPACE, limit=500)
+    return {
+        str(row["key"]): row
+        for row in rows
+        if isinstance(row, dict) and str(row.get("key") or "").strip()
+    }
+
+
+def _anchor_goal(control: Any, session_id: str) -> str:
+    """Read one exact session anchor; never accept another session as proof."""
+    row = control.store.get_knowledge(SESSION_NAMESPACE, session_id)
+    value = row.get("value") or {}
+    assert isinstance(value, dict), f"Malformed session anchor for {session_id}: {row}"
+    return str(value.get("current_goal_id") or "")
+
+
+def _goal_tasks(control: Any, goal_id: str) -> list[dict[str, Any]]:
+    return control.store.list_work_items(parent_id=goal_id, limit=1000)
+
+
+def _assert_no_historical_result_leak(response: str) -> None:
+    for poison in HISTORICAL_POISON_TOKENS:
+        assert poison not in response, f"Historical result poison leaked into current response: {poison}"
+
+
+def _assert_result_response_consistent(control: Any, goal_id: str, response: str) -> None:
+    """Verify every rendered task-result bullet is backed by the exact goal's rows."""
+    _assert_no_historical_result_leak(response)
+    assert goal_id in response, f"Status/result response omitted exact target goal {goal_id}: {response}"
+
+    tasks = _goal_tasks(control, goal_id)
+    allowed_result_lines: set[str] = set()
+    for task in tasks:
+        summary = str(task.get("summary") or "").strip()
+        if summary:
+            allowed_result_lines.add(f"- {task.get('title') or task.get('id')}: {summary[:1000]}")
+
+    rendered_result_lines = {
+        line.strip()
+        for line in response.splitlines()
+        if line.strip().startswith("- ")
+    }
+    unsupported = rendered_result_lines - allowed_result_lines
+    assert not unsupported, (
+        f"Response rendered result lines not present under exact goal {goal_id}: "
+        f"{sorted(unsupported)}"
+    )
+
+    if "Recorded task results:" in response:
+        assert rendered_result_lines, "Response claimed recorded task results but rendered none."
+        assert allowed_result_lines, (
+            f"Response claimed recorded results for {goal_id}, but CompanyStore has no task summaries."
+        )
+
+    no_result_text = "No completed task result has been recorded yet."
+    if no_result_text in response:
+        assert not allowed_result_lines, (
+            f"Response claimed no recorded task result for {goal_id}, "
+            "but CompanyStore contains task summaries."
+        )
 
 
 class PTYSession:
@@ -71,12 +141,10 @@ class PTYSession:
         )
         os.close(self.slave_fd)
         self.slave_fd = None
-        # Wait for the initial prompt
         boot_output = self._read_until_prompt(timeout=45.0)
         self.transcript.append({"type": "boot", "output": boot_output})
 
     def _clean_ansi(self, text: str) -> str:
-        # Strip ANSI escape sequences
         ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
         return ansi_escape.sub("", text)
 
@@ -102,7 +170,8 @@ class PTYSession:
             if self.process and self.process.poll() is not None:
                 break
         raise TimeoutError(
-            f"Timed out waiting for prompt after {timeout}s. Received:\n{self._clean_ansi(accumulated)}"
+            f"Timed out waiting for prompt after {timeout}s. Received:\n"
+            f"{self._clean_ansi(accumulated)}"
         )
 
     def send_turn(self, user_input: str, timeout: float | None = None) -> str:
@@ -112,11 +181,9 @@ class PTYSession:
         os.write(self.master_fd, payload)
         raw_output = self._read_until_prompt(timeout=timeout)
         cleaned = self._clean_ansi(raw_output)
-        # Strip the echoing user input and the trailing prompt
         response_text = cleaned
         if "◈ JARVIS ›" in response_text:
             parts = response_text.split("◈ JARVIS ›")
-            # The response is between the prompt echoes
             if len(parts) >= 2:
                 response_text = parts[-2]
         self.transcript.append(
@@ -162,6 +229,7 @@ def run_full_pty_qualification() -> dict[str, Any]:
     results: dict[str, Any] = {
         "entrypoint_test": "UNTESTED",
         "single_mission_continuity": "UNTESTED",
+        "result_consistency": "UNTESTED",
         "multi_mission_continuity": "UNTESTED",
         "restart_test": "UNTESTED",
         "turns": [],
@@ -182,8 +250,11 @@ def run_full_pty_qualification() -> dict[str, Any]:
 
     from jarvis.amaura.control_plane import AmauraControlPlane
 
-    # Step 0: Seed historical tasks into CompanyStore to verify ZERO historical poisoning
-    control = AmauraControlPlane(db_path=data_dir / "amaura.db", audit_checkpoint_path=data_dir / "audit.checkpoint")
+    control = AmauraControlPlane(
+        db_path=data_dir / "amaura.db",
+        audit_checkpoint_path=data_dir / "audit.checkpoint",
+    )
+
     control.store.insert_work_item(
         {
             "id": "goal_historical_weather",
@@ -195,6 +266,17 @@ def run_full_pty_qualification() -> dict[str, Any]:
     )
     control.store.insert_work_item(
         {
+            "id": "task_historical_weather_result",
+            "parent_id": "goal_historical_weather",
+            "item_type": "task",
+            "title": "old weather result",
+            "owner_id": "operator",
+            "state": "completed",
+            "summary": HISTORICAL_POISON_TOKENS[0],
+        }
+    )
+    control.store.insert_work_item(
+        {
             "id": "goal_historical_auth",
             "item_type": "programme",
             "title": "review pull request for authentication",
@@ -202,38 +284,66 @@ def run_full_pty_qualification() -> dict[str, Any]:
             "metadata": {"dynamic_goal": True, "executive_session_id": "old_session_2"},
         }
     )
+    control.store.insert_work_item(
+        {
+            "id": "task_historical_auth_result",
+            "parent_id": "goal_historical_auth",
+            "item_type": "task",
+            "title": "old auth result",
+            "owner_id": "operator",
+            "state": "completed",
+            "summary": HISTORICAL_POISON_TOKENS[1],
+        }
+    )
+    baseline_anchor_keys = set(_session_anchor_map(control))
     control.close()
 
-    # Step 1: Start real PTY process
     pty_session = PTYSession(data_dir=data_dir, working_dir=working_dir, timeout=60.0)
     print("[1/5] Launching .venv/bin/jarvis --no-web in real PTY...")
     pty_session.start()
     print("✓ PTY Process online.")
 
-    # Verify Entrypoint installed guards
     boot_text = pty_session.transcript[0]["output"]
     assert "J.A.R.V.I.S." in boot_text, "Boot sequence missing expected JARVIS banner"
     results["entrypoint_test"] = "PASS"
     print("✓ [Entrypoint Test] Production boot sequence verified.")
 
-    # Step 2: Create initial mission in interactive PTY
-    init_prompt = "build me a small arcade fighting game with sounds on my Desktop called founder-continuity-final"
+    init_prompt = (
+        "build me a small arcade fighting game with sounds on my Desktop "
+        "called founder-continuity-final"
+    )
     print(f"\n[2/5] Sending Mission Turn 0: '{init_prompt}'...")
     turn0_resp = pty_session.send_turn(init_prompt)
     print(f"Response: {turn0_resp[:200]}...")
 
-    # Extract goal ID from CompanyStore
-    control = AmauraControlPlane(db_path=data_dir / "amaura.db", audit_checkpoint_path=data_dir / "audit.checkpoint")
+    control = AmauraControlPlane(
+        db_path=data_dir / "amaura.db",
+        audit_checkpoint_path=data_dir / "audit.checkpoint",
+    )
     progs = [
         it
         for it in control.store.list_work_items(limit=100)
-        if it.get("item_type") == "programme" and it.get("id") not in ("goal_historical_weather", "goal_historical_auth")
+        if it.get("item_type") == "programme"
+        and it.get("id") not in ("goal_historical_weather", "goal_historical_auth")
     ]
-    assert len(progs) == 1, f"Expected exactly 1 new programme created, found {len(progs)}: {progs}"
+    assert len(progs) == 1, (
+        f"Expected exactly 1 new programme created, found {len(progs)}: {progs}"
+    )
     expected_goal_id = str(progs[0]["id"])
     print(f"✓ EXPECTED_GOAL ID created in CompanyStore: {expected_goal_id}")
 
-    # Step 3: Run the exact 6-turn continuity sequence in the SAME PTY
+    anchors_after_create = _session_anchor_map(control)
+    first_session_keys = set(anchors_after_create) - baseline_anchor_keys
+    assert len(first_session_keys) == 1, (
+        "Could not identify exactly one new interactive session anchor after mission "
+        f"creation: {sorted(first_session_keys)}"
+    )
+    first_session_id = next(iter(first_session_keys))
+    assert _anchor_goal(control, first_session_id) == expected_goal_id, (
+        f"Initial session {first_session_id} did not bind to {expected_goal_id}"
+    )
+    print(f"✓ Exact first-session anchor: {first_session_id} -> {expected_goal_id}")
+
     continuity_prompts = [
         ("what are the results of the task i gave you?", "results"),
         ("what's its status?", "status"),
@@ -249,34 +359,34 @@ def run_full_pty_qualification() -> dict[str, Any]:
         resp = pty_session.send_turn(prompt)
         print(f"    Output: {resp[:150]}...")
 
-        # Independent CompanyStore verification
-        # 1. Total programmes must still be exactly 3 (2 historical + 1 current)
         all_progs = [
             it
             for it in control.store.list_work_items(limit=100)
             if it.get("item_type") == "programme"
         ]
-        assert len(all_progs) == 3, f"Duplicate goal created on prompt '{prompt}'! Total now: {len(all_progs)}"
+        assert len(all_progs) == 3, (
+            f"Duplicate goal created on prompt '{prompt}'! Total now: {len(all_progs)}"
+        )
 
-        # 2. Active session goal in CompanyStore must be expected_goal_id
-        session_anchors = [
-            k
-            for k in control.store.list_knowledge(namespace="jarvis.session_context")
-        ]
-        assert len(session_anchors) >= 1, "SessionMissionContext anchor missing in CompanyStore knowledge table"
-        active_goal = session_anchors[0].get("value", {}).get("current_goal_id")
-        assert (
-            active_goal == expected_goal_id
-        ), f"Turn {idx} ({prompt}) anchored to '{active_goal}', expected '{expected_goal_id}'"
+        active_goal = _anchor_goal(control, first_session_id)
+        assert active_goal == expected_goal_id, (
+            f"Turn {idx} ({prompt}) anchored exact session {first_session_id} "
+            f"to '{active_goal}', expected '{expected_goal_id}'"
+        )
 
-        # 3. Response should reference the mission correctly and not fabricate results
-        assert "couldn't resolve that reference" not in resp.lower(), f"Unresolved reference on turn {idx}!"
+        assert "couldn't resolve that reference" not in resp.lower(), (
+            f"Unresolved reference on turn {idx}!"
+        )
+        _assert_no_historical_result_leak(resp)
+        if label in {"results", "status"}:
+            _assert_result_response_consistent(control, expected_goal_id, resp)
 
         results["turns"].append(
             {
                 "turn": idx,
                 "label": label,
                 "prompt": prompt,
+                "session_id": first_session_id,
                 "target_goal": active_goal,
                 "expected_goal": expected_goal_id,
                 "response_snippet": resp[:200],
@@ -285,20 +395,24 @@ def run_full_pty_qualification() -> dict[str, Any]:
         )
 
     results["single_mission_continuity"] = "PASS"
-    print("✓ [Single Mission Continuity] 6/6 turns targeted exact expected goal with 0 duplicate goals and 0 historical leaks.")
+    results["result_consistency"] = "PASS"
+    print(
+        "✓ [Single Mission Continuity] 6/6 turns stayed on the exact session goal "
+        "with 0 duplicate goals and 0 historical result leaks."
+    )
 
-    # Step 4: Multi-mission real CLI test in the SAME PTY
     print("\n[4/5] Multi-Mission Separation and Named Reference Switching in SAME PTY...")
     research_prompt = "research current AI coding agent trends on the web and summarize what you find"
     print(f"  Creating second mission: '{research_prompt}'...")
     res_resp = pty_session.send_turn(research_prompt)
     print(f"    Output: {res_resp[:150]}...")
 
-    # Verify second goal created
     new_progs = [
         it
         for it in control.store.list_work_items(limit=100)
-        if it.get("item_type") == "programme" and it.get("id") not in ("goal_historical_weather", "goal_historical_auth", expected_goal_id)
+        if it.get("item_type") == "programme"
+        and it.get("id")
+        not in ("goal_historical_weather", "goal_historical_auth", expected_goal_id)
     ]
     assert len(new_progs) == 1, f"Expected 1 research programme, found {len(new_progs)}"
     research_goal_id = str(new_progs[0]["id"])
@@ -316,49 +430,90 @@ def run_full_pty_qualification() -> dict[str, Any]:
         print(f"  Multi-Turn ({tag}): '{prompt}'")
         resp = pty_session.send_turn(prompt)
         print(f"    Output: {resp[:150]}...")
-
-        # Verify active session goal matches expected target
-        anchors = control.store.list_knowledge(namespace="jarvis.session_context")
-        active_gid = anchors[0].get("value", {}).get("current_goal_id")
-        assert (
-            active_gid == exp_gid
-        ), f"Multi-mission prompt '{prompt}' resolved to '{active_gid}', expected '{exp_gid}'"
+        active_gid = _anchor_goal(control, first_session_id)
+        assert active_gid == exp_gid, (
+            f"Multi-mission prompt '{prompt}' resolved exact session "
+            f"{first_session_id} to '{active_gid}', expected '{exp_gid}'"
+        )
+        _assert_no_historical_result_leak(resp)
 
     results["multi_mission_continuity"] = "PASS"
-    print("✓ [Multi-Mission Continuity] Correctly switched between game and research missions by name and pronouns.")
+    print(
+        "✓ [Multi-Mission Continuity] Correctly switched between game and research "
+        "missions by name and pronouns."
+    )
 
-    # Step 5: Clean process exit
     print("\n[5/5] Testing /exit and Restart Semantics...")
     exit_code = pty_session.exit()
     print(f"✓ PTY Process exited cleanly with code {exit_code}.")
+    assert pty_session.process is not None
     assert pty_session.process.poll() is not None, "Old process was not terminated!"
 
-    # Step 6: Restart in brand new PTY process
+    anchors_before_restart = _session_anchor_map(control)
+    restart_baseline_keys = set(anchors_before_restart)
+    assert first_session_id in restart_baseline_keys
+
     restart_pty = PTYSession(data_dir=data_dir, working_dir=working_dir, timeout=60.0)
     restart_pty.start()
     print("✓ New PTY process started.")
 
-    # Pronoun-only in fresh session must fail closed
+    programmes_before_fail_closed = {
+        str(it.get("id") or "")
+        for it in control.store.list_work_items(item_type="programme", limit=1000)
+    }
     fail_closed_resp = restart_pty.send_turn("continue it")
     print(f"  Restart 'continue it' -> {fail_closed_resp[:150]}...")
     assert (
-        "couldn't resolve" in fail_closed_resp.lower() or "clarify" in fail_closed_resp.lower() or "reference" in fail_closed_resp.lower()
+        "couldn't resolve" in fail_closed_resp.lower()
+        or "clarify" in fail_closed_resp.lower()
+        or "reference" in fail_closed_resp.lower()
     ), f"Fresh session 'continue it' did not fail closed: {fail_closed_resp}"
+    programmes_after_fail_closed = {
+        str(it.get("id") or "")
+        for it in control.store.list_work_items(item_type="programme", limit=1000)
+    }
+    assert programmes_after_fail_closed == programmes_before_fail_closed, (
+        "Fresh-session pronoun created a new goal instead of failing closed."
+    )
+    assert set(_session_anchor_map(control)) == restart_baseline_keys, (
+        "Fresh-session unresolved pronoun unexpectedly created/reused a persisted "
+        "session anchor before an explicit reference."
+    )
 
-    # Explicit old goal ID lookup must work
     explicit_resp = restart_pty.send_turn(f"{expected_goal_id} give me results")
-    print(f"  Restart explicit '{expected_goal_id} give me results' -> {explicit_resp[:150]}...")
-    assert (
-        expected_goal_id in explicit_resp or "founder-continuity-final" in explicit_resp.lower() or "game" in explicit_resp.lower()
-    ), f"Explicit goal lookup failed: {explicit_resp}"
+    print(
+        f"  Restart explicit '{expected_goal_id} give me results' -> "
+        f"{explicit_resp[:150]}..."
+    )
+    _assert_result_response_consistent(control, expected_goal_id, explicit_resp)
 
-    # Subsequent pronoun now targets restored anchor
+    anchors_after_explicit = _session_anchor_map(control)
+    new_restart_session_keys = set(anchors_after_explicit) - restart_baseline_keys
+    assert len(new_restart_session_keys) == 1, (
+        "Explicit lookup in restarted PTY did not create exactly one distinct "
+        f"new session anchor: {sorted(new_restart_session_keys)}"
+    )
+    restart_session_id = next(iter(new_restart_session_keys))
+    assert restart_session_id != first_session_id
+    assert _anchor_goal(control, restart_session_id) == expected_goal_id, (
+        f"Restarted session {restart_session_id} did not anchor to {expected_goal_id}"
+    )
+    assert _anchor_goal(control, first_session_id) == research_goal_id, (
+        "Old session anchor changed during restarted-session exact lookup; "
+        "restart proof must not reuse/mutate the prior session."
+    )
+    print(
+        f"  ✓ Distinct restart anchor: {restart_session_id} -> {expected_goal_id} "
+        f"(old session remains {first_session_id} -> {research_goal_id})"
+    )
+
     followup_resp = restart_pty.send_turn("continue it")
     print(f"  Restart follow-up 'continue it' -> {followup_resp[:150]}...")
-    anchors = control.store.list_knowledge(namespace="jarvis.session_context")
-    assert any(a.get("value", {}).get("current_goal_id") == expected_goal_id for a in anchors)
+    assert _anchor_goal(control, restart_session_id) == expected_goal_id, (
+        "Restart follow-up did not remain on the exact restored session anchor."
+    )
+    _assert_no_historical_result_leak(followup_resp)
 
-    # Normal conversation still works
     chat_resp = restart_pty.send_turn("what is 2 + 2?")
     print(f"  Restart normal chat 'what is 2 + 2?' -> {chat_resp[:150]}...")
     assert "4" in chat_resp, f"Normal chat failed: {chat_resp}"
@@ -369,6 +524,10 @@ def run_full_pty_qualification() -> dict[str, Any]:
 
     results["restart_test"] = "PASS"
     results["overall"] = "PASS"
+    results["first_session_id"] = first_session_id
+    results["restart_session_id"] = restart_session_id
+    results["historical_result_leaks"] = 0
+    results["unsupported_result_lines"] = 0
     print("\n" + "=" * 70)
     print("ALL REAL PTY CLI QUALIFICATION TESTS PASSED SUCCESSFULLY!")
     print("=" * 70)
