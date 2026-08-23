@@ -1201,6 +1201,15 @@ class IntentEngine:
         if SessionMissionContext.is_referential_control_language(clean):
             return "mission_control"
 
+        if any(
+            re.search(rf"\b{action}\b", clean)
+            for action in ("pause", "resume", "activate", "cancel", "stop")
+        ) and any(
+            re.search(rf"\b{noun}\b", clean)
+            for noun in ("mission", "task", "project", "goal", "that", "this", "it")
+        ):
+            return "mission_control"
+
         if re.match(
             r"^(?:please\s+)?(?:continue|resume|focus\s+on|execute|run)\s+(?:that|this|it|first|the\s+(?:mission|task|project|goal))\b",
             clean,
