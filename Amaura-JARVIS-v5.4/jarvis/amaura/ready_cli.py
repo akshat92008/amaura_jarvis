@@ -17,7 +17,7 @@ from typing import Any
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ENV_FILE = REPOSITORY_ROOT / ".env.amaura"
-_CACHE_SCHEMA_VERSION = 1
+_CACHE_SCHEMA_VERSION = 2
 _CACHE_FILENAME = "runtime-certification-v1.json"
 
 
@@ -69,10 +69,16 @@ def _runtime_fingerprint() -> str:
 
 
 def _certification_inputs(env_path: Path) -> dict[str, Any]:
+    from jarvis.amaura.local_certification import runtime_worktree_status
+
+    worktree = runtime_worktree_status(REPOSITORY_ROOT)
     return {
         "head": _git("rev-parse", "HEAD"),
-        "git_toplevel": str(Path(_git("rev-parse", "--show-toplevel")).resolve()),
-        "worktree_clean": not bool(_git("status", "--porcelain")),
+        "git_toplevel": str(worktree["checkout_root"]),
+        "worktree_clean": worktree["worktree_clean"],
+        "runtime_relative_path": worktree["runtime_relative_path"],
+        "runtime_dirty_entries": worktree["runtime_dirty_entries"],
+        "outside_runtime_dirty_entries": worktree["outside_runtime_dirty_entries"],
         "env_sha256": _sha256_file(env_path),
         "runtime_sha256": _runtime_fingerprint(),
     }
@@ -105,7 +111,10 @@ def _signed_payload(payload: dict[str, Any]) -> dict[str, Any]:
 def _write_cache(env_path: Path, report: dict[str, Any]) -> dict[str, Any]:
     inputs = _certification_inputs(env_path)
     if inputs.get("worktree_clean") is not True:
-        raise RuntimeError("Refusing to cache readiness for a dirty worktree")
+        raise RuntimeError(
+            "Refusing to cache readiness for changes inside the certified JARVIS runtime tree: "
+            f"{inputs.get('runtime_dirty_entries') or []}"
+        )
     payload = {
         "schema_version": _CACHE_SCHEMA_VERSION,
         "ready": True,
@@ -157,7 +166,7 @@ def _load_valid_cache(env_path: Path) -> tuple[dict[str, Any] | None, str]:
         current = _certification_inputs(env_path)
         if current.get("worktree_clean") is not True:
             return None, "worktree_dirty"
-        for key in ("head", "git_toplevel", "env_sha256", "runtime_sha256"):
+        for key in ("head", "git_toplevel", "runtime_relative_path", "env_sha256", "runtime_sha256"):
             if raw.get(key) != current.get(key):
                 return None, f"cache_{key}_changed"
         return raw, "cache_valid"
@@ -276,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
                 "head": cached.get("head"),
                 "certified_at": cached.get("certified_at"),
                 "cache_file": str(_cache_path()),
+                "outside_runtime_dirty_entries": cached.get("outside_runtime_dirty_entries", []),
             }
         )
 
