@@ -11,6 +11,15 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+_HISTORICAL_POISON_TOKENS = (
+    "HISTORICAL_FAKE_RESULT_A7C91",
+    "HISTORICAL_FAKE_RESULT_B13F2",
+)
+
+
+def _normalize_text(value: str) -> str:
+    return " ".join(str(value).split())
+
 
 def _git(root: Path, *args: str) -> str:
     completed = subprocess.run(
@@ -29,6 +38,80 @@ def _git(root: Path, *args: str) -> str:
     return completed.stdout.strip()
 
 
+def _rendered_result_bullets(response: str) -> list[str]:
+    marker = "Recorded task results:"
+    if marker not in response:
+        return []
+    section = response.split(marker, 1)[1]
+    if "Pending founder approvals:" in section:
+        section = section.split("Pending founder approvals:", 1)[0]
+    bullets: list[str] = []
+    current = ""
+    for raw_line in section.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("- "):
+            if current:
+                bullets.append(_normalize_text(current))
+            current = line[2:].strip()
+        elif current:
+            current = f"{current} {line}"
+    if current:
+        bullets.append(_normalize_text(current))
+    return bullets
+
+
+def _assert_authoritative_result_response(control: Any, goal_id: str, response: str) -> None:
+    """Cross-check rendered status/results against the exact CompanyStore mission."""
+
+    normalized = _normalize_text(response)
+    normalized_lower = normalized.lower()
+    for poison in _HISTORICAL_POISON_TOKENS:
+        assert poison not in response, f"Historical result poison leaked into current response: {poison}"
+
+    goal = control.store.get_work_item(goal_id)
+    title = _normalize_text(str(goal.get("title") or ""))
+    assert goal_id in response or (title and title in normalized), (
+        f"Status/result response did not identify exact target mission {goal_id}: {response}"
+    )
+
+    from jarvis.amaura.cognition import ExecutiveKernel
+
+    mission = ExecutiveKernel(control).brain.status(goal_id)
+    authoritative_state = str(mission.get("state") or goal.get("state") or "unknown").lower()
+    assert authoritative_state in normalized_lower, (
+        f"Response state disagrees with authoritative mission {goal_id}: "
+        f"expected {authoritative_state!r}, response={response!r}"
+    )
+
+    tasks = mission.get("active_tasks") or mission.get("tasks") or []
+    allowed_bullets: list[str] = []
+    for task in tasks:
+        summary = str(task.get("summary") or "").strip()
+        if summary:
+            allowed_bullets.append(
+                _normalize_text(f"{task.get('title') or task.get('id')}: {summary[:1000]}")
+            )
+
+    rendered_bullets = _rendered_result_bullets(response)
+    if "Recorded task results:" in response:
+        assert allowed_bullets, (
+            f"Response claimed recorded results for {goal_id}, but CompanyStore has no task summaries."
+        )
+        assert rendered_bullets, "Response claimed recorded task results but rendered none."
+        unsupported = [bullet for bullet in rendered_bullets if bullet not in allowed_bullets]
+        assert not unsupported, (
+            f"Response rendered result content not persisted under exact goal {goal_id}: {unsupported}"
+        )
+
+    no_result_text = "No completed task result has been recorded yet."
+    if no_result_text in response:
+        assert not allowed_bullets, (
+            f"Response claimed no recorded result for {goal_id}, but CompanyStore contains task summaries."
+        )
+
+
 def _load_pty_qualifier(root: Path) -> Any:
     path = root / "scripts" / "qualify_real_cli_pty.py"
     if not path.is_file():
@@ -38,10 +121,16 @@ def _load_pty_qualifier(root: Path) -> Any:
         raise RuntimeError(f"Could not load PTY qualification harness: {path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    module._assert_result_response_consistent = _assert_authoritative_result_response
     qualifier = getattr(module, "run_full_pty_qualification", None)
     if not callable(qualifier):
         raise RuntimeError("PTY qualification harness does not expose run_full_pty_qualification()")
     return qualifier
+
+
+def run_authoritative_pty_qualification(repository_root: str | Path) -> dict[str, Any]:
+    root = Path(repository_root).expanduser().resolve()
+    return _load_pty_qualifier(root)()
 
 
 def certify_local_runtime(repository_root: str | Path) -> dict[str, Any]:
@@ -85,7 +174,7 @@ def certify_local_runtime(repository_root: str | Path) -> dict[str, Any]:
         }
 
     try:
-        pty_report = _load_pty_qualifier(root)()
+        pty_report = run_authoritative_pty_qualification(root)
     except Exception as exc:
         pty_report = {
             "overall": "FAIL",
