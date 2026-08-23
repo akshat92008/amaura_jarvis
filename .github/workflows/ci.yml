@@ -78,3 +78,35 @@ jobs:
           test -f desktop-app/assets/icon.icns
           test -f desktop-app/entitlements.plist
           test -f desktop-app/package-lock.json
+
+  macos-real-cli:
+    runs-on: macos-14
+    env:
+      AMAURA_MODEL_MODE: local
+      AMAURA_LOCAL_MODEL: nova-worker-test
+      AMAURA_LOCAL_REVIEW_MODEL: nova-reviewer-test
+      AMAURA_REVIEWER_KEYS: qa-reviewer:ci-reviewer-key-at-least-thirty-two-bytes
+      AMAURA_REVIEW_ATTESTATION_KEY: ci-review-attestation-key-at-least-thirty-two-bytes
+      AMAURA_PROVIDER_RECEIPT_KEY: ci-provider-receipt-key-at-least-thirty-two-bytes
+      AMAURA_AUDIT_HMAC_KEY: ci-audit-hmac-key-at-least-thirty-two-bytes
+      AMAURA_EVIDENCE_HMAC_KEY: ci-evidence-hmac-key-at-least-thirty-two-bytes
+      AMAURA_DISABLE_CLOUD: "1"
+      JARVIS_LEGACY_TOOL_MODE: disabled
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - name: Install frozen environment
+        run: |
+          python -m pip install --upgrade pip uv
+          PYTHONWARNINGS=default uv sync --frozen --extra dev --python python
+      - name: Compile certification paths
+        run: .venv/bin/python -m compileall -q jarvis/amaura scripts/qualify_real_cli_pty.py scripts/certify_local_runtime.py
+      - name: Local-certification regression tests
+        run: .venv/bin/python -m pytest -q tests/test_local_certification.py
+      - name: Hardened real PTY on macOS
+        run: .venv/bin/python scripts/qualify_real_cli_pty.py
