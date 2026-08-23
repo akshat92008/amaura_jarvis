@@ -321,9 +321,9 @@ def _run_forced(
             text=user_input,
             session_id=session_id,
             workspace=request_workspace,
-            autonomy=autonomy,  # type: ignore[arg-type]
-            coding_backend=coding_backend,  # type: ignore[arg-type]
-            force_intent=intent,  # type: ignore[arg-type]
+            autonomy=autonomy,
+            coding_backend=coding_backend,
+            force_intent=intent,
             metadata=metadata,
         ),
         allow_missions=allow_missions,

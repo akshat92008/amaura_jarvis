@@ -201,7 +201,20 @@ def exact_reference_run_executive(
             )
 
         if item_id.startswith("goal_"):
+            from jarvis.amaura.session_context import SessionMissionContext
+            from jarvis.reliable_cli import _session_bindings
+
+            SessionMissionContext(control.store).set_active_goal(session_id, item_id, reason="exact_lookup")
+            _session_bindings(self)[session_id] = item_id
             return _goal_status(self, control, session_id, item_id, item)
+
+        parent_id = str(item.get("parent_id") or (item.get("metadata") or {}).get("goal_id") or "")
+        if parent_id and parent_id.startswith("goal_"):
+            from jarvis.amaura.session_context import SessionMissionContext
+            from jarvis.reliable_cli import _session_bindings
+
+            SessionMissionContext(control.store).set_active_goal(session_id, parent_id, reason="exact_lookup")
+            _session_bindings(self)[session_id] = parent_id
         return _item_status(control=control, session_id=session_id, item_id=item_id, item=item)
 
     return _PREVIOUS_RUN_EXECUTIVE(

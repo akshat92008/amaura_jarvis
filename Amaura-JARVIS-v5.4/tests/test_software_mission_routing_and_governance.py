@@ -351,7 +351,10 @@ def test_independent_verification_failure_is_not_retryable(tmp_path: Path):
             }
         )
 
-        with patch.object(GovernedTaskRunner, "_run_antigravity_delivery", fake_antigravity_delivery):
+        with (
+            patch("jarvis.amaura.antigravity_bridge.AntigravityDeliveryAdapter.configured", True),
+            patch.object(GovernedTaskRunner, "_run_antigravity_delivery", fake_antigravity_delivery),
+        ):
             result = executor.run(task_id)
 
         # Worker was called exactly once — not retried
@@ -372,7 +375,10 @@ def test_independent_verification_failure_is_not_retryable(tmp_path: Path):
         assert len(exec_status["active"]) == 0, f"Expected 0 active leases, found: {exec_status['active']}"
 
         # Subsequent execution attempt does NOT invoke the worker again because task is FAILED
-        with patch.object(GovernedTaskRunner, "_run_antigravity_delivery", fake_antigravity_delivery):
+        with (
+            patch("jarvis.amaura.antigravity_bridge.AntigravityDeliveryAdapter.configured", True),
+            patch.object(GovernedTaskRunner, "_run_antigravity_delivery", fake_antigravity_delivery),
+        ):
             try:
                 executor.run(task_id)
             except Exception:
@@ -427,7 +433,10 @@ def test_genuine_transient_failure_preserves_retryable_behavior(tmp_path: Path):
             }
         )
 
-        with patch.object(GovernedTaskRunner, "_run_antigravity_delivery", fake_transient_failure):
+        with (
+            patch("jarvis.amaura.antigravity_bridge.AntigravityDeliveryAdapter.configured", True),
+            patch.object(GovernedTaskRunner, "_run_antigravity_delivery", fake_transient_failure),
+        ):
             result = executor.run(task_id)
 
         assert worker_call_count == 1

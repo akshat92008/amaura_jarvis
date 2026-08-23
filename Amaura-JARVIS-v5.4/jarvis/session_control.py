@@ -208,6 +208,12 @@ def _bound_control_response(
 ) -> dict[str, Any] | None:
     goal_id = _session_bindings(agent).get(session_id, "")
     if not goal_id:
+        from jarvis.amaura.session_context import SessionMissionContext
+
+        goal_id = SessionMissionContext(control.store).get_active_goal(session_id) or ""
+        if goal_id:
+            _session_bindings(agent)[session_id] = goal_id
+    if not goal_id:
         return None
 
     kernel = _kernel_for(agent, control)

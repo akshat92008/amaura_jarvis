@@ -30,7 +30,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -1163,6 +1163,7 @@ class IntentEngine:
 
     def classify(self, text: str, *, world_context: str = "") -> ExecutiveIntent:
         clean = " ".join(str(text).strip().lower().split())
+        clean_no_punct = re.sub(r"[?!.,;:]", "", clean).strip()
         if re.match(r"^(please\s+)?remember(?:\s+that|:|\s)", clean):
             return "memory_write"
         if re.match(r"^(please\s+)?forget(?:\s+that|:|\s|\s+about)", clean):
@@ -1173,7 +1174,7 @@ class IntentEngine:
             if any(w in clean for w in ("result", "results", "status", "progress", "update", "state", "how", "give", "show")):
                 return "status"
         if any(
-            phrase in clean
+            clean_no_punct.startswith(phrase) or phrase in clean
             for phrase in (
                 "what's happening with",
                 "whats happening with",
@@ -1186,14 +1187,43 @@ class IntentEngine:
                 "what is the result",
                 "what were the results",
                 "what happened with",
+                "did it finish",
+                "did that finish",
+                "did it complete",
+                "is it done",
+                "is it finished",
+                "show me the",
+                "show me that",
+                "show me this",
+                "show the task",
+                "show that task",
+                "show this task",
+                "show the project",
+                "show that project",
+                "show this project",
+                "show the research",
+                "show the game",
             )
+        ) or re.match(
+            r"^(?:please\s+)?show(?:\s+me)?\s+(?:the|that|this|my|\w+\s+)?(?:task|project|mission|goal|research|game|status|results?)\b",
+            clean_no_punct,
         ):
             return "status"
-        control_words = {"pause", "resume", "activate", "cancel", "stop", "focus", "execute", "run", "continue"}
-        if (_tokens(clean) & control_words) and any(
-            token in clean for token in ("mission", "task", "project", "goal", "that", "this", "it", "first")
+
+        from jarvis.amaura.session_context import SessionMissionContext
+
+        if SessionMissionContext.is_referential_control_language(clean):
+            return "mission_control"
+
+        if any(
+            re.search(rf"\b{action}\b", clean)
+            for action in ("pause", "resume", "activate", "cancel", "stop")
+        ) and any(
+            re.search(rf"\b{noun}\b", clean)
+            for noun in ("mission", "task", "project", "goal", "that", "this", "it")
         ):
             return "mission_control"
+
         if re.match(
             r"^(?:please\s+)?(?:continue|resume|focus\s+on|execute|run)\s+(?:that|this|it|first|the\s+(?:mission|task|project|goal))\b",
             clean,
@@ -2019,12 +2049,18 @@ class ExecutiveKernel:
 
     @staticmethod
     def _mission_control_action(text: str) -> str:
+        from jarvis.amaura.session_context import SessionMissionContext
+
         clean = " ".join(str(text).lower().split())
+        clean_no_punct = re.sub(r"[?!.,;:]", "", clean).strip()
         if re.search(r"\b(cancel|stop)\b", clean):
             return "cancel"
         if re.search(r"\bpause\b", clean):
             return "pause"
-        if re.search(r"\b(activate|resume|continue|focus|execute|run)\b", clean):
+        if (
+            re.search(r"\b(activate|resume|continue|focus|execute|run|yes|yep|ok|okay|proceed|do it)\b", clean)
+            or clean_no_punct in SessionMissionContext.BARE_CONFIRMATIONS
+        ):
             return "activate"
         return ""
 
@@ -2198,7 +2234,7 @@ class ExecutiveKernel:
         world_context = (
             self.world.context(request.text, refresh=False) if needs_world else "(not needed for this conversation)"
         )
-        if self._needs_memory_context(request.text, intent):
+        if self._needs_memory_context(request.text, cast(ExecutiveIntent, intent)):
             memory_context, memory_sources = self.memory.context(request.text)
         else:
             memory_context, memory_sources = "", []
@@ -2232,7 +2268,9 @@ class ExecutiveKernel:
                     pending_apprs = []
                 if len(pending_apprs) == 1:
                     appr_id = str(pending_apprs[0]["id"])
-                    self.brain.approve(appr_id, actor="founder")
+                    self.control.decide_approval(
+                        appr_id, "founder", "approved", "Approved by founder via confirmation"
+                    )
                     self.session_context.set_active_goal(request.session_id, goal_id, reason="approved")
                     return ExecutiveResponse(
                         intent="mission_control",
