@@ -38,6 +38,16 @@ def _git(root: Path, *args: str) -> str:
     return completed.stdout.strip()
 
 
+def _resolve_git_checkout_root(root: Path) -> Path:
+    """Resolve the enclosing Git checkout for a package nested below repo root."""
+
+    top_level = _git(root, "rev-parse", "--show-toplevel")
+    checkout_root = Path(top_level).expanduser().resolve()
+    if not checkout_root.is_dir():
+        raise RuntimeError(f"Git reported an invalid checkout root: {checkout_root}")
+    return checkout_root
+
+
 def _rendered_result_bullets(response: str) -> list[str]:
     marker = "Recorded task results:"
     if marker not in response:
@@ -90,9 +100,7 @@ def _assert_authoritative_result_response(control: Any, goal_id: str, response: 
     for task in tasks:
         summary = str(task.get("summary") or "").strip()
         if summary:
-            allowed_bullets.append(
-                _normalize_text(f"{task.get('title') or task.get('id')}: {summary[:1000]}")
-            )
+            allowed_bullets.append(_normalize_text(f"{task.get('title') or task.get('id')}: {summary[:1000]}"))
 
     rendered_bullets = _rendered_result_bullets(response)
     if "Recorded task results:" in response:
@@ -137,14 +145,18 @@ def certify_local_runtime(repository_root: str | Path) -> dict[str, Any]:
     """Return a fail-closed daily-use verdict for the exact local checkout."""
 
     root = Path(repository_root).expanduser().resolve()
-    if not (root / ".git").exists():
+    try:
+        checkout_root = _resolve_git_checkout_root(root)
+    except Exception as exc:
         return {
             "ready": False,
             "error": "source_checkout_required",
             "repository_root": str(root),
+            "message": f"{type(exc).__name__}: {exc}",
         }
 
     provenance: dict[str, Any] = {
+        "checkout_root": str(checkout_root),
         "head": "",
         "origin_main": "",
         "head_matches_origin_main": False,
@@ -152,12 +164,12 @@ def certify_local_runtime(repository_root: str | Path) -> dict[str, Any]:
         "fetch_ok": False,
     }
     try:
-        _git(root, "fetch", "--quiet", "origin", "main")
+        _git(checkout_root, "fetch", "--quiet", "origin", "main")
         provenance["fetch_ok"] = True
-        provenance["head"] = _git(root, "rev-parse", "HEAD")
-        provenance["origin_main"] = _git(root, "rev-parse", "origin/main")
+        provenance["head"] = _git(checkout_root, "rev-parse", "HEAD")
+        provenance["origin_main"] = _git(checkout_root, "rev-parse", "origin/main")
         provenance["head_matches_origin_main"] = provenance["head"] == provenance["origin_main"]
-        provenance["worktree_clean"] = not bool(_git(root, "status", "--porcelain"))
+        provenance["worktree_clean"] = not bool(_git(checkout_root, "status", "--porcelain"))
     except Exception as exc:
         provenance["error"] = f"{type(exc).__name__}: {exc}"
 
