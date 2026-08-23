@@ -1163,6 +1163,7 @@ class IntentEngine:
 
     def classify(self, text: str, *, world_context: str = "") -> ExecutiveIntent:
         clean = " ".join(str(text).strip().lower().split())
+        clean_no_punct = re.sub(r"[?!.,;:]", "", clean).strip()
         if re.match(r"^(please\s+)?remember(?:\s+that|:|\s)", clean):
             return "memory_write"
         if re.match(r"^(please\s+)?forget(?:\s+that|:|\s|\s+about)", clean):
@@ -1173,7 +1174,7 @@ class IntentEngine:
             if any(w in clean for w in ("result", "results", "status", "progress", "update", "state", "how", "give", "show")):
                 return "status"
         if any(
-            phrase in clean
+            clean_no_punct.startswith(phrase) or phrase in clean
             for phrase in (
                 "what's happening with",
                 "whats happening with",
@@ -1186,14 +1187,20 @@ class IntentEngine:
                 "what is the result",
                 "what were the results",
                 "what happened with",
+                "did it finish",
+                "did that finish",
+                "did it complete",
+                "is it done",
+                "is it finished",
             )
         ):
             return "status"
-        control_words = {"pause", "resume", "activate", "cancel", "stop", "focus", "execute", "run", "continue"}
-        if (_tokens(clean) & control_words) and any(
-            token in clean for token in ("mission", "task", "project", "goal", "that", "this", "it", "first")
-        ):
+
+        from jarvis.amaura.session_context import SessionMissionContext
+
+        if SessionMissionContext.is_referential_control_language(clean):
             return "mission_control"
+
         if re.match(
             r"^(?:please\s+)?(?:continue|resume|focus\s+on|execute|run)\s+(?:that|this|it|first|the\s+(?:mission|task|project|goal))\b",
             clean,

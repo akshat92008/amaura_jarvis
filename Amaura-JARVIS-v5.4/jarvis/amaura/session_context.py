@@ -209,6 +209,14 @@ class SessionMissionContext:
             pass
         return goals
 
+    CONTROL_RE = re.compile(
+        r"^(?:(?:bro|nah|please|hey|just|okay|ok|so|now|and|well|actually)\s+)?"
+        r"(?:continue|resume|execute|run|finish|focus(?:\s+on)?|pause|cancel|approve|proceed(?:\s+with)?|start|work\s+on)"
+        r"\s+(?:it|that|this|the\s+task|that\s+task|this\s+task|the\s+mission|that\s+mission|this\s+mission|the\s+project|that\s+project|this\s+project|the\s+game|that\s+game|this\s+game|the\s+one|that\s+one|this\s+one|the\s+thing|that\s+thing|this\s+thing|the\s+same(?:\s+one)?|my\s+current\s+project|current\s+project|active\s+task)"
+        r"(?:\s+(?:first|now|please|immediately|already))?$",
+        re.IGNORECASE,
+    )
+
     @classmethod
     def is_referential_control_language(cls, text: str) -> bool:
         """Check if text is deictic/referential control or confirmation language."""
@@ -216,12 +224,9 @@ class SessionMissionContext:
         clean_no_punct = re.sub(r"[?!.,;:]", "", clean).strip()
         if clean_no_punct in cls.BARE_CONFIRMATIONS:
             return True
-        has_control = any(re.search(rf"\b{re.escape(v)}\b", clean) for v in cls.CONTROL_VERBS)
-        has_ref = (
-            any(re.search(rf"\b{re.escape(p)}\b", clean) for p in cls.DEICTIC_PRONOUNS)
-            or any(t in clean.split() for t in ("it", "that", "this", "first", "one", "same"))
-        )
-        return bool(has_control and has_ref)
+        if len(clean.split()) > 10:
+            return False
+        return bool(cls.CONTROL_RE.match(clean_no_punct))
 
     @classmethod
     def is_pure_deictic_reference(cls, text: str) -> bool:
@@ -230,6 +235,8 @@ class SessionMissionContext:
         clean_no_punct = re.sub(r"[?!.,;:]", "", clean).strip()
         if clean_no_punct in cls.BARE_CONFIRMATIONS:
             return True
+        if len(clean.split()) > 15:
+            return False
         vague_phrases = (
             "what are the results of the task i gave you",
             "what are the results of the task",
@@ -250,10 +257,12 @@ class SessionMissionContext:
             "finish that",
             "did it finish",
             "what happened with that thing i asked",
+            "what happened with that thing i asked you to build",
+            "what happened with the thing i asked you to build",
             "what happened with that thing",
             "what happened with the thing",
             "go ahead with it",
         )
-        if any(clean.startswith(vp) or clean == vp for vp in vague_phrases):
+        if any(clean_no_punct.startswith(vp) or clean_no_punct == vp for vp in vague_phrases):
             return True
         return False
