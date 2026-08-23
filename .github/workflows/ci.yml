@@ -82,7 +82,14 @@ jobs:
   macos-real-cli:
     runs-on: macos-14
     env:
-      AMAURA_MODEL_MODE: local
+      AMAURA_MODEL_MODE: omniroute
+      AMAURA_MODEL_PROVIDER: omniroute
+      AMAURA_OMNIROUTE_BASE_URL: http://127.0.0.1:18765/v1
+      AMAURA_OMNIROUTE_API_KEY: ci-local-provider-key-not-a-secret
+      AMAURA_OMNIROUTE_MODEL: ci-cognition
+      AMAURA_OMNIROUTE_CHAT_MODEL: ci-cognition
+      AMAURA_OMNIROUTE_INTENT_MODEL: ci-cognition
+      AMAURA_OMNIROUTE_REFERENCE_MODEL: ci-cognition
       AMAURA_LOCAL_MODEL: nova-worker-test
       AMAURA_LOCAL_REVIEW_MODEL: nova-reviewer-test
       AMAURA_REVIEWER_KEYS: qa-reviewer:ci-reviewer-key-at-least-thirty-two-bytes
@@ -90,7 +97,6 @@ jobs:
       AMAURA_PROVIDER_RECEIPT_KEY: ci-provider-receipt-key-at-least-thirty-two-bytes
       AMAURA_AUDIT_HMAC_KEY: ci-audit-hmac-key-at-least-thirty-two-bytes
       AMAURA_EVIDENCE_HMAC_KEY: ci-evidence-hmac-key-at-least-thirty-two-bytes
-      AMAURA_DISABLE_CLOUD: "1"
       JARVIS_LEGACY_TOOL_MODE: disabled
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
@@ -105,9 +111,21 @@ jobs:
           python -m pip install --upgrade pip uv
           PYTHONWARNINGS=default uv sync --frozen --extra dev --python python
       - name: Compile certification paths
-        run: .venv/bin/python -m compileall -q jarvis/amaura scripts/qualify_real_cli_pty.py scripts/certify_local_runtime.py
+        run: .venv/bin/python -m compileall -q jarvis/amaura scripts/qualify_real_cli_pty.py scripts/certify_local_runtime.py scripts/ci_omniroute_stub.py
       - name: Local-certification regression tests
         run: .venv/bin/python -m pytest -q tests/test_local_certification.py
+      - name: Start local cognition transport
+        run: |
+          .venv/bin/python scripts/ci_omniroute_stub.py >/tmp/amaura-ci-provider.log 2>&1 &
+          echo $! >/tmp/amaura-ci-provider.pid
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:18765/health >/dev/null; then
+              exit 0
+            fi
+            sleep 0.25
+          done
+          cat /tmp/amaura-ci-provider.log
+          exit 1
       - name: Authoritative real PTY on macOS
         run: |
           .venv/bin/python - <<'PY'
