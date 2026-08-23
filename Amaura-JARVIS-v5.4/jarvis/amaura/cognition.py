@@ -1192,7 +1192,21 @@ class IntentEngine:
                 "did it complete",
                 "is it done",
                 "is it finished",
+                "show me the",
+                "show me that",
+                "show me this",
+                "show the task",
+                "show that task",
+                "show this task",
+                "show the project",
+                "show that project",
+                "show this project",
+                "show the research",
+                "show the game",
             )
+        ) or re.match(
+            r"^(?:please\s+)?show(?:\s+me)?\s+(?:the|that|this|my|\w+\s+)?(?:task|project|mission|goal|research|game|status|results?)\b",
+            clean_no_punct,
         ):
             return "status"
 
@@ -2035,12 +2049,18 @@ class ExecutiveKernel:
 
     @staticmethod
     def _mission_control_action(text: str) -> str:
+        from jarvis.amaura.session_context import SessionMissionContext
+
         clean = " ".join(str(text).lower().split())
+        clean_no_punct = re.sub(r"[?!.,;:]", "", clean).strip()
         if re.search(r"\b(cancel|stop)\b", clean):
             return "cancel"
         if re.search(r"\bpause\b", clean):
             return "pause"
-        if re.search(r"\b(activate|resume|continue|focus|execute|run)\b", clean):
+        if (
+            re.search(r"\b(activate|resume|continue|focus|execute|run|yes|yep|ok|okay|proceed|do it)\b", clean)
+            or clean_no_punct in SessionMissionContext.BARE_CONFIRMATIONS
+        ):
             return "activate"
         return ""
 

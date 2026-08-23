@@ -10,8 +10,8 @@ from __future__ import annotations
 import re
 import threading
 from dataclasses import dataclass
+from typing import Any
 
-from jarvis.amaura.control_plane import AmauraControlPlane
 from jarvis.amaura.store import utc_now
 
 
@@ -92,8 +92,13 @@ class SessionMissionContext:
         }
     )
 
-    def __init__(self, control: AmauraControlPlane) -> None:
-        self.control = control
+    def __init__(self, control: Any) -> None:
+        if hasattr(control, "store"):
+            self.control = control
+            self.store = control.store
+        else:
+            self.control = None
+            self.store = control
         self._cache: dict[str, SessionAnchor] = {}
         self._lock = threading.Lock()
 
@@ -105,7 +110,7 @@ class SessionMissionContext:
             cached = self._cache.get(session_id)
             if cached is not None:
                 try:
-                    item = self.control.store.get_work_item(cached.goal_id)
+                    item = self.store.get_work_item(cached.goal_id)
                     if item:
                         return cached.goal_id
                 except Exception:
@@ -113,13 +118,13 @@ class SessionMissionContext:
                 del self._cache[session_id]
 
         try:
-            record = self.control.store.get_knowledge(self.NAMESPACE, session_id)
+            record = self.store.get_knowledge(self.NAMESPACE, session_id)
             val = record.get("value") or {}
             if isinstance(val, dict):
                 goal_id = str(val.get("current_goal_id") or "")
                 if goal_id:
                     try:
-                        item = self.control.store.get_work_item(goal_id)
+                        item = self.store.get_work_item(goal_id)
                         if item:
                             anchor = SessionAnchor(
                                 session_id=session_id,
@@ -141,7 +146,7 @@ class SessionMissionContext:
         if not session_id or not goal_id:
             return False
         try:
-            item = self.control.store.get_work_item(goal_id)
+            item = self.store.get_work_item(goal_id)
             if not item:
                 return False
         except Exception:
@@ -154,7 +159,7 @@ class SessionMissionContext:
             "reason": reason,
         }
         try:
-            self.control.store.upsert_knowledge(
+            self.store.upsert_knowledge(
                 self.NAMESPACE,
                 session_id,
                 payload,
@@ -181,7 +186,7 @@ class SessionMissionContext:
         with self._lock:
             self._cache.pop(session_id, None)
         try:
-            self.control.store.delete_knowledge(self.NAMESPACE, session_id)
+            self.store.delete_knowledge(self.NAMESPACE, session_id)
         except Exception:
             pass
 
@@ -194,7 +199,7 @@ class SessionMissionContext:
         if active:
             goals.append(active)
         try:
-            items = self.control.store.list_work_items(limit=200)
+            items = self.store.list_work_items(limit=200)
             for it in items:
                 if it.get("item_type") == "programme":
                     meta = it.get("metadata") or {}
