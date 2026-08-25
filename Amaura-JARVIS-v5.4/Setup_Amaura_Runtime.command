@@ -52,12 +52,15 @@ try:
     report = production_readiness(control, live=True)
 finally:
     control.close()
+details = report.get('details') or {}
+live = details.get('live') or {}
 summary = {
     'ready': report.get('ready'),
     'blockers': report.get('blockers'),
     'live_checks': report.get('live_checks'),
-    'reviewer_route': (report.get('details') or {}).get('reviewer_route'),
-    'antigravity_ready': ((report.get('details') or {}).get('antigravity_governed_backend') or {}).get('ready'),
+    'interactive_cognition': live.get('interactive_cognition'),
+    'reviewer_route': details.get('reviewer_route'),
+    'antigravity_ready': (details.get('antigravity_governed_backend') or {}).get('ready'),
 }
 print(json.dumps(summary, indent=2, sort_keys=True))
 if not report.get('ready'):
