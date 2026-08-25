@@ -80,6 +80,7 @@ def test_failed_authoritative_runtime_blocks_field_stages(monkeypatch: pytest.Mo
     env_file = tmp_path / ".env.amaura"
     env_file.write_text("TEST=1\n", encoding="utf-8")
     monkeypatch.setattr(deployment_gate.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(deployment_gate, "_canonical_env_file", lambda: env_file.resolve())
     monkeypatch.setattr(deployment_gate, "load_amaura_env", lambda *args, **kwargs: {})
     monkeypatch.setattr(deployment_gate, "_git_sha", lambda: "candidate")
 
