@@ -19,10 +19,10 @@ def test_setup_accepts_dashboard_client_keys_and_fails_closed_without_models() -
 
 def test_setup_discovers_models_before_asking_for_routes() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
-    discovery = text.index('Step 4/5 — Live gateway model discovery')
-    route_selection = text.index('Step 5/5 — Production model routes')
+    discovery = text.index("Step 4/5 — Live gateway model discovery")
+    route_selection = text.index("Step 5/5 — Production model routes")
     probe = text.index("probe = _probe_omniroute(base_url, api_key)")
-    primary_prompt = text.index('Primary worker/reasoning model')
+    primary_prompt = text.index("Primary worker/reasoning model")
     assert discovery < probe < route_selection < primary_prompt
     assert "mistral-large-latest" not in text
     assert "z-ai/glm-5.2" not in text
@@ -51,3 +51,15 @@ def test_setup_verifies_selected_routes_exist_before_writing_config() -> None:
     assert text.index("missing = [model for model in selected if model not in models]") < text.index(
         "env_path = _write_env"
     )
+
+
+def test_setup_smokes_every_selected_route_before_writing_config() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "def _probe_completion" in text
+    assert '"/chat/completions"' in text
+    assert '"worker", primary_model' in text
+    assert '"fast chat", chat_model' in text
+    assert '"reviewer", reviewer_model' in text
+    assert "failed a real completion" in text
+    assert "completed successfully" in text
+    assert text.index("result = _probe_completion(base_url, api_key, model)") < text.index("env_path = _write_env")
