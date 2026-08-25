@@ -167,9 +167,9 @@ def main() -> int:
         raise SystemExit(".env.amaura is missing; run ./Install_Amaura.command first")
     ENV_FILE.chmod(0o600)
 
-    # The private env is authoritative. Process exports may help an operator run
-    # the setup script, but this bootstrap validates and persists the exact file
-    # that launchd and the deployment gate will later consume.
+    # The private file is authoritative. We intentionally validate the file
+    # itself rather than stale shell exports because launchd and the deployment
+    # gate will consume this exact configuration later.
     load_amaura_env(ENV_FILE, override=False, require_private_permissions=True)
     current = _read_assignments(ENV_FILE)
     try:
@@ -177,7 +177,7 @@ def main() -> int:
     except RuntimeError as exc:
         raise SystemExit(str(exc)) from exc
 
-    evaluation_key = os.environ.get("AMAURA_EVALUATION_PACK_HMAC_KEY", "").strip() or current.get(
+    evaluation_key = current.get("AMAURA_EVALUATION_PACK_HMAC_KEY", "").strip() or os.environ.get(
         "AMAURA_EVALUATION_PACK_HMAC_KEY", ""
     ).strip()
     if len(evaluation_key.encode()) < 32:
