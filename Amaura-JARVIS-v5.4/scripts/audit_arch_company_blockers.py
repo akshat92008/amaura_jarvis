@@ -119,8 +119,6 @@ def analyze(tasks: list[dict[str, Any]], alerts: list[dict[str, Any]]) -> dict[s
                     continue
                 if child_state == "blocked":
                     blocked_found.add(child_id)
-                # Failed descendants may themselves block a deeper chain, so
-                # keep traversing through both failed and blocked problem nodes.
                 stack.append(child_id)
         return blocked_found
 
@@ -137,9 +135,7 @@ def analyze(tasks: list[dict[str, Any]], alerts: list[dict[str, Any]]) -> dict[s
         if not upstream_problem:
             root_tasks.append(task)
 
-    blocked_without_unresolved = [
-        task for task in blocked if not unresolved.get(str(task.get("id") or ""), [])
-    ]
+    blocked_without_unresolved = [task for task in blocked if not unresolved.get(str(task.get("id") or ""), [])]
     root_ids = {str(task.get("id") or "") for task in root_tasks}
     for task in blocked_without_unresolved:
         task_id = str(task.get("id") or "")
@@ -242,6 +238,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Audit ARCH live company blockers without mutating CompanyStore")
     parser.add_argument("--env-file", default=".env.amaura")
     parser.add_argument("--evidence-dir", default="qualification_evidence")
+    parser.add_argument(
+        "--fail-on-degraded",
+        action="store_true",
+        help="Return a non-zero exit status when failed/blocked tasks or open alerts are present.",
+    )
     args = parser.parse_args(argv)
 
     load_amaura_env(args.env_file, override=True, require_private_permissions=True)
@@ -275,6 +276,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print(json.dumps(result, indent=2, sort_keys=True))
     print(f"Evidence: {summary_path}")
+    if args.fail_on_degraded and result["status"] != "HEALTHY":
+        return 1
     return 0
 
 
