@@ -1,6 +1,5 @@
 import pathlib
 
-
 SCRIPT = pathlib.Path(__file__).resolve().parents[1] / "Setup_Amaura_OmniRoute.command"
 
 
