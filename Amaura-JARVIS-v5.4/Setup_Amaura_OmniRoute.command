@@ -52,7 +52,7 @@ def _prompt(label: str, default: str = "", secret: bool = False) -> str:
 
 
 def _redact(key: str, text: str) -> str:
-    if key and len(key) >= 6:
+    if key and len(key) >= 3:
         text = text.replace(key, "[REDACTED]")
     return text
 
@@ -72,17 +72,18 @@ def _probe_omniroute(base_url: str, api_key: str) -> dict:
     try:
         with urllib.request.urlopen(req, timeout=8.0) as response:
             latency_ms = int((time.monotonic() - started) * 1000)
-            raw = response.read(65536).decode("utf-8", errors="replace")
+            raw = response.read(262144).decode("utf-8", errors="replace")
         try:
             data = json.loads(raw)
             models = [
-                str(item.get("id") or item.get("name") or "")
+                str(item.get("id") or item.get("name") or "").strip()
                 for item in (data.get("data") or [])
                 if isinstance(item, dict)
             ]
+            models = [model for model in models if model]
         except Exception:
             models = []
-        return {"ok": True, "latency_ms": latency_ms, "models": models[:20], "error": ""}
+        return {"ok": True, "latency_ms": latency_ms, "models": models[:100], "error": ""}
     except urllib.error.HTTPError as exc:
         return {
             "ok": False,
@@ -90,12 +91,19 @@ def _probe_omniroute(base_url: str, api_key: str) -> dict:
             "models": [],
             "error": _redact(api_key, f"HTTP {exc.code}: {exc.reason}"),
         }
+    except urllib.error.URLError as exc:
+        return {
+            "ok": False,
+            "latency_ms": int((time.monotonic() - started) * 1000),
+            "models": [],
+            "error": _redact(api_key, f"URLError: {getattr(exc, 'reason', exc)}"),
+        }
     except Exception as exc:
         return {
             "ok": False,
             "latency_ms": int((time.monotonic() - started) * 1000),
             "models": [],
-            "error": _redact(api_key, type(exc).__name__),
+            "error": _redact(api_key, f"{type(exc).__name__}: {exc}"),
         }
 
 
@@ -168,7 +176,7 @@ def main() -> int:
     print()
 
     print(HEAD("Step 2/5 — OmniRoute gateway"))
-    base_url = _prompt("  OmniRoute Base URL", default="https://api.omniroute.ai/v1").rstrip("/")
+    base_url = _prompt("  OmniRoute Base URL", default="http://localhost:20128/v1").rstrip("/")
     if not base_url.startswith(("http://", "https://")):
         print(ERR("  ✗ Base URL must start with http:// or https://"))
         return 1
@@ -176,16 +184,17 @@ def main() -> int:
     print()
 
     print(HEAD("Step 3/5 — OmniRoute API key"))
-    print(DIM("  Input is hidden. Do not reuse a credential that has ever appeared in Git history."))
+    print(DIM("  Copy the client API key shown by the OmniRoute dashboard. Short local keys are valid."))
+    print(DIM("  Do not reuse a credential that has ever appeared in Git history."))
     api_key = _prompt("  OmniRoute API Key (hidden)", secret=True)
-    if len(api_key) < 8:
-        print(ERR("  ✗ API key is missing or too short."))
+    if not api_key:
+        print(ERR("  ✗ API key is required. Open OmniRoute → Dashboard/Endpoints and copy the client key."))
         return 1
     print(OK("  ✓ Key accepted (not echoed)"))
     print()
 
     print(HEAD("Step 4/5 — Production model routes"))
-    print(DIM("  Worker and reviewer must resolve to different concrete models."))
+    print(DIM("  Use exact model IDs exposed by OmniRoute. Worker and reviewer must be different."))
     primary_model = _prompt("  Primary worker/reasoning model", default="mistral-large-latest")
     fallback_model = _prompt("  Worker fallback model (optional)", default="")
     chat_model = _prompt("  Fast chat model", default=primary_model)
@@ -207,11 +216,32 @@ def main() -> int:
     probe = _probe_omniroute(base_url, api_key)
     if not probe["ok"]:
         print(ERR(f"  ✗ OmniRoute is BLOCKED: {probe['error']}"))
-        print(ERR("  Configuration was not changed. Fix the URL/key/network and rerun."))
+        print(ERR("  Configuration was not changed. Ensure OmniRoute is running, then fix the URL/key and rerun."))
         return 1
     print(OK(f"  ✓ OmniRoute is reachable ({probe['latency_ms']}ms)"))
-    if probe["models"]:
-        print(DIM(f"  ↳ Gateway returned {len(probe['models'])} model entries in the bounded probe."))
+
+    models = probe["models"]
+    if not models:
+        print(ERR("  ✗ OmniRoute is reachable but advertises zero models."))
+        print(ERR("  Open OmniRoute → Providers, connect at least one provider, confirm Models > 0, then rerun."))
+        print(ERR("  Configuration was not changed."))
+        return 1
+
+    print(DIM(f"  ↳ Gateway returned {len(models)} model entries in the bounded probe."))
+    selected = [primary_model, chat_model, reviewer_model]
+    if fallback_model:
+        selected.append(fallback_model)
+    missing = [model for model in selected if model not in models]
+    if missing:
+        print(ERR("  ✗ Selected route(s) are not advertised by this OmniRoute gateway:"))
+        for model in missing:
+            print(ERR(f"      - {model}"))
+        print(DIM("  Available model IDs (bounded):"))
+        for model in models[:20]:
+            print(DIM(f"      - {model}"))
+        print(ERR("  Configuration was not changed. Rerun using exact model IDs from OmniRoute."))
+        return 1
+    print(OK("  ✓ Every selected production route exists in the live gateway"))
     print()
 
     values = {
