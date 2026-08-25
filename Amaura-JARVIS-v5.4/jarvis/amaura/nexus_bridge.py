@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -32,6 +33,44 @@ class NexusDeliveryAdapter(NoryxDeliveryAdapter):
 
     RECEIPT_PROVIDER = "nexus"
     RECEIPT_OPERATION = "run_nexus_delivery"
+
+    def _command_parts(self) -> list[str]:
+        """Parse the legacy command without invoking a shell.
+
+        Historical callers passed ``f"{sys.executable} script.py"`` without
+        shell quoting.  That becomes ambiguous when the Python executable lives
+        below a directory containing spaces (for example ``amaura jarvis``).
+        Preserve the old API by recovering the longest leading on-disk
+        executable path, while still returning an argv list to ``subprocess``
+        and never enabling shell execution.
+        """
+        try:
+            parts = shlex.split(self.command)
+        except ValueError:
+            return []
+        if parts and (Path(parts[0]).is_file() or shutil.which(parts[0])):
+            return parts
+
+        raw = self.command.strip()
+        if not raw or raw.startswith(("'", '"')):
+            return []
+        words = raw.split()
+        for index in range(1, len(words) + 1):
+            executable = " ".join(words[:index])
+            if not Path(executable).is_file():
+                continue
+            tail = raw[len(executable) :].lstrip()
+            try:
+                arguments = shlex.split(tail) if tail else []
+            except ValueError:
+                return []
+            return [executable, *arguments]
+        return parts
+
+    @property
+    def configured(self) -> bool:
+        parts = self._command_parts()
+        return bool(parts and (Path(parts[0]).is_file() or shutil.which(parts[0])))
 
     def run_with_result(
         self,
@@ -62,7 +101,9 @@ class NexusDeliveryAdapter(NoryxDeliveryAdapter):
             request_file = Path(temp_dir) / "request.json"
             result_file = Path(temp_dir) / "result.json"
             request_file.write_text(json.dumps(request_payload, indent=2, sort_keys=True), encoding="utf-8")
-            parts = shlex.split(self.command)
+            parts = self._command_parts()
+            if not parts:
+                raise GovernanceError("Legacy Nexus CLI command is not configured")
             extra = os.environ.get(
                 "AMAURA_NEXUS_ARGUMENTS",
                 "run --request-file {request} --result-file {result}",
