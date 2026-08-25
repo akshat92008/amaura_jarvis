@@ -16,7 +16,7 @@ print "Configuring hosted-only production runtime…"
 
 # After the migration, make the private env file the single configuration
 # boundary. Stale exports from an older Nova/OmniRoute setup must not override
-# the persisted production profile during doctor/bootstrap.
+# the persisted production profile during readiness/bootstrap.
 unset AMAURA_MODEL_PROVIDER AMAURA_MODEL_MODE AMAURA_LOCAL_MODEL AMAURA_LOCAL_REVIEW_MODEL
 unset AMAURA_CLOUD_WORKER_MODEL AMAURA_CLOUD_REVIEW_MODEL AMAURA_REVIEW_MODE
 unset AMAURA_JARVIS_PROVIDER AMAURA_JARVIS_MODEL AMAURA_NVIDIA_MODEL
@@ -37,10 +37,34 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   fi
 fi
 
-print "Running live production doctor…"
-.venv/bin/python -m jarvis.amaura.cli doctor
+# Check the real configuration/provider/isolation posture without running the
+# full 20+ case release evaluation twice. jarvis-company-ready remains the one
+# authoritative expensive certification and will run the complete model gate.
+print "Running live production readiness preflight…"
+.venv/bin/python - <<'PY'
+import json
+from jarvis.amaura.runtime import load_amaura_env
+load_amaura_env('.env.amaura', override=True, require_private_permissions=True)
+from jarvis.amaura.control_plane import AmauraControlPlane
+from jarvis.amaura.readiness import production_readiness
+control = AmauraControlPlane()
+try:
+    report = production_readiness(control, live=True)
+finally:
+    control.close()
+summary = {
+    'ready': report.get('ready'),
+    'blockers': report.get('blockers'),
+    'live_checks': report.get('live_checks'),
+    'reviewer_route': (report.get('details') or {}).get('reviewer_route'),
+    'antigravity_ready': ((report.get('details') or {}).get('antigravity_governed_backend') or {}).get('ready'),
+}
+print(json.dumps(summary, indent=2, sort_keys=True))
+if not report.get('ready'):
+    raise SystemExit('Live production readiness preflight failed; resolve the blockers above before deployment.')
+PY
 
 print "Bootstrapping company objective portfolio…"
 .venv/bin/python -m jarvis.amaura.cli company bootstrap --repository "$PWD" >/dev/null
 
-print "Amaura hosted production runtime and company objective portfolio are ready."
+print "Amaura hosted production runtime and company objective portfolio are ready for final company certification."
