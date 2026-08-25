@@ -57,6 +57,7 @@ def _init_fixture(repository: Path) -> tuple[str, str]:
         ("git", "init"),
         ("git", "config", "user.name", "Amaura Qualification"),
         ("git", "config", "user.email", "qualification@localhost"),
+        ("git", "config", "commit.gpgsign", "false"),
     )
     for command in commands:
         result = _run(*command, cwd=repository)
@@ -114,11 +115,10 @@ def main(argv: list[str] | None = None) -> int:
         evidence_base = ROOT / evidence_base
     run_dir = evidence_base / f"{time.strftime('%Y%m%d_%H%M%S')}_CODING_FIELD"
     run_dir.mkdir(parents=True, exist_ok=False)
-    if hasattr(run_dir, "chmod"):
-        try:
-            run_dir.chmod(0o700)
-        except OSError:
-            pass
+    try:
+        run_dir.chmod(0o700)
+    except OSError:
+        pass
 
     payload: dict[str, Any] = {
         "candidate_sha": candidate,
