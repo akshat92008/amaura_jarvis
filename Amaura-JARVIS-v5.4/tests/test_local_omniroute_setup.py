@@ -1,7 +1,7 @@
-from pathlib import Path
+import pathlib
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "Setup_Amaura_OmniRoute.command"
+SCRIPT = pathlib.Path(__file__).resolve().parents[1] / "Setup_Amaura_OmniRoute.command"
 
 
 def test_setup_defaults_to_local_omniroute_gateway() -> None:
