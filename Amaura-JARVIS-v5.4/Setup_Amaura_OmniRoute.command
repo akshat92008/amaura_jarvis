@@ -164,6 +164,47 @@ def _dynamic_selector(model: str) -> bool:
     return normalized in _DYNAMIC_REVIEW_SELECTORS or normalized.startswith(_DYNAMIC_REVIEW_PREFIXES)
 
 
+def _concrete_models(models: list[str]) -> list[str]:
+    return [model for model in models if not _dynamic_selector(model)]
+
+
+def _print_model_choices(models: list[str]) -> None:
+    print(DIM("  Concrete model IDs exposed by this gateway:"))
+    for index, model in enumerate(models, start=1):
+        print(DIM(f"    {index:>3}. {model}"))
+
+
+def _resolve_model_choice(value: str, models: list[str]) -> str:
+    choice = value.strip()
+    if choice.isdigit():
+        index = int(choice)
+        if 1 <= index <= len(models):
+            return models[index - 1]
+    if choice in models:
+        return choice
+    return ""
+
+
+def _choose_model(label: str, models: list[str], *, default: str = "") -> str:
+    while True:
+        raw = _prompt(f"  {label} (number or exact ID)", default=default)
+        selected = _resolve_model_choice(raw, models)
+        if selected:
+            return selected
+        print(ERR("  ✗ Choose one of the numbered concrete model IDs shown above."))
+
+
+def _choose_optional_model(label: str, models: list[str]) -> str:
+    while True:
+        raw = _prompt(f"  {label} (optional; number/exact ID, blank for none)")
+        if not raw:
+            return ""
+        selected = _resolve_model_choice(raw, models)
+        if selected:
+            return selected
+        print(ERR("  ✗ Choose one of the numbered concrete model IDs shown above, or leave blank."))
+
+
 def main() -> int:
     print(BANNER)
     jarvis_dir = _detect_jarvis_dir()
@@ -193,25 +234,7 @@ def main() -> int:
     print(OK("  ✓ Key accepted (not echoed)"))
     print()
 
-    print(HEAD("Step 4/5 — Production model routes"))
-    print(DIM("  Use exact model IDs exposed by OmniRoute. Worker and reviewer must be different."))
-    primary_model = _prompt("  Primary worker/reasoning model", default="mistral-large-latest")
-    fallback_model = _prompt("  Worker fallback model (optional)", default="")
-    chat_model = _prompt("  Fast chat model", default=primary_model)
-    reviewer_model = _prompt("  Independent review model", default="z-ai/glm-5.2")
-    if not primary_model or not reviewer_model:
-        print(ERR("  ✗ Primary and reviewer models are required."))
-        return 1
-    if _dynamic_selector(reviewer_model):
-        print(ERR("  ✗ Reviewer must be a concrete model, not auto/best/default/router."))
-        return 1
-    if reviewer_model in {primary_model, fallback_model}:
-        print(ERR("  ✗ Independent reviewer must differ from every worker route."))
-        return 1
-    print(OK("  ✓ Independent routing contract is valid"))
-    print()
-
-    print(HEAD("Step 5/5 — Live gateway preflight"))
+    print(HEAD("Step 4/5 — Live gateway model discovery"))
     print(DIM(f"  Probing {base_url}/models …"))
     probe = _probe_omniroute(base_url, api_key)
     if not probe["ok"]:
@@ -227,19 +250,42 @@ def main() -> int:
         print(ERR("  Configuration was not changed."))
         return 1
 
+    concrete = _concrete_models(models)
     print(DIM(f"  ↳ Gateway returned {len(models)} model entries in the bounded probe."))
+    print(DIM(f"  ↳ {len(concrete)} are concrete model IDs eligible for governed production routing."))
+    if len(concrete) < 2:
+        print(ERR("  ✗ At least two concrete model IDs are required for worker/reviewer independence."))
+        print(ERR("  Dynamic auto/best/default aliases cannot serve as the independent reviewer."))
+        print(ERR("  Connect providers that expose concrete models, then rerun."))
+        return 1
+    _print_model_choices(concrete)
+    print()
+
+    print(HEAD("Step 5/5 — Production model routes"))
+    print(DIM("  Select concrete routes by number. Worker and reviewer must be different."))
+    primary_model = _choose_model("Primary worker/reasoning model", concrete)
+    fallback_model = _choose_optional_model("Worker fallback model", concrete)
+    chat_model = _choose_model("Fast chat model", concrete, default=primary_model)
+    reviewer_model = _choose_model("Independent review model", concrete)
+
+    if reviewer_model in {primary_model, fallback_model}:
+        print(ERR("  ✗ Independent reviewer must differ from every worker route."))
+        print(ERR("  Configuration was not changed. Rerun and choose a distinct reviewer model."))
+        return 1
+    if _dynamic_selector(reviewer_model):
+        print(ERR("  ✗ Reviewer must be a concrete model, not auto/best/default/router."))
+        return 1
+    print(OK("  ✓ Independent routing contract is valid"))
+
     selected = [primary_model, chat_model, reviewer_model]
     if fallback_model:
         selected.append(fallback_model)
     missing = [model for model in selected if model not in models]
     if missing:
-        print(ERR("  ✗ Selected route(s) are not advertised by this OmniRoute gateway:"))
+        print(ERR("  ✗ Selected route(s) disappeared from the live OmniRoute catalog:"))
         for model in missing:
             print(ERR(f"      - {model}"))
-        print(DIM("  Available model IDs (bounded):"))
-        for model in models[:20]:
-            print(DIM(f"      - {model}"))
-        print(ERR("  Configuration was not changed. Rerun using exact model IDs from OmniRoute."))
+        print(ERR("  Configuration was not changed. Refresh OmniRoute providers and rerun."))
         return 1
     print(OK("  ✓ Every selected production route exists in the live gateway"))
     print()
