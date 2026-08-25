@@ -3,7 +3,7 @@
 This gate composes the existing release, black-box, semantic, coding, live-state,
 and soak qualifications into one exact-SHA verdict. It intentionally performs
 no public publishing, outbound messaging, spending, account mutation, or
-production deployment.
+external production deployment.
 """
 
 from __future__ import annotations
@@ -98,6 +98,18 @@ def build_stages(*, env_file: Path, run_dir: Path, candidate_sha: str) -> tuple[
             description="Exact-main provenance, live production doctor, security/model gates, and real PTY continuity.",
         ),
         DeploymentStage(
+            name="canonical_arch_service",
+            command=(
+                python,
+                str(scripts / "install_arch_launchd.py"),
+                "--install",
+                "--repo-root",
+                str(ROOT),
+            ),
+            timeout_seconds=180,
+            description="Install/restart the rollback-safe canonical launchd service from this certified checkout.",
+        ),
+        DeploymentStage(
             name="deployed_arch_front_door",
             command=(
                 python,
@@ -109,7 +121,7 @@ def build_stages(*, env_file: Path, run_dir: Path, candidate_sha: str) -> tuple[
                 str(run_dir / "front_door"),
             ),
             timeout_seconds=600,
-            description="Black-box test of the actually running ARCH service, founder auth, grounding, runner, and macOS control.",
+            description="Black-box test of the freshly deployed ARCH service, founder auth, grounding, runner, and macOS control.",
         ),
         DeploymentStage(
             name="live_coding_delivery",
@@ -274,7 +286,8 @@ def run_deployment_gate(*, env_file: Path, evidence_base: Path | None = None) ->
             "public_publish": False,
             "spend": False,
             "account_mutation": False,
-            "production_deploy": False,
+            "external_production_deploy": False,
+            "local_arch_service_install": True,
             "coding_repository": "disposable",
             "company_store_audit": "read_only",
         },
