@@ -23,7 +23,7 @@ import urllib.request
 BANNER = r"""
   ┌──────────────────────────────────────────────────────────┐
   │  Amaura JARVIS — OmniRoute Production Setup              │
-  │  API keys are hidden and stored only in .env.amaura.     │
+  │  API keys are hidden and stored only in private files.   │
   └──────────────────────────────────────────────────────────┘
 """
 
@@ -34,7 +34,6 @@ def _colour(text: str, code: str) -> str:
 
 OK = lambda t: _colour(t, "32")
 ERR = lambda t: _colour(t, "31")
-WARN = lambda t: _colour(t, "33")
 HEAD = lambda t: _colour(t, "36;1")
 DIM = lambda t: _colour(t, "2")
 
@@ -117,10 +116,13 @@ def _backup_existing(jarvis_dir: pathlib.Path) -> None:
     if not env_path.exists():
         return
     stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup = jarvis_dir / f".env.amaura.bak.{stamp}"
+    backup_dir = pathlib.Path.home() / ".amaura" / "config-backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    os.chmod(backup_dir, 0o700)
+    backup = backup_dir / f"{jarvis_dir.name}.env.amaura.{stamp}.bak"
     shutil.copy2(env_path, backup)
     os.chmod(backup, 0o600)
-    print(DIM(f"  ↳ Backed up existing .env.amaura → {backup.name}"))
+    print(DIM(f"  ↳ Backed up existing private config → {backup}"))
 
 
 def _write_env(jarvis_dir: pathlib.Path, values: dict[str, str]) -> pathlib.Path:
@@ -209,18 +211,15 @@ def main() -> int:
         return 1
     print(OK(f"  ✓ OmniRoute is reachable ({probe['latency_ms']}ms)"))
     if probe["models"]:
-        visible = probe["models"]
-        print(DIM(f"  ↳ Gateway returned {len(visible)} model entries in the bounded probe."))
+        print(DIM(f"  ↳ Gateway returned {len(probe['models'])} model entries in the bounded probe."))
     print()
 
     values = {
-        # One hosted production routing boundary.
         "AMAURA_MODEL_MODE": "omniroute",
         "AMAURA_MODEL_PROVIDER": "omniroute",
         "AMAURA_DISABLE_CLOUD": "0",
         "AMAURA_REVIEW_MODE": "omniroute",
         "AMAURA_JARVIS_PROVIDER": "omniroute",
-        # OmniRoute routes.
         "AMAURA_OMNIROUTE_BASE_URL": base_url,
         "AMAURA_OMNIROUTE_API_KEY": api_key,
         "AMAURA_OMNIROUTE_MODEL": primary_model,
@@ -228,7 +227,6 @@ def main() -> int:
         "AMAURA_OMNIROUTE_REVIEW_MODEL": reviewer_model,
         "AMAURA_OMNIROUTE_FALLBACK_MODEL": fallback_model,
         "AMAURA_OMNIROUTE_REVIEW_FALLBACK_MODEL": "",
-        # Nova/Ollama and direct-provider production fallback are disabled.
         "AMAURA_LOCAL_MODEL": "",
         "AMAURA_LOCAL_REVIEW_MODEL": "",
         "AMAURA_CLOUD_WORKER_MODEL": "",
