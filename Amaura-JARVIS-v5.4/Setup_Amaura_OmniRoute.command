@@ -107,6 +107,70 @@ def _probe_omniroute(base_url: str, api_key: str) -> dict:
         }
 
 
+def _completion_endpoint(base_url: str) -> str:
+    normalized = base_url.rstrip("/")
+    if normalized.endswith("/chat/completions"):
+        return normalized
+    if normalized.endswith("/v1") or "/v1/" in normalized:
+        return normalized + "/chat/completions"
+    return normalized + "/v1/chat/completions"
+
+
+def _probe_completion(base_url: str, api_key: str, model: str) -> dict:
+    """Run a tiny real completion so catalog-only/dead routes cannot be saved."""
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": "Reply with exactly OK."}],
+        "temperature": 0.0,
+        "max_tokens": 128,
+        "stream": False,
+    }
+    req = urllib.request.Request(
+        _completion_endpoint(base_url),
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "Amaura-JARVIS/5.5-production-setup",
+        },
+        method="POST",
+    )
+    started = time.monotonic()
+    try:
+        with urllib.request.urlopen(req, timeout=25.0) as response:
+            latency_ms = int((time.monotonic() - started) * 1000)
+            raw = response.read(262144).decode("utf-8", errors="replace")
+        data = json.loads(raw)
+        choices = data.get("choices") or [] if isinstance(data, dict) else []
+        text = ""
+        if choices and isinstance(choices, list) and isinstance(choices[0], dict):
+            message = choices[0].get("message") or {}
+            if isinstance(message, dict):
+                text = str(message.get("content") or message.get("reasoning_content") or "").strip()
+        if not text:
+            return {"ok": False, "latency_ms": latency_ms, "error": "empty_completion"}
+        return {"ok": True, "latency_ms": latency_ms, "error": ""}
+    except urllib.error.HTTPError as exc:
+        return {
+            "ok": False,
+            "latency_ms": int((time.monotonic() - started) * 1000),
+            "error": _redact(api_key, f"HTTP {exc.code}: {exc.reason}"),
+        }
+    except urllib.error.URLError as exc:
+        return {
+            "ok": False,
+            "latency_ms": int((time.monotonic() - started) * 1000),
+            "error": _redact(api_key, f"URLError: {getattr(exc, 'reason', exc)}"),
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "latency_ms": int((time.monotonic() - started) * 1000),
+            "error": _redact(api_key, f"{type(exc).__name__}: {exc}"),
+        }
+
+
 def _detect_jarvis_dir() -> pathlib.Path:
     candidates = [
         pathlib.Path(__file__).resolve().parent,
@@ -288,6 +352,28 @@ def main() -> int:
         print(ERR("  Configuration was not changed. Refresh OmniRoute providers and rerun."))
         return 1
     print(OK("  ✓ Every selected production route exists in the live gateway"))
+    print()
+
+    print(HEAD("  Live completion smoke tests"))
+    tested: set[str] = set()
+    routes = [
+        ("worker", primary_model),
+        ("fast chat", chat_model),
+        ("reviewer", reviewer_model),
+    ]
+    if fallback_model:
+        routes.append(("worker fallback", fallback_model))
+    for label, model in routes:
+        if model in tested:
+            print(DIM(f"  ↳ {label}: {model} already proved by another selected role"))
+            continue
+        tested.add(model)
+        result = _probe_completion(base_url, api_key, model)
+        if not result["ok"]:
+            print(ERR(f"  ✗ {label}: {model} failed a real completion ({result['error']})"))
+            print(ERR("  Configuration was not changed. Choose a healthy concrete route and rerun."))
+            return 1
+        print(OK(f"  ✓ {label}: {model} completed successfully ({result['latency_ms']}ms)"))
     print()
 
     values = {
