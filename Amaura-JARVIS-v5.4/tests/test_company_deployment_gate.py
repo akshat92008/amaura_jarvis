@@ -19,6 +19,7 @@ def test_company_deployment_stage_contract(tmp_path: Path) -> None:
 
     assert [stage.name for stage in stages] == [
         "authoritative_runtime",
+        "canonical_arch_service",
         "deployed_arch_front_door",
         "live_coding_delivery",
         "live_semantic_company_task",
@@ -26,12 +27,14 @@ def test_company_deployment_stage_contract(tmp_path: Path) -> None:
         "unattended_resource_soak",
     ]
     assert "--recertify" in stages[0].command
-    assert "--use-running" in stages[1].command
-    assert "qual_coding_field_live.py" in " ".join(stages[2].command)
-    assert "qual_semantic_root_live.py" in " ".join(stages[3].command)
-    assert "--fail-on-degraded" in stages[4].command
-    assert stages[5].command[stages[5].command.index("--expected-sha") + 1] == "abc123"
-    assert stages[5].command[stages[5].command.index("--hours") + 1] == str(deployment_gate.SOAK_HOURS)
+    assert "install_arch_launchd.py" in " ".join(stages[1].command)
+    assert "--install" in stages[1].command
+    assert "--use-running" in stages[2].command
+    assert "qual_coding_field_live.py" in " ".join(stages[3].command)
+    assert "qual_semantic_root_live.py" in " ".join(stages[4].command)
+    assert "--fail-on-degraded" in stages[5].command
+    assert stages[6].command[stages[6].command.index("--expected-sha") + 1] == "abc123"
+    assert stages[6].command[stages[6].command.index("--hours") + 1] == str(deployment_gate.SOAK_HOURS)
 
 
 def test_run_stage_records_private_evidence(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
