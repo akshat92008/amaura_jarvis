@@ -34,6 +34,10 @@ class DeploymentStage:
     description: str
 
 
+def _canonical_env_file() -> Path:
+    return (ROOT / ".env.amaura").resolve()
+
+
 def _git_sha() -> str:
     completed = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -248,6 +252,12 @@ def _blocked_stage(stage: DeploymentStage, reason: str) -> dict[str, Any]:
 def run_deployment_gate(*, env_file: Path, evidence_base: Path | None = None) -> tuple[dict[str, Any], Path]:
     if platform.system() != "Darwin":
         raise RuntimeError("Company deployment qualification must run on the target macOS machine")
+    env_file = env_file.expanduser().resolve()
+    canonical_env = _canonical_env_file()
+    if env_file != canonical_env:
+        raise RuntimeError(
+            f"Company deployment qualification must use the canonical launchd environment file: {canonical_env}"
+        )
     if not env_file.is_file():
         raise RuntimeError(f"Private environment file not found: {env_file}")
 
@@ -300,7 +310,7 @@ def run_deployment_gate(*, env_file: Path, evidence_base: Path | None = None) ->
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the authoritative Amaura JARVIS company deployment gate")
-    parser.add_argument("--env-file", default=str(ROOT / ".env.amaura"))
+    parser.add_argument("--env-file", default=str(_canonical_env_file()))
     parser.add_argument(
         "--evidence-dir",
         default="",
