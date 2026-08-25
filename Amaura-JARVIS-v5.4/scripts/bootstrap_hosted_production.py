@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Bootstrap a hosted-only production profile for Amaura JARVIS.
+"""Bootstrap the final hosted OmniRoute production profile for Amaura JARVIS.
 
-This migration intentionally removes the legacy Nova/Ollama worker from the
-production path. It preserves independent authority secrets, imports an already
-exported NVIDIA key into the private Amaura env file, configures distinct hosted
-worker/reviewer models, selects the native macOS verifier by default, and creates
-an HMAC-authenticated private evaluation pack outside the repository.
+This migration permanently removes Nova/Ollama from the production route while
+preserving the hardening added by the hosted bootstrap: strict governance,
+private trust/backup state, native macOS verification, and an authenticated
+private model-evaluation pack outside the repository.
+
+The gateway credentials and explicit worker/reviewer models must already be
+configured by Setup_Amaura_OmniRoute.command. This script never guesses a
+reviewer route and never silently falls back to a direct provider.
 """
 
 from __future__ import annotations
@@ -19,12 +22,11 @@ from pathlib import Path
 from typing import Any
 
 from jarvis.amaura.evaluation import BUILTIN_CASES, evaluation_pack_status
+from jarvis.amaura.review_routing import omniroute_review_route
 from jarvis.amaura.runtime import load_amaura_env
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = ROOT / ".env.amaura"
-HOSTED_WORKER_MODEL = "meta/llama-3.3-70b-instruct"
-HOSTED_REVIEWER_MODEL = "nvidia/nemotron-3-super-120b-a12b"
 
 
 def _canonical(value: Any) -> bytes:
@@ -58,9 +60,8 @@ def _upsert(path: Path, updates: dict[str, str]) -> None:
         rendered.append(line)
     if remaining:
         rendered.append("")
-        rendered.append("# Hosted-only production profile (managed by bootstrap_hosted_production.py)")
-        for key, value in remaining.items():
-            rendered.append(f"{key}={value}")
+        rendered.append("# Final ARCH production profile (managed by bootstrap_hosted_production.py)")
+        rendered.extend(f"{key}={value}" for key, value in remaining.items())
     temporary = path.with_name(f".{path.name}.tmp")
     temporary.write_text("\n".join(rendered) + "\n", encoding="utf-8")
     temporary.chmod(0o600)
@@ -107,24 +108,78 @@ def _ensure_private_eval_pack(path: Path, key: str) -> dict[str, Any]:
     return {"created": True, **{k: v for k, v in status.items() if not k.startswith("_")}}
 
 
+def _production_route(current: dict[str, str]) -> dict[str, str]:
+    base_url = current.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or current.get("OMNIROUTE_BASE_URL", "").strip()
+    api_key = current.get("AMAURA_OMNIROUTE_API_KEY", "").strip() or current.get("OMNIROUTE_API_KEY", "").strip()
+    worker = current.get("AMAURA_OMNIROUTE_MODEL", "").strip() or current.get("OMNIROUTE_MODEL", "").strip()
+    fallback = current.get("AMAURA_OMNIROUTE_FALLBACK_MODEL", "").strip()
+    chat = current.get("AMAURA_OMNIROUTE_CHAT_MODEL", "").strip() or worker
+    reviewer = current.get("AMAURA_OMNIROUTE_REVIEW_MODEL", "").strip()
+    reviewer_fallback = current.get("AMAURA_OMNIROUTE_REVIEW_FALLBACK_MODEL", "").strip()
+
+    missing = [
+        name
+        for name, value in (
+            ("AMAURA_OMNIROUTE_BASE_URL", base_url),
+            ("AMAURA_OMNIROUTE_API_KEY", api_key),
+            ("AMAURA_OMNIROUTE_MODEL", worker),
+            ("AMAURA_OMNIROUTE_REVIEW_MODEL", reviewer),
+        )
+        if not value
+    ]
+    if missing:
+        raise RuntimeError(
+            "OmniRoute production configuration is incomplete: "
+            + ", ".join(missing)
+            + ". Run ./Setup_Amaura_OmniRoute.command first."
+        )
+    if not base_url.startswith(("http://", "https://")):
+        raise RuntimeError("AMAURA_OMNIROUTE_BASE_URL must start with http:// or https://")
+    if len(api_key) < 8:
+        raise RuntimeError("AMAURA_OMNIROUTE_API_KEY is invalid; rerun ./Setup_Amaura_OmniRoute.command")
+
+    route_env = {
+        "AMAURA_MODEL_PROVIDER": "omniroute",
+        "AMAURA_OMNIROUTE_MODEL": worker,
+        "AMAURA_OMNIROUTE_FALLBACK_MODEL": fallback,
+        "AMAURA_OMNIROUTE_REVIEW_MODEL": reviewer,
+        "AMAURA_OMNIROUTE_REVIEW_FALLBACK_MODEL": reviewer_fallback,
+    }
+    safety = omniroute_review_route(route_env)
+    if not safety.get("independent"):
+        raise RuntimeError(
+            "OmniRoute reviewer route is not independently safe: " + ", ".join(safety.get("blockers") or [])
+        )
+
+    return {
+        "base_url": base_url.rstrip("/"),
+        "api_key": api_key,
+        "worker": worker,
+        "fallback": fallback,
+        "chat": chat,
+        "reviewer": reviewer,
+        "reviewer_fallback": reviewer_fallback,
+    }
+
+
 def main() -> int:
     if not ENV_FILE.is_file():
         raise SystemExit(".env.amaura is missing; run ./Install_Amaura.command first")
     ENV_FILE.chmod(0o600)
 
-    # Preserve non-empty process credentials. This matters on a fresh clone where
-    # the generated env file intentionally contains no provider secret yet.
+    # The private file is authoritative. We intentionally validate the file
+    # itself rather than stale shell exports because launchd and the deployment
+    # gate will consume this exact configuration later.
     load_amaura_env(ENV_FILE, override=False, require_private_permissions=True)
     current = _read_assignments(ENV_FILE)
+    try:
+        route = _production_route(current)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
 
-    nvidia_key = os.environ.get("NVIDIA_API_KEY", "").strip() or current.get("NVIDIA_API_KEY", "").strip()
-    if not nvidia_key:
-        raise SystemExit(
-            "Hosted production requires NVIDIA_API_KEY. Export the existing key in this terminal and rerun; "
-            "JARVIS will not fall back to Nova/Ollama."
-        )
-
-    evaluation_key = os.environ.get("AMAURA_EVALUATION_PACK_HMAC_KEY", "").strip()
+    evaluation_key = current.get("AMAURA_EVALUATION_PACK_HMAC_KEY", "").strip() or os.environ.get(
+        "AMAURA_EVALUATION_PACK_HMAC_KEY", ""
+    ).strip()
     if len(evaluation_key.encode()) < 32:
         raise SystemExit("AMAURA_EVALUATION_PACK_HMAC_KEY is missing or invalid; regenerate .env.amaura safely")
 
@@ -138,25 +193,30 @@ def main() -> int:
     eval_path = trust_dir / "private-model-evaluation.json"
 
     updates = {
-        # Hosted-only Company OS routing.
-        "AMAURA_MODEL_MODE": "cloud",
+        # Canonical hosted gateway for workers, review, and executive cognition.
+        "AMAURA_MODEL_MODE": "omniroute",
+        "AMAURA_MODEL_PROVIDER": "omniroute",
+        "AMAURA_DISABLE_CLOUD": "0",
+        "AMAURA_REVIEW_MODE": "omniroute",
+        "AMAURA_JARVIS_PROVIDER": "omniroute",
+        "AMAURA_OMNIROUTE_BASE_URL": route["base_url"],
+        "AMAURA_OMNIROUTE_API_KEY": route["api_key"],
+        "AMAURA_OMNIROUTE_MODEL": route["worker"],
+        "AMAURA_OMNIROUTE_FALLBACK_MODEL": route["fallback"],
+        "AMAURA_OMNIROUTE_CHAT_MODEL": route["chat"],
+        "AMAURA_OMNIROUTE_REVIEW_MODEL": route["reviewer"],
+        "AMAURA_OMNIROUTE_REVIEW_FALLBACK_MODEL": route["reviewer_fallback"],
+        # No Nova/Ollama or direct NVIDIA production fallback.
         "AMAURA_LOCAL_MODEL": "",
         "AMAURA_LOCAL_REVIEW_MODEL": "",
-        "AMAURA_CLOUD_WORKER_MODEL": HOSTED_WORKER_MODEL,
-        "AMAURA_REVIEW_MODE": "cloud",
-        "AMAURA_CLOUD_REVIEW_MODEL": HOSTED_REVIEWER_MODEL,
-        "AMAURA_DISABLE_CLOUD": "0",
-        "NVIDIA_API_KEY": nvidia_key,
-        # Hosted executive cognition; no local fallback/probe.
-        "AMAURA_JARVIS_PROVIDER": "nvidia",
-        "AMAURA_JARVIS_MODEL": HOSTED_WORKER_MODEL,
-        "AMAURA_NVIDIA_MODEL": HOSTED_WORKER_MODEL,
+        "AMAURA_CLOUD_WORKER_MODEL": "",
+        "AMAURA_CLOUD_REVIEW_MODEL": "",
         "AMAURA_JARVIS_ALLOW_OLLAMA": "0",
         "AMAURA_JARVIS_OLLAMA_PROBE": "0",
-        # Native macOS isolation is the default target-machine verifier.
+        # Native macOS isolation is the target-machine verifier.
         "AMAURA_SANDBOX_MODE": "auto",
         "AMAURA_VERIFIER_MODE": "auto",
-        # Restore/lock the fail-closed launch posture even if an old env drifted.
+        # Restore/lock fail-closed production governance on every bootstrap.
         "AMAURA_STRICT_EVIDENCE": "1",
         "AMAURA_STRICT_EVIDENCE_SIGNATURES": "1",
         "AMAURA_STRICT_AUDIT_SIGNATURES": "1",
@@ -172,22 +232,25 @@ def main() -> int:
     }
     _upsert(ENV_FILE, updates)
 
-    # Re-load our persisted profile so evaluation_pack_status sees the exact file
-    # values that launchd/doctor will use later.
     load_amaura_env(ENV_FILE, override=True, require_private_permissions=True)
     pack = _ensure_private_eval_pack(eval_path, evaluation_key)
 
     report = {
         "ok": True,
-        "profile": "hosted_nvidia",
-        "worker_model": HOSTED_WORKER_MODEL,
-        "reviewer_model": HOSTED_REVIEWER_MODEL,
+        "profile": "hosted_omniroute",
+        "gateway": route["base_url"],
+        "worker_model": route["worker"],
+        "worker_fallback_model": route["fallback"],
+        "chat_model": route["chat"],
+        "reviewer_model": route["reviewer"],
+        "reviewer_fallback_model": route["reviewer_fallback"],
+        "reviewer_independent": True,
         "local_model_enabled": False,
+        "ollama_enabled": False,
         "sandbox_mode": "auto",
         "audit_checkpoint": str(checkpoint_path),
         "backup_dir": str(backup_dir),
         "private_evaluation_pack": pack,
-        "nvidia_key_persisted": True,
     }
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0
