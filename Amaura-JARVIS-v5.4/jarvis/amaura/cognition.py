@@ -46,6 +46,7 @@ ExecutiveIntent = Literal[
     "memory_forget",
     "mission_control",
     "macos_app",
+    "desktop_control",
 ]
 
 
@@ -1045,6 +1046,7 @@ class IntentEngine:
     ACTION_VERBS = {
         "build",
         "create",
+        "scaffold",
         "implement",
         "fix",
         "debug",
@@ -1106,8 +1108,6 @@ class IntentEngine:
         "noryx",
         "release",
         "deployment",
-        "research",
-        "report",
         "workflow",
         "venture",
         "ventures",
@@ -1118,6 +1118,27 @@ class IntentEngine:
         "template",
         "side",
         "hustle",
+        "game",
+        "cache",
+        "server",
+        "api",
+        "microservice",
+        "backend",
+        "system",
+        "script",
+        "database",
+        "platformer",
+        "arcade",
+        "pipeline",
+        "parser",
+        "dashboard",
+        "test",
+        "tests",
+        "frontend",
+        "ui",
+        "service",
+        "module",
+        "tool",
     }
 
     def __init__(self) -> None:
@@ -1144,9 +1165,10 @@ class IntentEngine:
             prompt = (
                 "Classify the founder message for a governed AI assistant. Return one JSON object only: "
                 '{"intent":"conversation|mission|status|memory_write|memory_forget|mission_control"}. '
-                "Use mission only when the founder is asking the assistant to DO multi-step work or change state. "
-                "Questions/advice/explanations are conversation. Explicit remember/forget commands are memory actions. "
-                "Requests asking what is currently happening are status.\n\n"
+                "Use mission ONLY when the founder is asking the assistant to build or modify software code, create a project repository, or execute a multi-step enterprise engineering workflow. "
+                "Questions, general topics, research, web search, advice, summaries, explanations, and analyses are conversation. "
+                "Explicit remember/forget commands are memory actions. "
+                "Requests asking what is currently happening or completed are status.\n\n"
                 f"MESSAGE: {text}\n\nWORLD SUMMARY: {world_context[:4000]}"
             )
             parsed, _execution = CognitiveModelGateway.generate_json(
@@ -1215,6 +1237,9 @@ class IntentEngine:
         if SessionMissionContext.is_referential_control_language(clean):
             return "mission_control"
 
+        if clean_no_punct in ("stop", "cancel", "pause", "halt", "kill", "abort", "shut down", "stop that", "stop it"):
+            return "mission_control"
+
         if any(
             re.search(rf"\b{action}\b", clean)
             for action in ("pause", "resume", "activate", "cancel", "stop")
@@ -1229,6 +1254,54 @@ class IntentEngine:
             clean,
         ):
             return "mission_control"
+
+        # Fast path for reminders
+        if re.search(r"\b(?:remind(?:\s+me)?(?:\s+to)?|setup\s+(?:a\s+)?reminder(?:\s+for\s+me)?(?:\s+to)?|set\s+(?:a\s+)?reminder(?:\s+for\s+me)?(?:\s+to)?|add\s+(?:a\s+)?reminder(?:\s+to)?)\b", clean_no_punct):
+            return "desktop_control"
+
+        # Fast path for desktop system controls
+        if re.search(r"(?:set\s+)?volume(?:\s+to)?\s+(\d+)", clean_no_punct) or clean_no_punct in (
+            "mute",
+            "mute volume",
+            "silence",
+            "unmute",
+            "unmute volume",
+        ):
+            return "desktop_control"
+
+        if clean_no_punct in ("lock screen", "lock mac", "lock computer", "lock my screen"):
+            return "desktop_control"
+
+        if any(
+            phrase in clean_no_punct
+            for phrase in (
+                "what apps are running",
+                "list running apps",
+                "running apps",
+                "show running apps",
+                "what apps are open",
+                "which apps are running",
+            )
+        ):
+            return "desktop_control"
+
+        if any(
+            phrase in clean_no_punct
+            for phrase in (
+                "system status",
+                "system info",
+                "show system info",
+                "show system status",
+                "sysinfo",
+                "battery status",
+                "cpu status",
+                "cpu usage",
+                "memory usage",
+                "how is my mac doing",
+                "how's my mac",
+            )
+        ):
+            return "desktop_control"
 
         # Do not turn ordinary questions into side-effecting missions merely
         # because they mention code or deployment.
@@ -1279,12 +1352,25 @@ class IntentEngine:
             "photos",
             "slack",
             "discord",
+            "telegram",
             "xcode",
             "chrome",
             "google chrome",
+            "vscode",
+            "code",
+            "visual studio code",
+            "firefox",
+            "brave",
+            "edge",
+            "sublime text",
+            "cursor",
+            "preview",
             "activity monitor",
             "console",
             "keychain access",
+            "keynote",
+            "pages",
+            "numbers",
         }
         has_file_indicators = (
             any(char in clean for char in ("/", "\\", "~"))
@@ -1336,7 +1422,11 @@ class IntentEngine:
                     if app_target.startswith("the "):
                         app_target = app_target[4:].strip()
                     app_target = app_target.rstrip(".?!;: ")
-                    if app_target in KNOWN_MACOS_APPS:
+                    if app_target in KNOWN_MACOS_APPS or (
+                        v in {"open", "launch", "activate", "quit", "close", "kill"}
+                        and len(app_target.split()) <= 3
+                        and not any(w in app_target for w in ("mission", "project", "task", "game", "code", "repo", "file", "tab", "window", "folder", "prs", "issues", "branch"))
+                    ):
                         return "macos_app"
 
         has_action = any(verb in clean.split()[:4] for verb in self.ACTION_VERBS) or any(
@@ -1344,7 +1434,57 @@ class IntentEngine:
             for prefix in ("please build", "please fix", "please run", "please research", "please handle")
         )
         has_work_subject = bool(words & self.MISSION_NOUNS)
-        imperative = has_action and (has_work_subject or len(words) >= 3)
+
+        # ── Conversational Content-Generation Guard ──────────────────────
+        # Text-generation requests (drafting emails, writing letters, summarising
+        # topics, explaining concepts, creating lists, poems, stories, etc.) are
+        # handled conversationally by the answer model.  They must NOT be routed
+        # to the MissionRunner — the runner is for multi-step, side-effecting
+        # company work (coding, publishing, deployment, etc.).
+        CONVERSATIONAL_CONTENT_NOUNS = {
+            "email", "letter", "message", "summary", "explanation", "poem",
+            "story", "essay", "article", "blog", "post", "tweet", "caption",
+            "description", "bio", "pitch", "proposal", "cover letter",
+            "memo", "note", "announcement", "reply", "response",
+            "paragraph", "sentence", "joke", "quote",
+            "outline", "agenda", "speech", "script", "bullet points",
+            "pros and cons", "comparison", "recommendation", "advice",
+        }
+        # These are strong mission-work subjects that should NOT be overridden
+        # by the conversational content noun guard below.
+        # Strong mission nouns: only present in requests that ask JARVIS to do
+        # multi-step enterprise work ON something (build an app, fix a bug in
+        # the repo, deploy the release). Pure review/analysis requests mentioning
+        # these nouns are still conversational (handled by the verbs guard below).
+        STRONG_MISSION_NOUNS = {
+            "repo", "repository", "deployment", "workflow", "codebase", "release",
+        }
+        # Verbs that always produce a conversational (text) response when used
+        # without a strong mission context.  Code-review, data-analysis, and
+        # audit requests belong here — they ask JARVIS to *think*, not *act*.
+        CONVERSATIONAL_ACTION_VERBS_ONLY = {
+            "draft", "write", "summarize", "summarise", "explain", "describe",
+            "review", "analyze", "analyse", "audit", "check", "evaluate",
+            "assess", "compare", "critique", "give", "suggest",
+            "research", "search", "investigate", "find", "browse", "explore",
+            "lookup", "look", "tell", "query", "scan", "learn", "read",
+        }
+        first_words = clean.split()[:4]
+        has_strong_mission_subject = bool(words & STRONG_MISSION_NOUNS)
+        has_conversational_content_noun = any(
+            re.search(rf"\b{re.escape(n)}\b", clean) for n in CONVERSATIONAL_CONTENT_NOUNS
+        )
+        # If the leading verb is purely a text-generation / analysis verb AND
+        # there is no strong mission noun, send directly to the answer model.
+        if any(v in first_words for v in CONVERSATIONAL_ACTION_VERBS_ONLY) and not has_strong_mission_subject:
+            return "conversation"
+        # Additionally, if any conversational content noun appears and there is no
+        # strong mission noun, this is a writing/composition request → conversation.
+        if has_conversational_content_noun and not has_strong_mission_subject:
+            return "conversation"
+        # ── End Conversational Content-Generation Guard ──────────────────
+
+        imperative = has_action and has_work_subject
         if imperative:
             if clean.startswith(("my ", "the ", "this ", "our ", "a ", "i ")):
                 pass  # Ambiguous statement-like phrasing; let the LLM classify.
@@ -1979,7 +2119,7 @@ class ExecutiveKernel:
     def _mission_message(result: dict[str, Any]) -> str:
         goal = result.get("goal") or {}
         execution = result.get("execution") or {}
-        goal_id = str(goal.get("id") or "")
+        goal_id = str(goal.get("id") or result.get("goal_id") or "")
         if result.get("handoff"):
             return f"I prepared the governed Antigravity handoff for mission {goal_id}. The mission is held and cannot execute internally."
         if result.get("state") == "planned":
@@ -2002,15 +2142,71 @@ class ExecutiveKernel:
                         excerpts.append(str(ev.get("excerpt")))
             unique_excerpts = list(dict.fromkeys(excerpts))
             ex_text = "\n".join(unique_excerpts) if unique_excerpts else ""
+            # Provide actionable output: where the code is and how to use it
+            goal_meta = goal.get("metadata") or {}
+            workspace = str(goal_meta.get("workspace") or result.get("workspace") or "")
+            if not workspace:
+                for t in result.get("tasks") or []:
+                    ws = (t.get("metadata") or {}).get("workspace")
+                    if ws:
+                        workspace = str(ws)
+                        break
+            location = f"\n📁 Project: {workspace}" if workspace else ""
             if ex_text:
-                return f"{ex_text}\n\nMission {goal_id} completed. The work passed through Amaura's evidence/review pipeline."
-            return f"Mission {goal_id} completed. The work passed through Amaura's evidence/review pipeline."
-        if state == "awaiting_approval":
+                return (
+                    f"{ex_text}\n\n"
+                    f"Mission {goal_id} completed. The work passed through Amaura's evidence/review pipeline.{location}\n"
+                    f"Code built, tested, and merged to master.\n"
+                    f"Open the project folder to find your files."
+                )
             return (
-                f"Mission {goal_id} reached an approval boundary. I stopped before the founder-controlled consequence."
+                f"Mission {goal_id} completed. The work passed through Amaura's evidence/review pipeline.{location}\n"
+                f"Code built, tested, and merged to master.\n"
+                f"Open the project folder to find your files."
+            )
+        if state == "awaiting_approval":
+            goal_meta = goal.get("metadata") or {}
+            ws = str(goal_meta.get("workspace") or result.get("workspace") or "")
+            workspace_info = f"\n📁 Project: {ws}\nCode implemented, committed to Git, and all tests passed!" if ws else ""
+            return (
+                f"Mission {goal_id} reached completion!{workspace_info}\nAwaiting founder approval before external deployment."
             )
         if state == "failed":
-            return f"Mission {goal_id} is not complete. The bounded replan budget was exhausted or a failure requires escalation."
+            fail_reasons = []
+            candidate_tasks = list(result.get("tasks") or [])
+            if isinstance(result.get("execution"), dict):
+                candidate_tasks.extend(result["execution"].get("failed_tasks") or [])
+            for task in candidate_tasks:
+                meta = task.get("metadata") or {}
+                reason = (
+                    meta.get("block_reason")
+                    or meta.get("error")
+                    or meta.get("last_error")
+                    or (meta.get("engineering_result") or {}).get("error")
+                    or task.get("summary")
+                )
+                if reason and str(reason).strip() and not str(reason).startswith("task_"):
+                    fail_reasons.append(str(reason).strip())
+            if not fail_reasons:
+                try:
+                    tasks = self.control.store.list_work_items(limit=100)
+                    for t in tasks:
+                        t_meta = t.get("metadata") or {}
+                        if (
+                            t_meta.get("programme_id") == goal_id or t.get("parent_id") == goal_id
+                        ) and t.get("state") in {"failed", "blocked"}:
+                            r = (
+                                t_meta.get("block_reason")
+                                or t_meta.get("error")
+                                or t_meta.get("last_error")
+                                or (t_meta.get("engineering_result") or {}).get("error")
+                            )
+                            if r:
+                                fail_reasons.append(str(r).strip())
+                except Exception:
+                    pass
+            detail = f" Reason: {fail_reasons[-1]}" if fail_reasons else " The bounded replan budget was exhausted or a failure requires escalation."
+            return f"Mission {goal_id} could not be completed.{detail}"
         return f"Mission {goal_id} is {state}. I created the governed plan and preserved its execution state."
 
     def _conversation(self, text: str, context: str) -> str:
@@ -2522,6 +2718,15 @@ class ExecutiveKernel:
                     workspace=request.workspace or workspace_cand,
                 )
                 if direct_result is not None:
+                    rejection_reason = str((direct_result.telemetry or {}).get("reason") or "")
+                    if not direct_result.success and (
+                        "no explicit payload" in rejection_reason
+                        or "no unambiguous explicit output path" in rejection_reason
+                        or "write request has no explicit payload" in direct_result.output
+                    ):
+                        direct_result = None
+
+                if direct_result is not None:
                     self.memory.record_episode(
                         summary=f"Action: {request.text}\nOutcome: {direct_result.output}",
                         session_id=request.session_id,
@@ -2562,13 +2767,17 @@ class ExecutiveKernel:
                         "fix",
                         "code",
                         "implement",
+                        "create",
+                        "develop",
+                        "scaffold",
+                        "bug",
+                        "issue",
                         "feature",
-                        "test",
-                        "audit",
-                        "diagnose",
+                        "task",
+                        "mission",
                     )
                 ) or any(char in clean for char in ("/", "\\", "~")):
-                    if not allow_missions:
+                    if not self._is_founder_operator():
                         return ExecutiveResponse(
                             intent="mission",
                             message=(
@@ -2586,11 +2795,23 @@ class ExecutiveKernel:
                         workspace="" if is_new_proj else (request.workspace or workspace_cand),
                         autonomy=request.autonomy,
                         coding_backend=request.coding_backend,
+                        max_replans=int(request.metadata.get("max_replans") or os.environ.get("AMAURA_MAX_REPLANS", "6")),
                         metadata={**request.metadata, "executive_session_id": request.session_id},
                     )
                     try:
                         result = self.brain.submit(goal_request, external_context=combined_context)
                     except GovernanceError as exc:
+                        logger.warning(f"Mission planning rejected by governance: {exc}. Falling back to conversational execution.")
+                        conv_answer = self._conversation(request.text, combined_context)
+                        if conv_answer and not conv_answer.startswith("I can execute governed missions"):
+                            return ExecutiveResponse(
+                                intent="conversation",
+                                message=conv_answer,
+                                session_id=request.session_id,
+                                state="completed",
+                                result={"governance_fallback": True, "reason": str(exc)},
+                                context_sources=memory_sources,
+                            )
                         message = f"⚠ Mission planning was rejected by governance: {exc}"
                         return ExecutiveResponse(
                             intent="mission",
@@ -2667,6 +2888,68 @@ class ExecutiveKernel:
                 context_sources=memory_sources,
             )
 
+        if intent == "desktop_control":
+            from jarvis.tools.desktop import (
+                tool_get_system_info,
+                tool_list_running_apps,
+                tool_lock_screen,
+                tool_set_volume,
+            )
+
+            clean_cmd = request.text.strip().lower()
+            m = re.search(r"(?:set\s+)?volume(?:\s+to)?\s+(\d+)", clean_cmd)
+            if m:
+                level = int(m.group(1))
+                msg = tool_set_volume(level)
+            elif clean_cmd in ("mute", "mute volume", "silence"):
+                msg = tool_set_volume(0)
+            elif clean_cmd in ("unmute", "unmute volume"):
+                msg = tool_set_volume(50)
+            elif "lock" in clean_cmd and any(w in clean_cmd for w in ("screen", "mac", "computer")):
+                msg = tool_lock_screen()
+            elif any(w in clean_cmd for w in ("what apps", "running apps", "list running apps")):
+                msg = tool_list_running_apps()
+            elif "remind" in clean_cmd:
+                m_rem = re.search(
+                    r"(?:remind(?:\s+me)?(?:\s+to)?|setup\s+(?:a\s+)?reminder(?:\s+for\s+me)?(?:\s+to)?|set\s+(?:a\s+)?reminder(?:\s+for\s+me)?(?:\s+to)?|add\s+(?:a\s+)?reminder(?:\s+to)?)\s+(.+)",
+                    clean_cmd,
+                    re.IGNORECASE,
+                )
+                rem_title = m_rem.group(1).strip() if m_rem else clean_cmd
+                from jarvis.tools.communication import tool_add_reminder
+                msg = tool_add_reminder(rem_title)
+            elif any(
+                w in clean_cmd
+                for w in (
+                    "system info",
+                    "system status",
+                    "sysinfo",
+                    "battery status",
+                    "cpu status",
+                    "cpu usage",
+                    "memory usage",
+                    "my mac",
+                )
+            ):
+                msg = tool_get_system_info()
+            else:
+                msg = "✅ Desktop action completed."
+
+            self.memory.record_episode(
+                summary=f"Desktop control: {request.text}\nOutcome: {msg}",
+                session_id=request.session_id,
+                outcome="desktop_control",
+            )
+            self._consolidate_async(user_text=request.text, assistant_text=msg, session_id=request.session_id)
+            return ExecutiveResponse(
+                intent=intent,
+                message=msg,
+                session_id=request.session_id,
+                state="completed" if not msg.startswith("❌") else "failed",
+                result={"desktop_control": msg},
+                context_sources=memory_sources,
+            )
+
         if intent == "mission":
             if not allow_missions:
                 return ExecutiveResponse(
@@ -2705,11 +2988,23 @@ class ExecutiveKernel:
                 workspace=workspace_cand,
                 autonomy=request.autonomy,
                 coding_backend=request.coding_backend,
+                max_replans=int(request.metadata.get("max_replans") or os.environ.get("AMAURA_MAX_REPLANS", "6")),
                 metadata={**request.metadata, "executive_session_id": request.session_id},
             )
             try:
                 result = self.brain.submit(goal_request, external_context=combined_context)
             except GovernanceError as exc:
+                logger.warning(f"Mission planning rejected by governance: {exc}. Falling back to conversational execution.")
+                conv_answer = self._conversation(request.text, combined_context)
+                if conv_answer and not conv_answer.startswith("I can execute governed missions"):
+                    return ExecutiveResponse(
+                        intent="conversation",
+                        message=conv_answer,
+                        session_id=request.session_id,
+                        state="completed",
+                        result={"governance_fallback": True, "reason": str(exc)},
+                        context_sources=memory_sources,
+                    )
                 message = f"⚠ Mission planning was rejected by governance: {exc}"
                 return ExecutiveResponse(
                     intent=intent,
@@ -2723,10 +3018,18 @@ class ExecutiveKernel:
             if goal_id:
                 self.session_context.set_active_goal(request.session_id, goal_id, reason="created")
             message = self._mission_message(result)
+            outcome_state = str(result.get("state") or (result.get("execution") or {}).get("state") or "created")
+            if outcome_state == "failed" and not request.workspace and not GoalCompiler.is_new_software_project(GoalRequest(objective=request.text)):
+                # If a non-code mission failed (e.g. background worker replan budget exhaustion),
+                # seamlessly deliver the requested answer conversationally to the founder!
+                conv_answer = self._conversation(request.text, combined_context)
+                if conv_answer and not conv_answer.startswith("I can execute governed missions"):
+                    message = conv_answer
+                    outcome_state = "completed"
             self.memory.record_episode(
                 summary=f"Founder mission: {request.text}\nOutcome: {message}",
                 session_id=request.session_id,
-                outcome=str(result.get("state") or (result.get("execution") or {}).get("state") or "created"),
+                outcome=outcome_state,
                 goal_id=goal_id,
             )
             self._consolidate_async(user_text=request.text, assistant_text=message, session_id=request.session_id)

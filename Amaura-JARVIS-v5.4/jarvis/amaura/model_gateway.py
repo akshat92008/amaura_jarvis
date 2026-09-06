@@ -270,6 +270,11 @@ class CognitiveModelGateway:
                 return general
             return ""
 
+        # Provider-specific configuration takes absolute precedence
+        provider_specific = os.environ.get(f"AMAURA_{provider.upper()}_MODEL", "").strip()
+        if provider_specific:
+            return provider_specific
+
         purpose_key = {
             "planner": "AMAURA_JARVIS_PLANNER_MODEL",
             "intent": "AMAURA_JARVIS_INTENT_MODEL",
@@ -278,20 +283,15 @@ class CognitiveModelGateway:
         }.get(purpose, "AMAURA_JARVIS_MODEL")
         specific = os.environ.get(purpose_key, "").strip()
         if specific and specific.lower() not in {"auto", "on", "true", "1"}:
-            return specific
+            if not ("antigravity/" in specific or "agy/" in specific or "auto/" in specific):
+                return specific
         general = os.environ.get("AMAURA_JARVIS_MODEL", "").strip()
-        if general:
+        if general and not ("antigravity/" in general or "agy/" in general or "auto/" in general):
             return general
-        provider_specific = os.environ.get(f"AMAURA_{provider.upper()}_MODEL", "").strip()
-        if provider_specific:
-            return provider_specific
         if provider == "ollama":
-            # Executive cognition must use the same small local model chosen for
-            # the Company OS, not the legacy global DEFAULT_MODEL (which may be a
-            # 70B cloud identifier and impossible on an 8 GB Mac).
-            return os.environ.get("AMAURA_LOCAL_MODEL", "nova:3b").strip()
+            return os.environ.get("AMAURA_LOCAL_MODEL", "llama3.2:1b").strip()
         defaults = {
-            "nvidia": "meta/llama-3.3-70b-instruct",
+            "nvidia": "meta/llama-3.2-11b-vision-instruct",
             "openai": "gpt-4o-mini",
             "anthropic": "claude-3-5-sonnet-20241022",
             "groq": "llama-3.3-70b-versatile",
@@ -788,6 +788,35 @@ class CognitiveModelGateway:
         )
 
     @classmethod
+    def _admissible_selections(cls, purpose: str = "general") -> list[CognitiveModelSelection]:
+        requested = (
+            os.environ.get("AMAURA_MODEL_PROVIDER", "").strip().lower()
+            or os.environ.get("AMAURA_JARVIS_PROVIDER", "auto").strip().lower()
+            or "auto"
+        )
+        selections: list[CognitiveModelSelection] = []
+        if requested != "auto":
+            if requested in cls.PROVIDERS and cls._provider_available(requested, purpose=purpose):
+                m = cls._model_for(requested, purpose)
+                if m:
+                    selections.append(CognitiveModelSelection(requested, m))
+
+        order = [
+            item.strip().lower()
+            for item in os.environ.get(
+                "AMAURA_JARVIS_PROVIDER_ORDER",
+                "omniroute,nvidia,ollama,openai,anthropic,groq,openrouter",
+            ).split(",")
+            if item.strip()
+        ]
+        for provider in order:
+            if provider != requested and provider in cls.PROVIDERS and cls._provider_available(provider, purpose=purpose):
+                m = cls._model_for(provider, purpose)
+                if m:
+                    selections.append(CognitiveModelSelection(provider, m))
+        return selections
+
+    @classmethod
     def generate(
         cls,
         *,
@@ -796,33 +825,43 @@ class CognitiveModelGateway:
         temperature: float = 0.1,
         max_tokens: int = 4000,
     ) -> CognitiveModelResult:
-        selection = cls.select(purpose=purpose)
-        if selection is None:
+        selections = cls._admissible_selections(purpose=purpose)
+        if not selections:
             raise GovernanceError(f"No configured cognition model is available for {purpose}")
-        if selection.provider == "omniroute":
-            deadline, retry_override = cls._interactive_budget(purpose)
-            return cls._omniroute(
-                model=selection.model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                deadline_monotonic=deadline,
-                max_retries_override=retry_override,
-            )
-        if selection.provider == "anthropic":
-            return cls._anthropic(
-                model=selection.model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-        return cls._openai_compatible(
-            provider=selection.provider,
-            model=selection.model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+        last_exc: Exception | None = None
+        for selection in selections:
+            try:
+                if selection.provider == "omniroute":
+                    deadline, retry_override = cls._interactive_budget(purpose)
+                    return cls._omniroute(
+                        model=selection.model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        deadline_monotonic=deadline,
+                        max_retries_override=retry_override,
+                    )
+                if selection.provider == "anthropic":
+                    return cls._anthropic(
+                        model=selection.model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                    )
+                return cls._openai_compatible(
+                    provider=selection.provider,
+                    model=selection.model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            except Exception as exc:
+                last_exc = exc
+                cls._record_provider_failure(selection.provider)
+                continue
+        if last_exc is not None:
+            raise last_exc
+        raise GovernanceError(f"No configured cognition model succeeded for {purpose}")
 
     @classmethod
     def generate_stream(
@@ -845,7 +884,7 @@ class CognitiveModelGateway:
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-            if result.text:
+            if result.text and callable(on_token):
                 on_token(result.text)
             return result
 
@@ -854,7 +893,15 @@ class CognitiveModelGateway:
             os.environ.get("AMAURA_OMNIROUTE_BASE_URL", "").strip() or os.environ.get("OMNIROUTE_BASE_URL", "").strip()
         ).rstrip("/")
         if not key or not base_url or not base_url.startswith(("http://", "https://")):
-            raise GovernanceError("OmniRoute is not properly configured for streaming")
+            result = cls.generate(
+                messages=messages,
+                purpose=purpose,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            if result.text and callable(on_token):
+                on_token(result.text)
+            return result
         endpoint = (
             base_url
             if base_url.endswith("/chat/completions")
@@ -878,12 +925,12 @@ class CognitiveModelGateway:
             "Authorization": f"Bearer {key}",
             "Accept": "text/event-stream",
         }
-        started = _time.monotonic()
         chunks: list[str] = []
+        ttft_ms = 0
+        started = _time.monotonic()
         request_id = ""
         resolved_provider = "omniroute"
         resolved_model = selection.model
-        ttft_ms = 0
         try:
             with cls._http_client().stream(
                 "POST",
@@ -893,11 +940,17 @@ class CognitiveModelGateway:
                 timeout=timeout_sec,
             ) as response:
                 response.raise_for_status()
-                headers = {k.lower(): v for k, v in response.headers.items()}
-                request_id = str(headers.get("x-request-id") or headers.get("x-omniroute-request-id") or "")
-                resolved_provider = str(headers.get("x-resolved-provider") or headers.get("x-provider") or "omniroute")
+                request_id = str(
+                    response.headers.get("x-request-id") or response.headers.get("x-omniroute-request-id") or ""
+                )
+                resolved_provider = str(
+                    response.headers.get("x-resolved-provider")
+                    or response.headers.get("x-provider")
+                    or response.headers.get("x-omniroute-provider")
+                    or "omniroute"
+                )
                 resolved_model = str(
-                    headers.get("x-resolved-model") or headers.get("x-omniroute-model") or selection.model
+                    response.headers.get("x-resolved-model") or response.headers.get("x-omniroute-model") or selection.model
                 )
                 for raw_line in response.iter_lines():
                     line = raw_line.strip()
@@ -917,19 +970,19 @@ class CognitiveModelGateway:
                             if not chunks:
                                 ttft_ms = int((_time.monotonic() - started) * 1000)
                             chunks.append(token)
-                            on_token(token)
+                            if callable(on_token):
+                                on_token(token)
         except Exception as exc:
             if chunks:
                 raise GovernanceError("OmniRoute stream interrupted after output began") from exc
-            result = cls._omniroute(
-                model=selection.model,
+            cls._record_provider_failure("omniroute")
+            result = cls.generate(
                 messages=messages,
+                purpose=purpose,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                deadline_monotonic=deadline,
-                max_retries_override=retry_override,
             )
-            if result.text:
+            if result.text and callable(on_token):
                 on_token(result.text)
             return result
         cls._record_provider_success("omniroute")

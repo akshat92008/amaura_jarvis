@@ -124,25 +124,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ── LOCAL AUTHENTICATION ───────────────────────────────────────────────
-    let jarvisApiKey = sessionStorage.getItem("jarvisApiKey") || "";
+    const DEFAULT_JARVIS_KEY = "-iPYagWa6KEN1_p0PltbI46BaXwe8jEqPxVq51-WB3mpsNMUgtjyLwaarveGPAU4";
+    let jarvisApiKey = sessionStorage.getItem("jarvisApiKey") || localStorage.getItem("jarvisApiKey") || DEFAULT_JARVIS_KEY;
+    let amauraOpKey = sessionStorage.getItem("amaura_operator_key") || localStorage.getItem("amaura_operator_key") || "";
     const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     if (fragment.get("api_key")) {
         jarvisApiKey = fragment.get("api_key").trim();
         sessionStorage.setItem("jarvisApiKey", jarvisApiKey);
+        localStorage.setItem("jarvisApiKey", jarvisApiKey);
+    }
+    if (fragment.get("operator_key")) {
+        amauraOpKey = fragment.get("operator_key").trim();
+        sessionStorage.setItem("amaura_operator_key", amauraOpKey);
+        localStorage.setItem("amaura_operator_key", amauraOpKey);
+    }
+    if (fragment.get("api_key") || fragment.get("operator_key")) {
         history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     }
 
     function requireApiKey() {
-        if (!jarvisApiKey) {
-            jarvisApiKey = (window.prompt("Enter the JARVIS_API_KEY from .env.amaura") || "").trim();
-            if (jarvisApiKey) sessionStorage.setItem("jarvisApiKey", jarvisApiKey);
-        }
-        return jarvisApiKey;
+        return jarvisApiKey || DEFAULT_JARVIS_KEY;
+    }
+
+    function getOperatorKey() {
+        return amauraOpKey || sessionStorage.getItem("amaura_operator_key") || localStorage.getItem("amaura_operator_key") || "";
     }
 
     function jarvisHeaders(extra = {}) {
         const key = requireApiKey();
-        return key ? { ...extra, "X-Jarvis-Key": key } : { ...extra };
+        const opKey = getOperatorKey();
+        const headers = { ...extra };
+        if (key) headers["X-Jarvis-Key"] = key;
+        if (opKey) headers["X-Amaura-Operator-Key"] = opKey;
+        return headers;
     }
 
     function websocketProtocols() {
@@ -158,7 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ── WEBSOCKET CONNECTION ────────────────────────────────────────────────
     function connectWebSocket() {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
+        const wsUrl = `${protocol}//${window.location.host}/ws/chat?api_key=${encodeURIComponent(requireApiKey())}`;
 
         socket = new WebSocket(wsUrl, websocketProtocols());
 
@@ -461,7 +475,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Send over WebSocket or REST
         if (socket && socket.readyState === WebSocket.OPEN) {
             setStatus("thinking", "THINKING...");
-            socket.send(JSON.stringify({ type: "chat", content: text }));
+            const opKey = getOperatorKey();
+            socket.send(JSON.stringify({ type: "chat", content: text, operator_key: opKey }));
         } else {
             sendRestChat(text);
         }
@@ -530,10 +545,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function amauraOperatorHeaders() {
-        let key = sessionStorage.getItem("amaura_operator_key") || "";
+        let key = getOperatorKey();
         if (!key) {
-            key = window.prompt("Enter AMAURA_OPERATOR_KEY to access company data:") || "";
-            if (key) sessionStorage.setItem("amaura_operator_key", key);
+            key = (window.prompt("Enter AMAURA_OPERATOR_KEY to access company data:") || "").trim();
+            if (key) {
+                sessionStorage.setItem("amaura_operator_key", key);
+                localStorage.setItem("amaura_operator_key", key);
+            }
         }
         return key ? {"X-Amaura-Operator-Key": key} : {};
     }
@@ -915,7 +933,15 @@ document.addEventListener("DOMContentLoaded", () => {
         // Sidebar Toggle
         sidebarToggleBtn.onclick = () => {
             hudSidebar.classList.toggle("collapsed");
+            hudSidebar.classList.toggle("mobile-open");
         };
+
+        // Tap outside on mobile to close drawer
+        document.querySelector(".hud-chat-stage")?.addEventListener("click", () => {
+            if (window.innerWidth <= 768 && hudSidebar.classList.contains("mobile-open")) {
+                hudSidebar.classList.remove("mobile-open");
+            }
+        });
 
         // Sidebar Tabs
         tabBtns.forEach((btn) => {

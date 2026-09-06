@@ -43,8 +43,13 @@ def execute_tool(name: str, args: dict) -> str:
 
 
 # Category imports intentionally happen only after the stable public API above.
+from jarvis.awareness import AWARENESS_DISPATCH, AWARENESS_TOOL_DEFINITIONS
 from jarvis.fleet import FLEET_DISPATCH, FLEET_TOOL_DEFINITIONS
+from jarvis.heartbeat import HEARTBEAT_DISPATCH, HEARTBEAT_TOOL_DEFINITIONS
 from jarvis.hud import HUD_DISPATCH, HUD_TOOL_DEFINITIONS
+from jarvis.knowledge_graph import KNOWLEDGE_GRAPH_DISPATCH, KNOWLEDGE_GRAPH_TOOL_DEFINITIONS
+from jarvis.morning_briefing import MORNING_BRIEFING_DISPATCH, MORNING_BRIEFING_TOOL_DEFINITIONS
+from jarvis.reflection import REFLECTION_DISPATCH, REFLECTION_TOOL_DEFINITIONS
 from jarvis.tools.advanced_coding import ADVANCED_CODING_DISPATCH, ADVANCED_CODING_TOOL_DEFINITIONS
 from jarvis.tools.agent_factory import AGENT_FACTORY_DISPATCH, AGENT_FACTORY_TOOL_DEFINITIONS
 from jarvis.tools.amaura import AMAURA_DISPATCH, AMAURA_TOOL_DEFINITIONS
@@ -98,6 +103,11 @@ ALL_TOOL_DEFINITIONS.extend(
         HUD_TOOL_DEFINITIONS,
         VOICE_TOOL_DEFINITIONS,
         AMAURA_TOOL_DEFINITIONS,
+        AWARENESS_TOOL_DEFINITIONS,
+        REFLECTION_TOOL_DEFINITIONS,
+        KNOWLEDGE_GRAPH_TOOL_DEFINITIONS,
+        HEARTBEAT_TOOL_DEFINITIONS,
+        MORNING_BRIEFING_TOOL_DEFINITIONS,
     )
 )
 
@@ -120,6 +130,11 @@ ALL_DISPATCH.update(
         **HUD_DISPATCH,
         **VOICE_DISPATCH,
         **AMAURA_DISPATCH,
+        **AWARENESS_DISPATCH,
+        **REFLECTION_DISPATCH,
+        **KNOWLEDGE_GRAPH_DISPATCH,
+        **HEARTBEAT_DISPATCH,
+        **MORNING_BRIEFING_DISPATCH,
         # Same public schemas; these last-provider handlers add a hard timeout
         # boundary around network search so third-party hangs cannot freeze JARVIS.
         **RESILIENT_RESEARCH_DISPATCH,

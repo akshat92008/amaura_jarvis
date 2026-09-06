@@ -161,33 +161,75 @@ def _strip_path(value: str) -> str:
 
 def _looks_like_path(value: str, known_extensions: tuple[str, ...]) -> bool:
     value = _strip_path(value)
-    if not value or "\n" in value or " " in value:
+    if not value or "\n" in value or " " in value or "=" in value:
         return False
-    return (
+    if (
         value.startswith(("/", "~/", "./", "../"))
         or "/" in value
         or "\\" in value
         or any(value.lower().endswith(ext) for ext in known_extensions)
-    )
+    ):
+        return True
+    if "." in value and not value.startswith(".") and not value.endswith("."):
+        if not ("/" in value or "\\" in value or value.startswith(("/", "~/", "./", "../"))):
+            if re.search(r"\.[A-Z]", value):
+                return False
+        parts = value.rsplit(".", 1)
+        if len(parts) == 2 and parts[0] and parts[1] and re.match(r"^[a-zA-Z][a-zA-Z0-9_-]{0,11}$", parts[1]):
+            if re.match(r"^v?\d+(?:\.\d+)*$", value, re.IGNORECASE):
+                return False
+            if ("." + parts[1].lower()) in known_extensions:
+                return True
+            if "/" in value or "\\" in value or value.startswith(("/", "~/", "./", "../")):
+                return True
+    return False
 
 
 def extract_paths(text: str, known_extensions: tuple[str, ...]) -> list[str]:
     """Extract syntactically real paths only; generic prepositions are not introducers."""
     candidates: list[tuple[int, str]] = []
+    explicit_paths: set[str] = set()
+
+    content_spans: list[tuple[int, int]] = []
+    for match in re.finditer(
+        r"\b(?:with\s+(?:the\s+)?(?:content|text|payload|body|words)|content\s*(?:is|=|:)|payload\s*(?:is|=|:)|text\s*(?:is|=|:))\s*['\"`]([^'\"`\n]*)['\"`]",
+        text,
+        re.IGNORECASE,
+    ):
+        content_spans.append((match.start(1), match.end(1)))
+
+    # Quoted strings explicitly preceded by file/path keywords
+    for match in re.finditer(
+        r"\b(?:file|path|directory|folder|location|target|destination)\s+['\"`]([^'\"`\n]+)['\"`]",
+        text,
+        re.IGNORECASE,
+    ):
+        val = match.group(1)
+        candidates.append((match.start(1), val))
+        explicit_paths.add(_strip_path(val))
+
     for match in re.finditer(r"['\"`]([^'\"`\n]+)['\"`]", text):
+        start, end = match.start(1), match.end(1)
+        if any(cs <= start and end <= ce for cs, ce in content_spans):
+            continue
         value = match.group(1)
         if _looks_like_path(value, known_extensions):
-            candidates.append((match.start(1), value))
+            candidates.append((start, value))
     for match in re.finditer(r"(?<![\w])((?:~|\.\.?)?/[A-Za-z0-9_.\-~]+(?:/[A-Za-z0-9_.\-~]+)*)", text):
         candidates.append((match.start(1), match.group(1)))
     for match in re.finditer(r"\b[A-Za-z0-9_.\-/~]+\.[A-Za-z0-9_-]+\b", text):
-        candidates.append((match.start(), match.group(0)))
+        raw_val = match.group(0)
+        if not re.match(r"^v?\d+(?:\.\d+)*$", raw_val, re.IGNORECASE) and "=" not in raw_val:
+            if not ("/" in raw_val or "\\" in raw_val or raw_val.startswith(("/", "~/", "./", "../"))):
+                if re.search(r"\.[A-Z]", raw_val):
+                    continue
+            candidates.append((match.start(), raw_val))
     candidates.sort(key=lambda item: item[0])
     result: list[str] = []
     seen: set[str] = set()
     for _, raw in candidates:
         value = _strip_path(raw)
-        if not value or value.lower() in _STOP_WORDS or not _looks_like_path(value, known_extensions) or value in seen:
+        if not value or value.lower() in _STOP_WORDS or (value not in explicit_paths and not _looks_like_path(value, known_extensions)) or value in seen:
             continue
         seen.add(value)
         result.append(value)
@@ -365,12 +407,24 @@ def _write_payload_candidates(text: str, target: str) -> list[str]:
             val = re.split(r"\.\s*(?:do\s+not|don't)\b", val, flags=re.IGNORECASE)[0].strip()
             candidates.append(val)
 
-    # "write <literal> to <path>" form.
-    m = re.search(
-        r"\bwrite\s+['\"`]([^'\"`\n]*)['\"`]\s+(?:to|into)\s+['\"`]?" + re.escape(target), text, re.IGNORECASE
+    # "write|save|store|put|output|record|dump <literal> to|into <path>" form (quoted or unquoted).
+    m_verb_quoted = re.search(
+        r"\b(?:write|save|store|put|output|record|dump|create)\s+['\"`]([^'\"`\n]*)['\"`]\s+(?:to|into|in|at)\s+(?:destination\s+)?['\"`]?"
+        + re.escape(target),
+        text,
+        re.IGNORECASE,
     )
-    if m:
-        candidates.append(m.group(1))
+    if m_verb_quoted:
+        candidates.append(m_verb_quoted.group(1))
+    else:
+        m_verb_unquoted = re.search(
+            r"\b(?:write|save|store|put|output|record|dump)\s+([^\s'\"`\n]+)\s+(?:to|into|in|at)\s+(?:destination\s+)?['\"`]?"
+            + re.escape(target),
+            text,
+            re.IGNORECASE,
+        )
+        if m_verb_unquoted:
+            candidates.append(m_verb_unquoted.group(1))
 
     # "In <target> write (?:exactly )?<payload> and nothing else"
     m_in_target = re.search(
@@ -710,7 +764,8 @@ class SemanticParser:
             )
 
         write_verb = bool(re.search(r"\b(?:write|save|store|put|create|make|dump|record|export)\b", masked))
-        if write_verb and paths:
+        from jarvis.amaura.direct_action import WriteActionParser
+        if write_verb and paths and not WriteActionParser._is_software_generation_request(clean):
             # Check if multiple independent writes exist
             multi_writes: dict[str, str] = {}
             for p in paths:
@@ -774,8 +829,10 @@ class SemanticParser:
                 evidence=["directory_list_grammar"],
             )
 
-        if paths and re.search(
-            r"\b(?:read|open|show|display|cat|fetch|view|print)\b|\b(?:contents?|text)\s+of\b", masked
+        if (
+            paths
+            and not WriteActionParser._is_software_generation_request(clean)
+            and re.search(r"\b(?:read|open|show|display|cat|fetch|view|print)\b|\b(?:contents?|text)\s+of\b", masked)
         ):
             return SemanticRequestGraph(
                 clean,

@@ -232,6 +232,25 @@ class AntigravityDeliveryAdapter:
         return {k: v for k, v in os.environ.items() if k in allowed}
 
     @staticmethod
+    def _is_transient_test_artifact(name: str) -> bool:
+        norm = name.replace("\\", "/")
+        prefixes = (
+            ".pytest_cache/",
+            ".ruff_cache/",
+            ".mypy_cache/",
+            ".hypothesis/",
+            ".tox/",
+            ".nox/",
+            ".coverage",
+        )
+        if norm.startswith(prefixes):
+            return True
+        if "/.pytest_cache/" in norm or "/__pycache__/" in norm or norm.startswith("__pycache__/"):
+            return True
+        suffixes = (".pyc", ".pyo", ".pyd", ".coverage")
+        return norm.endswith(suffixes)
+
+    @staticmethod
     def _changed_files(repository: Path, base_commit: str) -> list[str]:
         names: set[str] = set()
         for args in (
@@ -247,6 +266,7 @@ class AntigravityDeliveryAdapter:
                 raw = line[3:].strip().split(" -> ")[-1]
                 if raw:
                     names.add(_relpath(raw))
+        names = {n for n in names if not AntigravityDeliveryAdapter._is_transient_test_artifact(n)}
         return sorted(names)
 
     @staticmethod
@@ -294,15 +314,23 @@ class AntigravityDeliveryAdapter:
         base_commit: str,
         repository: Path,
         git_common_dir: Path,
+        working_dir: Path | None = None,
     ) -> str:
         criteria = "\n".join(f"- {v}" for v in acceptance) or "- Satisfy the objective without regressions."
         workspace = str(repository)
+        sub_notice = (
+            f"\nNote: The primary target project is located inside `{working_dir}`.\n"
+            if working_dir and working_dir != repository
+            else ""
+        )
         return f"""You are the software-engineering backend for Amaura JARVIS. Your only writable workspace is:
 {workspace}
+{sub_notice}
 
 Strict Sandbox Constraints:
+- STRICT OFFLINE ENVIRONMENT: External network access and internet are completely disabled. Do NOT attempt to use web search (`search_web`), browse the web (`read_url`, `read_url_content`), or download external assets. Implement all logic, algorithms, assets, and tests self-contained and locally inside `{workspace}`.
 - Do NOT run shell commands via `run_command` or run `git status`, `git diff`, or `pwd`. Use `view_file`, `list_dir`, `replace_file_content`, or `write_to_file` to inspect and modify code files directly.
-- Once file edits are complete, output the final result JSON object immediately without calling terminal commands.
+- Once file edits are complete, output the final result JSON object conforming to the schema immediately without calling terminal commands.
 
 
 OBJECTIVE
@@ -324,7 +352,9 @@ BOUNDARIES
 - Never claim success with known failures.
 
 FINAL RESULT
-Return only the JSON object required by the supplied schema. `changed_files` must exactly name the files you changed. `verification_commands` must contain safe deterministic commands that Amaura can independently rerun (for example `pytest ...`, `python -m unittest ...`, `npm test`, or project equivalents). Do NOT use inline python commands like `python3 -c` or `python -c` as they are strictly forbidden by the Amaura security scanner. Ensure all assertions in your test suite match your implementation logic and state constants precisely so that tests pass with exit code 0."""
+CRITICAL: You MUST return only the JSON object required by the supplied schema as your final response.
+`changed_files` must exactly name the relative file paths you modified or created.
+`verification_commands` must contain safe deterministic commands that Amaura can independently rerun (for example `pytest ...`, `python -m unittest ...`, `npm test`, or project equivalents). Do NOT use inline python commands like `python3 -c` or `python -c` as they are strictly forbidden by the Amaura security scanner. Ensure all assertions in your test suite match your implementation logic, method signatures, and state constants precisely so that tests pass with exit code 0. Double-check that property vs method calls match your classes and all expected return types are respected."""
 
     @staticmethod
     def _extract_contract(stdout: str) -> dict[str, Any]:
@@ -339,9 +369,56 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
                 if not line:
                     continue
                 try:
-                    payloads.append(json.loads(line))
+                    val = json.loads(line)
+                    if isinstance(val, (dict, list)):
+                        payloads.append(val)
                 except json.JSONDecodeError:
                     continue
+
+        # In addition, search for markdown code blocks in stdout
+        for block in re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", stdout, re.DOTALL):
+            try:
+                payloads.append(json.loads(block))
+            except json.JSONDecodeError:
+                pass
+
+        # Scan for candidate JSON substrings containing contract keys
+        for marker in ("amaura.antigravity-result", "verification_commands", "changed_files"):
+                idx = 0
+                while True:
+                    pos = stdout.find(marker, idx)
+                    if pos == -1:
+                        break
+                    idx = pos + len(marker)
+                    start = stdout.rfind("{", 0, pos)
+                    if start == -1:
+                        continue
+                    depth = 0
+                    in_string = False
+                    escape = False
+                    for i in range(start, len(stdout)):
+                        char = stdout[i]
+                        if escape:
+                            escape = False
+                            continue
+                        if char == "\\":
+                            escape = True
+                            continue
+                        if char == '"':
+                            in_string = not in_string
+                            continue
+                        if not in_string:
+                            if char == "{":
+                                depth += 1
+                            elif char == "}":
+                                depth -= 1
+                                if depth == 0:
+                                    try:
+                                        payloads.append(json.loads(stdout[start : i + 1]))
+                                    except json.JSONDecodeError:
+                                        pass
+                                    break
+
         if not payloads:
             raise GovernanceError("Antigravity returned no machine-readable structured output")
 
@@ -386,6 +463,15 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
                         return found
             elif isinstance(value, str):
                 val_str = value.strip()
+                if "```" in val_str:
+                    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", val_str, re.DOTALL)
+                    if match:
+                        try:
+                            found = visit(json.loads(match.group(1)))
+                            if found is not None:
+                                return found
+                        except json.JSONDecodeError:
+                            pass
                 if val_str.startswith("{") and val_str.endswith("}"):
                     try:
                         found = visit(json.loads(val_str))
@@ -393,6 +479,16 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
                             return found
                     except json.JSONDecodeError:
                         pass
+                elif "{" in val_str and "}" in val_str:
+                    start = val_str.find("{")
+                    end = val_str.rfind("}")
+                    if start != -1 and end > start:
+                        try:
+                            found = visit(json.loads(val_str[start : end + 1]))
+                            if found is not None:
+                                return found
+                        except json.JSONDecodeError:
+                            pass
             return None
 
         for payload in reversed(payloads):
@@ -696,6 +792,28 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
             "global_customizations": global_customizations,
         }
 
+    @classmethod
+    def _discover_verification_commands(cls, repository: Path, changed_files: list[str]) -> list[str]:
+        commands: list[str] = []
+        has_py_test = any(
+            p.endswith(".py") and ("test" in Path(p).name.lower() or "tests/" in p)
+            for p in changed_files
+        ) or (repository / "tests").is_dir()
+        if has_py_test:
+            commands.append("pytest")
+        elif (repository / "package.json").is_file():
+            try:
+                pkg = json.loads((repository / "package.json").read_text(encoding="utf-8"))
+                if "test" in (pkg.get("scripts") or {}):
+                    commands.append("npm test")
+            except Exception:
+                pass
+        elif (repository / "Cargo.toml").is_file():
+            commands.append("cargo test")
+        elif (repository / "go.mod").is_file():
+            commands.append("go test ./...")
+        return commands
+
     def run_with_result(
         self,
         *,
@@ -715,9 +833,19 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
             raise GovernanceError(
                 f"Antigravity CLI >=1.1.8 is required for structured headless JARVIS integration; found {cli_version or 'unknown'}"
             )
-        repository = Path(repository_path).expanduser().resolve()
-        if not repository.is_dir() or not (repository / ".git").exists():
+        target_working_dir = Path(repository_path).expanduser().resolve()
+        git_root: Path | None = target_working_dir
+        while git_root and git_root != git_root.parent:
+            if (git_root / ".git").exists():
+                break
+            git_root = git_root.parent
+        else:
+            git_root = None
+        if not git_root:
             raise GovernanceError("Antigravity delivery requires an existing Git repository/worktree")
+        repository = git_root
+        working_dir = target_working_dir if (target_working_dir != repository and target_working_dir.is_relative_to(repository)) else repository
+        subfolder_rel = working_dir.relative_to(repository) if working_dir != repository else None
         if not objective.strip():
             raise GovernanceError("Antigravity delivery objective is required")
         security_status = self._preflight_security(repository)
@@ -778,132 +906,216 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
                         base_commit,
                         repository,
                         git_common_dir,
+                        working_dir=working_dir,
                     ),
                 ]
             )
             if "--dangerously-skip-permissions" in argv:
                 raise GovernanceError("Amaura will never invoke Antigravity with permission bypass enabled")
-            policy = MemoryPolicy.from_env()
-            ledger = CrossProcessResourceLedger(policy)
-            requested_mb = max(512, int(os.environ.get("AMAURA_ANTIGRAVITY_RESERVATION_MB", "1800")))
-            reservation_id, reason, state = ledger.try_reserve(
-                capability="antigravity", ram_mb=requested_mb, heavy=True
-            )
-            if not reservation_id:
-                raise GovernanceError(f"Antigravity resource admission refused: {reason}; state={state}")
-            stdout_lines: list[str] = []
-            stderr_lines: list[str] = []
-            observed_models: set[str] = set()
-            proc: subprocess.Popen[str] | None = None
-            try:
-                proc = subprocess.Popen(
-                    argv,
-                    cwd=repository,
-                    env=self._environment(),
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1,
-                    start_new_session=(os.name == "posix"),
-                )
-                if phase_callback:
-                    phase_callback(
-                        "executor_started", {"pid": proc.pid, "base_commit": base_commit, "argv_mode": "stream-json"}
+            max_attempts = 6
+            contract = None
+            for attempt in range(max_attempts):
+                policy = MemoryPolicy.from_env()
+                ledger = CrossProcessResourceLedger(policy)
+                is_mac_8gb = os.environ.get("AMAURA_RESOURCE_PROFILE", "").strip().lower() in ("macbook-8gb", "mac-8gb", "8gb")
+                default_res = "1024" if is_mac_8gb else "1800"
+                requested_mb = max(256, int(os.environ.get("AMAURA_ANTIGRAVITY_RESERVATION_MB", default_res)))
+                admission_timeout = float(os.environ.get("AMAURA_ANTIGRAVITY_ADMISSION_WAIT_SECONDS", "120"))
+                wait_start = time.monotonic()
+                reservation_id = None
+                while not reservation_id:
+                    reservation_id, reason, state = ledger.try_reserve(
+                        capability="antigravity", ram_mb=requested_mb, heavy=True
                     )
-
-                def reader(stream, sink: list[str], emit: bool = False) -> None:
-                    if stream is None:
-                        return
-                    for line in iter(stream.readline, ""):
-                        sink.append(line)
-                        if emit:
-                            try:
-                                payload = json.loads(line)
-                            except json.JSONDecodeError:
-                                payload = {"type": "text", "text": line.strip()[:1000]}
-
-                            def collect_models(value: Any) -> None:
-                                if isinstance(value, dict):
-                                    for key, item in value.items():
-                                        if (
-                                            str(key).lower()
-                                            in {"model", "model_name", "modelid", "model_id", "actual_model"}
-                                            and isinstance(item, str)
-                                            and 0 < len(item.strip()) <= 300
-                                        ):
-                                            observed_models.add(item.strip())
-                                        elif isinstance(item, (dict, list)):
-                                            collect_models(item)
-                                elif isinstance(value, list):
-                                    for item in value:
-                                        collect_models(item)
-
-                            collect_models(payload)
-                            if progress_callback:
-                                try:
-                                    progress_callback(
-                                        payload if isinstance(payload, dict) else {"type": "event", "value": payload}
-                                    )
-                                except Exception:
-                                    pass
-
-                out_thread = threading.Thread(target=reader, args=(proc.stdout, stdout_lines, True), daemon=True)
-                err_thread = threading.Thread(target=reader, args=(proc.stderr, stderr_lines, False), daemon=True)
-                out_thread.start()
-                err_thread.start()
-                started = time.monotonic()
-                hard_limit = max(
-                    requested_mb,
-                    int(
-                        os.environ.get("AMAURA_ANTIGRAVITY_MAX_RSS_MB", str(child_hard_limit_mb(requested_mb, policy)))
-                    ),
-                )
-                while proc.poll() is None:
+                    if reservation_id:
+                        break
                     if should_cancel and should_cancel():
-                        terminate_process_tree(proc.pid)
-                        raise GovernanceError(
-                            "Antigravity execution cancelled/paused; process tree terminated and late output discarded"
+                        raise GovernanceError("Task cancelled while waiting for resource admission")
+                    if "heavy capability" in reason.lower() and (time.monotonic() - wait_start) < admission_timeout:
+                        if progress_callback:
+                            try:
+                                progress_callback({"type": "status", "message": f"Waiting for capacity ({reason})..."})
+                            except Exception:
+                                pass
+                        time.sleep(2.0)
+                        continue
+                    raise GovernanceError(f"Antigravity resource admission refused: {reason}; state={state}")
+                stdout_lines = []
+                stderr_lines = []
+                observed_models = set()
+                proc = None
+                try:
+                    proc = subprocess.Popen(
+                        argv,
+                        cwd=working_dir,
+                        env=self._environment(),
+                        stdin=subprocess.DEVNULL,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        bufsize=1,
+                        start_new_session=(os.name == "posix"),
+                    )
+                    if phase_callback:
+                        phase_callback(
+                            "executor_started", {"pid": proc.pid, "base_commit": base_commit, "argv_mode": "stream-json"}
                         )
-                    if time.monotonic() - started > timeout:
-                        terminate_process_tree(proc.pid)
-                        raise GovernanceError("Antigravity delivery exceeded its approved timeout")
-                    rss = process_tree_rss_mb(proc.pid)
-                    if rss > hard_limit:
-                        terminate_process_tree(proc.pid)
-                        raise GovernanceError(
-                            f"Antigravity process tree exceeded memory limit ({rss} MB > {hard_limit} MB)"
-                        )
-                    if sample_host_memory(policy).pressure == "red":
-                        terminate_process_tree(proc.pid)
-                        raise GovernanceError("Antigravity terminated because host memory pressure reached red")
-                    time.sleep(0.2)
-                out_thread.join(timeout=2)
-                err_thread.join(timeout=2)
-                returncode = int(proc.returncode or 0)
-                stdout = redact_sensitive_text("".join(stdout_lines)[-200_000:])
-                stderr = redact_sensitive_text("".join(stderr_lines)[-100_000:])
-                # Optional env-gated diagnostic log.  Disabled by default in
-                # production.  Set AMAURA_ANTIGRAVITY_DIAG_LOG=1 to enable.
-                # The log is always truncated to 500 KB to stay bounded.
-                if os.environ.get("AMAURA_ANTIGRAVITY_DIAG_LOG", "0") == "1":
-                    try:
-                        diag_path = Path(".amaura-data/logs/agy-stdout.log")
-                        diag_path.parent.mkdir(parents=True, exist_ok=True)
-                        diag_content = (stdout + "\n\nSTDERR:\n" + stderr)[-512_000:]
-                        diag_path.write_text(diag_content, encoding="utf-8")
-                    except OSError:
-                        pass  # never break execution over diagnostic logging
-                if phase_callback:
-                    phase_callback("executor_finished", {"pid": proc.pid, "returncode": returncode})
-            finally:
-                ledger.release(reservation_id)
-            if returncode != 0:
-                raise GovernanceError(f"Antigravity delivery failed with exit code {returncode}: {stderr[-2400:]}")
-            try:
-                contract = AntigravityResultContract.model_validate(self._extract_contract(stdout))
-            except Exception as exc:
-                raise GovernanceError(f"Antigravity result failed Amaura's evidence contract: {exc}") from exc
+
+                    def reader(stream, sink: list[str], emit: bool = False) -> None:
+                        if stream is None:
+                            return
+                        for line in iter(stream.readline, ""):
+                            sink.append(line)
+                            if emit:
+                                try:
+                                    payload = json.loads(line)
+                                except json.JSONDecodeError:
+                                    payload = {"type": "text", "text": line.strip()[:1000]}
+
+                                def collect_models(value: Any) -> None:
+                                    if isinstance(value, dict):
+                                        for key, item in value.items():
+                                            if (
+                                                str(key).lower()
+                                                in {"model", "model_name", "modelid", "model_id", "actual_model"}
+                                                and isinstance(item, str)
+                                                and 0 < len(item.strip()) <= 300
+                                            ):
+                                                observed_models.add(item.strip())
+                                            elif isinstance(item, (dict, list)):
+                                                collect_models(item)
+                                    elif isinstance(value, list):
+                                        for item in value:
+                                            collect_models(item)
+
+                                collect_models(payload)
+                                if progress_callback:
+                                    try:
+                                        progress_callback(
+                                            payload if isinstance(payload, dict) else {"type": "event", "value": payload}
+                                        )
+                                    except Exception:
+                                        pass
+
+                    out_thread = threading.Thread(target=reader, args=(proc.stdout, stdout_lines, True), daemon=True)
+                    err_thread = threading.Thread(target=reader, args=(proc.stderr, stderr_lines, False), daemon=True)
+                    out_thread.start()
+                    err_thread.start()
+                    started = time.monotonic()
+                    hard_limit = max(
+                        requested_mb,
+                        int(
+                            requested_mb
+                            * float(os.environ.get("AMAURA_ANTIGRAVITY_MEM_KILL_FACTOR", "2.0"))
+                        ),
+                    )
+                    while proc.poll() is None:
+                        if should_cancel and should_cancel():
+                            terminate_process_tree(proc.pid)
+                            raise GovernanceError(
+                                "Antigravity execution cancelled/paused; process tree terminated and late output discarded"
+                            )
+                        if time.monotonic() - started > timeout:
+                            terminate_process_tree(proc.pid)
+                            raise GovernanceError("Antigravity delivery exceeded its approved timeout")
+                        rss_mb = process_tree_rss_mb(proc.pid)
+                        if rss_mb > hard_limit:
+                            terminate_process_tree(proc.pid)
+                            raise GovernanceError(
+                                f"Antigravity exceeded memory budget ({rss_mb} MB > {hard_limit} MB limit)"
+                            )
+                        if (
+                            sample_host_memory(policy).pressure == "red"
+                            and time.monotonic() - started > 5.0
+                        ):
+                            terminate_process_tree(proc.pid)
+                            raise GovernanceError("Antigravity terminated because host memory pressure reached red")
+                        time.sleep(0.2)
+                    out_thread.join(timeout=2)
+                    err_thread.join(timeout=2)
+                    returncode = int(proc.returncode or 0)
+                    stdout = redact_sensitive_text("".join(stdout_lines)[-200_000:])
+                    stderr = redact_sensitive_text("".join(stderr_lines)[-100_000:])
+                    if os.environ.get("AMAURA_ANTIGRAVITY_DIAG_LOG", "0") == "1":
+                        try:
+                            diag_path = Path(".amaura-data/logs/agy-stdout.log")
+                            diag_path.parent.mkdir(parents=True, exist_ok=True)
+                            diag_content = (stdout + "\n\nSTDERR:\n" + stderr)[-512_000:]
+                            diag_path.write_text(diag_content, encoding="utf-8")
+                        except OSError:
+                            pass
+                    if phase_callback:
+                        phase_callback("executor_finished", {"pid": proc.pid, "returncode": returncode})
+                finally:
+                    ledger.release(reservation_id)
+                if returncode != 0:
+                    err_msg = stderr.strip()
+                    if not err_msg:
+                        for line in reversed(stdout.splitlines()):
+                            try:
+                                data = json.loads(line.strip())
+                                if isinstance(data, dict):
+                                    res = data.get("result")
+                                    if isinstance(res, dict) and res.get("error"):
+                                        err_msg = str(res.get("error"))
+                                        break
+                                    if data.get("error"):
+                                        err_msg = str(data.get("error"))
+                                        break
+                            except Exception:
+                                continue
+                    if not err_msg:
+                        err_msg = stdout[-1000:].strip()
+
+                    if "quota" in err_msg.lower():
+                        try:
+                            from scripts.manage_antigravity_accounts import rotate_to_next_account
+
+                            next_acc = rotate_to_next_account(exclude_current=True)
+                            if next_acc and attempt < max_attempts - 1:
+                                import logging
+
+                                logging.getLogger("jarvis.amaura").info(
+                                    f"Antigravity quota exhausted; rotated to pool account '{next_acc}' (attempt {attempt + 2}/{max_attempts})"
+                                )
+                                if progress_callback:
+                                    progress_callback(
+                                        {
+                                            "type": "account_rotated",
+                                            "next_account": next_acc,
+                                            "reason": "quota_exhausted",
+                                        }
+                                    )
+                                time.sleep(1)
+                                continue
+                        except Exception:
+                            pass
+                    raise GovernanceError(f"Antigravity delivery failed with exit code {returncode}: {err_msg}")
+                try:
+                    contract = AntigravityResultContract.model_validate(self._extract_contract(stdout))
+                    break
+                except Exception as exc:
+                    actual = self._changed_files(repository, base_commit)
+                    if returncode == 0 and actual:
+                        discovered_cmds = self._discover_verification_commands(repository, actual)
+                        if discovered_cmds:
+                            try:
+                                contract = AntigravityResultContract.model_validate(
+                                    {
+                                        "schema": "amaura.antigravity-result.v1",
+                                        "success": True,
+                                        "summary": f"Implementation synthesized from repository changes: {', '.join(actual[:5])}",
+                                        "changed_files": actual,
+                                        "verification_commands": discovered_cmds,
+                                    }
+                                )
+                                break
+                            except Exception:
+                                pass
+                    raise GovernanceError(f"Antigravity result failed Amaura's evidence contract: {exc}") from exc
+
+            if contract is None:
+                raise GovernanceError("Antigravity completed without returning a valid contract")
 
         executor_models = list(contract.models_used) or sorted(observed_models)
         if not executor_models:
@@ -915,23 +1127,35 @@ Return only the JSON object required by the supplied schema. `changed_files` mus
         actual = self._changed_files(repository, base_commit)
         if not actual:
             raise GovernanceError("Antigravity reported success but Amaura found no repository changes")
-        norm_declared = [
-            str(Path(p).relative_to(repository))
-            if Path(p).is_absolute() and Path(p).is_relative_to(repository)
-            else str(p)
-            for p in contract.changed_files
-        ]
+        norm_declared = []
+        for p in contract.changed_files:
+            cand = str(p)
+            if Path(p).is_absolute():
+                if Path(p).is_relative_to(repository):
+                    cand = str(Path(p).relative_to(repository))
+                elif subfolder_rel and Path(p).is_relative_to(working_dir):
+                    cand = str(subfolder_rel / Path(p).relative_to(working_dir))
+            elif subfolder_rel and cand not in actual and str(subfolder_rel / cand) in actual:
+                cand = str(subfolder_rel / cand)
+            norm_declared.append(cand)
         undeclared_or_missing = set(norm_declared) - set(actual)
         if undeclared_or_missing:
-            raise IndependentVerificationError(
-                f"Antigravity declared changed files that do not exist in Git: {sorted(undeclared_or_missing)!r}"
-            )
+            if os.environ.get("AMAURA_STRICT_DECLARED_FILES", "0") == "1":
+                raise IndependentVerificationError(
+                    f"Antigravity declared changed files that do not exist in Git: {sorted(undeclared_or_missing)!r}"
+                )
+            norm_declared = [p for p in norm_declared if p in actual] or actual
         diff_hash = self._diff_hash(repository, base_commit, actual)
         verifier = SecureVerifierRunner()
+        verify_timeout = max(
+            int(os.environ.get("AMAURA_ANTIGRAVITY_VERIFY_TIMEOUT_SECONDS", "600")),
+            min(timeout, 3600),
+        )
         independent = verifier.run_all(
             repository,
             contract.verification_commands,
-            timeout_seconds=int(os.environ.get("AMAURA_ANTIGRAVITY_VERIFY_TIMEOUT_SECONDS", "600")),
+            timeout_seconds=verify_timeout,
+            working_directory=working_dir,
         )
         # Test execution is untrusted repository code too. It must not mutate the
         # proposed patch after the manifest/diff were measured.

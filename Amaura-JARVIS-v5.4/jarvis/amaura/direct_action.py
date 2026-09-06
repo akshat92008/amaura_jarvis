@@ -18,7 +18,12 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from jarvis.tools.registry import execute_tool
+def execute_tool(*args: Any, **kwargs: Any) -> Any:
+    from jarvis.tools.registry import execute_tool as _real_execute_tool
+
+    return _real_execute_tool(*args, **kwargs)
+
+
 from jarvis.tools.result import parse_tool_result
 from jarvis.tools.security import resolve_workspace_path, tool_workspace, workspace_root
 
@@ -1308,15 +1313,37 @@ class PathExtractor:
 
         # 5. Words with extensions
         for m in re.finditer(r"\b[a-zA-Z0-9_.\-/~]+\.[a-zA-Z0-9_-]+", text):
-            candidates.append((m.start(0), m.group(0)))
+            cand = m.group(0)
+            if not ("/" in cand or "\\" in cand or cand.startswith(("~", "./", "../"))):
+                if re.search(r"\.[A-Z]", cand):
+                    continue
+                ext = "." + cand.rsplit(".", 1)[-1].lower()
+                if ext not in cls.KNOWN_EXTENSIONS:
+                    continue
+            candidates.append((m.start(0), cand))
 
         # 6. Unquoted path keywords
         for m in re.finditer(
-            r"\b(?:file|path|directory|folder|repo|repository|codebase|location|dir|destination|target|at|in|to|into|from|under|inside)\s+([~/a-zA-Z0-9_.\-]+)",
+            r"\b(?:file|path|directory|folder|repo|repository|codebase|location|dir|destination|target)\s+([~/a-zA-Z0-9_.\-]+)",
             text,
             re.IGNORECASE,
         ):
             candidates.append((m.start(1), m.group(1)))
+
+        # 6b. Spatial prepositions only when followed by a path with indicators
+        for m in re.finditer(
+            r"\b(?:at|in|to|into|from|under|inside)\s+([~/a-zA-Z0-9_.\-]+)",
+            text,
+            re.IGNORECASE,
+        ):
+            val = m.group(1)
+            if (
+                any(val.startswith(pfx) for pfx in ("/", "~", "./", "../"))
+                or any(val.endswith(ext) for ext in cls.KNOWN_EXTENSIONS)
+                or "/" in val
+                or "\\" in val
+            ):
+                candidates.append((m.start(1), val))
 
         for m in re.finditer(
             r"\b(?:(?:files|entries|children|direct children|items|filenames|inventory|contents)\s+\b(?:of|under|in|inside)\b)\s+['\"`]?([~/a-zA-Z0-9_.\-]+)['\"`]?",
@@ -1336,6 +1363,13 @@ class PathExtractor:
             p = raw_p.strip().strip("'\"`").rstrip(".,:;!?)]}")
             if not p or p.lower() in cls.STOP_WORDS:
                 continue
+            if not ("/" in p or "\\" in p or p.startswith(("~", "./", "../"))):
+                if re.search(r"\.[A-Z]", p):
+                    continue
+                if "." in p:
+                    ext = "." + p.rsplit(".", 1)[-1].lower()
+                    if ext not in cls.KNOWN_EXTENSIONS:
+                        continue
             if any(p == s or (len(p) < len(s) and p in s and "/" in s) for s in seen):
                 continue
             seen.add(p)
@@ -1462,6 +1496,51 @@ class WriteActionParser:
         re.IGNORECASE,
     )
 
+    @staticmethod
+    def _is_software_generation_request(cand: str) -> bool:
+        if not cand:
+            return False
+        clean = cand.lower().strip()
+        software_nouns = {
+            "game", "games", "platformer", "arcade", "mario", "snake", "pong", "tetris",
+            "webapp", "web-app", "microservice", "crawler", "scraper", "api", "server",
+            "backend", "frontend", "pipeline", "parser", "compiler", "engine", "database",
+            "cache", "queue", "router", "bot", "calculator", "benchmark", "cli",
+            "presentation", "presentations", "slide", "slides", "deck", "slide-deck",
+            "powerpoint", "pptx", "document", "documents", "doc", "docx", "pdf", "pdfs",
+            "summary", "summaries", "research", "paper", "papers",
+            "article", "articles", "guide", "guides", "tutorial", "tutorials", "essay",
+            "essays", "spreadsheet", "spreadsheets", "excel", "xlsx", "dashboard",
+            "website", "websites", "site", "sites", "webpage", "webpages", "ecommerce",
+            "e-commerce", "store", "stores", "shop", "shops", "shopping", "marketplace",
+            "portal", "app", "apps", "application", "applications", "service", "services",
+            "tool", "tools", "script", "scripts", "system", "systems", "program", "programs",
+            "project", "projects", "landing", "landing-page", "portfolio", "ui", "gui",
+            "interface", "component", "components", "fullstack", "full-stack",
+        }
+        cand_words = set(re.findall(r"[a-z0-9_]+", clean))
+        if bool(cand_words & software_nouns):
+            return True
+        tech_indicators = {
+            "pygame", "tkinter", "flask", "django", "fastapi", "react", "vue", "angular",
+            "sqlite", "pydantic", "sqlalchemy", "asyncio", "threading", "multiprocessing",
+            "html", "css", "javascript", "js", "ts", "typescript", "tailwind", "bootstrap",
+            "vite", "nextjs", "node", "express", "svelte",
+        }
+        if bool(cand_words & tech_indicators):
+            return True
+        if any(ph in clean for ph in (
+            "playable", "fully working", "interactive",
+            "do research", "conduct research", "deep research", "research on",
+            "prepare a presentation", "make a presentation", "create a presentation",
+            "prepare a report", "make a report", "write a report", "write an essay",
+            "create a document", "generate slides", "build me", "code me", "develop",
+            "create a website", "build a website", "create an app", "build an app",
+            "create a project", "build a project", "create a store", "build a store",
+        )):
+            return True
+        return False
+
     @classmethod
     def parse(cls, text: str, default_workspace: str = "") -> WriteAction | None:
         """Parse natural language write request into a structured WriteAction with clause roles."""
@@ -1574,54 +1653,33 @@ class WriteActionParser:
 
         if not target_path:
             to_match = re.search(
-                r"\b(?:to|into|at|in|in\s+file|file|destination|target|location)(?:\s+(?:destination|target|location|file|path|out|output))*\s+['\"`]?([~/a-zA-Z0-9_.\-]+)['\"`]?",
+                r"\b(?:to|into|at|in|in\s+file|file|destination|target|location)(?:\s+(?:destination|target|location|file|path|out|output))*\s+(['\"`]?)([~/a-zA-Z0-9_.\-]+)\1",
                 clean,
                 re.IGNORECASE,
             )
             if to_match:
-                cand = to_match.group(1).strip().strip("'\"`")
+                is_quoted = bool(to_match.group(1))
+                cand = to_match.group(2).strip().strip("'\"`")
                 while cand and cand[-1] in (".", ",", ":", ";", "!", "?", ")", "]", "}"):
                     cand = cand[:-1].strip()
-                # An explicit write destination introduced by to/into/at/in is a
-                # path role even when it is extensionless.  Reject only obvious
-                # grammar stop words; do not require a suffix to prove a path.
-                if (
-                    cand in all_paths
+                introducer_text = to_match.group(0).lower()
+                has_explicit_keyword = any(
+                    k in introducer_text for k in ("file", "path", "destination", "target", "location")
+                )
+                has_path_indicators = (
+                    is_quoted
+                    or cand in all_paths
                     or any(cand.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS)
+                    or any(cand.startswith(pfx) for pfx in ("/", "~", "./", "../"))
                     or "/" in cand
-                    or (
-                        cand.lower()
-                        not in {
-                            "the",
-                            "a",
-                            "an",
-                            "this",
-                            "that",
-                            "it",
-                            "on",
-                            "my",
-                            "your",
-                            "our",
-                            "called",
-                            "named",
-                            "content",
-                            "text",
-                            "payload",
-                            "to",
-                            "into",
-                            "at",
-                            "in",
-                            "file",
-                            "path",
-                            "location",
-                            "destination",
-                            "target",
-                            "out",
-                            "output",
-                        }
-                        and bool(re.fullmatch(r"[~/A-Za-z0-9_.-]+", cand))
-                    )
-                ):
+                    or "\\" in cand
+                )
+                # If explicit keyword was used (e.g. "destination find") or has path indicators, accept it
+                if (has_explicit_keyword or has_path_indicators) and cand.lower() not in {
+                    "the", "a", "an", "this", "that", "it", "on", "my", "your", "our",
+                    "called", "named", "content", "text", "payload", "to", "into", "at",
+                    "in", "file", "path", "location", "destination", "target", "out", "output",
+                } and bool(re.fullmatch(r"[~/A-Za-z0-9_.-]+", cand)):
                     target_path = cand
 
         if not target_path and args.get("output_path"):
@@ -1796,15 +1854,24 @@ class WriteActionParser:
                 ).strip()
                 if cand_after and cand_after != after_tgt:
                     cand_after = cls.TRAILING_DIRECTIVE_RE.sub("", cand_after).strip()
-                    if (cand_after.startswith("'") and cand_after.endswith("'")) or (
-                        cand_after.startswith('"') and cand_after.endswith('"')
-                    ):
+                    is_quoted_after = (
+                        (cand_after.startswith("'") and cand_after.endswith("'"))
+                        or (cand_after.startswith('"') and cand_after.endswith('"'))
+                        or (cand_after.startswith("`") and cand_after.endswith("`"))
+                    )
+                    if is_quoted_after:
                         cand_after = cand_after[1:-1]
-                    parsed_content = cand_after
-                    payload_span_start = clean.find(cand_after)
-                    payload_span_end = payload_span_start + len(cand_after)
-                    payload_type = "INLINE_LITERAL"
-                    has_explicit_content = True
+                        parsed_content = cand_after
+                        payload_span_start = clean.find(cand_after)
+                        payload_span_end = payload_span_start + len(cand_after)
+                        payload_type = "QUOTED_LITERAL"
+                        has_explicit_content = True
+                    elif not cls._is_software_generation_request(cand_after):
+                        parsed_content = cand_after
+                        payload_span_start = clean.find(cand_after)
+                        payload_span_end = payload_span_start + len(cand_after)
+                        payload_type = "INLINE_LITERAL"
+                        has_explicit_content = True
 
             # 7b. Clause relationships
             if parsed_content is None:
@@ -1868,7 +1935,7 @@ class WriteActionParser:
                             "the payload",
                             "the body",
                             "the file content",
-                        ):
+                        ) and not cls._is_software_generation_request(cand_before):
                             parsed_content = cand_before
                             payload_span_start = clean.find(cand_before)
                             payload_span_end = payload_span_start + len(cand_before)
@@ -2546,6 +2613,12 @@ class FilesystemActionClassifier:
         if any(w in clean for w in ("read", "cat", "open", "show", "display", "contents", "content", "raw")) or any(
             target_path_str.endswith(ext) for ext in RequestPreprocessor.KNOWN_EXTENSIONS
         ):
+            if WriteActionParser._is_software_generation_request(clean):
+                return FilesystemSemanticAction(
+                    action_type=FilesystemActionType.FS_UNKNOWN,
+                    target_path=target_path_str,
+                    confidence=0.0,
+                )
             return FilesystemSemanticAction(
                 action_type=FilesystemActionType.FS_READ_FILE,
                 target_path=target_path_str,
@@ -4183,6 +4256,8 @@ class DirectActionRouter:
     @classmethod
     def _is_filesystem_request(cls, text: str, workspace: str = "") -> bool:
         clean = text.lower()
+        if WriteActionParser._is_software_generation_request(clean):
+            return False
         all_paths = PathExtractor.extract_all_paths(text)
         tokens = set(re.findall(r"[a-z0-9_+-]+", clean))
 
@@ -4228,6 +4303,8 @@ class DirectActionRouter:
                 "must hold",
             )
         ):
+            if WriteActionParser._is_software_generation_request(clean):
+                return False
             return True
 
         read_tokens = {
@@ -4323,7 +4400,10 @@ class DirectActionRouter:
         )
 
         # A. Write / Create file
-        write_action = WriteActionParser.parse(text, default_workspace=workspace)
+        if not WriteActionParser._is_software_generation_request(text):
+            write_action = WriteActionParser.parse(text, default_workspace=workspace)
+        else:
+            write_action = None
         if write_action is not None and not cls._is_workflow_request(text):
             if write_action.is_invalid:
                 return DirectActionResult(

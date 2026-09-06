@@ -277,6 +277,7 @@ def test_regression_g_no_duplicate_execution_when_leader_lease_held(tmp_path: Pa
     data_dir = tmp_path / "amaura_data"
     data_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("AMAURA_DATA_DIR", str(data_dir))
+    monkeypatch.setenv("AMAURA_COMPANY_RUNTIME_LOCK_PATH", str(tmp_path / "runtime.lock"))
     from jarvis.tools.amaura import reset_control_plane
 
     reset_control_plane()

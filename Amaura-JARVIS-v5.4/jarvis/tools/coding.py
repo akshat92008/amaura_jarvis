@@ -317,6 +317,9 @@ def tool_edit_file(path: str, old_text: str, new_text: str) -> str:
     except OSError as e:
         return f"❌ Cannot read {path}: {e}"
 
+    if old_text.strip() == new_text.strip():
+        return f"❌ old_text and new_text are identical; no modifications were made to {p.name}. If you intend to update or rewrite the file with new logic, make sure new_text differs or use write_file to save the full file."
+
     count = content.count(old_text)
     if count == 0:
         return f"❌ Text not found in {p.name}. Make sure old_text matches exactly."
@@ -648,26 +651,79 @@ def tool_web_fetch(url: str, max_length: int = 10000) -> str:
         return f"❌ {exc}"
 
 
-def tool_web_search(query: str, max_results: int = 5) -> str:
-    """Search the web using DuckDuckGo."""
+def _ddg_lite_search(query: str, max_results: int = 5) -> list[dict[str, str]]:
+    """Direct HTTP fallback using DuckDuckGo Lite when DDGS client fails."""
     try:
-        from ddgs import DDGS
+        import html as _html
+        import re
+        import ssl
+        import urllib.parse
+        import urllib.request
+        import certifi
+
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        data = urllib.parse.urlencode({"q": query}).encode("utf-8")
+        req = urllib.request.Request(
+            "https://lite.duckduckgo.com/lite/",
+            data=data,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        )
+        results = []
+        with urllib.request.urlopen(req, context=ctx, timeout=8) as resp:
+            raw = resp.read().decode("utf-8", errors="ignore")
+            blocks = re.findall(
+                r"<a[^>]*rel=[\x27\"]nofollow[\x27\"][^>]*href=[\x27\"]([^\x27\"]+)[\x27\"][^>]*>(.*?)</a>.*?<td[^>]*class=[\x27\"]result-snippet[\x27\"][^>]*>(.*?)</td>",
+                raw,
+                re.DOTALL,
+            )
+            for href, title, snippet in blocks:
+                if "duckduckgo.com/y.js" in href:
+                    continue
+                clean_title = _html.unescape(re.sub(r"<[^>]+>", "", title)).strip()
+                clean_snippet = _html.unescape(re.sub(r"<[^>]+>", "", snippet)).strip()
+                clean_href = _html.unescape(href).strip()
+                if clean_title and clean_href:
+                    results.append({"title": clean_title, "href": clean_href, "body": clean_snippet})
+                if len(results) >= max_results:
+                    break
+        return results
+    except Exception:
+        return []
+
+
+def tool_web_search(query: str, max_results: int = 5) -> str:
+    """Search the web using DuckDuckGo with automatic lite fallback."""
+    results = []
+    try:
+        import warnings
+
+        warnings.filterwarnings("ignore")
+        try:
+            from duckduckgo_search import DDGS
+        except ImportError:
+            from ddgs import DDGS
 
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=max_results))
-        if not results:
-            return f"No results found for: {query}"
-        lines = [f"Search results for: {query}\n"]
-        for i, r in enumerate(results, 1):
-            lines.append(f"{i}. {r.get('title', 'No title')}")
-            lines.append(f"   {r.get('href', '')}")
-            lines.append(f"   {r.get('body', '')[:200]}")
-            lines.append("")
-        return "\n".join(lines)
-    except ImportError:
-        return "❌ ddgs not installed. Run: pip install ddgs"
-    except Exception as e:
-        return f"❌ Search error: {e}"
+    except Exception:
+        results = []
+
+    if not results:
+        results = _ddg_lite_search(query, max_results=max_results)
+
+    if not results:
+        return f"No results found for: {query}"
+
+    lines = [f"Search results for: {query}\n"]
+    for i, r in enumerate(results, 1):
+        lines.append(f"{i}. {r.get('title', 'No title')}")
+        lines.append(f"   {r.get('href', '')}")
+        lines.append(f"   {r.get('body', '')[:200]}")
+        lines.append("")
+    return "\n".join(lines)
 
 
 # ── Dispatch ─────────────────────────────────────────────────────────────────

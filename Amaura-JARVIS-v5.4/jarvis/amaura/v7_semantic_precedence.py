@@ -42,6 +42,9 @@ def _strip_response_tail(value: str) -> str:
         r"\s*;\s*exclude\s+commentary\.?\s*$",
         r"\s*,\s*with\s+no\s+prefix\s+or\s+suffix\.?\s*$",
         r"\s+and\s+no\s+other\s+characters\.?\s*$",
+        r"\s+and\s+nothing\s+(?:else|more)\.?\s*$",
+        r"\s+with\s+nothing\s+(?:else|more)\.?\s*$",
+        r"\s+without\s+(?:any\s+)?(?:commentary|explanation)\.?\s*$",
     ):
         result = re.sub(pattern, "", result, flags=re.IGNORECASE | re.DOTALL).strip()
     return result

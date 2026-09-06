@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Preview</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+        }
+        .editor {
+            width: 50%;
+            padding: 20px;
+            border-right: 1px solid #ccc;
+            overflow: auto;
+        }
+        .preview {
+            width: 50%;
+            padding: 20px;
+            overflow: auto;
+        }
+        textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            resize: none;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .preview-content {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="editor">
+        <textarea id="markdown-editor" placeholder="Enter Markdown here..."># Markdown Preview
+
+This is a simple markdown preview tool.
+
+## Features
+
+- Live preview
+- Syntax highlighting
+- Easy to use
+
+```python
+print("Hello, World!")
+```
+
+[Visit GitHub](https://github.com)
+</textarea>
+    </div>
+    <div class="preview">
+        <div id="preview-content" class="preview-content"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const editor = document.getElementById('markdown-editor');
+            const preview = document.getElementById('preview-content');
+
+            // Initialize with default content
+            updatePreview();
+
+            // Update preview on input
+            editor.addEventListener('input', updatePreview);
+
+            function updatePreview() {
+                const markdown = editor.value;
+                const html = marked.parse(markdown);
+                preview.innerHTML = html;
+
+                // Highlight code blocks
+                document.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

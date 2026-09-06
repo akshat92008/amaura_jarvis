@@ -178,7 +178,7 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
         ui.console.print(info)
         return True
 
-    elif command in ("/company", "/briefing", "/approvals"):
+    elif command in ("/company", "/approvals"):
         import json
 
         from jarvis.tools.amaura import get_control_plane
@@ -186,11 +186,21 @@ def handle_slash_command(cmd: str, agent: JarvisAgent, voice_engine: VoiceEngine
         control = get_control_plane()
         if command == "/company":
             result = control.dashboard()
-        elif command == "/briefing":
-            result = control.daily_briefing()
         else:
             result = {"pending_approvals": control.store.list_approvals("pending")}
         ui.console.print_json(json.dumps(result, default=str))
+        return True
+
+    elif command == "/briefing":
+        from jarvis.morning_briefing import compose_morning_briefing
+        briefing_text = compose_morning_briefing()
+        ui.console.print(f"\n{briefing_text}\n")
+        return True
+
+    elif command in ("/house-party", "/houseparty"):
+        from jarvis.fleet import house_party_protocol
+        report = house_party_protocol(arg or "Comprehensive perimeter defense and architecture analysis")
+        ui.console.print(f"\n{report}\n")
         return True
 
     elif command == "/telegram":
@@ -489,7 +499,13 @@ def launch_background_web(open_browser_flag: bool = True) -> str:
     url_host = browser_host(host)
     url = f"http://{url_host}:{port}"
     api_key = os.environ.get("JARVIS_API_KEY", "").strip()
-    browser_url = f"{url}/#api_key={api_key}" if api_key else url
+    op_key = os.environ.get("AMAURA_OPERATOR_KEY", "").strip()
+    hash_parts = []
+    if api_key:
+        hash_parts.append(f"api_key={api_key}")
+    if op_key:
+        hash_parts.append(f"operator_key={op_key}")
+    browser_url = f"{url}/#{'&'.join(hash_parts)}" if hash_parts else url
 
     def _async_launcher() -> None:
         import socket
@@ -618,7 +634,13 @@ def main():
         url_host = browser_host(host)
         url = f"http://{url_host}:{port}"
         api_key = os.environ.get("JARVIS_API_KEY", "").strip()
-        browser_url = f"{url}/#api_key={api_key}" if api_key else url
+        op_key = os.environ.get("AMAURA_OPERATOR_KEY", "").strip()
+        hash_parts = []
+        if api_key:
+            hash_parts.append(f"api_key={api_key}")
+        if op_key:
+            hash_parts.append(f"operator_key={op_key}")
+        browser_url = f"{url}/#{'&'.join(hash_parts)}" if hash_parts else url
 
         # Check if already running
         import socket

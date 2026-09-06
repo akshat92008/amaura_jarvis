@@ -52,8 +52,9 @@ def test_repository_repair_fails_closed_if_direct_plan_is_forced(tmp_path):
         compiler._direct_action_plan(request, str(tmp_path))
 
 
-def test_explicit_research_with_cli_workspace_is_not_misrouted_to_repository_work(tmp_path):
+def test_explicit_research_with_cli_workspace_is_not_misrouted_to_repository_work(tmp_path, monkeypatch):
     compiler = GoalCompiler()
+    monkeypatch.setattr(compiler, "llm_planning_enabled", lambda: False)
     request = GoalRequest(
         objective="Research one current AI developer-tool trend and produce an internal recommendation.",
         workspace=str(tmp_path),

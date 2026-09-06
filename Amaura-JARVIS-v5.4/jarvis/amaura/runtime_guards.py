@@ -30,7 +30,7 @@ def is_independent_verification_failure(reason: str) -> bool:
     return any(marker in clean for marker in _TERMINAL_VERIFICATION_MARKERS)
 
 
-def guarded_task_run(self: GovernedTaskRunner, task_id: str, max_iterations: int = 12) -> dict[str, Any]:
+def guarded_task_run(self: GovernedTaskRunner, task_id: str, max_iterations: int | None = None) -> dict[str, Any]:
     """Convert verifier rejection from execution retry into durable task failure."""
     result = _ORIGINAL_RUN(self, task_id, max_iterations=max_iterations)
     reason = str(result.get("reason") or "")

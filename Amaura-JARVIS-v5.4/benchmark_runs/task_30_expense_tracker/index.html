@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Expense Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .transaction-list {
+            margin-top: 20px;
+        }
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .balance {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+        }
+        .income {
+            color: green;
+        }
+        .expense {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Personal Expense Tracker</h1>
+        <div class="form-group">
+            <label for="description">Description:</label>
+            <input type="text" id="description" placeholder="Enter transaction description">
+        </div>
+        <div class="form-group">
+            <label for="amount">Amount:</label>
+            <input type="number" id="amount" placeholder="Enter amount">
+        </div>
+        <div class="form-group">
+            <label for="type">Type:</label>
+            <select id="type">
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+            </select>
+        </div>
+        <button onclick="addTransaction()">Add Transaction</button>
+        <div class="transaction-list" id="transactionList">
+            <!-- Transactions will be added here -->
+        </div>
+        <div class="balance" id="balance">Balance: $0.00</div>
+    </div>
+
+    <script>
+        let transactions = [];
+        let balance = 0;
+
+        function addTransaction() {
+            const description = document.getElementById('description').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const type = document.getElementById('type').value;
+
+            if (!description || isNaN(amount)) {
+                alert('Please enter both description and amount');
+                return;
+            }
+
+            const transaction = {
+                description,
+                amount,
+                type
+            };
+
+            transactions.push(transaction);
+            updateBalance(type === 'income' ? amount : -amount);
+            renderTransactions();
+            clearInputs();
+        }
+
+        function updateBalance(amount) {
+            balance += amount;
+            document.getElementById('balance').textContent = `Balance: $${balance.toFixed(2)}`;
+        }
+
+        function renderTransactions() {
+            const transactionList = document.getElementById('transactionList');
+            transactionList.innerHTML = '';
+
+            transactions.forEach(transaction => {
+                const transactionItem = document.createElement('div');
+                transactionItem.className = 'transaction-item';
+
+                const descriptionSpan = document.createElement('span');
+                descriptionSpan.textContent = transaction.description;
+
+                const amountSpan = document.createElement('span');
+                amountSpan.textContent = `$${transaction.amount.toFixed(2)}`;
+                amountSpan.className = transaction.type === 'income' ? 'income' : 'expense';
+
+                transactionItem.appendChild(descriptionSpan);
+                transactionItem.appendChild(amountSpan);
+
+                transactionList.appendChild(transactionItem);
+            });
+        }
+
+        function clearInputs() {
+            document.getElementById('description').value = '';
+            document.getElementById('amount').value = '';
+        }
+    </script>
+</body>
+</html>

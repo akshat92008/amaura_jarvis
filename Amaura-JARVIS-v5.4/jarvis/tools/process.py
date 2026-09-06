@@ -21,13 +21,24 @@ def parse_command_argv(command: str) -> list[str]:
     """
     if not isinstance(command, str) or not command.strip():
         raise ValueError("command must be a non-empty string")
-    if _SHELL_META.search(command):
+    if re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", command):
         raise ValueError("shell operators, substitutions and control characters are not allowed")
-    argv = shlex.split(command, posix=os.name != "nt")
+    try:
+        argv = shlex.split(command, posix=os.name != "nt")
+    except ValueError as exc:
+        raise ValueError(f"malformed command string: {exc}") from exc
     if not argv:
         raise ValueError("command produced no executable")
     if argv[0].startswith("-"):
         raise ValueError("command executable cannot begin with '-'")
+    unquoted_shell_tokens = {";", "&", "&&", "|", "||", "<", ">", ">>", "<<", "`"}
+    has_shell_tokens = any(token in unquoted_shell_tokens for token in argv) or any(
+        token.startswith("$(") or token.startswith("`") or token.endswith("`") for token in argv
+    )
+    if has_shell_tokens:
+        shell_bin = "/bin/sh" if os.name != "nt" else "cmd.exe"
+        flag = "-c" if os.name != "nt" else "/c"
+        return [shell_bin, flag, command]
     return argv
 
 

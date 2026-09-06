@@ -22,12 +22,20 @@ MODELS = {
         "supports_tools": True,
     },
     # ── Flagship Reasoning & Coding ──────────────────────────────────
-    "llama-3.3-70b": {
-        "id": "meta/llama-3.1-70b-instruct",
-        "name": "Llama 3.3 70B",
+    "llama-3.2-11b": {
+        "id": "meta/llama-3.2-11b-vision-instruct",
+        "name": "Llama 3.2 11B",
         "category": "coding",
         "context": 128000,
-        "description": "Meta's flagship 70B — super fast, elite tool calling & agentic coding",
+        "description": "Meta's flagship 11B — ultra-fast sub-second tool calling & agentic coding",
+        "supports_tools": True,
+    },
+    "llama-3.3-70b": {
+        "id": "meta/llama-3.2-90b-vision-instruct",
+        "name": "Llama 3.2 90B Vision",
+        "category": "coding",
+        "context": 128000,
+        "description": "Meta's flagship 90B — super fast, elite tool calling & agentic coding",
         "supports_tools": True,
     },
     "deepseek-v4": {
@@ -88,8 +96,9 @@ ALIASES = {
     "mythos": "fable-5-reasoning",
     "aimodel": "fable-5-reasoning",
     "gcp": "fable-5-reasoning",
-    "llama": "llama-3.3-70b",
-    "llama3": "llama-3.3-70b",
+    "llama": "llama-3.2-11b",
+    "llama3": "llama-3.2-11b",
+    "llama-11b": "llama-3.2-11b",
     "deepseek": "deepseek-v4",
     "ds": "deepseek-v4",
     "flash": "deepseek-flash",
@@ -99,7 +108,7 @@ ALIASES = {
     "vision": "llama-vision",
 }
 
-DEFAULT_MODEL = "llama-3.3-70b"
+DEFAULT_MODEL = "llama-3.2-11b"
 
 
 class SmartHybridModelRouter:

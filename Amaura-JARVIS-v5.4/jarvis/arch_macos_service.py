@@ -45,17 +45,21 @@ def launch_agent_payload(
         raise FileNotFoundError(f"ARCH private environment file is missing: {env_file}")
     if os.name == "posix" and env_file.stat().st_mode & 0o077:
         raise PermissionError(f"ARCH environment file must be private (chmod 600): {env_file}")
+    program_args = [
+        str(python),
+        "-m",
+        "jarvis.arch",
+        "--env-file",
+        str(env_file),
+        "--headless",
+        "--no-web",
+    ]
+    if Path("/usr/bin/caffeinate").exists():
+        program_args = ["/usr/bin/caffeinate", "-s", *program_args]
+
     return {
         "Label": label,
-        "ProgramArguments": [
-            str(python),
-            "-m",
-            "jarvis.arch",
-            "--env-file",
-            str(env_file),
-            "--headless",
-            "--no-web",
-        ],
+        "ProgramArguments": program_args,
         "WorkingDirectory": str(root),
         "RunAtLoad": True,
         "KeepAlive": {"SuccessfulExit": False},

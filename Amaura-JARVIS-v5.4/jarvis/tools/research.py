@@ -9,9 +9,6 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from jarvis.amaura.models import GovernanceError
-from jarvis.amaura.network import fetch_public_text
-
 # ── Tool Definitions ─────────────────────────────────────────────────────────
 
 RESEARCH_TOOL_DEFINITIONS = [
@@ -90,6 +87,9 @@ RESEARCH_TOOL_DEFINITIONS = [
 def _fetch_url_text(url: str, max_length: int = 8000) -> str:
     """Fetch a public URL through the governed, redirect-free network layer."""
     try:
+        from jarvis.amaura.models import GovernanceError
+        from jarvis.amaura.network import fetch_public_text
+
         raw = fetch_public_text(url, max_length=max(1, min(int(max_length) * 3, 100_000)))
         text = re.sub(r"<script[^>]*>.*?</script>", "", raw, flags=re.DOTALL | re.IGNORECASE)
         text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
@@ -97,16 +97,13 @@ def _fetch_url_text(url: str, max_length: int = 8000) -> str:
         text = html.unescape(text)
         text = re.sub(r"\s+", " ", text).strip()
         return text[:max_length] + ("..." if len(text) > max_length else "")
-    except (GovernanceError, ValueError) as exc:
+    except Exception as exc:
         return f"(failed to fetch: {exc})"
 
 
 def tool_deep_research(topic: str, num_queries: int = 3) -> str:
     """Perform deep web research by running multiple searches and compiling results."""
-    try:
-        from ddgs import DDGS
-    except ImportError:
-        return "❌ ddgs not installed. Run: pip install ddgs"
+    from jarvis.tools.coding import _ddg_lite_search
 
     # Generate search variations
     queries = [topic]
@@ -119,23 +116,32 @@ def tool_deep_research(topic: str, num_queries: int = 3) -> str:
     seen_urls = set()
 
     for query in queries:
+        results = []
         try:
+            try:
+                from duckduckgo_search import DDGS
+            except ImportError:
+                from ddgs import DDGS
             with DDGS() as ddgs:
                 results = list(ddgs.text(query, max_results=5))
-            for r in results:
-                url = r.get("href", "")
-                if url not in seen_urls:
-                    seen_urls.add(url)
-                    all_results.append(
-                        {
-                            "title": r.get("title", ""),
-                            "url": url,
-                            "snippet": r.get("body", ""),
-                            "query": query,
-                        }
-                    )
         except Exception:
-            continue
+            results = []
+
+        if not results:
+            results = _ddg_lite_search(query, max_results=5)
+
+        for r in results:
+            url = r.get("href", "")
+            if url not in seen_urls:
+                seen_urls.add(url)
+                all_results.append(
+                    {
+                        "title": r.get("title", ""),
+                        "url": url,
+                        "snippet": r.get("body", ""),
+                        "query": query,
+                    }
+                )
 
     if not all_results:
         return f"❌ No results found for: {topic}"

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Widget</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        
+        .weather-card {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            color: white;
+            padding: 20px;
+            width: 300px;
+            text-align: center;
+        }
+        
+        .location {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .temperature {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .conditions {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        
+        .details {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        
+        .detail {
+            text-align: center;
+        }
+        
+        .detail-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .forecast {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .forecast-day {
+            text-align: center;
+        }
+        
+        .forecast-icon {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="weather-card">
+        <div class="location">New York, USA</div>
+        <div class="temperature">22°C</div>
+        <div class="conditions">Partly Cloudy</div>
+        <div class="details">
+            <div class="detail">
+                <div class="detail-icon">💧</div>
+                <div>Humidity</div>
+                <div>65%</div>
+            </div>
+            <div class="detail">
+                <div class="detail-icon">🌬️</div>
+                <div>Wind</div>
+                <div>10 km/h</div>
+            </div>
+            <div class="detail">
+                <div class="detail-icon">🌡️</div>
+                <div>Feels Like</div>
+                <div>24°C</div>
+            </div>
+        </div>
+        <div class="forecast">
+            <div class="forecast-day">
+                <div>Mon</div>
+                <div class="forecast-icon">☀️</div>
+                <div>25°C</div>
+            </div>
+            <div class="forecast-day">
+                <div>Tue</div>
+                <div class="forecast-icon">🌧️</div>
+                <div>20°C</div>
+            </div>
+            <div class="forecast-day">
+                <div>Wed</div>
+                <div class="forecast-icon">⛅</div>
+                <div>22°C</div>
+            </div>
+            <div class="forecast-day">
+                <div>Thu</div>
+                <div class="forecast-icon">🌦️</div>
+                <div>19°C</div>
+            </div>
+            <div class="forecast-day">
+                <div>Fri</div>
+                <div class="forecast-icon">☀️</div>
+                <div>23°C</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

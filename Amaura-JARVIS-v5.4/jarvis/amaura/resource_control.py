@@ -75,11 +75,32 @@ class MemoryPolicy:
         burst = _int("AMAURA_RAM_BURST_LIMIT_MB", 2500, normal, 6144)
         absolute = _int("AMAURA_RAM_ABSOLUTE_LIMIT_MB", 3000, burst, 7168)
         pressure = _int("AMAURA_RAM_PRESSURE_LIMIT_MB", 1000, 384, normal)
+        total_sys_mb = 0
+        try:
+            total_sys_mb = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") // (1024 * 1024)
+        except Exception:
+            pass
+        is_mac_8gb = (
+            os.environ.get("AMAURA_RESOURCE_PROFILE", "").strip().lower() in ("macbook-8gb", "mac-8gb", "8gb")
+            or (0 < total_sys_mb <= 8192)
+        )
+        default_red_avail = 350 if is_mac_8gb else 800
+        default_yellow_avail = 700 if is_mac_8gb else 1600
+        default_red_used = 96.0 if is_mac_8gb else 92.0
+        red_avail = _int("AMAURA_RAM_RED_AVAILABLE_MB", default_red_avail, 128, 4096)
+        yellow_avail = _int("AMAURA_RAM_YELLOW_AVAILABLE_MB", default_yellow_avail, 256, 8192)
+        try:
+            red_used = float(os.environ.get("AMAURA_RAM_RED_USED_PERCENT", default_red_used))
+        except ValueError:
+            red_used = default_red_used
         return cls(
             normal_target_mb=normal,
             burst_limit_mb=burst,
             absolute_limit_mb=absolute,
             pressure_limit_mb=pressure,
+            red_available_mb=red_avail,
+            yellow_available_mb=yellow_avail,
+            red_used_percent=red_used,
             swap_growth_abort_mb=_int("AMAURA_SWAP_GROWTH_ABORT_MB", 192, 64, 2048),
             stale_reservation_seconds=_int("AMAURA_RESOURCE_LEASE_TTL_SECONDS", 7200, 60, 86400),
         )
@@ -261,7 +282,7 @@ def sample_host_memory(policy: MemoryPolicy | None = None) -> HostMemorySnapshot
     )
     yellow = (
         available_mb <= policy.yellow_available_mb
-        or used_percent >= policy.yellow_used_percent
+        or (used_percent >= policy.yellow_used_percent and (mac_free is None or mac_free <= 20.0))
         or swap_yellow
         or (mac_free is not None and mac_free <= 15.0)
     )
@@ -559,11 +580,11 @@ class CrossProcessResourceLedger:
                 else policy.normal_target_mb
             )
             projected = int(summary["reserved_mb"]) + max(0, int(ram_mb))
-            if bool(summary["active_heavy_jobs"]) and not heavy:
-                # During a burst, keep the host quiet rather than stacking ordinary work behind it.
+            if bool(summary["active_heavy_jobs"]) and not heavy and int(ram_mb) > 250:
+                # During a burst, keep the host quiet rather than stacking ordinary heavy work behind it.
                 return (
                     None,
-                    "a heavy capability is active; ordinary capability admission is paused",
+                    "a heavy capability is active; heavy capability admission is paused",
                     {
                         "host": host.to_dict(),
                         **summary,

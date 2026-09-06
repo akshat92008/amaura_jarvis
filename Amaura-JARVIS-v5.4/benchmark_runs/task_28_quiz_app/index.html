@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Quiz App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .quiz-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .question {
+            margin-bottom: 20px;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #e7f4e4;
+            border-radius: 8px;
+        }
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <h1>Interactive Quiz</h1>
+        <div class="question" id="question1">
+            <h2>Question 1: What is the capital of France?</h2>
+            <div class="options">
+                <button onclick="checkAnswer(1, 'Paris')">Paris</button>
+                <button onclick="checkAnswer(1, 'London')">London</button>
+                <button onclick="checkAnswer(1, 'Berlin')">Berlin</button>
+                <button onclick="checkAnswer(1, 'Madrid')">Madrid</button>
+            </div>
+        </div>
+        <div class="question" id="question2" style="display: none;">
+            <h2>Question 2: Which planet is known as the Red Planet?</h2>
+            <div class="options">
+                <button onclick="checkAnswer(2, 'Venus')">Venus</button>
+                <button onclick="checkAnswer(2, 'Mars')">Mars</button>
+                <button onclick="checkAnswer(2, 'Jupiter')">Jupiter</button>
+                <button onclick="checkAnswer(2, 'Saturn')">Saturn</button>
+            </div>
+        </div>
+        <div class="question" id="question3" style="display: none;">
+            <h2>Question 3: What is the largest mammal?</h2>
+            <div class="options">
+                <button onclick="checkAnswer(3, 'Elephant')">Elephant</button>
+                <button onclick="checkAnswer(3, 'Giraffe')">Giraffe</button>
+                <button onclick="checkAnswer(3, 'Blue Whale')">Blue Whale</button>
+                <button onclick="checkAnswer(3, 'Polar Bear')">Polar Bear</button>
+            </div>
+        </div>
+        <div class="result" id="result">
+            <div class="score" id="score"></div>
+            <button onclick="restartQuiz()">Restart Quiz</button>
+        </div>
+    </div>
+    <script>
+        let score = 0;
+        let currentQuestion = 1;
+        
+        function checkAnswer(questionNumber, selectedOption) {
+            const correctAnswers = {
+                1: "Paris",
+                2: "Mars",
+                3: "Blue Whale"
+            };
+            
+            if (selectedOption === correctAnswers[questionNumber]) {
+                score++;
+            }
+            
+            if (questionNumber < 3) {
+                document.getElementById(`question${questionNumber}`).style.display = 'none';
+                currentQuestion++;
+                document.getElementById(`question${currentQuestion}`).style.display = 'block';
+            } else {
+                showResult();
+            }
+        }
+        
+        function showResult() {
+            document.getElementById('score').textContent = `Your score: ${score}/3`;
+            document.getElementById('result').style.display = 'block';
+        }
+        
+        function restartQuiz() {
+            score = 0;
+            currentQuestion = 1;
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('question1').style.display = 'block';
+            document.getElementById('question2').style.display = 'none';
+            document.getElementById('question3').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

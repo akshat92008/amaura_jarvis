@@ -79,6 +79,82 @@ COMMUNICATION_TOOL_DEFINITIONS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "publish_instagram_post",
+            "description": "Publish an image or reel to Instagram via Meta Graph API (or assisted browser).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "media_url": {"type": "string", "description": "Public HTTPS URL of the image or video reel to post."},
+                    "caption": {"type": "string", "description": "Caption text and hashtags for the Instagram post."},
+                    "media_type": {"type": "string", "enum": ["IMAGE", "REELS"], "default": "IMAGE"},
+                },
+                "required": ["media_url", "caption"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "publish_linkedin_post",
+            "description": "Publish a text post or article update to LinkedIn via official API.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "Content of the post to publish on LinkedIn."},
+                },
+                "required": ["text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "publish_facebook_post",
+            "description": "Publish a post to Facebook Page feed via Meta Graph API.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "Post text to publish to Facebook Page."},
+                },
+                "required": ["text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_telegram_notification",
+            "description": "Send a real-time message or notification to the founder's Telegram account.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "Message to send via Telegram."},
+                },
+                "required": ["text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "prepare_social_outreach",
+            "description": "Prepare an assisted outreach message for Instagram, WhatsApp, LinkedIn, Facebook, or Email with a one-click browser launcher.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "channel": {"type": "string", "enum": ["instagram", "whatsapp", "linkedin", "facebook", "email"]},
+                    "recipient": {"type": "string", "description": "Recipient profile URL, phone number, or email."},
+                    "body": {"type": "string", "description": "Message body to send."},
+                    "subject": {"type": "string", "description": "Optional subject.", "default": ""},
+                    "open_browser": {"type": "boolean", "description": "Whether to auto-open the chat in browser.", "default": True},
+                },
+                "required": ["channel", "recipient", "body"],
+            },
+        },
+    },
 ]
 
 
@@ -314,6 +390,122 @@ def tool_automate_macos_app(script: str) -> str:
     return _run_applescript(script)
 
 
+def tool_publish_instagram_post(media_url: str, caption: str, media_type: str = "IMAGE") -> str:
+    """Publish an image or reel to Instagram via Meta Graph API or assisted browser."""
+    from jarvis.amaura.channels import MetaPublicationAdapter
+    adapter = MetaPublicationAdapter()
+    if not adapter.instagram_configured:
+        return (
+            "⚠️ Instagram API is not yet configured.\n"
+            "To enable direct automated Instagram publishing, add these to .env.amaura:\n"
+            "  AMAURA_META_ACCESS_TOKEN=<your-meta-access-token>\n"
+            "  AMAURA_INSTAGRAM_ACCOUNT_ID=<your-instagram-account-id>\n"
+            "  AMAURA_META_GRAPH_VERSION=23.0\n\n"
+            "Alternatively, use Playwright browser automation (`browser_navigate`) to manage Instagram directly!"
+        )
+    import secrets
+    idempotency_key = f"ig-{secrets.token_hex(8)}"
+    try:
+        receipt = adapter.publish_instagram_media(
+            media_url=media_url,
+            caption=caption,
+            idempotency_key=idempotency_key,
+            media_type=media_type,
+        )
+        return f"✅ Instagram post published successfully!\n   Post ID: {receipt.external_id}\n   Status: {receipt.status}"
+    except Exception as exc:
+        return f"❌ Instagram publication failed: {exc}"
+
+
+def tool_publish_linkedin_post(text: str) -> str:
+    """Publish a post to LinkedIn via official API."""
+    from jarvis.amaura.channels import LinkedInPublicationAdapter
+    adapter = LinkedInPublicationAdapter()
+    if not adapter.configured:
+        return (
+            "⚠️ LinkedIn API is not yet configured.\n"
+            "To enable direct automated LinkedIn publishing, add these to .env.amaura:\n"
+            "  AMAURA_LINKEDIN_ACCESS_TOKEN=<your-linkedin-access-token>\n"
+            "  AMAURA_LINKEDIN_AUTHOR_URN=urn:li:person:<your-urn-or-org>\n"
+            "  AMAURA_LINKEDIN_VERSION=202401"
+        )
+    import secrets
+    idempotency_key = f"li-{secrets.token_hex(8)}"
+    try:
+        receipt = adapter.publish_text(text=text, idempotency_key=idempotency_key)
+        return f"✅ LinkedIn post published successfully!\n   Post ID: {receipt.external_id}\n   Status: {receipt.status}"
+    except Exception as exc:
+        return f"❌ LinkedIn publication failed: {exc}"
+
+
+def tool_publish_facebook_post(text: str) -> str:
+    """Publish a post to Facebook Page feed via Meta Graph API."""
+    from jarvis.amaura.channels import MetaPublicationAdapter
+    adapter = MetaPublicationAdapter()
+    if not adapter.facebook_configured:
+        return (
+            "⚠️ Facebook Page API is not yet configured.\n"
+            "To enable direct Facebook Page publishing, add these to .env.amaura:\n"
+            "  AMAURA_META_ACCESS_TOKEN=<your-meta-access-token>\n"
+            "  AMAURA_FACEBOOK_PAGE_ID=<your-page-id>\n"
+            "  AMAURA_META_GRAPH_VERSION=23.0"
+        )
+    import secrets
+    idempotency_key = f"fb-{secrets.token_hex(8)}"
+    try:
+        receipt = adapter.publish_facebook_text(text=text, idempotency_key=idempotency_key)
+        return f"✅ Facebook post published successfully!\n   Post ID: {receipt.external_id}\n   Status: {receipt.status}"
+    except Exception as exc:
+        return f"❌ Facebook publication failed: {exc}"
+
+
+def tool_send_telegram_notification(text: str) -> str:
+    """Send a real-time message or notification to the founder's Telegram account."""
+    from jarvis.amaura.channels import TelegramNotificationAdapter
+    adapter = TelegramNotificationAdapter()
+    if not adapter.configured:
+        return (
+            "⚠️ Telegram Bot is not yet configured.\n"
+            "To enable Telegram alerts, add these to .env.amaura:\n"
+            "  TELEGRAM_BOT_TOKEN=<your-bot-token-from-@BotFather>\n"
+            "  TELEGRAM_USER_ID=<your-telegram-numeric-user-id>"
+        )
+    import secrets
+    idempotency_key = f"tg-{secrets.token_hex(8)}"
+    try:
+        receipt = adapter.send(text=text, idempotency_key=idempotency_key)
+        return f"✅ Telegram notification sent!\n   Message ID: {receipt.external_id}"
+    except Exception as exc:
+        return f"❌ Telegram notification failed: {exc}"
+
+
+def tool_prepare_social_outreach(
+    channel: str, recipient: str, body: str, subject: str = "", open_browser: bool = True
+) -> str:
+    """Prepare an assisted outreach message for Instagram, WhatsApp, LinkedIn, Facebook, or Email with a one-click browser launcher."""
+    from jarvis.amaura.channels import AssistedOutreachAdapter
+    adapter = AssistedOutreachAdapter()
+    import secrets
+    idempotency_key = f"outreach-{secrets.token_hex(8)}"
+    try:
+        receipt = adapter.prepare(
+            channel=channel,
+            recipient=recipient,
+            subject=subject,
+            body=body,
+            idempotency_key=idempotency_key,
+            open_browser=open_browser,
+        )
+        return (
+            f"✅ Assisted outreach packet prepared for {channel.title()}!\n"
+            f"   Recipient: {recipient}\n"
+            f"   Packet ID: {receipt.external_id}\n"
+            f"   Browser Launch: {'Opened in default browser' if open_browser else 'URL prepared'}"
+        )
+    except Exception as exc:
+        return f"❌ Failed to prepare assisted outreach: {exc}"
+
+
 COMMUNICATION_DISPATCH = {
     "send_imessage": lambda **kw: tool_send_imessage(kw.get("to", ""), kw.get("message", "")),
     "add_reminder": lambda **kw: tool_add_reminder(kw.get("title", ""), kw.get("notes", "")),
@@ -322,4 +514,18 @@ COMMUNICATION_DISPATCH = {
         kw.get("title", ""), kw.get("date", ""), kw.get("duration_hours", 1), kw.get("notes", "")
     ),
     "automate_macos_app": lambda **kw: tool_automate_macos_app(kw.get("script", "")),
+    "publish_instagram_post": lambda **kw: tool_publish_instagram_post(
+        kw.get("media_url", ""), kw.get("caption", ""), kw.get("media_type", "IMAGE")
+    ),
+    "publish_linkedin_post": lambda **kw: tool_publish_linkedin_post(kw.get("text", "")),
+    "publish_facebook_post": lambda **kw: tool_publish_facebook_post(kw.get("text", "")),
+    "send_telegram_notification": lambda **kw: tool_send_telegram_notification(kw.get("text", "")),
+    "prepare_social_outreach": lambda **kw: tool_prepare_social_outreach(
+        kw.get("channel", "instagram"),
+        kw.get("recipient", ""),
+        kw.get("body", ""),
+        kw.get("subject", ""),
+        kw.get("open_browser", True),
+    ),
 }
+

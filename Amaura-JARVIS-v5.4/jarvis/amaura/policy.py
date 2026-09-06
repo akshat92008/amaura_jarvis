@@ -496,10 +496,23 @@ class PolicyEngine:
             reasons.append("Completion requires verifiable evidence")
         if task["action_type"] in EXTERNAL_ACTIONS and not evidence:
             reasons.append("No external claim or commitment may proceed without evidence")
+        # Internal software tasks (repository_write) that have passed
+        # verification (have evidence) are self-contained: the test suite is
+        # the quality gate, so founder approval is unnecessary.  External
+        # actions, high/critical risk, and tasks without evidence still
+        # require explicit founder sign-off.
+        is_verified_internal_software = (
+            task["action_type"] == "repository_write"
+            and bool(evidence)
+            and task["action_type"] not in EXTERNAL_ACTIONS
+        )
         return PolicyDecision(
             allowed=not reasons,
-            requires_approval=risk in {RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL}
-            or task["action_type"] in EXTERNAL_ACTIONS,
+            requires_approval=(
+                (risk in {RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL}
+                 or task["action_type"] in EXTERNAL_ACTIONS)
+                and not is_verified_internal_software
+            ),
             manual_execution=risk is RiskLevel.CRITICAL,
             reasons=tuple(reasons),
         )

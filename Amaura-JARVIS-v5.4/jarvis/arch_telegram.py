@@ -42,6 +42,10 @@ def telegram_configured() -> bool:
     return bool(os.environ.get("TELEGRAM_BOT_TOKEN", "").strip() and os.environ.get("TELEGRAM_USER_ID", "").strip())
 
 
+_TELEGRAM_LOCK = threading.Lock()
+_TELEGRAM_THREAD: threading.Thread | None = None
+
+
 def start_arch_telegram(agent: Any) -> threading.Thread | None:
     """Start Telegram as an internal ARCH surface when credentials exist.
 
@@ -53,41 +57,47 @@ def start_arch_telegram(agent: Any) -> threading.Thread | None:
     if not telegram_configured():
         return None
 
-    proxy = ArchTelegramAgentProxy(agent)
+    global _TELEGRAM_THREAD
+    with _TELEGRAM_LOCK:
+        if _TELEGRAM_THREAD is not None and _TELEGRAM_THREAD.is_alive():
+            return _TELEGRAM_THREAD
 
-    def runner() -> None:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            from telegram.ext import Application
+        proxy = ArchTelegramAgentProxy(agent)
 
-            original_run_polling = Application.run_polling
-
-            def run_polling_without_signals(self, *args, **kwargs):
-                kwargs["stop_signals"] = None
-                return original_run_polling(self, *args, **kwargs)
-
-            Application.run_polling = run_polling_without_signals
+        def runner() -> None:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             try:
-                from jarvis.telegram.bot import start_telegram_bot
+                from telegram.ext import Application
 
-                start_telegram_bot(proxy)
+                original_run_polling = Application.run_polling
+
+                def run_polling_without_signals(self, *args, **kwargs):
+                    kwargs["stop_signals"] = None
+                    return original_run_polling(self, *args, **kwargs)
+
+                Application.run_polling = run_polling_without_signals
+                try:
+                    from jarvis.telegram.bot import start_telegram_bot
+
+                    start_telegram_bot(proxy)
+                finally:
+                    Application.run_polling = original_run_polling
             finally:
-                Application.run_polling = original_run_polling
-        finally:
-            try:
-                pending = asyncio.all_tasks(loop)
-                for task in pending:
-                    task.cancel()
-                if pending:
-                    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-            except Exception:
-                pass
-            loop.close()
+                try:
+                    pending = asyncio.all_tasks(loop)
+                    for task in pending:
+                        task.cancel()
+                    if pending:
+                        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                except Exception:
+                    pass
+                loop.close()
 
-    thread = threading.Thread(target=runner, name="arch-telegram", daemon=True)
-    thread.start()
-    return thread
+        thread = threading.Thread(target=runner, name="arch-telegram", daemon=True)
+        thread.start()
+        _TELEGRAM_THREAD = thread
+        return thread
 
 
 __all__ = ["ArchTelegramAgentProxy", "start_arch_telegram", "telegram_configured"]

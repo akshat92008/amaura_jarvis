@@ -2097,25 +2097,50 @@ class MacOSAppAdapter(_BaseAdapter):
         licence="Proprietary",
     )
 
-    ALLOWED_APPS = {
-        "safari",
-        "finder",
-        "spotify",
-        "terminal",
-        "iterm",
-        "iterm2",
-        "music",
-        "calculator",
-        "notes",
-        "mail",
-        "messages",
-        "textedit",
-        "system settings",
-        "calendar",
-        "photos",
-        "slack",
-        "discord",
+    APP_MAPPING = {
+        "chrome": "Google Chrome",
+        "google chrome": "Google Chrome",
+        "vscode": "Visual Studio Code",
+        "code": "Visual Studio Code",
+        "visual studio code": "Visual Studio Code",
+        "safari": "Safari",
+        "finder": "Finder",
+        "spotify": "Spotify",
+        "terminal": "Terminal",
+        "iterm": "iTerm",
+        "iterm2": "iTerm",
+        "music": "Music",
+        "calculator": "Calculator",
+        "notes": "Notes",
+        "mail": "Mail",
+        "messages": "Messages",
+        "textedit": "TextEdit",
+        "system settings": "System Settings",
+        "calendar": "Calendar",
+        "photos": "Photos",
+        "slack": "Slack",
+        "discord": "Discord",
+        "telegram": "Telegram",
+        "firefox": "Firefox",
+        "brave": "Brave Browser",
+        "edge": "Microsoft Edge",
+        "sublime text": "Sublime Text",
+        "cursor": "Cursor",
+        "preview": "Preview",
+        "activity monitor": "Activity Monitor",
+        "keynote": "Keynote",
+        "pages": "Pages",
+        "numbers": "Numbers",
+        "whatsapp": "WhatsApp",
+        "zoom": "zoom.us",
+        "notion": "Notion",
+        "chatgpt": "ChatGPT",
+        "docker": "Docker",
+        "obs": "OBS",
+        "vlc": "VLC",
+        "figma": "Figma",
     }
+    ALLOWED_APPS = set(APP_MAPPING.keys()) | {v.lower() for v in APP_MAPPING.values()}
 
     def available(self) -> tuple[bool, str]:
         if sys.platform != "darwin":
@@ -2133,10 +2158,8 @@ class MacOSAppAdapter(_BaseAdapter):
             raise GovernanceError("Application name is required")
 
         app_name = raw_app_name.lower()
-        if app_name not in self.ALLOWED_APPS:
-            raise GovernanceError(f"Application '{raw_app_name}' is not in the strict allowlist.")
-
-        if not re.match(r"^[A-Za-z0-9 -]{1,30}$", raw_app_name):
+        target_app = self.APP_MAPPING.get(app_name, raw_app_name)
+        if not re.match(r"^[A-Za-z0-9 -]{1,40}$", target_app):
             raise GovernanceError(f"Application name '{raw_app_name}' failed security validation.")
 
         started = time.monotonic()
@@ -2144,18 +2167,18 @@ class MacOSAppAdapter(_BaseAdapter):
         try:
             if operation in ("open", "activate"):
                 result = subprocess.run(
-                    ["open", "-a", raw_app_name], capture_output=True, text=True, timeout=10, shell=False
+                    ["open", "-a", target_app], capture_output=True, text=True, timeout=10, shell=False
                 )
                 if result.returncode != 0:
-                    raise CapabilityExecutionError(f"Failed to open '{raw_app_name}': {result.stderr.strip()}")
+                    raise CapabilityExecutionError(f"Failed to open '{target_app}': {result.stderr.strip()}")
             elif operation == "close":
                 # osa script tell app to quit safely
-                script = f'tell application "{raw_app_name}" to quit'
+                script = f'tell application "{target_app}" to quit'
                 result = subprocess.run(
                     ["osascript", "-e", script], capture_output=True, text=True, timeout=10, shell=False
                 )
                 if result.returncode != 0:
-                    raise CapabilityExecutionError(f"Failed to close '{raw_app_name}': {result.stderr.strip()}")
+                    raise CapabilityExecutionError(f"Failed to close '{target_app}': {result.stderr.strip()}")
 
             # Verify app status
             check = subprocess.run(

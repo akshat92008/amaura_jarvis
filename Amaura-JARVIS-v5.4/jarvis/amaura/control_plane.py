@@ -459,6 +459,32 @@ class AmauraControlPlane:
             }
         )
         self.store.publish_event("approval.requested", approval["id"], {"task_id": task["id"], "risk": task["risk"]})
+        try:
+            from jarvis.amaura.channels import TelegramNotificationAdapter
+
+            adapter = TelegramNotificationAdapter()
+            if adapter.configured:
+                buttons = [
+                    [
+                        {"text": "✅ Approve", "callback_data": f"amaura:approved:{approval['id']}"},
+                        {"text": "❌ Reject", "callback_data": f"amaura:rejected:{approval['id']}"},
+                    ]
+                ]
+                text = (
+                    f"⚠️ FOUNDER APPROVAL REQUIRED\n\n"
+                    f"Task: {task.get('title', 'Action Required')}\n"
+                    f"Risk: {str(task.get('risk', 'UNKNOWN')).upper()}\n"
+                    f"Action: {task.get('action_type', '')}\n"
+                    f"Requested by: {requested_by}\n"
+                    f"ID: {approval['id']}"
+                )
+                adapter.send(
+                    text=text,
+                    idempotency_key=f"tg-approval-{approval['id']}",
+                    buttons=buttons,
+                )
+        except Exception:
+            pass
         return approval
 
     @staticmethod

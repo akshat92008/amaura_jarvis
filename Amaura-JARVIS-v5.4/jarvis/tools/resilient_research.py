@@ -26,14 +26,65 @@ import json
 import sys
 import warnings
 
-warnings.filterwarnings("ignore", category=RuntimeWarning)
-from ddgs import DDGS
+warnings.filterwarnings("ignore")
+try:
+    from duckduckgo_search import DDGS
+except ImportError:
+    from ddgs import DDGS
 
 query = sys.argv[1]
 max_results = int(sys.argv[2])
-timeout = int(sys.argv[3])
-with DDGS(timeout=timeout) as ddgs:
-    results = list(ddgs.text(query, max_results=max_results))
+timeout = int(sys.argv[3]) if len(sys.argv) > 3 else 10
+results = []
+try:
+    with DDGS(timeout=timeout) as ddgs:
+        results = list(ddgs.text(query, max_results=max_results))
+except Exception:
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=max_results))
+    except Exception:
+        results = []
+
+if not results:
+    try:
+        import html as _html
+        import re
+        import ssl
+        import urllib.parse
+        import urllib.request
+        import certifi
+
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        data = urllib.parse.urlencode({"q": query}).encode("utf-8")
+        req = urllib.request.Request(
+            "https://lite.duckduckgo.com/lite/",
+            data=data,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        )
+        with urllib.request.urlopen(req, context=ctx, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8", errors="ignore")
+            blocks = re.findall(
+                r"<a[^>]*rel=[\x27\"]nofollow[\x27\"][^>]*href=[\x27\"]([^\x27\"]+)[\x27\"][^>]*>(.*?)</a>.*?<td[^>]*class=[\x27\"]result-snippet[\x27\"][^>]*>(.*?)</td>",
+                raw,
+                re.DOTALL,
+            )
+            for href, title, snippet in blocks:
+                if "duckduckgo.com/y.js" in href:
+                    continue
+                clean_title = _html.unescape(re.sub(r"<[^>]+>", "", title)).strip()
+                clean_snippet = _html.unescape(re.sub(r"<[^>]+>", "", snippet)).strip()
+                clean_href = _html.unescape(href).strip()
+                if clean_title and clean_href:
+                    results.append({"title": clean_title, "href": clean_href, "body": clean_snippet})
+                if len(results) >= max_results:
+                    break
+    except Exception:
+        pass
+
 print(json.dumps(results, ensure_ascii=False))
 """
 

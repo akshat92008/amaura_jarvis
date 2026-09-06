@@ -130,3 +130,33 @@ def test_custom_company_launchagent_label_is_rejected(tmp_path):
     env_file.chmod(0o600)
     with pytest.raises(ValueError, match="fixed to"):
         launch_agent_payload(repo, label="com.amaura.jarvis.company.second")
+
+
+def test_plain_text_json_tool_calls_extracted_and_stripped():
+    from jarvis.agent import JarvisAgent
+
+    raw = '''I am building the project now.
+{
+"action": "run_command",
+"command": "mkdir -p /tmp/test_dir"
+}
+
+```json
+{
+"action": "write_file",
+"path": "/tmp/test_dir/main.py",
+"content": "print('hello')"
+}
+```
+Ready for review.'''
+
+    tools, cleaned = JarvisAgent._parse_xml_tool_calls(raw)
+    assert len(tools) == 2
+    assert tools[0]["name"] == "run_command"
+    assert "mkdir -p" in tools[0]["arguments"]
+    assert tools[1]["name"] == "write_file"
+    assert "/tmp/test_dir/main.py" in tools[1]["arguments"]
+    assert '{"action"' not in cleaned
+    assert "run_command" not in cleaned
+    assert "I am building the project now." in cleaned
+    assert "Ready for review." in cleaned

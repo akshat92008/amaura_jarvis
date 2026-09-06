@@ -30,7 +30,7 @@ class AmauraSupervisor:
         *,
         worker_id: str | None = None,
         lease_seconds: int = 900,
-        max_attempts: int = 2,
+        max_attempts: int | None = None,
         outbox_max_attempts: int | None = None,
         outbox_lease_seconds: int | None = None,
         runner_factory: RunnerFactory = GovernedTaskRunner,
@@ -40,7 +40,8 @@ class AmauraSupervisor:
         self.control = control_plane
         self.worker_id = worker_id or (f"{socket.gethostname()}-{os.getpid()}-{uuid.uuid4().hex[:6]}")
         self.lease_seconds = max(30, min(int(lease_seconds), 86_400))
-        self.max_attempts = max(1, min(int(max_attempts), 20))
+        default_max_attempts = int(os.environ.get("AMAURA_SUPERVISOR_MAX_ATTEMPTS", "3"))
+        self.max_attempts = max(1, min(int(max_attempts if max_attempts is not None else default_max_attempts), 20))
         self.outbox_max_attempts = max(
             1,
             min(int(outbox_max_attempts or self.max_attempts), 20),

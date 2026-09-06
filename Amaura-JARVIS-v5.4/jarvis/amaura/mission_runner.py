@@ -244,11 +244,23 @@ class MissionRunner:
                 }
             state = current_status.get("state", "queued")
             if state in terminal_or_blocked:
+                msg = ExecutiveKernel._mission_message(current_status)
+                if state in ("completed", "failed", "awaiting_approval"):
+                    try:
+                        from jarvis.amaura.channels import TelegramNotificationAdapter
+
+                        adapter = TelegramNotificationAdapter()
+                        if adapter.configured:
+                            icon = "✅" if state == "completed" else ("⚠️" if state == "awaiting_approval" else "❌")
+                            text = f"{icon} MISSION {state.upper()}\n\n{msg}"
+                            adapter.send(text=text, idempotency_key=f"tg-mission-{goal_id}-{state}")
+                    except Exception:
+                        pass
                 return {
                     "goal_id": goal_id,
                     "state": state,
                     "status": current_status,
-                    "message": ExecutiveKernel._mission_message(current_status),
+                    "message": msg,
                     "ticks_executed": ticks_executed,
                 }
             if (time.monotonic() - start_time) >= timeout_seconds or ticks_executed >= max_ticks:

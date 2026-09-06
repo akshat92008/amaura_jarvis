@@ -654,6 +654,7 @@ def production_readiness(
             }
         )
         interactive_cognition = _probe_interactive_cognition()
+        is_docker_required = sandbox_mode == "docker" or verifier_mode == "docker"
         live_checks = {
             "interactive_cognition_ready": bool(interactive_cognition.get("ready", False)),
             "ollama_reachable": ollama["reachable"]
@@ -679,16 +680,16 @@ def production_readiness(
                 if (review_mode == "local" or omniroute_configured)
                 else bool(cloud_review_model and cloud_review_key)
             ),
-            "docker_healthy": docker["healthy"]
-            if (sandbox_mode == "docker" or verifier_mode == "docker")
-            else effective_verifier_healthy,
+            "verifier_healthy": effective_verifier_healthy,
             "sandbox_image_available": docker["image_available"]
-            if (sandbox_mode == "docker" or verifier_mode == "docker")
+            if is_docker_required
             else True,
             "sandbox_image_smoke": docker["image_smoke"]
-            if (sandbox_mode == "docker" or verifier_mode == "docker")
+            if is_docker_required
             else True,
         }
+        if is_docker_required:
+            live_checks["docker_healthy"] = docker["healthy"]
         live_details = {
             "interactive_cognition": interactive_cognition,
             "ollama": ollama,

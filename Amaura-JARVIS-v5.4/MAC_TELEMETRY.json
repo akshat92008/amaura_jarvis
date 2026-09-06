@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-09-06 01:44:00",
+  "top_processes": [
+    {"pid": 949, "cpu": 24.6, "comm": "Google Chrome Helper"},
+    {"pid": 410, "cpu": 21.9, "comm": "WindowServer"},
+    {"pid": 41481, "cpu": 20.9, "comm": "Google Chrome Helper (Renderer)"},
+    {"pid": 657, "cpu": 15.7, "comm": "bird"},
+    {"pid": 20959, "cpu": 13.6, "comm": "Antigravity Helper (Renderer)"}
+  ],
+  "disk_free": "5.7Gi",
+  "system_platform": "macOS"
+}

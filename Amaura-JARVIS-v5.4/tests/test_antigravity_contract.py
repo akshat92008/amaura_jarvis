@@ -103,6 +103,28 @@ class TestExtractContractAccept(unittest.TestCase):
         result = self._extract(json.dumps(d))
         self.assertEqual(result["schema"], "amaura.antigravity-result.v1")
 
+    def test_contract_in_markdown_code_fence(self):
+        content = "Here is the result:\n```json\n" + json.dumps(_make_valid(), indent=2) + "\n```\nAll done!"
+        result = self._extract(content)
+        self.assertEqual(result["schema"], "amaura.antigravity-result.v1")
+        self.assertIs(result["success"], True)
+
+    def test_contract_in_assistant_message_content(self):
+        stream_event = json.dumps({
+            "type": "assistant",
+            "content": "Task completed successfully.\n```json\n" + json.dumps(_make_valid()) + "\n```"
+        })
+        result = self._extract(stream_event)
+        self.assertEqual(result["schema"], "amaura.antigravity-result.v1")
+        self.assertIs(result["success"], True)
+
+    def test_contract_multiline_raw_block(self):
+        raw = "Some logs before\n" + json.dumps(_make_valid(), indent=4) + "\nSome logs after"
+        result = self._extract(raw)
+        self.assertEqual(result["schema"], "amaura.antigravity-result.v1")
+        self.assertIs(result["success"], True)
+
+
 
 class TestExtractContractRejectByExtractor(unittest.TestCase):
     """These payloads must cause _extract_contract to raise GovernanceError
@@ -247,6 +269,25 @@ class TestExtractContractRejectByModelValidate(unittest.TestCase):
         contract = AntigravityResultContract.model_validate(extracted)
         self.assertIs(contract.success, True)
         self.assertEqual(contract.changed_files, ["src/greet.py"])
+
+
+class TestDiscoverVerificationCommands(unittest.TestCase):
+    def test_discovers_pytest_for_python_test_files(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            cmds = AntigravityDeliveryAdapter._discover_verification_commands(repo, ["tests/test_foo.py", "src/foo.py"])
+            self.assertEqual(cmds, ["pytest"])
+
+    def test_discovers_npm_test_for_package_json(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / "package.json").write_text('{"scripts": {"test": "jest"}}')
+            cmds = AntigravityDeliveryAdapter._discover_verification_commands(repo, ["src/index.js"])
+            self.assertEqual(cmds, ["npm test"])
 
 
 if __name__ == "__main__":

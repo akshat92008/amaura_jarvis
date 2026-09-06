@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import platform
+import re
 import shlex
 import shutil
 import subprocess
@@ -112,7 +113,7 @@ class SecureVerifierRunner:
         return argv
 
     @staticmethod
-    def _clean_environment(temp_home: str) -> dict[str, str]:
+    def _clean_environment(temp_home: str, target_cwd: Path | None = None, repo: Path | None = None) -> dict[str, str]:
         allowed = {
             "PATH",
             "LANG",
@@ -137,6 +138,17 @@ class SecureVerifierRunner:
         inherited_path = env.get("PATH", "")
         env["PATH"] = runtime_bin + (os.pathsep + inherited_path if inherited_path else "")
         env.update({"HOME": temp_home, "TMPDIR": temp_home, "TEMP": temp_home, "TMP": temp_home})
+        # Inject project directory into PYTHONPATH so local imports succeed
+        py_paths = []
+        if target_cwd:
+            py_paths.append(str(target_cwd))
+        if repo and str(repo) != (str(target_cwd) if target_cwd else ""):
+            py_paths.append(str(repo))
+        inherited_py_path = os.environ.get("PYTHONPATH", "")
+        if inherited_py_path:
+            py_paths.append(inherited_py_path)
+        if py_paths:
+            env["PYTHONPATH"] = os.pathsep.join(py_paths)
         # Prevent common language tooling from inheriting user-global config.
         env.update(
             {
@@ -225,16 +237,24 @@ class SecureVerifierRunner:
     def _looks_like_macos_sandbox_abort(completed: subprocess.CompletedProcess[str]) -> bool:
         return completed.returncode in {-6, 134}
 
-    def run(self, repository: str | Path, command: str, *, timeout_seconds: int = 300) -> VerificationResult:
+    def run(
+        self,
+        repository: str | Path,
+        command: str,
+        *,
+        timeout_seconds: int = 300,
+        working_directory: str | Path | None = None,
+    ) -> VerificationResult:
         repo = Path(repository).expanduser().resolve()
         if not repo.is_dir():
             raise GovernanceError("Verifier repository does not exist")
+        target_cwd = Path(working_directory).expanduser().resolve() if working_directory else repo
         argv = self.parse_command(command)
         timeout = max(5, min(int(timeout_seconds), 1800))
         mode = self._resolve_mode()
         with tempfile.TemporaryDirectory(prefix="amaura-verify-") as temp:
             temp_home = Path(temp).resolve()
-            env = self._clean_environment(str(temp_home))
+            env = self._clean_environment(str(temp_home), target_cwd=target_cwd, repo=repo)
             resolved_argv = list(argv)
             if resolved_argv and resolved_argv[0] == "python" and not shutil.which("python", path=env.get("PATH")):
                 resolved_argv[0] = shutil.which("python3", path=env.get("PATH")) or sys.executable
@@ -242,7 +262,7 @@ class SecureVerifierRunner:
                 if os.environ.get("AMAURA_ALLOW_HOST_VERIFICATION", "0") != "1":
                     raise GovernanceError("Host verification requires AMAURA_ALLOW_HOST_VERIFICATION=1")
                 launch = resolved_argv
-                cwd = repo
+                cwd = target_cwd
                 isolation = "host-breakglass"
                 network_disabled = False
             elif mode == "native":
@@ -250,7 +270,7 @@ class SecureVerifierRunner:
                     raise GovernanceError("Native verifier isolation currently requires macOS sandbox-exec")
                 profile = self._mac_profile(repo, temp_home)
                 launch = ["sandbox-exec", "-p", profile, *resolved_argv]
-                cwd = repo
+                cwd = target_cwd
                 isolation = "macos-sandbox-exec"
                 network_disabled = True
             elif mode == "docker":
@@ -274,7 +294,7 @@ class SecureVerifierRunner:
                     image,
                     *argv,
                 ]
-                cwd = repo
+                cwd = target_cwd
                 isolation = f"docker:{image}"
                 network_disabled = True
             else:
@@ -301,7 +321,7 @@ class SecureVerifierRunner:
                 try:
                     host_completed = subprocess.run(
                         resolved_argv,
-                        cwd=repo,
+                        cwd=target_cwd,
                         env=env,
                         stdin=subprocess.DEVNULL,
                         capture_output=True,
@@ -338,6 +358,7 @@ class SecureVerifierRunner:
         commands: Iterable[str],
         *,
         timeout_seconds: int = 300,
+        working_directory: str | Path | None = None,
     ) -> list[dict]:
         """Run every declared verification command independently and fail closed.
 
@@ -349,9 +370,20 @@ class SecureVerifierRunner:
         command_list = [str(command).strip() for command in commands if str(command).strip()]
         if not command_list:
             raise GovernanceError("Independent verification requires at least one command")
+        expanded_commands: list[str] = []
+        for cmd in command_list:
+            sub_cmds = re.split(r"\s*(?:&&|;)\s*", cmd)
+            for sc in sub_cmds:
+                if sc.strip():
+                    expanded_commands.append(sc.strip())
         evidence: list[dict] = []
-        for command in command_list:
-            result = self.run(repository, command, timeout_seconds=timeout_seconds)
+        for command in expanded_commands:
+            result = self.run(
+                repository,
+                command,
+                timeout_seconds=timeout_seconds,
+                working_directory=working_directory,
+            )
             payload = result.to_dict()
             evidence.append(payload)
             if not result.passed:

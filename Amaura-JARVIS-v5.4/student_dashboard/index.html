@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Student Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="theme-dark">
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <div class="brand-icon">🎓</div>
+                <h2>Aura<span>Study</span></h2>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-tab="overview">
+                    <span class="icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="courses">
+                    <span class="icon">📚</span>
+                    <span>Courses</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="tasks">
+                    <span class="icon">📝</span>
+                    <span>Assignments</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="schedule">
+                    <span class="icon">📅</span>
+                    <span>Schedule</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="timer">
+                    <span class="icon">⏱️</span>
+                    <span>Focus Timer</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="student-mini-profile">
+                    <div class="avatar">AS</div>
+                    <div class="info">
+                        <span class="name">Akshat S.</span>
+                        <span class="role">Computer Science</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="mobile-toggle" id="menuToggle" aria-label="Toggle Navigation">☰</button>
+                    <div>
+                        <h1>Good morning, Alex 👋</h1>
+                        <p class="subtitle">Fall Semester 2026 • Week 8</p>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="theme-btn" id="themeToggle" title="Toggle Theme">🌓 Mode</button>
+                    <div class="notifications-badge" title="Notifications">
+                        🔔 <span class="badge-dot"></span>
+                    </div>
+                    <div class="user-pill">
+                        <span class="status-indicator online"></span>
+                        <span>Junior Year</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- KPI Metric Cards Grid -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <div class="card-icon gold">⭐</div>
+                    <div class="card-data">
+                        <span class="metric-label">Cumulative GPA</span>
+                        <h2 class="metric-value">3.88 <span class="metric-trend up">+0.06</span></h2>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="card-icon blue">📖</div>
+                    <div class="card-data">
+                        <span class="metric-label">Enrolled Courses</span>
+                        <h2 class="metric-value">5 <span class="metric-sub">16 Credits</span></h2>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="card-icon purple">⏳</div>
+                    <div class="card-data">
+                        <span class="metric-label">Study Time (Week)</span>
+                        <h2 class="metric-value">32.4 <span class="metric-unit">hrs</span></h2>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="card-icon emerald">🎯</div>
+                    <div class="card-data">
+                        <span class="metric-label">Assignment Completion</span>
+                        <h2 class="metric-value" id="completionRate">85%</h2>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Grid: Courses & Assignments -->
+            <div class="content-grid">
+                <!-- Courses & Schedule Column -->
+                <div class="grid-column left-col">
+                    <!-- Active Courses -->
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h3>Current Courses</h3>
+                            <span class="panel-badge">5 Active</span>
+                        </div>
+                        <div class="course-list">
+                            <div class="course-item">
+                                <div class="course-color c-blue"></div>
+                                <div class="course-details">
+                                    <div class="course-title-row">
+                                        <h4>CS 401: Distributed Systems</h4>
+                                        <span class="grade-pill grade-a">A (94%)</span>
+                                    </div>
+                                    <p class="instructor">Prof. Henderson • Mon, Wed 10:00 AM</p>
+                                    <div class="progress-bar-container">
+                                        <div class="progress-bar" style="width: 78%;"></div>
+                                    </div>
+                                    <span class="progress-text">Syllabus Progress: 78%</span>
+                                </div>
+                            </div>
+
+                            <div class="course-item">
+                                <div class="course-color c-purple"></div>
+                                <div class="course-details">
+                                    <div class="course-title-row">
+                                        <h4>CS 480: Deep Learning & Neural Nets</h4>
+                                        <span class="grade-pill grade-a">A- (91%)</span>
+                                    </div>
+                                    <p class="instructor">Dr. Vaswani • Tue, Thu 2:00 PM</p>
+                                    <div class="progress-bar-container">
+                                        <div class="progress-bar" style="width: 65%;"></div>
+                                    </div>
+                                    <span class="progress-text">Syllabus Progress: 65%</span>
+                                </div>
+                            </div>
+
+                            <div class="course-item">
+                                <div class="course-color c-emerald"></div>
+                                <div class="course-details">
+                                    <div class="course-title-row">
+                                        <h4>MATH 310: Linear Algebra & Matrices</h4>
+                                        <span class="grade-pill grade-b">B+ (88%)</span>
+                                    </div>
+                                    <p class="instructor">Prof. Strang • Mon, Wed, Fri 1:00 PM</p>
+                                    <div class="progress-bar-container">
+                                        <div class="progress-bar" style="width: 82%;"></div>
+                                    </div>
+                                    <span class="progress-text">Syllabus Progress: 82%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Today's Schedule -->
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h3>Today's Schedule</h3>
+                            <span class="panel-sub" id="todayDate">Today</span>
+                        </div>
+                        <div class="timeline">
+                            <div class="timeline-item past">
+                                <span class="time">09:00 AM</span>
+                                <div class="timeline-content">
+                                    <strong>Team Standup</strong>
+                                    <span>Senior Design Project • Zoom</span>
+                                </div>
+                            </div>
+                            <div class="timeline-item active">
+                                <span class="time">10:00 AM</span>
+                                <div class="timeline-content">
+                                    <strong>CS 401 Lecture</strong>
+                                    <span>Hall 3B • Raft Consensus</span>
+                                </div>
+                            </div>
+                            <div class="timeline-item upcoming">
+                                <span class="time">02:30 PM</span>
+                                <div class="timeline-content">
+                                    <strong>Office Hours: Dr. Vaswani</strong>
+                                    <span>Gates Building 412</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Interactive Tasks & Timer Column -->
+                <div class="grid-column right-col">
+                    <!-- Interactive Focus Timer (Pomodoro) -->
+                    <section class="panel timer-panel">
+                        <div class="panel-header">
+                            <h3>Study Focus Timer</h3>
+                            <span class="timer-mode-badge" id="timerMode">Pomodoro (25m)</span>
+                        </div>
+                        <div class="timer-display">
+                            <div class="timer-circle">
+                                <span class="time-countdown" id="timeRemaining">25:00</span>
+                                <span class="timer-status-text" id="timerStateText">Ready to Focus</span>
+                            </div>
+                            <div class="timer-controls">
+                                <button class="btn btn-primary" id="startTimerBtn">Start Focus</button>
+                                <button class="btn btn-secondary" id="pauseTimerBtn" disabled>Pause</button>
+                                <button class="btn btn-tertiary" id="resetTimerBtn">Reset</button>
+                            </div>
+                            <div class="timer-presets">
+                                <button class="preset-chip active" data-time="25">25m Pomodoro</button>
+                                <button class="preset-chip" data-time="50">50m Deep Work</button>
+                                <button class="preset-chip" data-time="5">5m Break</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Assignments & Task Manager -->
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h3>Assignments & Tasks</h3>
+                                <span class="panel-sub" id="taskSummary">3 remaining</span>
+                            </div>
+                            <div class="filter-group">
+                                <button class="filter-btn active" data-filter="all">All</button>
+                                <button class="filter-btn" data-filter="pending">Pending</button>
+                                <button class="filter-btn" data-filter="completed">Done</button>
+                            </div>
+                        </div>
+
+                        <!-- Add Task Form -->
+                        <form id="addTaskForm" class="add-task-form">
+                            <input type="text" id="taskTitleInput" placeholder="Add new assignment or reading..." required>
+                            <select id="taskPrioritySelect">
+                                <option value="high">High Priority</option>
+                                <option value="medium" selected>Medium Priority</option>
+                                <option value="low">Low Priority</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary btn-sm">+ Add</button>
+                        </form>
+
+                        <!-- Tasks List -->
+                        <div class="tasks-list" id="tasksList">
+                            <!-- Injected by app.js -->
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

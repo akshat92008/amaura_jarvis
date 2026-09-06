@@ -73,9 +73,38 @@ def start_telegram_bot(agent):
         user_text = update.message.text
         ui.print_info(f"[Telegram] Received: {user_text[:80]}...")
 
-        # Run agent in thread pool to avoid blocking
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, agent.run_non_interactive, user_text)
+        # Send immediate typing action so user knows JARVIS is thinking
+        try:
+            await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+        except Exception:
+            pass
+
+        stop_typing = asyncio.Event()
+
+        async def _keep_typing():
+            while not stop_typing.is_set():
+                try:
+                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+                except Exception:
+                    pass
+                await asyncio.sleep(4)
+
+        typing_task = asyncio.create_task(_keep_typing())
+        try:
+            # Run agent in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            agent_future = loop.run_in_executor(None, agent.run_non_interactive, user_text)
+            try:
+                response = await asyncio.wait_for(asyncio.shield(agent_future), timeout=3.5)
+            except asyncio.TimeoutError:
+                try:
+                    await update.message.reply_text("⚡ On it! JARVIS is executing your request in the background...")
+                except Exception:
+                    pass
+                response = await agent_future
+        finally:
+            stop_typing.set()
+            typing_task.cancel()
 
         if response:
             # Split long messages (Telegram limit is 4096 chars)
@@ -113,8 +142,36 @@ def start_telegram_bot(agent):
         await update.message.reply_text(f"🎤 *Heard:* _{transcription}_", parse_mode="Markdown")
 
         # Process with agent
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, agent.run_non_interactive, transcription)
+        try:
+            await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+        except Exception:
+            pass
+
+        stop_typing = asyncio.Event()
+
+        async def _keep_typing():
+            while not stop_typing.is_set():
+                try:
+                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+                except Exception:
+                    pass
+                await asyncio.sleep(4)
+
+        typing_task = asyncio.create_task(_keep_typing())
+        try:
+            loop = asyncio.get_event_loop()
+            agent_future = loop.run_in_executor(None, agent.run_non_interactive, transcription)
+            try:
+                response = await asyncio.wait_for(asyncio.shield(agent_future), timeout=3.5)
+            except asyncio.TimeoutError:
+                try:
+                    await update.message.reply_text("⚡ On it! JARVIS is executing your request in the background...")
+                except Exception:
+                    pass
+                response = await agent_future
+        finally:
+            stop_typing.set()
+            typing_task.cancel()
 
         if response:
             for chunk in _split_message(response):
@@ -401,7 +458,7 @@ def start_telegram_bot(agent):
     app.add_handler(CommandHandler("costs", costs_command))
     app.add_handler(CommandHandler("pause", pause_command))
     app.add_handler(CommandHandler("kill", kill_command))
-    app.add_handler(CommandHandler("external-on", external_on_command))
+    app.add_handler(CommandHandler("external_on", external_on_command))
     app.add_handler(CallbackQueryHandler(amaura_approval_callback, pattern=r"^amaura:"))
     app.add_handler(CallbackQueryHandler(integration_approval_callback, pattern=r"^iact:"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))

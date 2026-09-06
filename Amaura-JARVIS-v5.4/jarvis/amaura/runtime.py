@@ -25,6 +25,13 @@ _SAFE_SERVER_DEFAULTS = {
 def _apply_safe_server_defaults() -> None:
     for key, value in _SAFE_SERVER_DEFAULTS.items():
         os.environ.setdefault(key, value)
+    if "SSL_CERT_FILE" not in os.environ:
+        try:
+            import certifi
+
+            os.environ["SSL_CERT_FILE"] = certifi.where()
+        except ImportError:
+            pass
 
 
 def _candidate_files(explicit: str | Path | None = None) -> Iterable[Path]:

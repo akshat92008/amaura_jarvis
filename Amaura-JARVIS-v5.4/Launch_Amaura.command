@@ -44,19 +44,6 @@ if [[ "$BOOTSTRAPPED" != "1" ]]; then
   python -m jarvis.amaura.cli company bootstrap --repository "$PWD" >/dev/null
 fi
 
-mkdir -p .amaura-data/logs
-SERVER_LOG=".amaura-data/logs/server.log"
-python -m jarvis.server >>"$SERVER_LOG" 2>&1 &
-SERVER_PID=$!
-
-cleanup() {
-  if kill -0 "$SERVER_PID" 2>/dev/null; then
-    kill "$SERVER_PID" 2>/dev/null || true
-    wait "$SERVER_PID" 2>/dev/null || true
-  fi
-}
-trap cleanup EXIT INT TERM
-
 read HOST PORT < <(python - <<'PY'
 from jarvis.amaura.runtime import load_amaura_env
 load_amaura_env(require_private_permissions=True)
@@ -67,6 +54,29 @@ print(
 )
 PY
 )
+
+if lsof -ti :${PORT} >/dev/null 2>&1; then
+  EXISTING_PID=$(lsof -ti :${PORT} | head -n 1)
+  print -u2 "Port ${PORT} is already in use by PID ${EXISTING_PID}. Terminate it before launching Amaura."
+  exit 1
+fi
+
+mkdir -p .amaura-data/logs
+SERVER_LOG=".amaura-data/logs/server.log"
+if [[ -x /usr/bin/caffeinate ]]; then
+  /usr/bin/caffeinate -s python -m jarvis.server >>"$SERVER_LOG" 2>&1 &
+else
+  python -m jarvis.server >>"$SERVER_LOG" 2>&1 &
+fi
+SERVER_PID=$!
+
+cleanup() {
+  if kill -0 "$SERVER_PID" 2>/dev/null; then
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT INT TERM
 
 HEALTH_URL="http://${HOST}:${PORT}/api/health"
 for _ in {1..40}; do

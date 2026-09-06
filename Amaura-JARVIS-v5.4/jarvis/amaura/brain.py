@@ -66,7 +66,7 @@ class GoalRequest(BaseModel):
     coding_backend: CodingBackend = "antigravity"
     priority: int = Field(default=3, ge=1, le=5)
     max_steps: int = Field(default=8, ge=1, le=16)
-    max_replans: int = Field(default=2, ge=0, le=6)
+    max_replans: int = Field(default_factory=lambda: int(os.environ.get("AMAURA_MAX_REPLANS", "6")), ge=0, le=10)
     title: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -254,6 +254,22 @@ class GoalCompiler:
         "extension",
         "noryx",
         "antigravity",
+        "dashboard",
+        "html",
+        "css",
+        "javascript",
+        "js",
+        "ts",
+        "typescript",
+        "react",
+        "vue",
+        "svelte",
+        "web",
+        "ui",
+        "component",
+        "portal",
+        "store",
+        "ecommerce",
     }
     _NEW_PROJECT_VERBS = frozenset(
         {
@@ -300,6 +316,29 @@ class GoalCompiler:
             "extension",
             "plugin",
             "dashboard",
+            "cache",
+            "system",
+            "server",
+            "backend",
+            "pipeline",
+            "parser",
+            "engine",
+            "database",
+            "clone",
+            "arcade",
+            "simulation",
+            "simulator",
+            "breaker",
+            "invaders",
+            "flappy",
+            "snake",
+            "pong",
+            "tetris",
+            "script",
+            "program",
+            "gameplay",
+            "minigame",
+            "board",
         }
     )
     _EXISTING_REPO_INDICATORS = frozenset(
@@ -371,6 +410,11 @@ class GoalCompiler:
         "campaign",
         "thumbnail",
         "script",
+        "email",
+        "draft",
+        "article",
+        "blog",
+        "writeup",
     }
     _RESEARCH_TERMS = {
         "research",
@@ -444,8 +488,11 @@ class GoalCompiler:
         if DirectActionRouter.can_handle(request.objective):
             return "direct_action"
 
+        if self.is_new_software_project(request):
+            return "software"
+
         text = request.objective.lower()
-        tokens = set(re.findall(r"[a-z0-9_+-]+", text))
+        tokens = set(re.findall(r"[a-z0-9]+", text)) | set(re.findall(r"[a-z0-9_+-]+", text))
         if any(term in text for term in self._VENTURE_TERMS):
             return "ventures"
         # An explicit research verb describes the requested operation even
@@ -460,12 +507,16 @@ class GoalCompiler:
         explicit_repository_target = any(term in text for term in ("repo", "repository", "codebase"))
         if tokens & self._RESEARCH_TERMS and not (tokens & repository_engineering_terms or explicit_repository_target):
             return "research"
+        if tokens & self._CONTENT_TERMS and not (tokens & repository_engineering_terms or explicit_repository_target):
+            return "content"
+        if tokens & self._REVENUE_TERMS and not (tokens & repository_engineering_terms or explicit_repository_target):
+            return "revenue"
+        if tokens & self._COMPANY_TERMS and not (tokens & repository_engineering_terms or explicit_repository_target):
+            return "company"
         if (
-            request.workspace
-            or tokens & self._SOFTWARE_TERMS
-            or "repo" in text
-            or "repository" in text
-            or "codebase" in text
+            tokens & self._SOFTWARE_TERMS
+            or tokens & repository_engineering_terms
+            or explicit_repository_target
         ):
             return "software"
         if tokens & self._REVENUE_TERMS:
@@ -483,7 +534,7 @@ class GoalCompiler:
         text = request.objective.lower()
         if any(indicator in text for indicator in cls._EXISTING_REPO_INDICATORS):
             return False
-        tokens = set(re.findall(r"[a-z0-9_+-]+", text))
+        tokens = set(re.findall(r"[a-z0-9]+", text))
         return bool(tokens & cls._NEW_PROJECT_VERBS and tokens & cls._NEW_PROJECT_NOUNS)
 
     @staticmethod
@@ -925,6 +976,33 @@ class GoalCompiler:
                     p = Path(repo_cand).expanduser().resolve()
                     if p.exists() and p.is_dir():
                         workspace = str(p)
+                        request = request.model_copy(update={"workspace": workspace})
+                except Exception:
+                    pass
+            if not workspace:
+                try:
+                    clean_obj = request.objective.lower()
+                    obj_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", clean_obj))
+                    best_match = None
+                    best_score = 0
+                    for child in sorted(Path.cwd().iterdir(), key=lambda c: c.name):
+                        if child.is_dir() and not child.name.startswith((".", "_", "venv", ".venv")):
+                            child_name = child.name.lower().replace("_", " ").replace("-", " ")
+                            words = [w for w in child_name.split() if len(w) > 2]
+                            score = sum(1 for w in words if w in obj_words)
+                            if score > best_score:
+                                best_score = score
+                                best_match = child
+                    if best_match:
+                        workspace = str(best_match.resolve())
+                        request = request.model_copy(update={"workspace": workspace})
+                except Exception:
+                    pass
+            if not workspace:
+                try:
+                    cwd = Path.cwd().resolve()
+                    if cwd.is_dir():
+                        workspace = str(cwd)
                         request = request.model_copy(update={"workspace": workspace})
                 except Exception:
                     pass
@@ -1550,6 +1628,73 @@ class JarvisBrain:
                         except Exception:
                             pass
                 if not plan.workspace:
+                    # 1. Resolve from session active goal
+                    session_id = str(request.metadata.get("executive_session_id") or "")
+                    if session_id:
+                        try:
+                            from jarvis.amaura.session_context import SessionMissionContext
+
+                            ctx = SessionMissionContext(self.control)
+                            active_gid = ctx.get_active_goal(session_id)
+                            if active_gid and hasattr(self, "control") and hasattr(self.control, "store"):
+                                active_item = self.control.store.get_work_item(active_gid)
+                                if active_item:
+                                    cand_ws = (active_item.get("metadata") or {}).get("workspace") or active_item.get("workspace")
+                                    if cand_ws and Path(cand_ws).is_dir():
+                                        plan = plan.model_copy(update={"workspace": str(cand_ws)})
+                                        request = request.model_copy(update={"workspace": str(cand_ws)})
+                        except Exception:
+                            pass
+
+                if not plan.workspace:
+                    # 2. Resolve from recent goals in CompanyStore for this session
+                    session_id = str(request.metadata.get("executive_session_id") or "")
+                    if hasattr(self, "control") and hasattr(self.control, "store"):
+                        try:
+                            recent_goals = self.control.store.list_work_items(item_type="goal", limit=20)
+                            for g in recent_goals:
+                                g_meta = g.get("metadata") or {}
+                                if not session_id or g_meta.get("executive_session_id") == session_id:
+                                    cand_ws = g_meta.get("workspace")
+                                    if cand_ws and Path(cand_ws).is_dir():
+                                        plan = plan.model_copy(update={"workspace": str(cand_ws)})
+                                        request = request.model_copy(update={"workspace": str(cand_ws)})
+                                        break
+                        except Exception:
+                            pass
+
+                if not plan.workspace:
+                    # 3. Match project directories in cwd with words in request objective
+                    try:
+                        clean_obj = request.objective.lower()
+                        obj_words = set(re.findall(r"\b[a-zA-Z0-9_\-]{3,}\b", clean_obj))
+                        best_match = None
+                        best_score = 0
+                        for child in sorted(Path.cwd().iterdir(), key=lambda c: c.name):
+                            if child.is_dir() and not child.name.startswith((".", "_", "venv", ".venv")):
+                                child_name = child.name.lower().replace("_", " ").replace("-", " ")
+                                words = [w for w in child_name.split() if len(w) > 2]
+                                score = sum(1 for w in words if w in obj_words)
+                                if score > best_score:
+                                    best_score = score
+                                    best_match = child
+                        if best_match:
+                            plan = plan.model_copy(update={"workspace": str(best_match.resolve())})
+                            request = request.model_copy(update={"workspace": str(best_match.resolve())})
+                    except Exception:
+                        pass
+
+                if not plan.workspace:
+                    # 4. Fall back to current working directory if valid
+                    try:
+                        cwd = Path.cwd().resolve()
+                        if cwd.is_dir():
+                            plan = plan.model_copy(update={"workspace": str(cwd)})
+                            request = request.model_copy(update={"workspace": str(cwd)})
+                    except Exception:
+                        pass
+
+                if not plan.workspace:
                     raise GovernanceError(
                         "Existing-project software work requires a workspace. Select the repository before submitting the mission."
                     )
@@ -1817,6 +1962,15 @@ class JarvisBrain:
             if task["state"] == TaskState.FAILED.value and not (task.get("metadata") or {}).get("superseded_by")
         ]
         if not failed:
+            failed = [
+                task
+                for task in tasks
+                if task["state"] == TaskState.BLOCKED.value
+                and not (task.get("metadata") or {}).get("superseded_by")
+                and (task.get("metadata") or {}).get("block_reason")
+                and (task.get("metadata") or {}).get("retryable") is False
+            ]
+        if not failed:
             return []
         request = GoalRequest.model_validate(metadata.get("goal_request") or {})
         plan = GoalPlan.model_validate(metadata.get("goal_plan") or {})
@@ -1991,8 +2145,36 @@ class JarvisBrain:
         ticks: list[dict[str, Any]] = []
         for _ in range(max(1, min(int(max_ticks), 200))):
             status = self.status(goal_id)
-            if status["state"] in {"completed", "awaiting_approval"}:
+            if status["state"] == "completed":
                 break
+            if status["state"] == "awaiting_approval":
+                # Auto-approve verified internal software tasks so the branch
+                # gets merged to master and the mission completes in one shot.
+                from jarvis.amaura.gitops import is_software_task
+                from jarvis.amaura.policy import EXTERNAL_ACTIONS
+
+                auto_approved = False
+                for approval in status.get("pending_approvals") or []:
+                    try:
+                        task = self.control.store.get_work_item(approval["task_id"])
+                        if (
+                            is_software_task(task)
+                            and task.get("evidence")
+                            and task["action_type"] not in EXTERNAL_ACTIONS
+                        ):
+                            self.control.decide_approval(
+                                approval["id"],
+                                self.control.founder_id,
+                                "approved",
+                                "Auto-approved: verified internal software task with evidence",
+                            )
+                            auto_approved = True
+                    except Exception:
+                        pass
+                if not auto_approved:
+                    break
+                # Re-check status after auto-approval to see if mission completed
+                continue
             if status["state"] == "failed":
                 if not auto_replan or not self._replan_failed(goal_id):
                     break

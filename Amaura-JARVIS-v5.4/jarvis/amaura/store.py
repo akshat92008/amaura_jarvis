@@ -212,7 +212,11 @@ class CompanyStore:
             is_outer = self._savepoints == 0
 
             if is_outer:
-                self._connection.execute("BEGIN IMMEDIATE")
+                if not getattr(self._connection, "in_transaction", False):
+                    try:
+                        self._connection.execute("BEGIN IMMEDIATE")
+                    except sqlite3.OperationalError:
+                        pass
                 self._autocommit = False
 
             self._savepoints += 1

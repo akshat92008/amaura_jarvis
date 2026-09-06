@@ -138,6 +138,7 @@ def _pinned_request(
     headers: dict[str, str],
     timeout: float,
     max_bytes: int,
+    allow_truncation: bool = False,
 ) -> tuple[int, bytes, dict[str, str]]:
     if not destination.addresses:
         raise GovernanceError("Outbound destination has no validated address")
@@ -154,10 +155,10 @@ def _pinned_request(
         response = connection.getresponse()
         if 300 <= int(response.status) < 400:
             raise GovernanceError(f"Outbound redirects are disabled (provider returned HTTP {response.status})")
-        raw = response.read(max_bytes + 1)
-        if len(raw) > max_bytes:
+        raw = response.read(max_bytes if allow_truncation else (max_bytes + 1))
+        if not allow_truncation and len(raw) > max_bytes:
             raise GovernanceError(f"Provider response exceeded the {max_bytes} byte limit")
-        return int(response.status), raw, {str(k).lower(): str(v) for k, v in response.getheaders()}
+        return int(response.status), raw[:max_bytes], {str(k).lower(): str(v) for k, v in response.getheaders()}
     except GovernanceError:
         raise
     except (OSError, ssl.SSLError, http.client.HTTPException) as exc:
@@ -305,6 +306,7 @@ def fetch_public_bytes(url: str, *, max_length: int = 100_000) -> tuple[bytes, d
         headers={"Accept": "text/*,application/json,application/xml", "User-Agent": "Amaura-Evidence-Fetcher/1.2"},
         timeout=15.0,
         max_bytes=limit,
+        allow_truncation=True,
     )
     if not 200 <= status < 300:
         raise GovernanceError(f"Public evidence fetch returned HTTP {status}")
@@ -325,10 +327,11 @@ def fetch_public_text(url: str, *, max_length: int = 10_000) -> str:
     of crashing the entire governed task.
     """
     try:
-        raw, _metadata = fetch_public_bytes(url, max_length=max_length)
+        buffer_size = max(100_000, max_length * 5)
+        raw, _metadata = fetch_public_bytes(url, max_length=buffer_size)
     except GovernanceError as exc:
         return f"❌ {exc}"
-    return raw.decode("utf-8", errors="replace")
+    return raw.decode("utf-8", errors="replace")[:max_length]
 
 
 __all__ = [

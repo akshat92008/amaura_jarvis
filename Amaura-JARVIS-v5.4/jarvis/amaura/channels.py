@@ -206,16 +206,31 @@ class TelegramNotificationAdapter:
     def configured(self) -> bool:
         return bool(self.token and self.chat_id)
 
-    def send(self, *, text: str, idempotency_key: str) -> Any:
+    def send(
+        self,
+        *,
+        text: str,
+        idempotency_key: str,
+        reply_markup: dict[str, Any] | None = None,
+        buttons: list[list[dict[str, str]]] | None = None,
+    ) -> Any:
         if not self.configured:
             raise GovernanceError("Telegram founder notifications are not configured")
         clean = text.strip()
         if not clean or len(clean) > 4096:
             raise GovernanceError("Telegram message must contain 1-4096 characters")
+        payload: dict[str, Any] = {
+            "chat_id": self.chat_id,
+            "text": clean,
+            "disable_web_page_preview": True,
+        }
+        computed_markup = reply_markup or ({"inline_keyboard": buttons} if buttons else None)
+        if computed_markup:
+            payload["reply_markup"] = computed_markup
         status, response, _ = self.transport(
             self.endpoint_template.format(token=self.token),
             method="POST",
-            payload={"chat_id": self.chat_id, "text": clean, "disable_web_page_preview": True},
+            payload=payload,
             headers={"X-Amaura-Idempotency-Key": idempotency_key},
             timeout=20,
         )
@@ -226,13 +241,16 @@ class TelegramNotificationAdapter:
         chat = cast(dict[str, Any], result.get("chat")) if isinstance(result.get("chat"), dict) else {}
         if not message_id or str(chat.get("id", "")) != str(self.chat_id):
             raise GovernanceError("Telegram did not confirm the configured founder chat")
+        receipt_payload = {"chat_id": self.chat_id, "text": clean}
+        if computed_markup:
+            receipt_payload["reply_markup"] = computed_markup
         return _provider_receipt(
             provider="telegram",
             operation="send_telegram_notification",
             external_id=message_id,
             thread_id=str(self.chat_id),
             idempotency_key=idempotency_key,
-            payload={"chat_id": self.chat_id, "text": clean},
+            payload=receipt_payload,
             status="sent",
             key=self.receipt_key,
         )

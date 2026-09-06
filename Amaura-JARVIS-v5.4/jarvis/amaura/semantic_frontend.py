@@ -410,7 +410,12 @@ def _directory_target(text: str, paths: list[str]) -> str:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             value = _strip_token(match.group(1))
-            if value.lower() not in {"the", "a", "an", "this", "that", "box"}:
+            stop_words = {
+                "the", "a", "an", "this", "that", "box", "and", "or", "is", "are", "was", "were",
+                "to", "of", "for", "with", "in", "on", "at", "by", "from", "my", "your", "our", "their",
+                "not", "but", "what", "which", "how", "why", "where", "when", "who"
+            }
+            if value.lower() not in stop_words and ("/" in value or value in {".", "..", "~"} or value.startswith(".")):
                 return value
     return ""
 
@@ -1023,7 +1028,10 @@ def install_semantic_frontend() -> None:
 
         # Reuse the mature clause/reference parser as a subordinate role parser;
         # it no longer competes with other top-level actions.
-        write_action = da.WriteActionParser.parse(routing)
+        if not da.WriteActionParser._is_software_generation_request(routing):
+            write_action = da.WriteActionParser.parse(routing)
+        else:
+            write_action = None
         if write_action is not None:
             graph = core.SemanticRequestGraph(
                 clean, core.SemanticAction.FILE_WRITE, mode, evidence=["write_clause_role_parser"]
@@ -1126,10 +1134,14 @@ def install_semantic_frontend() -> None:
             )
 
         read_target = _file_read_target(routing, paths)
-        if read_target and re.search(
-            r"\b(?:read|open|show|display|cat|fetch|view|print|load|get|retrieve|examine|inspect)\b|"
-            r"\b(?:contents?|content|text)\s+(?:of|from|inside)\b|\bwhat\s+does\b[^\n]{0,120}\bcontain\b|\bwhat\s+is\s+inside\b",
-            lower,
+        if (
+            read_target
+            and not da.WriteActionParser._is_software_generation_request(clean)
+            and re.search(
+                r"\b(?:read|open|show|display|cat|fetch|view|print|load|get|retrieve|examine|inspect)\b|"
+                r"\b(?:contents?|content|text)\s+(?:of|from|inside)\b|\bwhat\s+does\b[^\n]{0,120}\bcontain\b|\bwhat\s+is\s+inside\b",
+                lower,
+            )
         ):
             return core.SemanticRequestGraph(
                 clean,
@@ -1874,6 +1886,8 @@ def install_semantic_frontend() -> None:
         )
 
     def can_handle(cls: Any, text: str) -> bool:
+        if da.WriteActionParser._is_software_generation_request(text):
+            return False
         if _interactive_command(text) is not None:
             return True
         return (

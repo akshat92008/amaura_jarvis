@@ -229,18 +229,21 @@ def _worktree_root() -> Path:
     return Path(os.environ.get("AMAURA_WORKTREE_ROOT", "/tmp/amaura-worktrees")).expanduser().resolve()
 
 
-def prepare_task_worktree(workspace: str | Path, task_id: str) -> WorktreeRecord:
-    """Create one isolated branch from an exact clean repository head."""
-    repository = _repository_root(workspace)
-    status = _run_git(repository, ["status", "--porcelain"]).stdout.strip()
-    if status:
-        raise GovernanceError(
-            "Engineering workspace is dirty. Commit or stash local changes before Amaura starts a repository task."
-        )
-    base_branch = _run_git(repository, ["symbolic-ref", "--quiet", "--short", "HEAD"]).stdout.strip()
+def prepare_task_worktree(
+    repository: Path | str,
+    task_id: str,
+    *,
+    source_worktree: Path | str | None = None,
+) -> WorktreeRecord:
+    """Create or resume an isolated worktree branch for a governed task."""
+    repository = Path(repository).resolve()
+    if not is_git_repository(repository):
+        raise GovernanceError(f"Workspace is not a valid Git repository: {repository}")
+    repo_root = _repository_root(repository)
+    base_branch = _run_git(repo_root, ["symbolic-ref", "--quiet", "--short", "HEAD"]).stdout.strip()
     if not base_branch:
         raise GovernanceError("Amaura repository tasks require a named base branch; detached HEAD is not allowed")
-    base_commit = _run_git(repository, ["rev-parse", "HEAD"]).stdout.strip()
+    base_commit = _run_git(repo_root, ["rev-parse", "HEAD"]).stdout.strip()
     branch = _branch_name(task_id)
     worktree_path = _worktree_root() / task_id
     worktree_path.parent.mkdir(parents=True, exist_ok=True)
@@ -251,7 +254,7 @@ def prepare_task_worktree(workspace: str | Path, task_id: str) -> WorktreeRecord
     # repository by ``finalize_task_commit`` before review.
     isolation_mode = (
         "isolated_clone"
-        if any(character.isspace() for character in str(_common_git_dir(repository)))
+        if any(character.isspace() for character in str(_common_git_dir(repo_root)))
         else "linked_worktree"
     )
 
@@ -261,17 +264,17 @@ def prepare_task_worktree(workspace: str | Path, task_id: str) -> WorktreeRecord
         if Path(existing_root).resolve() != worktree_path.resolve() or existing_branch != branch:
             raise GovernanceError(f"Unexpected worktree already exists at {worktree_path}")
         existing_mode = "isolated_clone" if (worktree_path / ".git").is_dir() else "linked_worktree"
-        return WorktreeRecord(str(repository), str(worktree_path), branch, base_branch, base_commit, existing_mode)
+        return WorktreeRecord(str(repo_root), str(worktree_path), branch, base_branch, base_commit, existing_mode)
 
-    branch_probe = _run_git(repository, ["show-ref", "--verify", f"refs/heads/{branch}"], allow_failure=True)
+    branch_probe = _run_git(repo_root, ["show-ref", "--verify", f"refs/heads/{branch}"], allow_failure=True)
     if branch_probe.returncode == 0:
         raise GovernanceError(
             f"Task branch '{branch}' already exists without its expected worktree. Reconcile or remove it before retrying."
         )
     if isolation_mode == "isolated_clone":
         _run_git(
-            repository,
-            ["clone", "--local", "--no-hardlinks", "--no-checkout", str(repository), str(worktree_path)],
+            repo_root,
+            ["clone", "--local", "--no-hardlinks", "--no-checkout", str(repo_root), str(worktree_path)],
             timeout=300,
         )
         _run_git(worktree_path, ["checkout", "-b", branch, base_commit], timeout=120)
@@ -279,8 +282,22 @@ def prepare_task_worktree(workspace: str | Path, task_id: str) -> WorktreeRecord
         # the local origin; Amaura imports the exact verified commit itself.
         _run_git(worktree_path, ["remote", "remove", "origin"], allow_failure=True)
     else:
-        _run_git(repository, ["worktree", "add", "-b", branch, str(worktree_path), base_commit], timeout=120)
-    return WorktreeRecord(str(repository), str(worktree_path), branch, base_branch, base_commit, isolation_mode)
+        _run_git(repo_root, ["worktree", "add", "-b", branch, str(worktree_path), base_commit], timeout=120)
+
+    if source_worktree and Path(source_worktree).is_dir():
+        import shutil
+
+        src = Path(source_worktree).resolve()
+        for item in src.iterdir():
+            if item.name == ".git":
+                continue
+            dest = worktree_path / item.name
+            if item.is_dir():
+                shutil.copytree(item, dest, dirs_exist_ok=True)
+            else:
+                shutil.copy2(item, dest)
+
+    return WorktreeRecord(str(repo_root), str(worktree_path), branch, base_branch, base_commit, isolation_mode)
 
 
 def finalize_task_commit(
@@ -508,7 +525,10 @@ def cleanup_task_worktree(task: dict[str, Any], *, require_clean: bool = True) -
         return
     repository = _repository_root(str(repository_raw))
     worktree = Path(str(worktree_raw)).expanduser().resolve()
-    isolation_mode = str(metadata.get("git_isolation_mode") or "linked_worktree")
+    isolation_mode = str(
+        metadata.get("git_isolation_mode")
+        or ("isolated_clone" if (worktree / ".git").is_dir() else "linked_worktree")
+    )
     if worktree.exists() and require_clean:
         status = _run_git(worktree, ["status", "--porcelain"]).stdout.strip()
         if status:
